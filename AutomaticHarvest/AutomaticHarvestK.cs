@@ -190,46 +190,70 @@ namespace AutomaticHarvest
                     })
                     .PlayAnim("off")
                     .Transition(this.on, (StatesInstance smi) => !smi.master.storage.IsFull() && smi.master.energyConsumer.IsPowered, UpdateRate.SIM_200ms);
-                   
+
 
 
                 this.on
                     .Enter(delegate (StatesInstance smi)
                     {
                         if (!smi.master.dispenser.isEnabled)
-                        {
                             smi.master.reservoir.RefreshHstatusLight(HstatusLight.Yellow);
-                        }
                         else
-                        {
                             smi.master.reservoir.RefreshHstatusLight(HstatusLight.Green);
-                            
-                        }
-                        smi.master.operational.SetActive(true, false);
-                        smi.master.anim_au = Anim_Au.on;
 
+                        smi.master.anim_au = Anim_Au.on;
                     })
                     .DefaultState(this.on.idle)
-                    .Update(delegate (StatesInstance smi, float dt)
-                        {
-                            smi.CheckPlants();
-                            GameObject firstPlant = smi.plantsToHarvest.FirstOrDefault();
-                            if (firstPlant != null)
-                            {
-                                // 使用植物的世界位置来设置枪口的旋转
-                                smi.PointGunAt(firstPlant.transform.position);
-                            }
-                           
-                            smi.HarvestPlantsIfNeeded();
+                    //.Update(delegate (StatesInstance smi, float dt)
+                    //{
+                    //    smi.CheckPlants();
+                    //    GameObject firstPlant = smi.plantsToHarvest.FirstOrDefault();
+                    //    if (firstPlant != null)
+                    //    {
+                    //        // 使用植物的世界位置来设置枪口的旋转
+                    //        smi.PointGunAt(firstPlant.transform.position);
+                    //    }
 
-                        }, UpdateRate.SIM_4000ms, false)
+                    //    smi.HarvestPlantsIfNeeded();
+
+                    //}, UpdateRate.SIM_4000ms, false)
                     .Transition(this.off, (StatesInstance smi) => smi.master.storage.IsFull() || !smi.master.energyConsumer.IsPowered, UpdateRate.SIM_200ms);
+
                 this.on.idle
                     .PlayAnim("on")
-                    .EventTransition(GameHashes.ActiveChanged, this.on.working, (StatesInstance smi) => smi.GetComponent<Operational>().IsActive);
+                    .Enter(smi => smi.master.operational.SetActive(false))
+                    .Update(delegate (StatesInstance smi, float dt)
+                    {
+                        smi.CheckPlants(); // 持续扫描
+                    }, UpdateRate.SIM_1000ms)
+                    // 如果发现有植物，跳转到 working
+                    .Transition(this.on.working, (StatesInstance smi) => smi.plantsToHarvest.Count > 0, UpdateRate.SIM_200ms);
+
                 this.on.working
-                    .PlayAnim("working")
-                    .EventTransition(GameHashes.ActiveChanged, this.on.idle, (StatesInstance smi) => !smi.GetComponent<Operational>().IsActive);
+                    .Enter(delegate (StatesInstance smi)
+                    {
+                        smi.master.operational.SetActive(true);
+                        // 指向第一个目标
+                        GameObject target = smi.plantsToHarvest.FirstOrDefault();
+                        if (target != null)
+                        {
+                            smi.PointGunAt(target.transform.position);
+                        }
+                    })
+                    .ScheduleGoTo(0.5f, this.on.post_harvest);
+
+                this.on.post_harvest
+                    .Enter(delegate (StatesInstance smi)
+                    {
+                        // b执行收获：只收列表第一个
+                        smi.HarvestSinglePlant();
+                        // 重新扫描一次，看看还有没有剩下的
+                        smi.CheckPlants();
+                    })
+                    // 如果还有，回到 working 状态处理下一个目标
+                    .Transition(this.on.working, (StatesInstance smi) => smi.plantsToHarvest.Count > 0, UpdateRate.SIM_200ms)
+                    // 如果没了，回到 idle 待机
+                    .Transition(this.on.idle, (StatesInstance smi) => smi.plantsToHarvest.Count == 0, UpdateRate.SIM_200ms);
             }
             
 
@@ -244,7 +268,8 @@ namespace AutomaticHarvest
             public class  ReadyStates : State
             {
                 public State idle;  
-                public State working;  
+                public State working;
+                public State post_harvest;
             }
                
         }
@@ -324,6 +349,24 @@ namespace AutomaticHarvest
                     // 调用收获和存储植物的方法
                     master.autoPlantHarvester.HarvestAndStorePlants(plantsToHarvest);
                     plantsToHarvest.Clear();
+                }
+            }
+
+            /// <summary>
+            /// 收获单个植物
+            /// </summary>
+            public void HarvestSinglePlant()
+            {
+                if (plantsToHarvest != null && plantsToHarvest.Count > 0)
+                {
+                    GameObject target = plantsToHarvest[0];
+                    if (target != null)
+                    {
+                        // 这里只传入包含单个目标的 List 
+                        master.autoPlantHarvester.HarvestAndStorePlants(new List<GameObject> { target });
+                    }
+                    // 处理完后从待收获列表中移除
+                    plantsToHarvest.RemoveAt(0);
                 }
             }
 
