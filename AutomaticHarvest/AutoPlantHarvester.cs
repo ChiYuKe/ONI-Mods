@@ -56,6 +56,8 @@ public class AutoPlantHarvester : KMonoBehaviour
         allowedTags.Add(GameTags.Edible);
         allowedTags.Add(GameTags.Seed);
         allowedTags.Add(GameTags.Organics);
+        allowedTags.Add(GameTags.CookingIngredient);
+        allowedTags.Add("PlantFiber_");
 
 
     }
@@ -203,6 +205,17 @@ public class AutoPlantHarvester : KMonoBehaviour
             return;
         }
 
+        WorkerBase skilledWorker = null;
+        foreach (var minionGO in GetAllMinionGameObjects())
+        {
+            var resume = minionGO.GetComponent<MinionResume>();
+            if (resume != null && resume.HasPerk(Db.Get().SkillPerks.CanSalvagePlantFiber))
+            {
+                skilledWorker = minionGO.GetComponent<WorkerBase>();
+                break; 
+            }
+        }
+
         foreach (GameObject plantGO in plants)
         {
             if (plantGO == null)
@@ -217,8 +230,23 @@ public class AutoPlantHarvester : KMonoBehaviour
 
                 try
                 {
+                    var fiberProducer = plantGO.GetComponent<PlantFiberProducer>();
                     harvestable.Harvest(); // 执行收获逻辑，掉落物生成
+                    if (skilledWorker != null)
+                    {
+                        if (fiberProducer != null)
+                        {
+                            // 直接反射调用私有方法 SpawnPlantFiber
+                            var spawnMethod = typeof(PlantFiberProducer).GetMethod("SpawnPlantFiber",
+                                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
 
+                            if (spawnMethod != null)
+                            {
+                                spawnMethod.Invoke(fiberProducer, null);
+                              
+                            }
+                        }
+                    }
                     // 延迟执行 AutoStoreItems，将 harvestCell 作为 data 参数传入 
                     GameScheduler.Instance.Schedule(
                         "DelayedStore" + plantGO.name,
@@ -309,6 +337,30 @@ public class AutoPlantHarvester : KMonoBehaviour
         pickupEntries.Recycle();
     }
 
+
+    /// <summary>
+    /// 获取所有场景中活跃的复制人对象。
+    /// </summary>
+    /// <returns>包含所有复制人对象的列表。</returns>
+    public static List<GameObject> GetAllMinionGameObjects()
+    {
+        List<GameObject> minionGameObjects = new List<GameObject>();
+
+        // 遍历所有活跃的复制人身份对象
+        foreach (MinionIdentity minionIdentity in Components.LiveMinionIdentities.Items)
+        {
+            if (minionIdentity != null)
+            {
+                GameObject minionObject = minionIdentity.gameObject; // 直接获取 GameObject
+                if (minionObject != null)
+                {
+                    minionGameObjects.Add(minionObject); // 添加到列表中
+                }
+            }
+        }
+
+        return minionGameObjects; // 返回完整的列表
+    }
 
 
 

@@ -97,6 +97,22 @@ namespace AutomaticHarvest
             }
         }
 
+        [HarmonyPatch(typeof(PlantFiberConfig), "CreatePrefab")]
+        public static class Patch_PlantFiberConfig_CreatePrefab
+        {
+            public static void Postfix(GameObject __result)
+            {
+                // 1. 获取 KPrefabID 组件
+                KPrefabID prefabID = __result.GetComponent<KPrefabID>();
+
+                if (prefabID != null)
+                {
+                    prefabID.AddTag(new Tag("PlantFiber_"), false);
+                }
+            }
+        }
+
+
 
 
 
