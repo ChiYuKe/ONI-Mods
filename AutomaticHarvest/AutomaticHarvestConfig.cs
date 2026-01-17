@@ -117,7 +117,7 @@ namespace AutomaticHarvest
 
 
 
-            go.AddOrGet<Automatable>();
+           //  go.AddOrGet<Automatable>();
             // go.AddOrGet<TreeFilterable>();
 
             // go.AddOrGet<LogicOperationalController>();
