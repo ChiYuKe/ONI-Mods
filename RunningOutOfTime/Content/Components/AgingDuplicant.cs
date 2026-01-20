@@ -75,9 +75,9 @@ namespace RunningOutOfTime.Content.Components
             hasAppliedAgingEffects = true;
 
             // 注入衰老 Buff
-           //  KEffects.ApplyBuff(gameObject, "");
+            KEffects.ApplyBuff(gameObject, ModEffects.ROOT_SHUAILAO);
 
-            // 全局 UI 通知
+            // 通知
             EternalDecayMain.NotifyDeathApplied(gameObject);
 
         }

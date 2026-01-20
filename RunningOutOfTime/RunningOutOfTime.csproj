@@ -4,12 +4,14 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>0da87c5e-e884-4f28-a4a9-b947d14cf185</ProjectGuid>
+    <ProjectGuid>{74716706-7850-4BD3-A7F6-137548688929}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>RunningOutOfTime</RootNamespace>
     <AssemblyName>RunningOutOfTime</AssemblyName>
-    <TargetFrameworkVersion>v4.7.1</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+    <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
+    <ImplicitlyExpandNETStandardFacades>false</ImplicitlyExpandNETStandardFacades>
     <LangVersion>10.0</LangVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
@@ -18,7 +20,7 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
+    <OutputPath>..\..\..\..\Documents\Klei\OxygenNotIncluded\mods\Dev\RunningOutOfTime\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -32,24 +34,75 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="System"/>
-    
-    <Reference Include="System.Core"/>
-    <Reference Include="System.Xml.Linq"/>
-    <Reference Include="System.Data.DataSetExtensions"/>
-    
-    
-    <Reference Include="Microsoft.CSharp"/>
-    
-    <Reference Include="System.Data"/>
-    
-    <Reference Include="System.Net.Http"/>
-    
-    <Reference Include="System.Xml"/>
-  </ItemGroup>
-  <ItemGroup>
-    <Compile Include="Class1.cs" />
+    <Compile Include="Content\Components\AgingDuplicant.cs" />
+    <Compile Include="Content\Components\MinionBrainResume.cs" />
+    <Compile Include="Content\Components\Ownable.cs" />
+    <Compile Include="Content\Config\GameTags.cs" />
+    <Compile Include="Content\Config\ModConfig.cs" />
+    <Compile Include="Content\Config\STRINGS.cs" />
+    <Compile Include="Content\Config\TUNINGS.cs" />
+    <Compile Include="Content\Core\AgingManager.cs" />
+    <Compile Include="Content\Core\InheritanceManager.cs" />
+    <Compile Include="Content\Core\ModEffects.cs" />
+    <Compile Include="Content\Items\MiniBrainBadConfig.cs" />
+    <Compile Include="Content\Items\MinionBrain.cs" />
+    <Compile Include="Content\Items\MinionBrainConfig.cs" />
+    <Compile Include="Content\Patches\AssignableSlotsPatch.cs" />
+    <Compile Include="Content\Patches\DeathsPatch.cs" />
+    <Compile Include="Content\Patches\MinionPatch.cs" />
+    <Compile Include="Content\Utils\KEffectBuilderUtil.cs" />
+    <Compile Include="Content\Utils\KEffects.cs" />
+    <Compile Include="Content\Utils\KLocUtil.cs" />
+    <Compile Include="Content\Utils\KLogUtil.cs" />
+    <Compile Include="Content\Utils\KModAudioUtil.cs" />
+    <Compile Include="Content\Utils\KModMinionUtils.cs" />
+    <Compile Include="Content\Utils\KModResources.cs" />
+    <Compile Include="Content\Utils\KUtils.cs" />
+    <Compile Include="EternalDecayMain.cs" />
+    <Compile Include="KModPatch.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
+  <ItemGroup>
+    <Reference Include="0Harmony">
+      <HintPath>D:\Program Files (x86)\Steam\steamapps\common\OxygenNotIncluded\OxygenNotIncluded_Data\Managed\0Harmony.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Assembly-CSharp">
+      <HintPath>D:\Program Files (x86)\Steam\steamapps\common\OxygenNotIncluded\OxygenNotIncluded_Data\Managed\Assembly-CSharp.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Assembly-CSharp-firstpass">
+      <HintPath>D:\Program Files (x86)\Steam\steamapps\common\OxygenNotIncluded\OxygenNotIncluded_Data\Managed\Assembly-CSharp-firstpass.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="FMODUnity">
+      <HintPath>D:\Program Files (x86)\Steam\steamapps\common\OxygenNotIncluded\OxygenNotIncluded_Data\Managed\FMODUnity.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>D:\Program Files (x86)\Steam\steamapps\common\OxygenNotIncluded\OxygenNotIncluded_Data\Managed\Newtonsoft.Json.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="PLib">
+      <HintPath>..\Managed\PLib.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="UnityEngine">
+      <HintPath>..\Managed\UnityEngine.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="UnityEngine.AssetBundleModule">
+      <HintPath>D:\Program Files (x86)\Steam\steamapps\common\OxygenNotIncluded\OxygenNotIncluded_Data\Managed\UnityEngine.AssetBundleModule.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>D:\Program Files (x86)\Steam\steamapps\common\OxygenNotIncluded\OxygenNotIncluded_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Content\UI\" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
- </Project>
+</Project>

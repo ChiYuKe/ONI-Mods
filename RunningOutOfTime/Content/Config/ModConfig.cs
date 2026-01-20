@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace RunningOutOfTime
+namespace RunningOutOfTime.Content.Config
 {
-    public class Class1
+    internal class ModConfig
     {
     }
 }
