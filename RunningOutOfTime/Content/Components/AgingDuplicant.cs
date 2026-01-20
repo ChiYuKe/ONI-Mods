@@ -6,6 +6,7 @@ using KSerialization;
 using RunningOutOfTime.Content.Config;
 using RunningOutOfTime.Content.Core;
 using UnityEngine;
+using static STRINGS.UI.UISIDESCREENS.AUTOPLUMBERSIDESCREEN.BUTTONS;
 
 namespace RunningOutOfTime.Content.Components
 {
@@ -22,6 +23,12 @@ namespace RunningOutOfTime.Content.Components
         // --- 存档持久化数据 ---
         [Serialize] public bool hasAppliedAgingEffects;
         [Serialize] private bool isLifeTerminated;
+
+        public enum AgeUnit
+        {
+            Cycles,
+            Seconds
+        }
 
 
         // --- 核心逻辑入口 ---
@@ -46,11 +53,10 @@ namespace RunningOutOfTime.Content.Components
 
         private void EvaluateBiologicalAge()
         {
-            // 获取当前年龄（周期）
-            AmountInstance ageInstance = Db.Get().Amounts.Get("AgeAttribute").Lookup(gameObject);
-            if (ageInstance == null) return;
+            // 获取当前年龄
+            var currentAge = GetCurrentAge(gameObject, AgeUnit.Cycles);
 
-            float currentAge = ageInstance.value;
+         
             float maxLifespan = TUNINGS.AGE.MINION_AGE_THRESHOLD;
             float senescencePoint = maxLifespan * TUNINGS.AGE.AGE_80PERCENT_THRESHOLD;
 
@@ -65,6 +71,22 @@ namespace RunningOutOfTime.Content.Components
             {
                 ApplySenescence();
             }
+        }
+
+
+
+        /// <summary>
+        /// 获取当前 minion 的年龄
+        /// </summary>
+        /// <param name="minion">目标小人</param>
+        /// <param name="unit">输出单位：周期或秒</param>
+        public static float GetCurrentAge(GameObject minion, AgeUnit unit = AgeUnit.Seconds)
+        {
+            var ageInstance = Db.Get().Amounts.Get("AgeAttribute").Lookup(minion);
+            if (ageInstance == null) return 0f;
+
+            float cycles = ageInstance.value;
+            return unit == AgeUnit.Seconds ? cycles * 600f : cycles;
         }
 
         /// <summary>
@@ -89,10 +111,10 @@ namespace RunningOutOfTime.Content.Components
         {
             isLifeTerminated = true;
 
-            // 清理状态：移除衰老 Buff，准备死亡
-            KEffects.RemoveBuff(gameObject,"");
+            // 移除衰老 Buff
+            KEffects.RemoveBuff(gameObject, ModEffects.ROOT_SHUAILAO);
 
-            // 核心功能：生成新对象/数据转移
+            // 生成新对象/数据转移
             InheritanceManager.TransferSoul(gameObject, transform.position);
 
             // 触发死亡序列
