@@ -513,6 +513,7 @@ namespace StorageNetwork.UI
             UnityEngine.Object.DestroyImmediate(header.GetComponent<Image>());
             KImage headerImage = header.AddComponent<KImage>();
             headerImage.type = Image.Type.Sliced;
+            ApplySprite(headerImage, "plan_menu_heading_bg_gray");
             headerImage.colorStyleSetting = CreateColorStyle(backgroundColor, Lighten(backgroundColor, 0.08f), Darken(backgroundColor, 0.08f));
             headerImage.ColorState = KImage.ColorSelector.Inactive;
 
@@ -531,9 +532,22 @@ namespace StorageNetwork.UI
             headerLayout.childForceExpandWidth = false;
             headerLayout.childForceExpandHeight = true;
 
-            TextMeshProUGUI arrow = CreateText("Arrow", header.transform, expanded ? "▼" : "▶", 14, TextAlignmentOptions.Center);
-            arrow.color = new Color(0.1f, 0.11f, 0.12f, 1f);
-            arrow.gameObject.AddComponent<LayoutElement>().preferredWidth = 20f;
+            GameObject arrowObject = new GameObject("Arrow");
+            arrowObject.transform.SetParent(header.transform, false);
+            arrowObject.AddComponent<RectTransform>();
+            LayoutElement arrowLayout = arrowObject.AddComponent<LayoutElement>();
+            arrowLayout.preferredWidth = 20f;
+            arrowLayout.preferredHeight = 18f;
+            Image arrow = arrowObject.AddComponent<Image>();
+            arrow.raycastTarget = false;
+            arrow.preserveAspect = true;
+            ApplySprite(arrow, expanded ? "stresspanel_icon_expand_arrow_up" : "stresspanel_icon_expand_arrow_right");
+            if (arrow.sprite == null)
+            {
+                TextMeshProUGUI fallbackArrow = CreateText("FallbackArrow", arrowObject.transform, expanded ? "▼" : "▶", 14, TextAlignmentOptions.Center);
+                fallbackArrow.color = new Color(0.1f, 0.11f, 0.12f, 1f);
+                Stretch(fallbackArrow.rectTransform(), 0f, 0f);
+            }
 
             TextMeshProUGUI name = CreateText("Name", header.transform, title, fontSize, TextAlignmentOptions.MidlineLeft);
             name.color = new Color(0.12f, 0.13f, 0.13f, 1f);
@@ -756,19 +770,15 @@ namespace StorageNetwork.UI
                 return;
             }
 
-            int targetIndex = 0;
             string itemName = GetStoredItemName(items[0]);
             float sourceMass = GetStoredItemsMass(items);
 
-            System.Action rebuild = null;
-            rebuild = () =>
+            void ShowTransferAmountDialog(Storage destination)
             {
-                Storage destination = targets[Mathf.Clamp(targetIndex, 0, targets.Count - 1)];
                 float remainingCapacity = Mathf.Max(0f, destination.RemainingCapacity());
                 float maxTransfer = Mathf.Min(sourceMass, remainingCapacity);
                 string details = string.Format(
-                    "目标：{0}\n目标容量：{1} / {2}\n最大可转移：{3}",
-                    destination.GetProperName(),
+                    "目标容量：{0} / {1}\n最大可转移：{2}",
                     GameUtil.GetFormattedMass(destination.MassStored()),
                     GameUtil.GetFormattedMass(destination.Capacity()),
                     GameUtil.GetFormattedMass(maxTransfer));
@@ -779,21 +789,29 @@ namespace StorageNetwork.UI
                     details,
                     maxTransfer,
                     amount => TransferSelectedItem(source, itemKey, destination, amount),
-                    targets.Count > 1 ? "上一个" : null,
-                    targets.Count > 1 ? () =>
-                    {
-                        targetIndex = (targetIndex + targets.Count - 1) % targets.Count;
-                        rebuild();
-                    } : null,
-                    targets.Count > 1 ? "下一个" : null,
-                    targets.Count > 1 ? () =>
-                    {
-                        targetIndex = (targetIndex + 1) % targets.Count;
-                        rebuild();
-                    } : null);
-            };
+                    "目标：" + destination.GetProperName(),
+                    () => ShowTargetSelectionDialog(targets, destination, ShowTransferAmountDialog));
+            }
 
-            rebuild();
+            ShowTransferAmountDialog(targets[0]);
+        }
+
+        private void ShowTargetSelectionDialog(List<Storage> targets, Storage selectedTarget, System.Action<Storage> onSelected)
+        {
+            CloseModal();
+            modalRoot = CreateModalFrame("选择目标箱子", 500f, 360f, out GameObject body);
+            AddModalText(body.transform, "同一网络中的可接收目标", 14, FontStyles.Bold);
+
+            RectTransform targetContent = CreateModalScrollList(body.transform, 230f);
+
+            foreach (Storage target in targets)
+            {
+                CreateTargetSelectionRow(targetContent, target, target == selectedTarget, () => onSelected?.Invoke(target));
+            }
+
+            GameObject footer = AddHorizontalRow(body.transform, 6f);
+            AddFooterSpacer(footer.transform);
+            AddModalButton(footer.transform, "取消", 90f, () => onSelected?.Invoke(selectedTarget));
         }
 
         private void ShowStorageSettingsDialog(Storage storage)
@@ -838,10 +856,8 @@ namespace StorageNetwork.UI
             string details,
             float maxAmount,
             System.Action<float> onConfirm,
-            string secondaryLeftText = null,
-            System.Action secondaryLeftAction = null,
-            string secondaryRightText = null,
-            System.Action secondaryRightAction = null)
+            string targetButtonText = null,
+            System.Action targetButtonAction = null)
         {
             CloseModal();
             maxAmount = Mathf.Max(0f, maxAmount);
@@ -851,11 +867,18 @@ namespace StorageNetwork.UI
             TextMeshProUGUI detailsText = AddModalText(body.transform, details, 12, FontStyles.Normal);
             detailsText.color = new Color(0.82f, 0.85f, 0.88f, 1f);
 
+            if (!string.IsNullOrEmpty(targetButtonText) && targetButtonAction != null)
+            {
+                GameObject targetRow = AddHorizontalRow(body.transform, 6f);
+                AddModalButton(targetRow.transform, targetButtonText, 240f, targetButtonAction);
+                AddFooterSpacer(targetRow.transform);
+            }
+
             float currentAmount = maxAmount;
             bool updating = false;
             TextMeshProUGUI valueLabel = AddModalText(body.transform, string.Empty, 13, FontStyles.Bold);
-            Slider slider = CreateAmountSlider(body.transform, maxAmount);
-            TMP_InputField input = CreateAmountInputRow(body.transform);
+            KSlider slider = CreateAmountSlider(body.transform, maxAmount);
+            KInputTextField input = CreateAmountInputRow(body.transform);
 
             System.Action<float> setAmount = value =>
             {
@@ -893,14 +916,6 @@ namespace StorageNetwork.UI
             setAmount(currentAmount);
 
             GameObject shortcutRow = AddHorizontalRow(body.transform, 6f);
-            if (!string.IsNullOrEmpty(secondaryLeftText) && secondaryLeftAction != null)
-            {
-                AddModalButton(shortcutRow.transform, secondaryLeftText, 92f, secondaryLeftAction);
-            }
-            if (!string.IsNullOrEmpty(secondaryRightText) && secondaryRightAction != null)
-            {
-                AddModalButton(shortcutRow.transform, secondaryRightText, 92f, secondaryRightAction);
-            }
             AddFooterSpacer(shortcutRow.transform);
             AddModalButton(shortcutRow.transform, "全部", 80f, () => setAmount(maxAmount));
 
@@ -1152,6 +1167,97 @@ namespace StorageNetwork.UI
             return row;
         }
 
+        private RectTransform CreateModalScrollList(Transform parent, float height)
+        {
+            GameObject list = CreatePlainImage("TargetList", parent, new Color(0.22f, 0.25f, 0.27f, 1f));
+            list.AddComponent<LayoutElement>().preferredHeight = height;
+
+            GameObject viewport = new GameObject("Viewport");
+            viewport.transform.SetParent(list.transform, false);
+            RectTransform viewportRect = viewport.AddComponent<RectTransform>();
+            SetStretch(viewportRect, 6f, 20f, 6f, 6f);
+            viewport.AddComponent<RectMask2D>();
+
+            GameObject contentObject = new GameObject("Content");
+            contentObject.transform.SetParent(viewport.transform, false);
+            RectTransform content = contentObject.AddComponent<RectTransform>();
+            content.anchorMin = new Vector2(0f, 1f);
+            content.anchorMax = new Vector2(1f, 1f);
+            content.pivot = new Vector2(0.5f, 1f);
+            content.offsetMin = Vector2.zero;
+            content.offsetMax = Vector2.zero;
+
+            VerticalLayoutGroup layout = contentObject.AddComponent<VerticalLayoutGroup>();
+            layout.padding = new RectOffset(0, 0, 0, 0);
+            layout.spacing = 4f;
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.childForceExpandWidth = true;
+            layout.childForceExpandHeight = false;
+
+            ContentSizeFitter fitter = contentObject.AddComponent<ContentSizeFitter>();
+            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+            Scrollbar scrollbar = CreateScrollbar(list.transform);
+
+            ScrollRect scrollRect = list.AddComponent<ScrollRect>();
+            scrollRect.viewport = viewportRect;
+            scrollRect.content = content;
+            scrollRect.horizontal = false;
+            scrollRect.vertical = true;
+            scrollRect.movementType = ScrollRect.MovementType.Clamped;
+            scrollRect.scrollSensitivity = 24f;
+            scrollRect.verticalScrollbar = scrollbar;
+            scrollRect.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHideAndExpandViewport;
+            scrollRect.verticalScrollbarSpacing = 2f;
+            list.AddComponent<ScrollWheelBlocker>();
+            return content;
+        }
+
+        private void CreateTargetSelectionRow(Transform parent, Storage target, bool selected, System.Action onClick)
+        {
+            Color baseColor = selected
+                ? new Color(0.33f, 0.39f, 0.45f, 1f)
+                : new Color(0.25f, 0.29f, 0.34f, 1f);
+            GameObject row = CreateStyledButton("TargetButton", parent, string.Empty, onClick, baseColor);
+            row.AddComponent<LayoutElement>().preferredHeight = 30f;
+
+            HorizontalLayoutGroup layout = row.AddComponent<HorizontalLayoutGroup>();
+            layout.padding = new RectOffset(8, 8, 0, 0);
+            layout.spacing = 8f;
+            layout.childAlignment = TextAnchor.MiddleCenter;
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.childForceExpandWidth = false;
+            layout.childForceExpandHeight = false;
+
+            TextMeshProUGUI name = CreateText("Name", row.transform, target.GetProperName(), 12, TextAlignmentOptions.MidlineLeft);
+            name.color = Color.white;
+            name.textWrappingMode = TextWrappingModes.NoWrap;
+            name.overflowMode = TextOverflowModes.Ellipsis;
+            name.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+
+            TextMeshProUGUI remaining = CreateText(
+                "Remaining",
+                row.transform,
+                "剩余 " + GameUtil.GetFormattedMass(Mathf.Max(0f, target.RemainingCapacity())),
+                11,
+                TextAlignmentOptions.MidlineRight);
+            remaining.color = new Color(0.88f, 0.90f, 0.92f, 1f);
+            remaining.textWrappingMode = TextWrappingModes.NoWrap;
+            remaining.gameObject.AddComponent<LayoutElement>().preferredWidth = 120f;
+
+            TextMeshProUGUI capacity = CreateText(
+                "Capacity",
+                row.transform,
+                string.Format("{0} / {1}", GameUtil.GetFormattedMass(target.MassStored()), GameUtil.GetFormattedMass(target.Capacity())),
+                11,
+                TextAlignmentOptions.MidlineRight);
+            capacity.color = new Color(0.78f, 0.82f, 0.85f, 1f);
+            capacity.textWrappingMode = TextWrappingModes.NoWrap;
+            capacity.gameObject.AddComponent<LayoutElement>().preferredWidth = 150f;
+        }
+
         private static void AddFooterSpacer(Transform parent)
         {
             GameObject spacer = new GameObject("Spacer");
@@ -1218,22 +1324,23 @@ namespace StorageNetwork.UI
             refreshLabel();
         }
 
-        private static Slider CreateAmountSlider(Transform parent, float maxAmount)
+        private static KSlider CreateAmountSlider(Transform parent, float maxAmount)
         {
             GameObject sliderObject = new GameObject("AmountSlider");
+            sliderObject.SetActive(false);
             sliderObject.transform.SetParent(parent, false);
-            RectTransform sliderRect = sliderObject.AddComponent<RectTransform>();
+            sliderObject.AddComponent<RectTransform>();
             sliderObject.AddComponent<LayoutElement>().preferredHeight = 24f;
 
-            GameObject background = CreatePlainImage("Background", sliderObject.transform, new Color(0.12f, 0.14f, 0.18f, 1f));
-            Stretch(background.GetComponent<RectTransform>(), 0f, 8f);
+            GameObject background = CreatePlainImage("Background", sliderObject.transform, new Color(0.10f, 0.11f, 0.13f, 1f));
+            Stretch(background.GetComponent<RectTransform>(), 0f, 9f);
 
             GameObject fillArea = new GameObject("Fill Area");
             fillArea.transform.SetParent(sliderObject.transform, false);
             RectTransform fillAreaRect = fillArea.AddComponent<RectTransform>();
             Stretch(fillAreaRect, 3f, 8f);
 
-            GameObject fill = CreatePlainImage("Fill", fillArea.transform, new Color(0.55f, 0.67f, 0.76f, 1f));
+            GameObject fill = CreatePlainImage("Fill", fillArea.transform, new Color(0.58f, 0.22f, 0.43f, 1f));
             Stretch(fill.GetComponent<RectTransform>(), 0f, 0f);
 
             GameObject handleArea = new GameObject("Handle Slide Area");
@@ -1241,11 +1348,11 @@ namespace StorageNetwork.UI
             RectTransform handleAreaRect = handleArea.AddComponent<RectTransform>();
             Stretch(handleAreaRect, 8f, 0f);
 
-            GameObject handle = CreatePlainImage("Handle", handleArea.transform, new Color(0.90f, 0.92f, 0.95f, 1f));
+            GameObject handle = CreatePlainImage("Handle", handleArea.transform, new Color(0.66f, 0.37f, 0.55f, 1f));
             RectTransform handleRect = handle.GetComponent<RectTransform>();
-            handleRect.sizeDelta = new Vector2(14f, 22f);
+            handleRect.sizeDelta = new Vector2(16f, 18f);
 
-            Slider slider = sliderObject.AddComponent<Slider>();
+            KSlider slider = sliderObject.AddComponent<KSlider>();
             slider.minValue = 0f;
             slider.maxValue = Mathf.Max(0.001f, maxAmount);
             slider.value = maxAmount;
@@ -1253,10 +1360,11 @@ namespace StorageNetwork.UI
             slider.handleRect = handleRect;
             slider.targetGraphic = handle.GetComponent<Image>();
             slider.direction = Slider.Direction.LeftToRight;
+            sliderObject.SetActive(true);
             return slider;
         }
 
-        private static TMP_InputField CreateAmountInputRow(Transform parent)
+        private static KInputTextField CreateAmountInputRow(Transform parent)
         {
             GameObject row = AddHorizontalRow(parent, 8f);
             TextMeshProUGUI label = CreateText("AmountInputLabel", row.transform, "输入数量", 12, TextAlignmentOptions.MidlineLeft);
@@ -1265,9 +1373,10 @@ namespace StorageNetwork.UI
             return CreateAmountInput(row.transform);
         }
 
-        private static TMP_InputField CreateAmountInput(Transform parent)
+        private static KInputTextField CreateAmountInput(Transform parent)
         {
             GameObject inputObject = CreatePlainImage("AmountInput", parent, new Color(0.14f, 0.16f, 0.20f, 1f));
+            ApplySprite(inputObject.GetComponent<Image>(), "InputFieldBackground");
             LayoutElement inputLayout = inputObject.AddComponent<LayoutElement>();
             inputLayout.preferredWidth = 150f;
             inputLayout.preferredHeight = 28f;
@@ -1276,7 +1385,7 @@ namespace StorageNetwork.UI
             text.color = Color.white;
             Stretch(text.rectTransform(), 8f, 3f);
 
-            TMP_InputField input = inputObject.AddComponent<TMP_InputField>();
+            KInputTextField input = inputObject.AddComponent<KInputTextField>();
             input.textComponent = text;
             input.contentType = TMP_InputField.ContentType.DecimalNumber;
             input.lineType = TMP_InputField.LineType.SingleLine;
@@ -1411,13 +1520,18 @@ namespace StorageNetwork.UI
 
         private static GameObject CreateGameButton(string name, Transform parent, string text, System.Action onClick)
         {
-            Color baseColor = new Color(0.34f, 0.38f, 0.42f, 1f);
+            return CreateStyledButton(name, parent, text, onClick, new Color(0.20f, 0.23f, 0.33f, 1f));
+        }
+
+        private static GameObject CreateStyledButton(string name, Transform parent, string text, System.Action onClick, Color baseColor)
+        {
             GameObject buttonObject = new GameObject(name);
             buttonObject.transform.SetParent(parent, false);
             buttonObject.AddComponent<RectTransform>();
 
             KImage image = buttonObject.AddComponent<KImage>();
             image.type = Image.Type.Sliced;
+            ApplySprite(image, "skin_button_action");
             image.colorStyleSetting = CreateColorStyle(baseColor, Lighten(baseColor, 0.07f), Darken(baseColor, 0.08f));
             image.ColorState = KImage.ColorSelector.Inactive;
 
@@ -1428,13 +1542,19 @@ namespace StorageNetwork.UI
             button.onClick += () => onClick?.Invoke();
 
             Outline outline = buttonObject.AddComponent<Outline>();
-            outline.effectColor = new Color(0.14f, 0.16f, 0.19f, 0.9f);
+            outline.effectColor = new Color(0.58f, 0.62f, 0.70f, 0.95f);
             outline.effectDistance = new Vector2(1f, -1f);
 
-            TextMeshProUGUI label = CreateText("Label", buttonObject.transform, text, 12, TextAlignmentOptions.Center);
-            label.fontStyle = FontStyles.Bold;
-            label.color = new Color(0.94f, 0.96f, 0.98f, 1f);
-            Stretch(label.rectTransform(), 2f, 0f);
+            if (!string.IsNullOrEmpty(text))
+            {
+                TextMeshProUGUI label = CreateText("Label", buttonObject.transform, text, 12, TextAlignmentOptions.Center);
+                label.fontStyle = FontStyles.Bold;
+                label.color = new Color(0.94f, 0.96f, 0.98f, 1f);
+                label.textWrappingMode = TextWrappingModes.NoWrap;
+                label.overflowMode = TextOverflowModes.Ellipsis;
+                Stretch(label.rectTransform(), 4f, 0f);
+            }
+
             return buttonObject;
         }
 
@@ -1444,6 +1564,24 @@ namespace StorageNetwork.UI
             {
                 Debug.Log("[StorageNetworkPanel] " + message);
             }
+        }
+
+        private static bool ApplySprite(Image image, string spriteName)
+        {
+            if (image == null || string.IsNullOrEmpty(spriteName))
+            {
+                return false;
+            }
+
+            Sprite sprite = Assets.GetSprite(spriteName);
+            if (sprite == null)
+            {
+                return false;
+            }
+
+            image.sprite = sprite;
+            image.type = Image.Type.Sliced;
+            return true;
         }
 
         private static ColorStyleSetting CreateColorStyle(Color normal, Color hover, Color pressed)
@@ -1489,6 +1627,7 @@ namespace StorageNetwork.UI
 
             Image background = scrollbarObject.AddComponent<Image>();
             background.color = new Color(0.48f, 0.49f, 0.50f, 1f);
+            ApplySprite(background, "build_menu_scrollbar_frame");
 
             GameObject handleObject = new GameObject("Handle");
             handleObject.transform.SetParent(scrollbarObject.transform, false);
@@ -1500,6 +1639,7 @@ namespace StorageNetwork.UI
 
             Image handleImage = handleObject.AddComponent<Image>();
             handleImage.color = new Color(0.22f, 0.25f, 0.34f, 1f);
+            ApplySprite(handleImage, "build_menu_scrollbar_inner");
 
             Scrollbar scrollbar = scrollbarObject.AddComponent<Scrollbar>();
             scrollbar.direction = Scrollbar.Direction.BottomToTop;
