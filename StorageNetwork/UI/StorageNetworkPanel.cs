@@ -14,7 +14,7 @@ namespace StorageNetwork.UI
     public sealed class StorageNetworkPanel : MonoBehaviour, IInputHandler
     {
         private static StorageNetworkPanel instance;
-
+        private static Dictionary<string, Sprite> spriteCache;
         private StorageNetworkHub targetHub;
         private bool overviewMode;
         private TextMeshProUGUI summaryText;
@@ -145,6 +145,7 @@ namespace StorageNetwork.UI
         private void BuildWindow(Transform parent)
         {
             GameObject window = CreateBox("Window", parent, new Color(0.78f, 0.79f, 0.80f, 0.98f));
+            ApplyThinBoxSprite(window.GetComponent<Image>());
             windowRect = window.GetComponent<RectTransform>();
             windowRect.anchorMin = new Vector2(0.5f, 0.5f);
             windowRect.anchorMax = new Vector2(0.5f, 0.5f);
@@ -513,7 +514,6 @@ namespace StorageNetwork.UI
             UnityEngine.Object.DestroyImmediate(header.GetComponent<Image>());
             KImage headerImage = header.AddComponent<KImage>();
             headerImage.type = Image.Type.Sliced;
-            ApplySprite(headerImage, "plan_menu_heading_bg_gray");
             headerImage.colorStyleSetting = CreateColorStyle(backgroundColor, Lighten(backgroundColor, 0.08f), Darken(backgroundColor, 0.08f));
             headerImage.ColorState = KImage.ColorSelector.Inactive;
 
@@ -532,22 +532,7 @@ namespace StorageNetwork.UI
             headerLayout.childForceExpandWidth = false;
             headerLayout.childForceExpandHeight = true;
 
-            GameObject arrowObject = new GameObject("Arrow");
-            arrowObject.transform.SetParent(header.transform, false);
-            arrowObject.AddComponent<RectTransform>();
-            LayoutElement arrowLayout = arrowObject.AddComponent<LayoutElement>();
-            arrowLayout.preferredWidth = 20f;
-            arrowLayout.preferredHeight = 18f;
-            Image arrow = arrowObject.AddComponent<Image>();
-            arrow.raycastTarget = false;
-            arrow.preserveAspect = true;
-            ApplySprite(arrow, expanded ? "stresspanel_icon_expand_arrow_up" : "stresspanel_icon_expand_arrow_right");
-            if (arrow.sprite == null)
-            {
-                TextMeshProUGUI fallbackArrow = CreateText("FallbackArrow", arrowObject.transform, expanded ? "▼" : "▶", 14, TextAlignmentOptions.Center);
-                fallbackArrow.color = new Color(0.1f, 0.11f, 0.12f, 1f);
-                Stretch(fallbackArrow.rectTransform(), 0f, 0f);
-            }
+            CreateFoldoutIcon(header.transform, expanded);
 
             TextMeshProUGUI name = CreateText("Name", header.transform, title, fontSize, TextAlignmentOptions.MidlineLeft);
             name.color = new Color(0.12f, 0.13f, 0.13f, 1f);
@@ -790,23 +775,23 @@ namespace StorageNetwork.UI
                     maxTransfer,
                     amount => TransferSelectedItem(source, itemKey, destination, amount),
                     "目标：" + destination.GetProperName(),
-                    () => ShowTargetSelectionDialog(targets, destination, ShowTransferAmountDialog));
+                    () => ShowTargetSelectionDialog(source, targets, destination, ShowTransferAmountDialog));
             }
 
             ShowTransferAmountDialog(targets[0]);
         }
 
-        private void ShowTargetSelectionDialog(List<Storage> targets, Storage selectedTarget, System.Action<Storage> onSelected)
+        private void ShowTargetSelectionDialog(Storage source, List<Storage> targets, Storage selectedTarget, System.Action<Storage> onSelected)
         {
             CloseModal();
-            modalRoot = CreateModalFrame("选择目标箱子", 500f, 360f, out GameObject body);
+            modalRoot = CreateModalFrame("选择目标箱子", 620f, 430f, out GameObject body);
             AddModalText(body.transform, "同一网络中的可接收目标", 14, FontStyles.Bold);
 
-            RectTransform targetContent = CreateModalScrollList(body.transform, 230f);
+            RectTransform targetContent = CreateModalScrollList(body.transform, 300f);
 
             foreach (Storage target in targets)
             {
-                CreateTargetSelectionRow(targetContent, target, target == selectedTarget, () => onSelected?.Invoke(target));
+                CreateTargetSelectionRow(targetContent, source, target, target == selectedTarget, () => onSelected?.Invoke(target));
             }
 
             GameObject footer = AddHorizontalRow(body.transform, 6f);
@@ -1108,6 +1093,7 @@ namespace StorageNetwork.UI
             overlayImage.color = new Color(0f, 0f, 0f, 0.34f);
 
             GameObject dialog = CreateBox("Dialog", overlay.transform, new Color(0.22f, 0.24f, 0.28f, 0.98f));
+            ApplyThinBoxSprite(dialog.GetComponent<Image>());
             RectTransform dialogRect = dialog.GetComponent<RectTransform>();
             dialogRect.anchorMin = new Vector2(0.5f, 0.5f);
             dialogRect.anchorMax = new Vector2(0.5f, 0.5f);
@@ -1175,7 +1161,7 @@ namespace StorageNetwork.UI
             GameObject viewport = new GameObject("Viewport");
             viewport.transform.SetParent(list.transform, false);
             RectTransform viewportRect = viewport.AddComponent<RectTransform>();
-            SetStretch(viewportRect, 6f, 20f, 6f, 6f);
+            SetStretch(viewportRect, 6f, 34f, 6f, 6f);
             viewport.AddComponent<RectMask2D>();
 
             GameObject contentObject = new GameObject("Content");
@@ -1214,13 +1200,10 @@ namespace StorageNetwork.UI
             return content;
         }
 
-        private void CreateTargetSelectionRow(Transform parent, Storage target, bool selected, System.Action onClick)
+        private void CreateTargetSelectionRow(Transform parent, Storage source, Storage target, bool selected, System.Action onClick)
         {
-            Color baseColor = selected
-                ? new Color(0.33f, 0.39f, 0.45f, 1f)
-                : new Color(0.25f, 0.29f, 0.34f, 1f);
-            GameObject row = CreateStyledButton("TargetButton", parent, string.Empty, onClick, baseColor);
-            row.AddComponent<LayoutElement>().preferredHeight = 30f;
+            GameObject row = CreateStyledButton("TargetButton", parent, string.Empty, onClick, selected ? KleiPinkStyle() : KleiBlueStyle());
+            row.AddComponent<LayoutElement>().preferredHeight = 32f;
 
             HorizontalLayoutGroup layout = row.AddComponent<HorizontalLayoutGroup>();
             layout.padding = new RectOffset(8, 8, 0, 0);
@@ -1245,7 +1228,23 @@ namespace StorageNetwork.UI
                 TextAlignmentOptions.MidlineRight);
             remaining.color = new Color(0.88f, 0.90f, 0.92f, 1f);
             remaining.textWrappingMode = TextWrappingModes.NoWrap;
-            remaining.gameObject.AddComponent<LayoutElement>().preferredWidth = 120f;
+            remaining.gameObject.AddComponent<LayoutElement>().preferredWidth = 115f;
+
+            GameObject sourceLocateButton = CreateGameButton("LocateSourceButton", row.transform, string.Empty, () => FocusStorage(source));
+            LayoutElement sourceLocateLayout = sourceLocateButton.AddComponent<LayoutElement>();
+            sourceLocateLayout.preferredWidth = 28f;
+            sourceLocateLayout.preferredHeight = 22f;
+            AddButtonIcon(sourceLocateButton.transform, "action_follow_cam", "源");
+            ToolTip sourceTooltip = sourceLocateButton.AddComponent<ToolTip>();
+            sourceTooltip.toolTip = "定位当前箱子";
+
+            GameObject targetLocateButton = CreateGameButton("LocateTargetButton", row.transform, string.Empty, () => FocusStorage(target));
+            LayoutElement targetLocateLayout = targetLocateButton.AddComponent<LayoutElement>();
+            targetLocateLayout.preferredWidth = 28f;
+            targetLocateLayout.preferredHeight = 22f;
+            AddButtonIcon(targetLocateButton.transform, "action_follow_cam", "目");
+            ToolTip targetTooltip = targetLocateButton.AddComponent<ToolTip>();
+            targetTooltip.toolTip = "定位目标箱子";
 
             TextMeshProUGUI capacity = CreateText(
                 "Capacity",
@@ -1255,7 +1254,21 @@ namespace StorageNetwork.UI
                 TextAlignmentOptions.MidlineRight);
             capacity.color = new Color(0.78f, 0.82f, 0.85f, 1f);
             capacity.textWrappingMode = TextWrappingModes.NoWrap;
-            capacity.gameObject.AddComponent<LayoutElement>().preferredWidth = 150f;
+            capacity.gameObject.AddComponent<LayoutElement>().preferredWidth = 125f;
+        }
+
+        private static void FocusStorage(Storage storage)
+        {
+            if (storage == null || SelectTool.Instance == null)
+            {
+                return;
+            }
+
+            KSelectable selectable = storage.GetComponent<KSelectable>();
+            if (selectable != null)
+            {
+                SelectTool.Instance.SelectAndFocus(storage.transform.position, selectable, Vector3.zero);
+            }
         }
 
         private static void AddFooterSpacer(Transform parent)
@@ -1271,8 +1284,61 @@ namespace StorageNetwork.UI
             GameObject button = CreateGameButton("ModalButton", parent, text, onClick);
             LayoutElement layout = button.AddComponent<LayoutElement>();
             layout.preferredWidth = width;
-            layout.preferredHeight = 26f;
+            layout.preferredHeight = 24f;
             return button;
+        }
+
+        private static void CreateFoldoutIcon(Transform parent, bool expanded)
+        {
+            GameObject iconObject = new GameObject("FoldoutIcon");
+            iconObject.transform.SetParent(parent, false);
+            iconObject.AddComponent<RectTransform>();
+            LayoutElement layout = iconObject.AddComponent<LayoutElement>();
+            layout.minWidth = 22f;
+            layout.preferredWidth = 22f;
+            layout.minHeight = 22f;
+            layout.preferredHeight = 22f;
+
+            Image icon = iconObject.AddComponent<Image>();
+            icon.raycastTarget = false;
+            icon.preserveAspect = true;
+            Sprite sprite = GetSpriteByName(expanded ? "iconDown" : "iconRight");
+            if (sprite != null)
+            {
+                icon.sprite = sprite;
+                icon.type = Image.Type.Simple;
+                icon.color = new Color(0.12f, 0.13f, 0.13f, 1f);
+                return;
+            }
+
+            UnityEngine.Object.DestroyImmediate(icon);
+            TextMeshProUGUI arrow = CreateText("Arrow", iconObject.transform, expanded ? "▼" : "▶", 16, TextAlignmentOptions.Center);
+            arrow.color = new Color(0.1f, 0.11f, 0.12f, 1f);
+            Stretch(arrow.rectTransform(), 0f, 0f);
+        }
+
+        private static void AddButtonIcon(Transform parent, string spriteName, string fallbackText)
+        {
+            GameObject iconObject = new GameObject("Icon");
+            iconObject.transform.SetParent(parent, false);
+            RectTransform iconRect = iconObject.AddComponent<RectTransform>();
+            Stretch(iconRect, 5f, 3f);
+
+            Sprite sprite = GetSpriteByName(spriteName);
+            if (sprite != null)
+            {
+                Image icon = iconObject.AddComponent<Image>();
+                icon.sprite = sprite;
+                icon.type = Image.Type.Simple;
+                icon.preserveAspect = true;
+                icon.raycastTarget = false;
+                icon.color = new Color(0.92f, 0.94f, 0.96f, 1f);
+                return;
+            }
+
+            TextMeshProUGUI text = CreateText("FallbackText", iconObject.transform, fallbackText, 10, TextAlignmentOptions.Center);
+            text.color = new Color(0.92f, 0.94f, 0.96f, 1f);
+            Stretch(text.rectTransform(), 0f, 0f);
         }
 
         private void AddSettingToggleRow(Transform parent, string label, bool initialValue, System.Action<bool> onChanged)
@@ -1284,24 +1350,24 @@ namespace StorageNetwork.UI
                 TextMeshProUGUI text = stateButton?.GetComponentInChildren<TextMeshProUGUI>();
                 if (text != null)
                 {
-                    text.text = current ? "开" : "关";
+                    text.text = current ? "开" : string.Empty;
                 }
 
                 KImage image = stateButton?.GetComponent<KImage>();
                 if (image != null)
                 {
                     Color baseColor = current
-                        ? new Color(0.42f, 0.55f, 0.48f, 1f)
-                        : new Color(0.30f, 0.33f, 0.37f, 1f);
-                    image.colorStyleSetting = CreateColorStyle(baseColor, Lighten(baseColor, 0.07f), Darken(baseColor, 0.08f));
+                        ? new Color(0.43f, 0.58f, 0.49f, 1f)
+                        : new Color(0.23f, 0.27f, 0.31f, 1f);
+                    image.colorStyleSetting = CreateColorStyle(baseColor, Lighten(baseColor, 0.05f), Darken(baseColor, 0.05f));
                 }
             };
 
-            GameObject row = CreatePlainImage("SettingRow", parent, new Color(0.27f, 0.31f, 0.33f, 1f));
-            row.AddComponent<LayoutElement>().preferredHeight = 32f;
+            GameObject row = CreatePlainImage("SettingRow", parent, new Color(0.26f, 0.30f, 0.32f, 1f));
+            row.AddComponent<LayoutElement>().preferredHeight = 28f;
 
             HorizontalLayoutGroup layout = row.AddComponent<HorizontalLayoutGroup>();
-            layout.padding = new RectOffset(10, 8, 0, 0);
+            layout.padding = new RectOffset(10, 10, 0, 0);
             layout.spacing = 8f;
             layout.childAlignment = TextAnchor.MiddleCenter;
             layout.childControlWidth = true;
@@ -1313,7 +1379,7 @@ namespace StorageNetwork.UI
             labelText.color = new Color(0.93f, 0.95f, 0.95f, 1f);
             labelText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
 
-            stateButton = AddModalButton(row.transform, string.Empty, 58f, () =>
+            stateButton = CreateGameButton("SettingToggle", row.transform, string.Empty, () =>
             {
                 current = !current;
                 onChanged?.Invoke(current);
@@ -1321,6 +1387,9 @@ namespace StorageNetwork.UI
                 targetHub?.RefreshNetwork();
                 lastListSignature = null;
             });
+            LayoutElement buttonLayout = stateButton.AddComponent<LayoutElement>();
+            buttonLayout.preferredWidth = 42f;
+            buttonLayout.preferredHeight = 18f;
             refreshLabel();
         }
 
@@ -1330,15 +1399,15 @@ namespace StorageNetwork.UI
             sliderObject.SetActive(false);
             sliderObject.transform.SetParent(parent, false);
             sliderObject.AddComponent<RectTransform>();
-            sliderObject.AddComponent<LayoutElement>().preferredHeight = 24f;
+            sliderObject.AddComponent<LayoutElement>().preferredHeight = 20f;
 
             GameObject background = CreatePlainImage("Background", sliderObject.transform, new Color(0.10f, 0.11f, 0.13f, 1f));
-            Stretch(background.GetComponent<RectTransform>(), 0f, 9f);
+            Stretch(background.GetComponent<RectTransform>(), 0f, 6f);
 
             GameObject fillArea = new GameObject("Fill Area");
             fillArea.transform.SetParent(sliderObject.transform, false);
             RectTransform fillAreaRect = fillArea.AddComponent<RectTransform>();
-            Stretch(fillAreaRect, 3f, 8f);
+            Stretch(fillAreaRect, 3f, 6f);
 
             GameObject fill = CreatePlainImage("Fill", fillArea.transform, new Color(0.58f, 0.22f, 0.43f, 1f));
             Stretch(fill.GetComponent<RectTransform>(), 0f, 0f);
@@ -1350,7 +1419,7 @@ namespace StorageNetwork.UI
 
             GameObject handle = CreatePlainImage("Handle", handleArea.transform, new Color(0.66f, 0.37f, 0.55f, 1f));
             RectTransform handleRect = handle.GetComponent<RectTransform>();
-            handleRect.sizeDelta = new Vector2(16f, 18f);
+            handleRect.sizeDelta = new Vector2(12f, 16f);
 
             KSlider slider = sliderObject.AddComponent<KSlider>();
             slider.minValue = 0f;
@@ -1376,10 +1445,9 @@ namespace StorageNetwork.UI
         private static KInputTextField CreateAmountInput(Transform parent)
         {
             GameObject inputObject = CreatePlainImage("AmountInput", parent, new Color(0.14f, 0.16f, 0.20f, 1f));
-            ApplySprite(inputObject.GetComponent<Image>(), "InputFieldBackground");
             LayoutElement inputLayout = inputObject.AddComponent<LayoutElement>();
             inputLayout.preferredWidth = 150f;
-            inputLayout.preferredHeight = 28f;
+            inputLayout.preferredHeight = 24f;
 
             TextMeshProUGUI text = CreateText("Text", inputObject.transform, string.Empty, 13, TextAlignmentOptions.MidlineLeft);
             text.color = Color.white;
@@ -1447,6 +1515,12 @@ namespace StorageNetwork.UI
                 }
 
                 e.Consumed = true;
+                return;
+            }
+
+            if (e.TryConsume(global::Action.Escape))
+            {
+                Close();
                 return;
             }
 
@@ -1520,10 +1594,10 @@ namespace StorageNetwork.UI
 
         private static GameObject CreateGameButton(string name, Transform parent, string text, System.Action onClick)
         {
-            return CreateStyledButton(name, parent, text, onClick, new Color(0.20f, 0.23f, 0.33f, 1f));
+            return CreateStyledButton(name, parent, text, onClick, KleiBlueStyle());
         }
 
-        private static GameObject CreateStyledButton(string name, Transform parent, string text, System.Action onClick, Color baseColor)
+        private static GameObject CreateStyledButton(string name, Transform parent, string text, System.Action onClick, ColorStyleSetting style)
         {
             GameObject buttonObject = new GameObject(name);
             buttonObject.transform.SetParent(parent, false);
@@ -1531,8 +1605,8 @@ namespace StorageNetwork.UI
 
             KImage image = buttonObject.AddComponent<KImage>();
             image.type = Image.Type.Sliced;
-            ApplySprite(image, "skin_button_action");
-            image.colorStyleSetting = CreateColorStyle(baseColor, Lighten(baseColor, 0.07f), Darken(baseColor, 0.08f));
+            ApplyThinButtonSprite(image);
+            image.colorStyleSetting = style;
             image.ColorState = KImage.ColorSelector.Inactive;
 
             KButton button = buttonObject.AddComponent<KButton>();
@@ -1541,14 +1615,10 @@ namespace StorageNetwork.UI
             button.soundPlayer = new ButtonSoundPlayer();
             button.onClick += () => onClick?.Invoke();
 
-            Outline outline = buttonObject.AddComponent<Outline>();
-            outline.effectColor = new Color(0.58f, 0.62f, 0.70f, 0.95f);
-            outline.effectDistance = new Vector2(1f, -1f);
-
             if (!string.IsNullOrEmpty(text))
             {
-                TextMeshProUGUI label = CreateText("Label", buttonObject.transform, text, 12, TextAlignmentOptions.Center);
-                label.fontStyle = FontStyles.Bold;
+                TextMeshProUGUI label = CreateText("Label", buttonObject.transform, text, 11, TextAlignmentOptions.Center);
+                label.fontStyle = FontStyles.Normal;
                 label.color = new Color(0.94f, 0.96f, 0.98f, 1f);
                 label.textWrappingMode = TextWrappingModes.NoWrap;
                 label.overflowMode = TextOverflowModes.Ellipsis;
@@ -1556,6 +1626,68 @@ namespace StorageNetwork.UI
             }
 
             return buttonObject;
+        }
+
+        private static void ApplyThinButtonSprite(KImage image)
+        {
+            if (image == null)
+            {
+                return;
+            }
+
+            Sprite sprite = GetSpriteByName("web_button");
+            if (sprite == null)
+            {
+                return;
+            }
+
+            image.sprite = sprite;
+            image.type = Image.Type.Sliced;
+            image.pixelsPerUnitMultiplier = 2f;
+            image.fillCenter = true;
+        }
+
+        private static void ApplyThinBoxSprite(Image image)
+        {
+            if (image == null)
+            {
+                return;
+            }
+
+            Sprite sprite = GetSpriteByName("web_box");
+            if (sprite == null)
+            {
+                return;
+            }
+
+            image.sprite = sprite;
+            image.type = Image.Type.Sliced;
+            image.pixelsPerUnitMultiplier = 2f;
+            image.fillCenter = true;
+        }
+
+        private static Sprite GetSpriteByName(string spriteName)
+        {
+            Sprite sprite = Assets.GetSprite(spriteName);
+            if (sprite != null)
+            {
+                return sprite;
+            }
+
+            if (spriteCache == null)
+            {
+                spriteCache = new Dictionary<string, Sprite>();
+                foreach (Sprite resourceSprite in Resources.FindObjectsOfTypeAll<Sprite>())
+                {
+                    string name = resourceSprite != null ? resourceSprite.name : null;
+                    if (!string.IsNullOrEmpty(name) && !spriteCache.ContainsKey(name))
+                    {
+                        spriteCache.Add(name, resourceSprite);
+                    }
+                }
+            }
+
+            return spriteCache.TryGetValue(spriteName, out sprite) ? sprite : null;
         }
 
         private static void LogDebug(string message)
@@ -1566,22 +1698,28 @@ namespace StorageNetwork.UI
             }
         }
 
-        private static bool ApplySprite(Image image, string spriteName)
+        private static ColorStyleSetting KleiBlueStyle()
         {
-            if (image == null || string.IsNullOrEmpty(spriteName))
-            {
-                return false;
-            }
+            ColorStyleSetting style = ScriptableObject.CreateInstance<ColorStyleSetting>();
+            style.activeColor = new Color(0.34f, 0.37f, 0.47f, 1f);
+            style.inactiveColor = new Color(0.20f, 0.23f, 0.30f, 1f);
+            style.hoverColor = new Color(0.28f, 0.31f, 0.40f, 1f);
+            style.disabledColor = new Color(0.4156863f, 0.4117647f, 0.4f);
+            style.disabledActiveColor = new Color(0.625f, 0.6158088f, 0.5882353f);
+            style.disabledhoverColor = new Color(0.5f, 0.4898898f, 0.4595588f);
+            return style;
+        }
 
-            Sprite sprite = Assets.GetSprite(spriteName);
-            if (sprite == null)
-            {
-                return false;
-            }
-
-            image.sprite = sprite;
-            image.type = Image.Type.Sliced;
-            return true;
+        private static ColorStyleSetting KleiPinkStyle()
+        {
+            ColorStyleSetting style = ScriptableObject.CreateInstance<ColorStyleSetting>();
+            style.activeColor = new Color(0.7941176f, 0.4496107f, 0.6242238f);
+            style.inactiveColor = new Color(0.5294118f, 0.2724914f, 0.4009516f);
+            style.hoverColor = new Color(0.6176471f, 0.3315311f, 0.4745891f);
+            style.disabledColor = new Color(0.4156863f, 0.4117647f, 0.4f);
+            style.disabledActiveColor = Color.clear;
+            style.disabledhoverColor = new Color(0.5f, 0.5f, 0.5f);
+            return style;
         }
 
         private static ColorStyleSetting CreateColorStyle(Color normal, Color hover, Color pressed)
@@ -1627,7 +1765,6 @@ namespace StorageNetwork.UI
 
             Image background = scrollbarObject.AddComponent<Image>();
             background.color = new Color(0.48f, 0.49f, 0.50f, 1f);
-            ApplySprite(background, "build_menu_scrollbar_frame");
 
             GameObject handleObject = new GameObject("Handle");
             handleObject.transform.SetParent(scrollbarObject.transform, false);
@@ -1639,7 +1776,6 @@ namespace StorageNetwork.UI
 
             Image handleImage = handleObject.AddComponent<Image>();
             handleImage.color = new Color(0.22f, 0.25f, 0.34f, 1f);
-            ApplySprite(handleImage, "build_menu_scrollbar_inner");
 
             Scrollbar scrollbar = scrollbarObject.AddComponent<Scrollbar>();
             scrollbar.direction = Scrollbar.Direction.BottomToTop;
