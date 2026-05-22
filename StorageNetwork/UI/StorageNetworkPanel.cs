@@ -5,11 +5,12 @@ using StorageNetwork.Components;
 using StorageNetwork.Core;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace StorageNetwork.UI
 {
-    public sealed class StorageNetworkPanel : MonoBehaviour
+    public sealed class StorageNetworkPanel : MonoBehaviour, IInputHandler
     {
         private static StorageNetworkPanel instance;
 
@@ -17,8 +18,14 @@ namespace StorageNetwork.UI
         private bool overviewMode;
         private TextMeshProUGUI summaryText;
         private RectTransform listContent;
+        private RectTransform windowRect;
+        private KInputController registeredController;
         private readonly Dictionary<Storage, bool> expandedStorages = new Dictionary<Storage, bool>();
         private float refreshElapsed;
+
+        public string handlerName => gameObject.name;
+
+        public KInputHandler inputHandler { get; set; }
 
         public static void Show(StorageNetworkHub hub)
         {
@@ -101,6 +108,16 @@ namespace StorageNetwork.UI
             Refresh();
         }
 
+        private void OnEnable()
+        {
+            RegisterInputHandler();
+        }
+
+        private void OnDisable()
+        {
+            UnregisterInputHandler();
+        }
+
         private void Update()
         {
             if (targetHub == null && !overviewMode)
@@ -119,7 +136,7 @@ namespace StorageNetwork.UI
         private void BuildWindow(Transform parent)
         {
             GameObject window = CreateBox("Window", parent, new Color(0.78f, 0.79f, 0.80f, 0.98f));
-            RectTransform windowRect = window.GetComponent<RectTransform>();
+            windowRect = window.GetComponent<RectTransform>();
             windowRect.anchorMin = new Vector2(0.5f, 0.5f);
             windowRect.anchorMax = new Vector2(0.5f, 0.5f);
             windowRect.pivot = new Vector2(0.5f, 0.5f);
@@ -190,6 +207,8 @@ namespace StorageNetwork.UI
             scrollRect.verticalScrollbar = scrollbar;
             scrollRect.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHideAndExpandViewport;
             scrollRect.verticalScrollbarSpacing = 4f;
+
+            list.AddComponent<ScrollWheelBlocker>();
         }
 
         private void Refresh()
@@ -312,7 +331,9 @@ namespace StorageNetwork.UI
             headerLayout.padding = new RectOffset(10, 10, 0, 0);
             headerLayout.spacing = 8f;
             headerLayout.childAlignment = TextAnchor.MiddleCenter;
+            headerLayout.childControlWidth = true;
             headerLayout.childControlHeight = true;
+            headerLayout.childForceExpandWidth = false;
             headerLayout.childForceExpandHeight = true;
 
             TextMeshProUGUI arrow = CreateText("Arrow", header.transform, expanded ? "▼" : "▶", 14, TextAlignmentOptions.Center);
@@ -344,7 +365,7 @@ namespace StorageNetwork.UI
 
             GameObject details = CreateBox("Details", row.transform, new Color(0.82f, 0.82f, 0.77f, 1f));
             VerticalLayoutGroup detailsLayout = details.AddComponent<VerticalLayoutGroup>();
-            detailsLayout.padding = new RectOffset(38, 12, 8, 8);
+            detailsLayout.padding = new RectOffset(12, 12, 8, 8);
             detailsLayout.spacing = 3f;
             detailsLayout.childControlHeight = true;
             detailsLayout.childControlWidth = true;
@@ -363,14 +384,7 @@ namespace StorageNetwork.UI
                 foreach (IGrouping<string, GameObject> group in items.GroupBy(GetStoredItemName).OrderBy(group => group.Key))
                 {
                     float mass = group.Sum(item => item.GetComponent<PrimaryElement>()?.Mass ?? 0f);
-                    TextMeshProUGUI itemText = CreateText(
-                        "Item",
-                        details.transform,
-                        string.Format("{0}    {1}", group.Key, GameUtil.GetFormattedMass(mass)),
-                        12,
-                        TextAlignmentOptions.MidlineLeft);
-                    itemText.color = new Color(0.18f, 0.19f, 0.19f, 1f);
-                    itemText.gameObject.AddComponent<LayoutElement>().preferredHeight = 22f;
+                    CreateStoredItemRow(details.transform, group.Key, GameUtil.GetFormattedMass(mass), group.FirstOrDefault());
                 }
             }
 
@@ -405,9 +419,123 @@ namespace StorageNetwork.UI
             return item != null ? item.GetProperName() : string.Empty;
         }
 
+        private static void CreateStoredItemRow(Transform parent, string itemName, string formattedMass, GameObject representative)
+        {
+            GameObject row = new GameObject("ItemRow");
+            row.transform.SetParent(parent, false);
+            row.AddComponent<RectTransform>();
+            row.AddComponent<LayoutElement>().preferredHeight = 24f;
+
+            HorizontalLayoutGroup layout = row.AddComponent<HorizontalLayoutGroup>();
+            layout.spacing = 6f;
+            layout.childAlignment = TextAnchor.MiddleLeft;
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.childForceExpandWidth = false;
+            layout.childForceExpandHeight = false;
+
+            GameObject iconObject = new GameObject("Icon");
+            iconObject.transform.SetParent(row.transform, false);
+            iconObject.AddComponent<RectTransform>();
+            iconObject.AddComponent<LayoutElement>().preferredWidth = 22f;
+
+            Image icon = iconObject.AddComponent<Image>();
+            icon.raycastTarget = false;
+            icon.preserveAspect = true;
+            SetStoredItemIcon(icon, representative);
+
+            TextMeshProUGUI itemText = CreateText(
+                "Text",
+                row.transform,
+                string.Format("{0}    {1}", itemName, formattedMass),
+                12,
+                TextAlignmentOptions.MidlineLeft);
+            itemText.color = new Color(0.18f, 0.19f, 0.19f, 1f);
+            itemText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        }
+
+        private static void SetStoredItemIcon(Image icon, GameObject item)
+        {
+            if (icon == null || item == null)
+            {
+                return;
+            }
+
+            Sprite sprite = null;
+            Color tint = Color.white;
+
+            KPrefabID prefabId = item.GetComponent<KPrefabID>();
+            if (prefabId != null)
+            {
+                var uiSprite = Def.GetUISprite(prefabId.PrefabID(), "ui", false);
+                sprite = uiSprite.first;
+                tint = uiSprite.second;
+            }
+
+            if (sprite == null)
+            {
+                PrimaryElement primaryElement = item.GetComponent<PrimaryElement>();
+                if (primaryElement != null)
+                {
+                    var uiSprite = Def.GetUISprite(primaryElement.ElementID.CreateTag(), "ui", false);
+                    sprite = uiSprite.first;
+                    tint = uiSprite.second;
+                }
+            }
+
+            icon.sprite = sprite;
+            icon.color = sprite != null ? tint : Color.clear;
+        }
+
         private void Close()
         {
             gameObject.SetActive(false);
+        }
+
+        public void OnKeyDown(KButtonEvent e)
+        {
+            if (e.Consumed || !IsMouseOverWindow())
+            {
+                return;
+            }
+
+            if (!e.TryConsume(global::Action.ZoomIn))
+            {
+                e.TryConsume(global::Action.ZoomOut);
+            }
+        }
+
+        private bool IsMouseOverWindow()
+        {
+            if (windowRect == null)
+            {
+                return false;
+            }
+
+            Vector2 localMousePosition = windowRect.InverseTransformPoint(KInputManager.GetMousePos());
+            return windowRect.rect.Contains(localMousePosition);
+        }
+
+        private void RegisterInputHandler()
+        {
+            if (registeredController != null || KInputManager.currentController == null)
+            {
+                return;
+            }
+
+            registeredController = KInputManager.currentController;
+            KInputHandler.Add(registeredController, this, 100);
+        }
+
+        private void UnregisterInputHandler()
+        {
+            if (registeredController == null)
+            {
+                return;
+            }
+
+            KInputHandler.Remove(registeredController, this);
+            registeredController = null;
         }
 
         private static GameObject CreateBox(string name, Transform parent, Color color)
@@ -499,6 +627,14 @@ namespace StorageNetwork.UI
             rectTransform.pivot = new Vector2(0.5f, 1f);
             rectTransform.offsetMin = new Vector2(left, -top - height);
             rectTransform.offsetMax = new Vector2(-right, -top);
+        }
+
+        private sealed class ScrollWheelBlocker : MonoBehaviour, IScrollHandler
+        {
+            public void OnScroll(PointerEventData eventData)
+            {
+                eventData.Use();
+            }
         }
     }
 }
