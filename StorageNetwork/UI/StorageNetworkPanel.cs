@@ -76,7 +76,7 @@ namespace StorageNetwork.UI
             rootRect.offsetMax = Vector2.zero;
 
             Image blocker = root.AddComponent<Image>();
-            blocker.color = new Color(0f, 0f, 0f, 0.22f);
+            blocker.color = new Color(0f, 0f, 0f, 0.08f);
 
             StorageNetworkPanel panel = root.AddComponent<StorageNetworkPanel>();
             panel.BuildWindow(root.transform);
@@ -108,25 +108,26 @@ namespace StorageNetwork.UI
 
         private void BuildWindow(Transform parent)
         {
-            GameObject window = CreateBox("Window", parent, new Color(0.12f, 0.13f, 0.15f, 0.98f));
+            GameObject window = CreateBox("Window", parent, new Color(0.57f, 0.59f, 0.64f, 0.98f));
             RectTransform windowRect = window.GetComponent<RectTransform>();
-            windowRect.anchorMin = new Vector2(0.5f, 0.5f);
-            windowRect.anchorMax = new Vector2(0.5f, 0.5f);
-            windowRect.pivot = new Vector2(0.5f, 0.5f);
-            windowRect.sizeDelta = new Vector2(500f, 350f);
+            windowRect.anchorMin = new Vector2(0.5f, 1f);
+            windowRect.anchorMax = new Vector2(0.5f, 1f);
+            windowRect.pivot = new Vector2(0.5f, 1f);
+            windowRect.anchoredPosition = new Vector2(0f, -96f);
+            windowRect.sizeDelta = new Vector2(920f, 410f);
 
             VerticalLayoutGroup layout = window.AddComponent<VerticalLayoutGroup>();
-            layout.padding = new RectOffset(6, 6, 6, 6);
-            layout.spacing = 6f;
+            layout.padding = new RectOffset(6, 6, 4, 6);
+            layout.spacing = 8f;
             layout.childControlHeight = true;
             layout.childControlWidth = true;
             layout.childForceExpandHeight = false;
             layout.childForceExpandWidth = true;
 
-            GameObject header = CreateBox("Header", window.transform, new Color(0.43f, 0.20f, 0.32f, 1f));
+            GameObject header = CreateBox("Header", window.transform, new Color(0.43f, 0.20f, 0.34f, 1f));
             LayoutElement headerLayoutElement = header.AddComponent<LayoutElement>();
-            headerLayoutElement.minHeight = 34f;
-            headerLayoutElement.preferredHeight = 34f;
+            headerLayoutElement.minHeight = 28f;
+            headerLayoutElement.preferredHeight = 28f;
             HorizontalLayoutGroup headerLayout = header.AddComponent<HorizontalLayoutGroup>();
             headerLayout.padding = new RectOffset(10, 4, 0, 0);
             headerLayout.spacing = 6f;
@@ -134,30 +135,40 @@ namespace StorageNetwork.UI
             headerLayout.childForceExpandHeight = true;
             headerLayout.childAlignment = TextAnchor.MiddleCenter;
 
-            TextMeshProUGUI title = CreateText("Title", header.transform, "储存网络", 16, TextAlignmentOptions.MidlineLeft);
+            TextMeshProUGUI title = CreateText("Title", header.transform, "储存网络", 14, TextAlignmentOptions.MidlineLeft);
             title.fontStyle = FontStyles.Bold;
             title.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
 
             GameObject closeButton = CreateButton("CloseButton", header.transform, "X", Close);
             LayoutElement closeLayout = closeButton.AddComponent<LayoutElement>();
-            closeLayout.preferredWidth = 30f;
-            closeLayout.preferredHeight = 30f;
+            closeLayout.preferredWidth = 26f;
+            closeLayout.preferredHeight = 24f;
 
-            GameObject summary = CreateBox("Summary", window.transform, new Color(0.22f, 0.23f, 0.24f, 0.98f));
+            GameObject content = CreateBox("Content", window.transform, new Color(0.88f, 0.89f, 0.91f, 0.98f));
+            content.AddComponent<LayoutElement>().flexibleHeight = 1f;
+            VerticalLayoutGroup contentLayout = content.AddComponent<VerticalLayoutGroup>();
+            contentLayout.padding = new RectOffset(8, 8, 8, 8);
+            contentLayout.spacing = 8f;
+            contentLayout.childControlHeight = true;
+            contentLayout.childControlWidth = true;
+            contentLayout.childForceExpandHeight = false;
+            contentLayout.childForceExpandWidth = true;
+
+            GameObject summary = CreateBox("Summary", content.transform, new Color(0.36f, 0.42f, 0.47f, 1f));
             LayoutElement summaryLayout = summary.AddComponent<LayoutElement>();
-            summaryLayout.minHeight = 66f;
-            summaryLayout.preferredHeight = 66f;
+            summaryLayout.minHeight = 54f;
+            summaryLayout.preferredHeight = 54f;
             summaryText = CreateText("SummaryText", summary.transform, string.Empty, 14, TextAlignmentOptions.TopLeft);
             summaryText.lineSpacing = 4f;
-            Stretch(summaryText.rectTransform(), 10f, 7f);
+            Stretch(summaryText.rectTransform(), 12f, 7f);
 
-            GameObject list = CreateBox("List", window.transform, new Color(0.68f, 0.67f, 0.62f, 0.98f));
+            GameObject list = CreateBox("List", content.transform, new Color(0.80f, 0.79f, 0.74f, 1f));
             list.AddComponent<LayoutElement>().flexibleHeight = 1f;
-            listText = CreateText("ListText", list.transform, string.Empty, 14, TextAlignmentOptions.TopLeft);
+            listText = CreateText("ListText", list.transform, string.Empty, 13, TextAlignmentOptions.TopLeft);
             listText.color = new Color(0.12f, 0.13f, 0.13f, 1f);
-            listText.lineSpacing = 8f;
+            listText.lineSpacing = 10f;
             listText.textWrappingMode = TextWrappingModes.Normal;
-            Stretch(listText.rectTransform(), 12f, 10f);
+            Stretch(listText.rectTransform(), 14f, 12f);
         }
 
         private void Refresh()
@@ -190,7 +201,7 @@ namespace StorageNetwork.UI
             foreach (StorageNetworkStorageInfo storage in targetHub.ConnectedStorages)
             {
                 float percent = storage.CapacityKg > 0f ? storage.StoredKg / storage.CapacityKg : 0f;
-                builder.Append("<b>");
+                builder.Append("<mark=#ecebe4aa><b> ");
                 builder.Append(storage.Name);
                 builder.Append("</b>    ");
                 builder.Append(GameUtil.GetFormattedMass(storage.StoredKg));
@@ -198,7 +209,7 @@ namespace StorageNetwork.UI
                 builder.Append(GameUtil.GetFormattedMass(storage.CapacityKg));
                 builder.Append("  ");
                 builder.Append(Mathf.RoundToInt(percent * 100f));
-                builder.AppendLine("%");
+                builder.AppendLine("% </mark>");
                 builder.AppendLine();
             }
 
@@ -243,7 +254,7 @@ namespace StorageNetwork.UI
             foreach (StorageNetworkHub hub in hubs)
             {
                 float percent = hub.TotalCapacityKg > 0f ? hub.TotalStoredKg / hub.TotalCapacityKg : 0f;
-                builder.Append("<b>");
+                builder.Append("<mark=#ecebe4aa><b> ");
                 builder.Append(hub.GetProperName());
                 builder.Append("</b>    ");
                 builder.Append(GameUtil.GetFormattedMass(hub.TotalStoredKg));
@@ -253,7 +264,7 @@ namespace StorageNetwork.UI
                 builder.Append(Mathf.RoundToInt(percent * 100f));
                 builder.Append("%  ");
                 builder.Append(hub.ConnectedStorages.Count);
-                builder.AppendLine(" 个储存");
+                builder.AppendLine(" 个储存 </mark>");
                 builder.AppendLine();
             }
 
