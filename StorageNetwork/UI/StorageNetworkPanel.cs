@@ -20,8 +20,13 @@ namespace StorageNetwork.UI
         private RectTransform listContent;
         private RectTransform windowRect;
         private KInputController registeredController;
+        private string selectedItemKey;
+        private Storage selectedItemStorage;
+        private readonly Dictionary<string, bool> expandedStorageTypes = new Dictionary<string, bool>();
         private readonly Dictionary<Storage, bool> expandedStorages = new Dictionary<Storage, bool>();
         private float refreshElapsed;
+        private string lastListSignature;
+        private const bool DebugLogging = true;
 
         public string handlerName => gameObject.name;
 
@@ -98,14 +103,16 @@ namespace StorageNetwork.UI
         {
             targetHub = hub;
             overviewMode = false;
-            Refresh();
+            lastListSignature = null;
+            Refresh(true);
         }
 
         private void SetOverview()
         {
             targetHub = null;
             overviewMode = true;
-            Refresh();
+            lastListSignature = null;
+            Refresh(true);
         }
 
         private void OnEnable()
@@ -126,7 +133,7 @@ namespace StorageNetwork.UI
             }
 
             refreshElapsed += Time.unscaledDeltaTime;
-            if (refreshElapsed >= 0.5f)
+            if (refreshElapsed >= 1f)
             {
                 refreshElapsed = 0f;
                 Refresh();
@@ -150,7 +157,7 @@ namespace StorageNetwork.UI
             title.fontStyle = FontStyles.Bold;
             Stretch(title.rectTransform(), 12f, 0f);
 
-            GameObject closeButton = CreateButton("CloseButton", header.transform, "X", Close);
+            GameObject closeButton = CreateGameButton("CloseButton", header.transform, "X", Close);
             RectTransform closeRect = closeButton.GetComponent<RectTransform>();
             closeRect.anchorMin = new Vector2(1f, 0.5f);
             closeRect.anchorMax = new Vector2(1f, 0.5f);
@@ -211,13 +218,13 @@ namespace StorageNetwork.UI
             list.AddComponent<ScrollWheelBlocker>();
         }
 
-        private void Refresh()
+        private void Refresh(bool forceRebuild = false)
         {
             if (targetHub == null || summaryText == null || listContent == null)
             {
                 if (overviewMode)
                 {
-                    RefreshOverview();
+                    RefreshOverview(forceRebuild);
                 }
 
                 return;
@@ -233,25 +240,62 @@ namespace StorageNetwork.UI
 
             if (targetHub.ConnectedStorages.Count == 0)
             {
-                ClearList();
-                CreateInfoRow("未连接储存建筑", "把储存建筑贴近储存网络线缆，或让线缆经过建筑相邻格。");
+                if (forceRebuild || lastListSignature != "empty")
+                {
+                    lastListSignature = "empty";
+                    ClearList();
+                    CreateInfoRow("未连接储存建筑", "把储存建筑贴近储存网络线缆，或让线缆经过建筑相邻格。");
+                }
+
                 return;
             }
 
-            RebuildStorageRows(targetHub.ConnectedStorages);
+            string listSignature = BuildListSignature(targetHub.ConnectedStorages);
+            if (forceRebuild || listSignature != lastListSignature)
+            {
+                lastListSignature = listSignature;
+                RebuildStorageRows(targetHub.ConnectedStorages);
+            }
         }
 
         private void RebuildStorageRows(IEnumerable<StorageNetworkStorageInfo> storages)
         {
             ClearList();
 
-            foreach (StorageNetworkStorageInfo storage in targetHub.ConnectedStorages)
+            foreach (IGrouping<string, StorageNetworkStorageInfo> group in storages.GroupBy(GetStorageTypeKey).OrderBy(group => GetStorageTypeName(group.First())))
             {
-                CreateStorageRow(storage);
+                CreateStorageTypeRow(group.ToList());
             }
+
+            RebuildLayout();
         }
 
-        private void RefreshOverview()
+        private static string BuildListSignature(IEnumerable<StorageNetworkStorageInfo> storages)
+        {
+            return string.Join("|", storages
+                .OrderBy(GetStorageTypeKey)
+                .ThenBy(storage => storage.Storage != null ? storage.Storage.GetInstanceID() : 0)
+                .Select(storage =>
+                {
+                    string items = string.Join(",", storage.Storage.items
+                        .Where(item => item != null)
+                        .GroupBy(GetStoredItemKey)
+                        .OrderBy(group => group.Key)
+                        .Select(group => string.Format("{0}:{1}:{2:0.###}",
+                            group.Key,
+                            group.Count(),
+                            group.Sum(item => item.GetComponent<PrimaryElement>()?.Mass ?? 0f))));
+
+                    return string.Format("{0}:{1}:{2:0.###}:{3:0.###}:{4}",
+                        GetStorageTypeKey(storage),
+                        storage.Storage != null ? storage.Storage.GetInstanceID() : 0,
+                        storage.StoredKg,
+                        storage.CapacityKg,
+                        items);
+                }));
+        }
+
+        private void RefreshOverview(bool forceRebuild = false)
         {
             if (summaryText == null || listContent == null)
             {
@@ -281,11 +325,29 @@ namespace StorageNetwork.UI
 
             if (hubs.Length == 0)
             {
-                ClearList();
-                CreateInfoRow("未建造储存网络核心", string.Empty);
+                if (forceRebuild || lastListSignature != "overview-empty")
+                {
+                    lastListSignature = "overview-empty";
+                    ClearList();
+                    CreateInfoRow("未建造储存网络核心", string.Empty);
+                }
+
                 return;
             }
 
+            string overviewSignature = "overview|" + string.Join("|", hubs.Select(hub =>
+                string.Format("{0}:{1:0.###}:{2:0.###}:{3}",
+                    hub.GetInstanceID(),
+                    hub.TotalStoredKg,
+                    hub.TotalCapacityKg,
+                    hub.ConnectedStorages.Count)));
+
+            if (!forceRebuild && overviewSignature == lastListSignature)
+            {
+                return;
+            }
+
+            lastListSignature = overviewSignature;
             ClearList();
             foreach (StorageNetworkHub hub in hubs)
             {
@@ -298,9 +360,65 @@ namespace StorageNetwork.UI
                         Mathf.RoundToInt(percent * 100f),
                         hub.ConnectedStorages.Count));
             }
+
+            RebuildLayout();
         }
 
-        private void CreateStorageRow(StorageNetworkStorageInfo storageInfo)
+        private void CreateStorageTypeRow(List<StorageNetworkStorageInfo> storages)
+        {
+            if (storages == null || storages.Count == 0)
+            {
+                return;
+            }
+
+            string typeKey = GetStorageTypeKey(storages[0]);
+            string typeName = GetStorageTypeName(storages[0]);
+            bool expanded = expandedStorageTypes.TryGetValue(typeKey, out bool isExpanded) && isExpanded;
+            float storedKg = storages.Sum(storage => storage.StoredKg);
+            float capacityKg = storages.Sum(storage => storage.CapacityKg);
+            float percent = capacityKg > 0f ? storedKg / capacityKg : 0f;
+
+            GameObject row = CreateBox("StorageTypeRow", listContent, new Color(0.86f, 0.85f, 0.80f, 1f));
+            AddVerticalContainer(row, 0f, 0, 0, 0, 0);
+
+            GameObject header = CreateFoldoutHeader(
+                row.transform,
+                expanded,
+                string.Format("{0}  x{1}", typeName, storages.Count),
+                string.Format("{0} / {1}  {2}%",
+                    GameUtil.GetFormattedMass(storedKg),
+                    GameUtil.GetFormattedMass(capacityKg),
+                    Mathf.RoundToInt(percent * 100f)),
+                new Color(0.66f, 0.67f, 0.62f, 1f),
+                14,
+                300f,
+                () =>
+                {
+                    expandedStorageTypes[typeKey] = !expanded;
+                    Refresh(true);
+                });
+
+            header.GetComponent<HorizontalLayoutGroup>().padding = new RectOffset(10, 10, 0, 0);
+
+            if (!expanded)
+            {
+                row.AddComponent<LayoutElement>().preferredHeight = 34f;
+                return;
+            }
+
+            GameObject storageList = CreateBox("Storages", row.transform, new Color(0.80f, 0.80f, 0.75f, 1f));
+            AddVerticalContainer(storageList, 4f, 18, 0, 4, 4);
+            storageList.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+            foreach (StorageNetworkStorageInfo storage in storages.OrderBy(storage => storage.Name))
+            {
+                CreateStorageRow(storage, storageList.transform);
+            }
+
+            row.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        }
+
+        private void CreateStorageRow(StorageNetworkStorageInfo storageInfo, Transform parent)
         {
             Storage storage = storageInfo.Storage;
             if (storage == null)
@@ -311,51 +429,25 @@ namespace StorageNetwork.UI
             bool expanded = expandedStorages.TryGetValue(storage, out bool isExpanded) && isExpanded;
             float percent = storageInfo.CapacityKg > 0f ? storageInfo.StoredKg / storageInfo.CapacityKg : 0f;
 
-            GameObject row = CreateBox("StorageRow", listContent, new Color(0.88f, 0.87f, 0.82f, 1f));
-            VerticalLayoutGroup rowLayout = row.AddComponent<VerticalLayoutGroup>();
-            rowLayout.childControlHeight = true;
-            rowLayout.childControlWidth = true;
-            rowLayout.childForceExpandHeight = false;
-            rowLayout.childForceExpandWidth = true;
+            GameObject row = CreateBox("StorageRow", parent, new Color(0.88f, 0.87f, 0.82f, 1f));
+            AddVerticalContainer(row, 0f, 0, 0, 0, 0);
 
-            GameObject header = CreateBox("Header", row.transform, new Color(0.72f, 0.72f, 0.68f, 1f));
-            header.AddComponent<LayoutElement>().preferredHeight = 34f;
-            Button button = header.AddComponent<Button>();
-            button.onClick.AddListener(() =>
-            {
-                expandedStorages[storage] = !expanded;
-                Refresh();
-            });
-
-            HorizontalLayoutGroup headerLayout = header.AddComponent<HorizontalLayoutGroup>();
-            headerLayout.padding = new RectOffset(10, 10, 0, 0);
-            headerLayout.spacing = 8f;
-            headerLayout.childAlignment = TextAnchor.MiddleCenter;
-            headerLayout.childControlWidth = true;
-            headerLayout.childControlHeight = true;
-            headerLayout.childForceExpandWidth = false;
-            headerLayout.childForceExpandHeight = true;
-
-            TextMeshProUGUI arrow = CreateText("Arrow", header.transform, expanded ? "▼" : "▶", 14, TextAlignmentOptions.Center);
-            arrow.color = new Color(0.1f, 0.11f, 0.12f, 1f);
-            arrow.gameObject.AddComponent<LayoutElement>().preferredWidth = 20f;
-
-            TextMeshProUGUI name = CreateText("Name", header.transform, storageInfo.Name, 13, TextAlignmentOptions.MidlineLeft);
-            name.color = new Color(0.12f, 0.13f, 0.13f, 1f);
-            name.fontStyle = FontStyles.Bold;
-            name.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
-
-            TextMeshProUGUI amount = CreateText(
-                "Amount",
-                header.transform,
+            CreateFoldoutHeader(
+                row.transform,
+                expanded,
+                storageInfo.Name,
                 string.Format("{0} / {1}  {2}%",
                     GameUtil.GetFormattedMass(storageInfo.StoredKg),
                     GameUtil.GetFormattedMass(storageInfo.CapacityKg),
                     Mathf.RoundToInt(percent * 100f)),
+                new Color(0.72f, 0.72f, 0.68f, 1f),
                 13,
-                TextAlignmentOptions.MidlineRight);
-            amount.color = new Color(0.28f, 0.29f, 0.29f, 1f);
-            amount.gameObject.AddComponent<LayoutElement>().preferredWidth = 260f;
+                260f,
+                () =>
+                {
+                    expandedStorages[storage] = !expanded;
+                    Refresh(true);
+                });
 
             if (!expanded)
             {
@@ -381,15 +473,83 @@ namespace StorageNetwork.UI
             }
             else
             {
-                foreach (IGrouping<string, GameObject> group in items.GroupBy(GetStoredItemName).OrderBy(group => group.Key))
+                foreach (IGrouping<string, GameObject> group in items.GroupBy(GetStoredItemKey).OrderBy(group => GetStoredItemName(group.FirstOrDefault())))
                 {
                     float mass = group.Sum(item => item.GetComponent<PrimaryElement>()?.Mass ?? 0f);
-                    CreateStoredItemRow(details.transform, group.Key, GameUtil.GetFormattedMass(mass), group.FirstOrDefault());
+                    CreateStoredItemRow(
+                        storage,
+                        details.transform,
+                        group.Key,
+                        GetStoredItemName(group.FirstOrDefault()),
+                        GameUtil.GetFormattedMass(mass),
+                        group.FirstOrDefault());
                 }
             }
 
             ContentSizeFitter fitter = details.AddComponent<ContentSizeFitter>();
             fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            row.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        }
+
+        private GameObject CreateFoldoutHeader(
+            Transform parent,
+            bool expanded,
+            string title,
+            string amountText,
+            Color backgroundColor,
+            int fontSize,
+            float amountWidth,
+            System.Action onClick)
+        {
+            GameObject header = CreateBox("Header", parent, backgroundColor);
+            header.AddComponent<LayoutElement>().preferredHeight = 34f;
+
+            UnityEngine.Object.DestroyImmediate(header.GetComponent<Image>());
+            KImage headerImage = header.AddComponent<KImage>();
+            headerImage.type = Image.Type.Sliced;
+            headerImage.colorStyleSetting = CreateColorStyle(backgroundColor, Lighten(backgroundColor, 0.08f), Darken(backgroundColor, 0.08f));
+            headerImage.ColorState = KImage.ColorSelector.Inactive;
+
+            KButton button = header.AddComponent<KButton>();
+            button.bgImage = headerImage;
+            button.additionalKImages = new KImage[0];
+            button.soundPlayer = new ButtonSoundPlayer();
+            button.onClick += () => onClick?.Invoke();
+
+            HorizontalLayoutGroup headerLayout = header.AddComponent<HorizontalLayoutGroup>();
+            headerLayout.padding = new RectOffset(10, 10, 0, 0);
+            headerLayout.spacing = 8f;
+            headerLayout.childAlignment = TextAnchor.MiddleCenter;
+            headerLayout.childControlWidth = true;
+            headerLayout.childControlHeight = true;
+            headerLayout.childForceExpandWidth = false;
+            headerLayout.childForceExpandHeight = true;
+
+            TextMeshProUGUI arrow = CreateText("Arrow", header.transform, expanded ? "▼" : "▶", 14, TextAlignmentOptions.Center);
+            arrow.color = new Color(0.1f, 0.11f, 0.12f, 1f);
+            arrow.gameObject.AddComponent<LayoutElement>().preferredWidth = 20f;
+
+            TextMeshProUGUI name = CreateText("Name", header.transform, title, fontSize, TextAlignmentOptions.MidlineLeft);
+            name.color = new Color(0.12f, 0.13f, 0.13f, 1f);
+            name.fontStyle = FontStyles.Bold;
+            name.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+
+            TextMeshProUGUI amount = CreateText("Amount", header.transform, amountText, fontSize, TextAlignmentOptions.MidlineRight);
+            amount.color = new Color(0.28f, 0.29f, 0.29f, 1f);
+            amount.gameObject.AddComponent<LayoutElement>().preferredWidth = amountWidth;
+
+            return header;
+        }
+
+        private static void AddVerticalContainer(GameObject gameObject, float spacing, int left, int right, int top, int bottom)
+        {
+            VerticalLayoutGroup layout = gameObject.AddComponent<VerticalLayoutGroup>();
+            layout.padding = new RectOffset(left, right, top, bottom);
+            layout.spacing = spacing;
+            layout.childControlHeight = true;
+            layout.childControlWidth = true;
+            layout.childForceExpandHeight = false;
+            layout.childForceExpandWidth = true;
         }
 
         private void CreateInfoRow(string title, string details)
@@ -399,6 +559,18 @@ namespace StorageNetwork.UI
             TextMeshProUGUI text = CreateText("Text", row.transform, string.IsNullOrEmpty(details) ? title : title + "\n" + details, 13, TextAlignmentOptions.MidlineLeft);
             text.color = new Color(0.18f, 0.19f, 0.19f, 1f);
             Stretch(text.rectTransform(), 12f, 6f);
+            RebuildLayout();
+        }
+
+        private void RebuildLayout()
+        {
+            if (listContent == null)
+            {
+                return;
+            }
+
+            Canvas.ForceUpdateCanvases();
+            LayoutRebuilder.ForceRebuildLayoutImmediate(listContent);
         }
 
         private void ClearList()
@@ -419,7 +591,7 @@ namespace StorageNetwork.UI
             return item != null ? item.GetProperName() : string.Empty;
         }
 
-        private static void CreateStoredItemRow(Transform parent, string itemName, string formattedMass, GameObject representative)
+        private void CreateStoredItemRow(Storage storage, Transform parent, string itemKey, string itemName, string formattedMass, GameObject representative)
         {
             GameObject row = new GameObject("ItemRow");
             row.transform.SetParent(parent, false);
@@ -433,6 +605,31 @@ namespace StorageNetwork.UI
             layout.childControlHeight = true;
             layout.childForceExpandWidth = false;
             layout.childForceExpandHeight = false;
+
+            bool selected = selectedItemStorage == storage && selectedItemKey == itemKey;
+            KImage background = row.AddComponent<KImage>();
+            background.color = selected ? new Color(0.62f, 0.67f, 0.70f, 1f) : Color.clear;
+            background.colorStyleSetting = CreateColorStyle(
+                background.color,
+                new Color(0.68f, 0.72f, 0.74f, 1f),
+                new Color(0.54f, 0.59f, 0.62f, 1f));
+
+            KButton rowButton = row.AddComponent<KButton>();
+            rowButton.bgImage = background;
+            rowButton.additionalKImages = new KImage[0];
+            rowButton.soundPlayer = new ButtonSoundPlayer();
+            rowButton.onClick += () =>
+            {
+                selectedItemStorage = storage;
+                selectedItemKey = itemKey;
+                LogDebug(string.Format(
+                    "Select item row storage={0} itemKey={1} itemName={2} mass={3}",
+                    storage != null ? storage.gameObject.GetProperName() : "null",
+                    itemKey,
+                    itemName,
+                    formattedMass));
+                Refresh(true);
+            };
 
             GameObject iconObject = new GameObject("Icon");
             iconObject.transform.SetParent(row.transform, false);
@@ -452,6 +649,16 @@ namespace StorageNetwork.UI
                 TextAlignmentOptions.MidlineLeft);
             itemText.color = new Color(0.18f, 0.19f, 0.19f, 1f);
             itemText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+
+            if (selected)
+            {
+                GameObject dropButton = CreateGameButton("DropButton", row.transform, "丢弃", () => DropSelectedItem(storage, itemKey));
+                LayoutElement dropLayout = dropButton.AddComponent<LayoutElement>();
+                dropLayout.preferredWidth = 72f;
+                dropLayout.preferredHeight = 22f;
+                ToolTip tooltip = dropButton.AddComponent<ToolTip>();
+                tooltip.toolTip = "丢弃这个储存建筑中的目标物品";
+            }
         }
 
         private static void SetStoredItemIcon(Image icon, GameObject item)
@@ -485,6 +692,114 @@ namespace StorageNetwork.UI
 
             icon.sprite = sprite;
             icon.color = sprite != null ? tint : Color.clear;
+        }
+
+        private void DropSelectedItem(Storage storage, string itemKey)
+        {
+            LogDebug(string.Format(
+                "DropSelectedItem begin storage={0} storageGO={1} itemKey={2}",
+                storage != null ? storage.GetInstanceID().ToString() : "null",
+                storage != null ? storage.gameObject.GetProperName() : "null",
+                itemKey));
+
+            List<GameObject> items = FindStoredItems(storage, itemKey);
+            LogDebug(string.Format("DropSelectedItem matched items={0}", items.Count));
+            if (storage == null || items.Count == 0)
+            {
+                selectedItemStorage = null;
+                selectedItemKey = null;
+                LogDebug("DropSelectedItem abort: missing storage or items");
+                Refresh(true);
+                return;
+            }
+
+            Tag dropTag = GetStoredItemTag(items[0]);
+            float mass = items.Sum(item => item.GetComponent<PrimaryElement>()?.Mass ?? 0f);
+            LogDebug(string.Format(
+                "DropSelectedItem resolved tag={0} tagValid={1} mass={2:0.###} firstItem={3}",
+                dropTag,
+                dropTag.IsValid,
+                mass,
+                items[0] != null ? items[0].GetProperName() : "null"));
+
+            bool dropped = dropTag.IsValid && mass > 0f && storage.DropSome(dropTag, mass, false, false, default(Vector3), true, true);
+            LogDebug(string.Format("DropSelectedItem DropSome result={0} remainingItems={1}", dropped, storage.items.Count));
+
+            if (!dropped)
+            {
+                foreach (GameObject item in items.ToList())
+                {
+                    GameObject droppedItem = storage.Drop(item, true);
+                    LogDebug(string.Format(
+                        "DropSelectedItem fallback Drop item={0} result={1}",
+                        item != null ? item.GetProperName() : "null",
+                        droppedItem != null ? droppedItem.GetProperName() : "null"));
+                    if (droppedItem != null)
+                    {
+                        droppedItem.transform.SetPosition(storage.transform.GetPosition());
+                    }
+                }
+            }
+
+            selectedItemStorage = null;
+            selectedItemKey = null;
+            targetHub?.RefreshNetwork();
+            lastListSignature = null;
+            Refresh(true);
+            LogDebug("DropSelectedItem end");
+        }
+
+        private static List<GameObject> FindStoredItems(Storage storage, string itemKey)
+        {
+            return storage?.items
+                .Where(item => item != null && GetStoredItemKey(item) == itemKey)
+                .ToList() ?? new List<GameObject>();
+        }
+
+        private static Tag GetStoredItemTag(GameObject item)
+        {
+            if (item == null)
+            {
+                return Tag.Invalid;
+            }
+
+            KPrefabID prefabId = item.GetComponent<KPrefabID>();
+            if (prefabId != null)
+            {
+                return prefabId.PrefabID();
+            }
+
+            PrimaryElement primaryElement = item.GetComponent<PrimaryElement>();
+            return primaryElement != null ? primaryElement.ElementID.CreateTag() : Tag.Invalid;
+        }
+
+        private static string GetStoredItemKey(GameObject item)
+        {
+            if (item == null)
+            {
+                return string.Empty;
+            }
+
+            KPrefabID prefabId = item.GetComponent<KPrefabID>();
+            if (prefabId != null)
+            {
+                return prefabId.PrefabID().ToString();
+            }
+
+            PrimaryElement primaryElement = item.GetComponent<PrimaryElement>();
+            return primaryElement != null ? primaryElement.ElementID.ToString() : item.name;
+        }
+
+        private static string GetStorageTypeKey(StorageNetworkStorageInfo storageInfo)
+        {
+            KPrefabID prefabId = storageInfo.Storage?.GetComponent<KPrefabID>();
+            return prefabId != null ? prefabId.PrefabID().ToString() : GetStorageTypeName(storageInfo);
+        }
+
+        private static string GetStorageTypeName(StorageNetworkStorageInfo storageInfo)
+        {
+            GameObject gameObject = storageInfo.Storage?.gameObject;
+            return gameObject != null ? gameObject.GetProperName() : storageInfo.Name;
         }
 
         private void Close()
@@ -562,14 +877,70 @@ namespace StorageNetwork.UI
             return textComponent;
         }
 
-        private static GameObject CreateButton(string name, Transform parent, string text, System.Action onClick)
+        private static GameObject CreateGameButton(string name, Transform parent, string text, System.Action onClick)
         {
-            GameObject buttonObject = CreateBox(name, parent, new Color(0.2f, 0.22f, 0.3f, 1f));
-            Button button = buttonObject.AddComponent<Button>();
-            button.onClick.AddListener(() => onClick?.Invoke());
-            TextMeshProUGUI label = CreateText("Label", buttonObject.transform, text, 16, TextAlignmentOptions.Center);
-            Stretch(label.rectTransform(), 0f, 0f);
+            Color baseColor = new Color(0.16f, 0.18f, 0.26f, 1f);
+            GameObject buttonObject = new GameObject(name);
+            buttonObject.transform.SetParent(parent, false);
+            buttonObject.AddComponent<RectTransform>();
+
+            KImage image = buttonObject.AddComponent<KImage>();
+            image.type = Image.Type.Sliced;
+            image.colorStyleSetting = CreateColorStyle(baseColor, Lighten(baseColor, 0.1f), Darken(baseColor, 0.1f));
+            image.ColorState = KImage.ColorSelector.Inactive;
+
+            KButton button = buttonObject.AddComponent<KButton>();
+            button.bgImage = image;
+            button.additionalKImages = new KImage[0];
+            button.soundPlayer = new ButtonSoundPlayer();
+            button.onClick += () => onClick?.Invoke();
+
+            Outline outline = buttonObject.AddComponent<Outline>();
+            outline.effectColor = new Color(0.63f, 0.66f, 0.74f, 1f);
+            outline.effectDistance = new Vector2(1f, -1f);
+
+            TextMeshProUGUI label = CreateText("Label", buttonObject.transform, text, 14, TextAlignmentOptions.Center);
+            label.fontStyle = FontStyles.Bold;
+            Stretch(label.rectTransform(), 2f, 0f);
             return buttonObject;
+        }
+
+        private static void LogDebug(string message)
+        {
+            if (DebugLogging)
+            {
+                Debug.Log("[StorageNetworkPanel] " + message);
+            }
+        }
+
+        private static ColorStyleSetting CreateColorStyle(Color normal, Color hover, Color pressed)
+        {
+            ColorStyleSetting style = ScriptableObject.CreateInstance<ColorStyleSetting>();
+            style.inactiveColor = normal;
+            style.hoverColor = hover;
+            style.activeColor = pressed;
+            style.disabledColor = Darken(normal, 0.08f);
+            style.disabledActiveColor = style.disabledColor;
+            style.disabledhoverColor = style.disabledColor;
+            return style;
+        }
+
+        private static Color Lighten(Color color, float amount)
+        {
+            return new Color(
+                Mathf.Clamp01(color.r + amount),
+                Mathf.Clamp01(color.g + amount),
+                Mathf.Clamp01(color.b + amount),
+                color.a);
+        }
+
+        private static Color Darken(Color color, float amount)
+        {
+            return new Color(
+                Mathf.Clamp01(color.r - amount),
+                Mathf.Clamp01(color.g - amount),
+                Mathf.Clamp01(color.b - amount),
+                color.a);
         }
 
         private static Scrollbar CreateScrollbar(Transform parent)
