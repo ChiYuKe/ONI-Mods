@@ -1,6 +1,7 @@
 using System.Text;
 using System.Linq;
 using System.Collections.Generic;
+using System.Globalization;
 using StorageNetwork.Components;
 using StorageNetwork.Core;
 using TMPro;
@@ -19,6 +20,7 @@ namespace StorageNetwork.UI
         private TextMeshProUGUI summaryText;
         private RectTransform listContent;
         private RectTransform windowRect;
+        private GameObject modalRoot;
         private KInputController registeredController;
         private string selectedItemKey;
         private Storage selectedItemStorage;
@@ -442,12 +444,14 @@ namespace StorageNetwork.UI
                     Mathf.RoundToInt(percent * 100f)),
                 new Color(0.72f, 0.72f, 0.68f, 1f),
                 13,
-                260f,
+                210f,
                 () =>
                 {
                     expandedStorages[storage] = !expanded;
                     Refresh(true);
-                });
+                },
+                "设置",
+                () => ShowStorageSettingsDialog(storage));
 
             if (!expanded)
             {
@@ -499,7 +503,9 @@ namespace StorageNetwork.UI
             Color backgroundColor,
             int fontSize,
             float amountWidth,
-            System.Action onClick)
+            System.Action onClick,
+            string actionText = null,
+            System.Action actionClick = null)
         {
             GameObject header = CreateBox("Header", parent, backgroundColor);
             header.AddComponent<LayoutElement>().preferredHeight = 34f;
@@ -517,7 +523,7 @@ namespace StorageNetwork.UI
             button.onClick += () => onClick?.Invoke();
 
             HorizontalLayoutGroup headerLayout = header.AddComponent<HorizontalLayoutGroup>();
-            headerLayout.padding = new RectOffset(10, 10, 0, 0);
+            headerLayout.padding = new RectOffset(10, 28, 0, 0);
             headerLayout.spacing = 8f;
             headerLayout.childAlignment = TextAnchor.MiddleCenter;
             headerLayout.childControlWidth = true;
@@ -533,6 +539,14 @@ namespace StorageNetwork.UI
             name.color = new Color(0.12f, 0.13f, 0.13f, 1f);
             name.fontStyle = FontStyles.Bold;
             name.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+
+            if (!string.IsNullOrEmpty(actionText) && actionClick != null)
+            {
+                GameObject actionButton = CreateGameButton("HeaderActionButton", header.transform, actionText, actionClick);
+                LayoutElement actionLayout = actionButton.AddComponent<LayoutElement>();
+                actionLayout.preferredWidth = 50f;
+                actionLayout.preferredHeight = 20f;
+            }
 
             TextMeshProUGUI amount = CreateText("Amount", header.transform, amountText, fontSize, TextAlignmentOptions.MidlineRight);
             amount.color = new Color(0.28f, 0.29f, 0.29f, 1f);
@@ -652,10 +666,17 @@ namespace StorageNetwork.UI
 
             if (selected)
             {
-                GameObject dropButton = CreateGameButton("DropButton", row.transform, "丢弃", () => DropSelectedItem(storage, itemKey));
+                GameObject transferButton = CreateGameButton("TransferButton", row.transform, "转移", () => ShowTransferDialog(storage, itemKey));
+                LayoutElement transferLayout = transferButton.AddComponent<LayoutElement>();
+                transferLayout.preferredWidth = 58f;
+                transferLayout.preferredHeight = 20f;
+                ToolTip transferTooltip = transferButton.AddComponent<ToolTip>();
+                transferTooltip.toolTip = "把这个物品转移到同一网络中的目标储存建筑";
+
+                GameObject dropButton = CreateGameButton("DropButton", row.transform, "丢弃", () => ShowDropDialog(storage, itemKey));
                 LayoutElement dropLayout = dropButton.AddComponent<LayoutElement>();
-                dropLayout.preferredWidth = 72f;
-                dropLayout.preferredHeight = 22f;
+                dropLayout.preferredWidth = 58f;
+                dropLayout.preferredHeight = 20f;
                 ToolTip tooltip = dropButton.AddComponent<ToolTip>();
                 tooltip.toolTip = "丢弃这个储存建筑中的目标物品";
             }
@@ -694,13 +715,227 @@ namespace StorageNetwork.UI
             icon.color = sprite != null ? tint : Color.clear;
         }
 
-        private void DropSelectedItem(Storage storage, string itemKey)
+        private void ShowDropDialog(Storage storage, string itemKey)
+        {
+            List<GameObject> items = FindStoredItems(storage, itemKey);
+            if (storage == null || items.Count == 0)
+            {
+                Refresh(true);
+                return;
+            }
+
+            string itemName = GetStoredItemName(items[0]);
+            float availableMass = GetStoredItemsMass(items);
+            ShowAmountDialog(
+                "丢弃数量",
+                itemName,
+                string.Format("当前箱子可丢弃：{0}", GameUtil.GetFormattedMass(availableMass)),
+                availableMass,
+                amount => DropSelectedItem(storage, itemKey, amount));
+        }
+
+        private void ShowTransferDialog(Storage source, string itemKey)
+        {
+            List<GameObject> items = FindStoredItems(source, itemKey);
+            if (targetHub == null || source == null || items.Count == 0)
+            {
+                Refresh(true);
+                return;
+            }
+
+            targetHub.RefreshNetwork();
+            List<Storage> targets = targetHub.ConnectedStorages
+                .Select(info => info.Storage)
+                .Where(storage => storage != null && storage != source && storage.RemainingCapacity() > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+                .OrderBy(storage => storage.GetProperName())
+                .ToList();
+
+            if (targets.Count == 0)
+            {
+                ShowMessageDialog("转移物品", "同一网络中没有可接收物品的目标箱子。");
+                return;
+            }
+
+            int targetIndex = 0;
+            string itemName = GetStoredItemName(items[0]);
+            float sourceMass = GetStoredItemsMass(items);
+
+            System.Action rebuild = null;
+            rebuild = () =>
+            {
+                Storage destination = targets[Mathf.Clamp(targetIndex, 0, targets.Count - 1)];
+                float remainingCapacity = Mathf.Max(0f, destination.RemainingCapacity());
+                float maxTransfer = Mathf.Min(sourceMass, remainingCapacity);
+                string details = string.Format(
+                    "目标：{0}\n目标容量：{1} / {2}\n最大可转移：{3}",
+                    destination.GetProperName(),
+                    GameUtil.GetFormattedMass(destination.MassStored()),
+                    GameUtil.GetFormattedMass(destination.Capacity()),
+                    GameUtil.GetFormattedMass(maxTransfer));
+
+                ShowAmountDialog(
+                    "转移数量",
+                    itemName,
+                    details,
+                    maxTransfer,
+                    amount => TransferSelectedItem(source, itemKey, destination, amount),
+                    targets.Count > 1 ? "上一个" : null,
+                    targets.Count > 1 ? () =>
+                    {
+                        targetIndex = (targetIndex + targets.Count - 1) % targets.Count;
+                        rebuild();
+                    } : null,
+                    targets.Count > 1 ? "下一个" : null,
+                    targets.Count > 1 ? () =>
+                    {
+                        targetIndex = (targetIndex + 1) % targets.Count;
+                        rebuild();
+                    } : null);
+            };
+
+            rebuild();
+        }
+
+        private void ShowStorageSettingsDialog(Storage storage)
+        {
+            if (storage == null)
+            {
+                return;
+            }
+
+            CloseModal();
+            modalRoot = CreateModalFrame("箱子设置", 420f, 335f, out GameObject body);
+            AddModalText(body.transform, storage.GetProperName(), 15, FontStyles.Bold);
+            AddModalText(
+                body.transform,
+                string.Format("储存：{0} / {1}\n剩余容量：{2}",
+                    GameUtil.GetFormattedMass(storage.MassStored()),
+                    GameUtil.GetFormattedMass(storage.Capacity()),
+                    GameUtil.GetFormattedMass(Mathf.Max(0f, storage.RemainingCapacity()))),
+                12,
+                FontStyles.Normal);
+
+            AddSettingToggleRow(body.transform, "允许网络取出", storage.allowItemRemoval, value => storage.allowItemRemoval = value);
+            AddSettingToggleRow(body.transform, "允许界面移除", storage.allowUIItemRemoval, value => storage.allowUIItemRemoval = value);
+            AddSettingToggleRow(body.transform, "只收已标记清扫", storage.GetOnlyFetchMarkedItems(), value =>
+            {
+                if (storage.allowSettingOnlyFetchMarkedItems)
+                {
+                    storage.SetOnlyFetchMarkedItems(value);
+                }
+            });
+            AddSettingToggleRow(body.transform, "忽略来源优先级", storage.ignoreSourcePriority, value => storage.ignoreSourcePriority = value);
+            AddSettingToggleRow(body.transform, "只从低优先级转入", storage.onlyTransferFromLowerPriority, value => storage.onlyTransferFromLowerPriority = value);
+
+            GameObject footer = AddHorizontalRow(body.transform, 6f);
+            AddFooterSpacer(footer.transform);
+            AddModalButton(footer.transform, "关闭", 90f, CloseModal);
+        }
+
+        private void ShowAmountDialog(
+            string title,
+            string itemName,
+            string details,
+            float maxAmount,
+            System.Action<float> onConfirm,
+            string secondaryLeftText = null,
+            System.Action secondaryLeftAction = null,
+            string secondaryRightText = null,
+            System.Action secondaryRightAction = null)
+        {
+            CloseModal();
+            maxAmount = Mathf.Max(0f, maxAmount);
+            modalRoot = CreateModalFrame(title, 430f, 300f, out GameObject body);
+
+            AddModalText(body.transform, itemName, 15, FontStyles.Bold);
+            TextMeshProUGUI detailsText = AddModalText(body.transform, details, 12, FontStyles.Normal);
+            detailsText.color = new Color(0.82f, 0.85f, 0.88f, 1f);
+
+            float currentAmount = maxAmount;
+            bool updating = false;
+            TextMeshProUGUI valueLabel = AddModalText(body.transform, string.Empty, 13, FontStyles.Bold);
+            Slider slider = CreateAmountSlider(body.transform, maxAmount);
+            TMP_InputField input = CreateAmountInputRow(body.transform);
+
+            System.Action<float> setAmount = value =>
+            {
+                currentAmount = Mathf.Clamp(value, 0f, maxAmount);
+                valueLabel.text = string.Format("数量：{0}", GameUtil.GetFormattedMass(currentAmount));
+                if (!updating)
+                {
+                    updating = true;
+                    slider.value = currentAmount;
+                    input.text = FormatAmount(currentAmount);
+                    updating = false;
+                }
+            };
+
+            slider.onValueChanged.AddListener(value =>
+            {
+                if (!updating)
+                {
+                    setAmount(value);
+                }
+            });
+
+            input.onEndEdit.AddListener(value =>
+            {
+                if (TryParseAmount(value, out float parsed))
+                {
+                    setAmount(parsed);
+                }
+                else
+                {
+                    setAmount(currentAmount);
+                }
+            });
+
+            setAmount(currentAmount);
+
+            GameObject shortcutRow = AddHorizontalRow(body.transform, 6f);
+            if (!string.IsNullOrEmpty(secondaryLeftText) && secondaryLeftAction != null)
+            {
+                AddModalButton(shortcutRow.transform, secondaryLeftText, 92f, secondaryLeftAction);
+            }
+            if (!string.IsNullOrEmpty(secondaryRightText) && secondaryRightAction != null)
+            {
+                AddModalButton(shortcutRow.transform, secondaryRightText, 92f, secondaryRightAction);
+            }
+            AddFooterSpacer(shortcutRow.transform);
+            AddModalButton(shortcutRow.transform, "全部", 80f, () => setAmount(maxAmount));
+
+            GameObject footer = AddHorizontalRow(body.transform, 6f);
+            AddFooterSpacer(footer.transform);
+            AddModalButton(footer.transform, "取消", 80f, CloseModal);
+            AddModalButton(footer.transform, "确定", 90f, () =>
+            {
+                float finalAmount = Mathf.Clamp(currentAmount, 0f, maxAmount);
+                CloseModal();
+                if (finalAmount > 0f)
+                {
+                    onConfirm?.Invoke(finalAmount);
+                }
+            });
+        }
+
+        private void ShowMessageDialog(string title, string message)
+        {
+            CloseModal();
+            modalRoot = CreateModalFrame(title, 360f, 170f, out GameObject body);
+            AddModalText(body.transform, message, 13, FontStyles.Normal);
+            GameObject footer = AddHorizontalRow(body.transform, 6f);
+            AddFooterSpacer(footer.transform);
+            AddModalButton(footer.transform, "确定", 90f, CloseModal);
+        }
+
+        private void DropSelectedItem(Storage storage, string itemKey, float requestedMass)
         {
             LogDebug(string.Format(
-                "DropSelectedItem begin storage={0} storageGO={1} itemKey={2}",
+                "DropSelectedItem begin storage={0} storageGO={1} itemKey={2} requestedMass={3:0.###}",
                 storage != null ? storage.GetInstanceID().ToString() : "null",
                 storage != null ? storage.gameObject.GetProperName() : "null",
-                itemKey));
+                itemKey,
+                requestedMass));
 
             List<GameObject> items = FindStoredItems(storage, itemKey);
             LogDebug(string.Format("DropSelectedItem matched items={0}", items.Count));
@@ -714,7 +949,7 @@ namespace StorageNetwork.UI
             }
 
             Tag dropTag = GetStoredItemTag(items[0]);
-            float mass = items.Sum(item => item.GetComponent<PrimaryElement>()?.Mass ?? 0f);
+            float mass = Mathf.Min(requestedMass, GetStoredItemsMass(items));
             LogDebug(string.Format(
                 "DropSelectedItem resolved tag={0} tagValid={1} mass={2:0.###} firstItem={3}",
                 dropTag,
@@ -747,6 +982,52 @@ namespace StorageNetwork.UI
             lastListSignature = null;
             Refresh(true);
             LogDebug("DropSelectedItem end");
+        }
+
+        private void TransferSelectedItem(Storage source, string itemKey, Storage destination, float requestedMass)
+        {
+            List<GameObject> items = FindStoredItems(source, itemKey);
+            if (source == null || destination == null || items.Count == 0)
+            {
+                Refresh(true);
+                return;
+            }
+
+            Tag tag = GetStoredItemTag(items[0]);
+            float maxTransfer = Mathf.Min(GetStoredItemsMass(items), Mathf.Max(0f, destination.RemainingCapacity()));
+            float remaining = Mathf.Clamp(requestedMass, 0f, maxTransfer);
+            float transferred = 0f;
+
+            while (tag.IsValid && remaining > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+            {
+                float moved = source.Transfer(destination, tag, remaining, block_events: false, hide_popups: true);
+                if (moved <= 0f)
+                {
+                    break;
+                }
+
+                transferred += moved;
+                remaining -= moved;
+            }
+
+            LogDebug(string.Format(
+                "TransferSelectedItem source={0} destination={1} tag={2} requested={3:0.###} transferred={4:0.###}",
+                source.gameObject.GetProperName(),
+                destination.gameObject.GetProperName(),
+                tag,
+                requestedMass,
+                transferred));
+
+            selectedItemStorage = null;
+            selectedItemKey = null;
+            targetHub?.RefreshNetwork();
+            lastListSignature = null;
+            Refresh(true);
+        }
+
+        private static float GetStoredItemsMass(IEnumerable<GameObject> items)
+        {
+            return items.Sum(item => item.GetComponent<PrimaryElement>()?.Mass ?? 0f);
         }
 
         private static List<GameObject> FindStoredItems(Storage storage, string itemKey)
@@ -802,14 +1083,265 @@ namespace StorageNetwork.UI
             return gameObject != null ? gameObject.GetProperName() : storageInfo.Name;
         }
 
+        private GameObject CreateModalFrame(string title, float width, float height, out GameObject body)
+        {
+            GameObject overlay = new GameObject("ModalOverlay");
+            overlay.transform.SetParent(transform, false);
+            RectTransform overlayRect = overlay.AddComponent<RectTransform>();
+            Stretch(overlayRect, 0f, 0f);
+            Image overlayImage = overlay.AddComponent<Image>();
+            overlayImage.color = new Color(0f, 0f, 0f, 0.34f);
+
+            GameObject dialog = CreateBox("Dialog", overlay.transform, new Color(0.22f, 0.24f, 0.28f, 0.98f));
+            RectTransform dialogRect = dialog.GetComponent<RectTransform>();
+            dialogRect.anchorMin = new Vector2(0.5f, 0.5f);
+            dialogRect.anchorMax = new Vector2(0.5f, 0.5f);
+            dialogRect.pivot = new Vector2(0.5f, 0.5f);
+            dialogRect.anchoredPosition = Vector2.zero;
+            dialogRect.sizeDelta = new Vector2(width, height);
+
+            GameObject header = CreateBox("ModalHeader", dialog.transform, new Color(0.43f, 0.20f, 0.34f, 1f));
+            SetTopStretch(header.GetComponent<RectTransform>(), 0f, 0f, 0f, 30f);
+            TextMeshProUGUI titleText = CreateText("Title", header.transform, title, 14, TextAlignmentOptions.MidlineLeft);
+            titleText.fontStyle = FontStyles.Bold;
+            Stretch(titleText.rectTransform(), 12f, 0f);
+
+            GameObject closeButton = CreateGameButton("CloseButton", header.transform, "X", CloseModal);
+            RectTransform closeRect = closeButton.GetComponent<RectTransform>();
+            closeRect.anchorMin = new Vector2(1f, 0.5f);
+            closeRect.anchorMax = new Vector2(1f, 0.5f);
+            closeRect.pivot = new Vector2(1f, 0.5f);
+            closeRect.anchoredPosition = new Vector2(-4f, 0f);
+            closeRect.sizeDelta = new Vector2(24f, 22f);
+
+            body = CreateBox("ModalBody", dialog.transform, new Color(0.34f, 0.38f, 0.40f, 1f));
+            SetStretch(body.GetComponent<RectTransform>(), 8f, 8f, 8f, 38f);
+            VerticalLayoutGroup layout = body.AddComponent<VerticalLayoutGroup>();
+            layout.padding = new RectOffset(14, 14, 12, 12);
+            layout.spacing = 7f;
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.childForceExpandWidth = true;
+            layout.childForceExpandHeight = false;
+
+            return overlay;
+        }
+
+        private static TextMeshProUGUI AddModalText(Transform parent, string text, int size, FontStyles style)
+        {
+            TextMeshProUGUI label = CreateText("ModalText", parent, text, size, TextAlignmentOptions.MidlineLeft);
+            label.fontStyle = style;
+            label.color = Color.white;
+            label.gameObject.AddComponent<LayoutElement>().preferredHeight = text.Contains("\n") ? 48f : 24f;
+            return label;
+        }
+
+        private static GameObject AddHorizontalRow(Transform parent, float spacing)
+        {
+            GameObject row = new GameObject("ModalRow");
+            row.transform.SetParent(parent, false);
+            row.AddComponent<RectTransform>();
+            row.AddComponent<LayoutElement>().preferredHeight = 28f;
+            HorizontalLayoutGroup layout = row.AddComponent<HorizontalLayoutGroup>();
+            layout.spacing = spacing;
+            layout.childAlignment = TextAnchor.MiddleLeft;
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.childForceExpandWidth = false;
+            layout.childForceExpandHeight = false;
+            return row;
+        }
+
+        private static void AddFooterSpacer(Transform parent)
+        {
+            GameObject spacer = new GameObject("Spacer");
+            spacer.transform.SetParent(parent, false);
+            spacer.AddComponent<RectTransform>();
+            spacer.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        }
+
+        private static GameObject AddModalButton(Transform parent, string text, float width, System.Action onClick)
+        {
+            GameObject button = CreateGameButton("ModalButton", parent, text, onClick);
+            LayoutElement layout = button.AddComponent<LayoutElement>();
+            layout.preferredWidth = width;
+            layout.preferredHeight = 26f;
+            return button;
+        }
+
+        private void AddSettingToggleRow(Transform parent, string label, bool initialValue, System.Action<bool> onChanged)
+        {
+            bool current = initialValue;
+            GameObject stateButton = null;
+            System.Action refreshLabel = () =>
+            {
+                TextMeshProUGUI text = stateButton?.GetComponentInChildren<TextMeshProUGUI>();
+                if (text != null)
+                {
+                    text.text = current ? "开" : "关";
+                }
+
+                KImage image = stateButton?.GetComponent<KImage>();
+                if (image != null)
+                {
+                    Color baseColor = current
+                        ? new Color(0.42f, 0.55f, 0.48f, 1f)
+                        : new Color(0.30f, 0.33f, 0.37f, 1f);
+                    image.colorStyleSetting = CreateColorStyle(baseColor, Lighten(baseColor, 0.07f), Darken(baseColor, 0.08f));
+                }
+            };
+
+            GameObject row = CreatePlainImage("SettingRow", parent, new Color(0.27f, 0.31f, 0.33f, 1f));
+            row.AddComponent<LayoutElement>().preferredHeight = 32f;
+
+            HorizontalLayoutGroup layout = row.AddComponent<HorizontalLayoutGroup>();
+            layout.padding = new RectOffset(10, 8, 0, 0);
+            layout.spacing = 8f;
+            layout.childAlignment = TextAnchor.MiddleCenter;
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.childForceExpandWidth = false;
+            layout.childForceExpandHeight = false;
+
+            TextMeshProUGUI labelText = CreateText("Label", row.transform, label, 12, TextAlignmentOptions.MidlineLeft);
+            labelText.color = new Color(0.93f, 0.95f, 0.95f, 1f);
+            labelText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+
+            stateButton = AddModalButton(row.transform, string.Empty, 58f, () =>
+            {
+                current = !current;
+                onChanged?.Invoke(current);
+                refreshLabel();
+                targetHub?.RefreshNetwork();
+                lastListSignature = null;
+            });
+            refreshLabel();
+        }
+
+        private static Slider CreateAmountSlider(Transform parent, float maxAmount)
+        {
+            GameObject sliderObject = new GameObject("AmountSlider");
+            sliderObject.transform.SetParent(parent, false);
+            RectTransform sliderRect = sliderObject.AddComponent<RectTransform>();
+            sliderObject.AddComponent<LayoutElement>().preferredHeight = 24f;
+
+            GameObject background = CreatePlainImage("Background", sliderObject.transform, new Color(0.12f, 0.14f, 0.18f, 1f));
+            Stretch(background.GetComponent<RectTransform>(), 0f, 8f);
+
+            GameObject fillArea = new GameObject("Fill Area");
+            fillArea.transform.SetParent(sliderObject.transform, false);
+            RectTransform fillAreaRect = fillArea.AddComponent<RectTransform>();
+            Stretch(fillAreaRect, 3f, 8f);
+
+            GameObject fill = CreatePlainImage("Fill", fillArea.transform, new Color(0.55f, 0.67f, 0.76f, 1f));
+            Stretch(fill.GetComponent<RectTransform>(), 0f, 0f);
+
+            GameObject handleArea = new GameObject("Handle Slide Area");
+            handleArea.transform.SetParent(sliderObject.transform, false);
+            RectTransform handleAreaRect = handleArea.AddComponent<RectTransform>();
+            Stretch(handleAreaRect, 8f, 0f);
+
+            GameObject handle = CreatePlainImage("Handle", handleArea.transform, new Color(0.90f, 0.92f, 0.95f, 1f));
+            RectTransform handleRect = handle.GetComponent<RectTransform>();
+            handleRect.sizeDelta = new Vector2(14f, 22f);
+
+            Slider slider = sliderObject.AddComponent<Slider>();
+            slider.minValue = 0f;
+            slider.maxValue = Mathf.Max(0.001f, maxAmount);
+            slider.value = maxAmount;
+            slider.fillRect = fill.GetComponent<RectTransform>();
+            slider.handleRect = handleRect;
+            slider.targetGraphic = handle.GetComponent<Image>();
+            slider.direction = Slider.Direction.LeftToRight;
+            return slider;
+        }
+
+        private static TMP_InputField CreateAmountInputRow(Transform parent)
+        {
+            GameObject row = AddHorizontalRow(parent, 8f);
+            TextMeshProUGUI label = CreateText("AmountInputLabel", row.transform, "输入数量", 12, TextAlignmentOptions.MidlineLeft);
+            label.color = new Color(0.92f, 0.94f, 0.95f, 1f);
+            label.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+            return CreateAmountInput(row.transform);
+        }
+
+        private static TMP_InputField CreateAmountInput(Transform parent)
+        {
+            GameObject inputObject = CreatePlainImage("AmountInput", parent, new Color(0.14f, 0.16f, 0.20f, 1f));
+            LayoutElement inputLayout = inputObject.AddComponent<LayoutElement>();
+            inputLayout.preferredWidth = 150f;
+            inputLayout.preferredHeight = 28f;
+
+            TextMeshProUGUI text = CreateText("Text", inputObject.transform, string.Empty, 13, TextAlignmentOptions.MidlineLeft);
+            text.color = Color.white;
+            Stretch(text.rectTransform(), 8f, 3f);
+
+            TMP_InputField input = inputObject.AddComponent<TMP_InputField>();
+            input.textComponent = text;
+            input.contentType = TMP_InputField.ContentType.DecimalNumber;
+            input.lineType = TMP_InputField.LineType.SingleLine;
+            input.caretColor = Color.white;
+            input.selectionColor = new Color(0.55f, 0.67f, 0.76f, 0.55f);
+            return input;
+        }
+
+        private static GameObject CreatePlainImage(string name, Transform parent, Color color)
+        {
+            GameObject gameObject = new GameObject(name);
+            gameObject.transform.SetParent(parent, false);
+            gameObject.AddComponent<RectTransform>();
+            Image image = gameObject.AddComponent<Image>();
+            image.color = color;
+            image.type = Image.Type.Sliced;
+            return gameObject;
+        }
+
+        private static string FormatAmount(float amount)
+        {
+            return amount.ToString("0.###", CultureInfo.InvariantCulture);
+        }
+
+        private static bool TryParseAmount(string value, out float amount)
+        {
+            return float.TryParse(value, NumberStyles.Float, CultureInfo.CurrentCulture, out amount) ||
+                   float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out amount);
+        }
+
+        private void CloseModal()
+        {
+            if (modalRoot != null)
+            {
+                Destroy(modalRoot);
+                modalRoot = null;
+            }
+        }
+
         private void Close()
         {
+            CloseModal();
             gameObject.SetActive(false);
         }
 
         public void OnKeyDown(KButtonEvent e)
         {
-            if (e.Consumed || !IsMouseOverWindow())
+            if (e.Consumed)
+            {
+                return;
+            }
+
+            if (modalRoot != null)
+            {
+                if (e.TryConsume(global::Action.Escape))
+                {
+                    CloseModal();
+                    return;
+                }
+
+                e.Consumed = true;
+                return;
+            }
+
+            if (!IsMouseOverWindow())
             {
                 return;
             }
@@ -879,14 +1411,14 @@ namespace StorageNetwork.UI
 
         private static GameObject CreateGameButton(string name, Transform parent, string text, System.Action onClick)
         {
-            Color baseColor = new Color(0.16f, 0.18f, 0.26f, 1f);
+            Color baseColor = new Color(0.34f, 0.38f, 0.42f, 1f);
             GameObject buttonObject = new GameObject(name);
             buttonObject.transform.SetParent(parent, false);
             buttonObject.AddComponent<RectTransform>();
 
             KImage image = buttonObject.AddComponent<KImage>();
             image.type = Image.Type.Sliced;
-            image.colorStyleSetting = CreateColorStyle(baseColor, Lighten(baseColor, 0.1f), Darken(baseColor, 0.1f));
+            image.colorStyleSetting = CreateColorStyle(baseColor, Lighten(baseColor, 0.07f), Darken(baseColor, 0.08f));
             image.ColorState = KImage.ColorSelector.Inactive;
 
             KButton button = buttonObject.AddComponent<KButton>();
@@ -896,11 +1428,12 @@ namespace StorageNetwork.UI
             button.onClick += () => onClick?.Invoke();
 
             Outline outline = buttonObject.AddComponent<Outline>();
-            outline.effectColor = new Color(0.63f, 0.66f, 0.74f, 1f);
+            outline.effectColor = new Color(0.14f, 0.16f, 0.19f, 0.9f);
             outline.effectDistance = new Vector2(1f, -1f);
 
-            TextMeshProUGUI label = CreateText("Label", buttonObject.transform, text, 14, TextAlignmentOptions.Center);
+            TextMeshProUGUI label = CreateText("Label", buttonObject.transform, text, 12, TextAlignmentOptions.Center);
             label.fontStyle = FontStyles.Bold;
+            label.color = new Color(0.94f, 0.96f, 0.98f, 1f);
             Stretch(label.rectTransform(), 2f, 0f);
             return buttonObject;
         }
