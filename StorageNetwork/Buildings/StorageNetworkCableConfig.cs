@@ -1,4 +1,5 @@
 using StorageNetwork.Components;
+using StorageNetwork.UI;
 using TUNING;
 using UnityEngine;
 
@@ -24,7 +25,7 @@ namespace StorageNetwork.Buildings
                 TUNING.BUILDINGS.DECOR.PENALTY.TIER0,
                 NOISE_POLLUTION.NONE);
 
-            buildingDef.ViewMode = OverlayModes.Logic.ID;
+            buildingDef.ViewMode = StorageNetworkOverviewMode.ID;
             buildingDef.ObjectLayer = ObjectLayer.LogicWire;
             buildingDef.TileLayer = ObjectLayer.LogicWireTile;
             buildingDef.ReplacementLayer = ObjectLayer.ReplacementLogicWire;
@@ -47,19 +48,16 @@ namespace StorageNetwork.Buildings
         {
             GeneratedBuildings.MakeBuildingAlwaysOperational(go);
             BuildingConfigManager.Instance.IgnoreDefaultKComponent(typeof(RequiresFoundation), prefabTag);
-            go.AddOrGet<LogicWire>();
             go.AddOrGet<StorageNetworkCable>();
-
             KAnimGraphTileVisualizer visualizer = go.AddOrGet<KAnimGraphTileVisualizer>();
             visualizer.connectionSource = KAnimGraphTileVisualizer.ConnectionSource.Logic;
-            visualizer.isPhysicalBuilding = true;
+            visualizer.isPhysicalBuilding = false;
         }
 
         public override void DoPostConfigureUnderConstruction(GameObject go)
         {
             base.DoPostConfigureUnderConstruction(go);
             go.GetComponent<Constructable>().isDiggingRequired = false;
-
             KAnimGraphTileVisualizer visualizer = go.AddOrGet<KAnimGraphTileVisualizer>();
             visualizer.connectionSource = KAnimGraphTileVisualizer.ConnectionSource.Logic;
             visualizer.isPhysicalBuilding = false;
@@ -67,7 +65,6 @@ namespace StorageNetwork.Buildings
 
         public override void DoPostConfigureComplete(GameObject go)
         {
-            go.GetComponent<LogicWire>().MaxBitDepth = LogicWire.BitDepth.OneBit;
         }
     }
 }

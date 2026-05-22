@@ -53,6 +53,7 @@ namespace StorageNetwork.UI
         public override void Disable()
         {
             OverlayModes.Mode.ResetDisplayValues<SaveLoadRoot>(layerTargets);
+            HidePortIcons();
             layerTargets.Clear();
             desiredTargets.Clear();
             Camera.main.cullingMask &= ~cameraLayerMask;
@@ -70,6 +71,7 @@ namespace StorageNetwork.UI
             ClearStaleTargets();
             AddVisibleTargets(visibleMin, visibleMax);
             TintTargets();
+            DrawPortIcons();
         }
 
         public override List<LegendEntry> GetCustomLegendData()
@@ -185,6 +187,48 @@ namespace StorageNetwork.UI
             if (root != null)
             {
                 desiredTargets.Add(root);
+            }
+        }
+
+        private void DrawPortIcons()
+        {
+            foreach (StorageNetworkStorageConnector connector in StorageNetworkRegistry.RegisteredStorageConnectors)
+            {
+                if (connector == null)
+                {
+                    continue;
+                }
+
+                StorageNetworkPortVisualizer visualizer = connector.GetComponent<StorageNetworkPortVisualizer>();
+                if (visualizer != null)
+                {
+                    SaveLoadRoot root = connector.GetComponent<SaveLoadRoot>();
+                    if (focusHub == null || (root != null && desiredTargets.Contains(root)))
+                    {
+                        visualizer.Draw();
+                    }
+                    else
+                    {
+                        visualizer.Hide();
+                    }
+                }
+            }
+        }
+
+        private void HidePortIcons()
+        {
+            foreach (StorageNetworkStorageConnector connector in StorageNetworkRegistry.RegisteredStorageConnectors)
+            {
+                if (connector == null)
+                {
+                    continue;
+                }
+
+                StorageNetworkPortVisualizer visualizer = connector.GetComponent<StorageNetworkPortVisualizer>();
+                if (visualizer != null)
+                {
+                    visualizer.Hide();
+                }
             }
         }
     }

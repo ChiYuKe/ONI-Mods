@@ -14,6 +14,7 @@ namespace StorageNetwork.Patches
             }
 
             __instance.gameObject.AddOrGet<StorageNetworkStorageConnector>();
+            __instance.gameObject.AddOrGet<StorageNetworkPortVisualizer>();
         }
     }
 }

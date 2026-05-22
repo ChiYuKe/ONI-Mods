@@ -4,6 +4,10 @@ namespace StorageNetwork.Core
     {
         int Cell { get; }
 
+        int InputCell { get; }
+
+        int OutputCell { get; }
+
         string DisplayName { get; }
 
         Storage Storage { get; }

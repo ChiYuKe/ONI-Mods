@@ -9,10 +9,13 @@ namespace StorageNetwork.Core
     {
         private static readonly HashSet<StorageNetworkCable> Cables = new HashSet<StorageNetworkCable>();
         private static readonly HashSet<StorageNetworkHub> Hubs = new HashSet<StorageNetworkHub>();
+        private static readonly HashSet<StorageNetworkStorageConnector> StorageConnectors = new HashSet<StorageNetworkStorageConnector>();
 
         public static IReadOnlyCollection<StorageNetworkHub> RegisteredHubs => Hubs;
 
         public static IReadOnlyCollection<StorageNetworkCable> RegisteredCables => Cables;
+
+        public static IReadOnlyCollection<StorageNetworkStorageConnector> RegisteredStorageConnectors => StorageConnectors;
 
         public static void Register(StorageNetworkHub hub)
         {
@@ -44,6 +47,24 @@ namespace StorageNetwork.Core
             if (cable != null)
             {
                 Cables.Remove(cable);
+                MarkDirty();
+            }
+        }
+
+        public static void Register(StorageNetworkStorageConnector connector)
+        {
+            if (connector != null)
+            {
+                StorageConnectors.Add(connector);
+                MarkDirty();
+            }
+        }
+
+        public static void Unregister(StorageNetworkStorageConnector connector)
+        {
+            if (connector != null)
+            {
+                StorageConnectors.Remove(connector);
                 MarkDirty();
             }
         }
@@ -84,7 +105,7 @@ namespace StorageNetwork.Core
                 return Enumerable.Empty<Storage>();
             }
 
-            HashSet<int> networkCells = FindConnectedCableCells(Grid.PosToCell(requesterStorage));
+            HashSet<int> networkCells = FindConnectedCableCells(requesterStorage);
             return FindConnectedStorages(networkCells).Where(storage => storage != requesterStorage);
         }
 
@@ -113,13 +134,18 @@ namespace StorageNetwork.Core
             return ExpandCableNetwork(startCells);
         }
 
-        private static HashSet<int> FindConnectedCableCells(int originCell)
+        private static HashSet<int> FindConnectedCableCells(Storage requesterStorage)
         {
+            IStorageNetworkConnectable connector = GetConnector(requesterStorage?.gameObject);
             HashSet<int> startCells = new HashSet<int>();
-            AddAdjacentCableCells(originCell, startCells);
-            if (IsCableCell(originCell))
+            if (connector == null)
             {
-                startCells.Add(originCell);
+                return startCells;
+            }
+
+            if (IsCableCell(connector.InputCell))
+            {
+                startCells.Add(connector.InputCell);
             }
 
             return ExpandCableNetwork(startCells);
@@ -145,6 +171,19 @@ namespace StorageNetwork.Core
                         pending.Enqueue(adjacentCell);
                     }
                 }
+
+                foreach (StorageNetworkStorageConnector connector in StorageConnectors)
+                {
+                    if (connector == null || !connector.CanShareStorage || connector.InputCell != cell)
+                    {
+                        continue;
+                    }
+
+                    if (IsCableCell(connector.OutputCell) && !visited.Contains(connector.OutputCell))
+                    {
+                        pending.Enqueue(connector.OutputCell);
+                    }
+                }
             }
 
             return visited;
@@ -153,31 +192,17 @@ namespace StorageNetwork.Core
         private static IEnumerable<Storage> FindConnectedStorages(HashSet<int> networkCells)
         {
             HashSet<Storage> storages = new HashSet<Storage>();
-            foreach (int cell in networkCells)
+            foreach (StorageNetworkStorageConnector connector in StorageConnectors)
             {
-                AddStorageAtCell(cell, storages);
-                foreach (int adjacentCell in GetCardinalCells(cell))
+                if (connector?.Storage != null &&
+                    connector.CanShareStorage &&
+                    networkCells.Contains(connector.InputCell))
                 {
-                    AddStorageAtCell(adjacentCell, storages);
+                    storages.Add(connector.Storage);
                 }
             }
 
             return storages;
-        }
-
-        private static void AddStorageAtCell(int cell, HashSet<Storage> storages)
-        {
-            if (!Grid.IsValidCell(cell))
-            {
-                return;
-            }
-
-            GameObject buildingObject = Grid.Objects[cell, (int)ObjectLayer.Building];
-            IStorageNetworkConnectable connector = GetConnector(buildingObject);
-            if (connector?.Storage != null && connector.CanShareStorage)
-            {
-                storages.Add(connector.Storage);
-            }
         }
 
         private static IStorageNetworkConnectable GetConnector(GameObject buildingObject)
@@ -209,14 +234,19 @@ namespace StorageNetwork.Core
             }
         }
 
-        private static bool IsCableCell(int cell)
+        public static StorageNetworkCable GetCableAtCell(int cell)
         {
             if (!Grid.IsValidCell(cell))
             {
-                return false;
+                return null;
             }
 
-            return Cables.Any(cable => cable != null && cable.Cell == cell);
+            return Cables.FirstOrDefault(cable => cable != null && cable.Cell == cell);
+        }
+
+        public static bool IsCableCell(int cell)
+        {
+            return GetCableAtCell(cell) != null;
         }
 
         private static IEnumerable<int> GetCardinalCells(int cell)
