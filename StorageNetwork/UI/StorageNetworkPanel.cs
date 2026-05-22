@@ -108,62 +108,40 @@ namespace StorageNetwork.UI
 
         private void BuildWindow(Transform parent)
         {
-            GameObject window = CreateBox("Window", parent, new Color(0.57f, 0.59f, 0.64f, 0.98f));
+            GameObject window = CreateBox("Window", parent, new Color(0.78f, 0.79f, 0.80f, 0.98f));
             RectTransform windowRect = window.GetComponent<RectTransform>();
-            windowRect.anchorMin = new Vector2(0.5f, 1f);
-            windowRect.anchorMax = new Vector2(0.5f, 1f);
-            windowRect.pivot = new Vector2(0.5f, 1f);
-            windowRect.anchoredPosition = new Vector2(0f, -96f);
-            windowRect.sizeDelta = new Vector2(920f, 410f);
-
-            VerticalLayoutGroup layout = window.AddComponent<VerticalLayoutGroup>();
-            layout.padding = new RectOffset(6, 6, 4, 6);
-            layout.spacing = 8f;
-            layout.childControlHeight = true;
-            layout.childControlWidth = true;
-            layout.childForceExpandHeight = false;
-            layout.childForceExpandWidth = true;
+            windowRect.anchorMin = new Vector2(0.5f, 0.5f);
+            windowRect.anchorMax = new Vector2(0.5f, 0.5f);
+            windowRect.pivot = new Vector2(0.5f, 0.5f);
+            windowRect.anchoredPosition = Vector2.zero;
+            windowRect.sizeDelta = new Vector2(880f, 360f);
 
             GameObject header = CreateBox("Header", window.transform, new Color(0.43f, 0.20f, 0.34f, 1f));
-            LayoutElement headerLayoutElement = header.AddComponent<LayoutElement>();
-            headerLayoutElement.minHeight = 28f;
-            headerLayoutElement.preferredHeight = 28f;
-            HorizontalLayoutGroup headerLayout = header.AddComponent<HorizontalLayoutGroup>();
-            headerLayout.padding = new RectOffset(10, 4, 0, 0);
-            headerLayout.spacing = 6f;
-            headerLayout.childControlHeight = true;
-            headerLayout.childForceExpandHeight = true;
-            headerLayout.childAlignment = TextAnchor.MiddleCenter;
+            SetTopStretch(header.GetComponent<RectTransform>(), 6f, 6f, 6f, 28f);
 
             TextMeshProUGUI title = CreateText("Title", header.transform, "储存网络", 14, TextAlignmentOptions.MidlineLeft);
             title.fontStyle = FontStyles.Bold;
-            title.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+            Stretch(title.rectTransform(), 12f, 0f);
 
             GameObject closeButton = CreateButton("CloseButton", header.transform, "X", Close);
-            LayoutElement closeLayout = closeButton.AddComponent<LayoutElement>();
-            closeLayout.preferredWidth = 26f;
-            closeLayout.preferredHeight = 24f;
+            RectTransform closeRect = closeButton.GetComponent<RectTransform>();
+            closeRect.anchorMin = new Vector2(1f, 0.5f);
+            closeRect.anchorMax = new Vector2(1f, 0.5f);
+            closeRect.pivot = new Vector2(1f, 0.5f);
+            closeRect.anchoredPosition = new Vector2(-4f, 0f);
+            closeRect.sizeDelta = new Vector2(24f, 22f);
 
             GameObject content = CreateBox("Content", window.transform, new Color(0.88f, 0.89f, 0.91f, 0.98f));
-            content.AddComponent<LayoutElement>().flexibleHeight = 1f;
-            VerticalLayoutGroup contentLayout = content.AddComponent<VerticalLayoutGroup>();
-            contentLayout.padding = new RectOffset(8, 8, 8, 8);
-            contentLayout.spacing = 8f;
-            contentLayout.childControlHeight = true;
-            contentLayout.childControlWidth = true;
-            contentLayout.childForceExpandHeight = false;
-            contentLayout.childForceExpandWidth = true;
+            SetStretch(content.GetComponent<RectTransform>(), 8f, 8f, 8f, 42f);
 
             GameObject summary = CreateBox("Summary", content.transform, new Color(0.36f, 0.42f, 0.47f, 1f));
-            LayoutElement summaryLayout = summary.AddComponent<LayoutElement>();
-            summaryLayout.minHeight = 54f;
-            summaryLayout.preferredHeight = 54f;
+            SetTopStretch(summary.GetComponent<RectTransform>(), 8f, 8f, 8f, 54f);
             summaryText = CreateText("SummaryText", summary.transform, string.Empty, 14, TextAlignmentOptions.TopLeft);
             summaryText.lineSpacing = 4f;
             Stretch(summaryText.rectTransform(), 12f, 7f);
 
             GameObject list = CreateBox("List", content.transform, new Color(0.80f, 0.79f, 0.74f, 1f));
-            list.AddComponent<LayoutElement>().flexibleHeight = 1f;
+            SetStretch(list.GetComponent<RectTransform>(), 8f, 8f, 8f, 70f);
             listText = CreateText("ListText", list.transform, string.Empty, 13, TextAlignmentOptions.TopLeft);
             listText.color = new Color(0.12f, 0.13f, 0.13f, 1f);
             listText.lineSpacing = 10f;
@@ -316,6 +294,23 @@ namespace StorageNetwork.UI
             rectTransform.anchorMax = Vector2.one;
             rectTransform.offsetMin = new Vector2(horizontal, vertical);
             rectTransform.offsetMax = new Vector2(-horizontal, -vertical);
+        }
+
+        private static void SetStretch(RectTransform rectTransform, float left, float right, float bottom, float top)
+        {
+            rectTransform.anchorMin = Vector2.zero;
+            rectTransform.anchorMax = Vector2.one;
+            rectTransform.offsetMin = new Vector2(left, bottom);
+            rectTransform.offsetMax = new Vector2(-right, -top);
+        }
+
+        private static void SetTopStretch(RectTransform rectTransform, float left, float right, float top, float height)
+        {
+            rectTransform.anchorMin = new Vector2(0f, 1f);
+            rectTransform.anchorMax = Vector2.one;
+            rectTransform.pivot = new Vector2(0.5f, 1f);
+            rectTransform.offsetMin = new Vector2(left, -top - height);
+            rectTransform.offsetMax = new Vector2(-right, -top);
         }
     }
 }
