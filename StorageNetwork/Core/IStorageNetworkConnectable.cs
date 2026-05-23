@@ -12,6 +12,8 @@ namespace StorageNetwork.Core
 
         Storage Storage { get; }
 
+        bool AllowsNetworkPull { get; }
+
         bool CanShareStorage { get; }
     }
 }

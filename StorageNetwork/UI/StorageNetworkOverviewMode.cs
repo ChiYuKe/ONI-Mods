@@ -78,6 +78,11 @@ namespace StorageNetwork.UI
         {
             return new List<LegendEntry>
             {
+                new LegendEntry(STRINGS.UI.STORAGE_NETWORK.LEGEND_INPUT_PORT, STRINGS.UI.STORAGE_NETWORK.LEGEND_INPUT_PORT_TOOLTIP, Color.white, null, Assets.GetSprite("logicInput"), true),
+                new LegendEntry(STRINGS.UI.STORAGE_NETWORK.LEGEND_OUTPUT_PORT, STRINGS.UI.STORAGE_NETWORK.LEGEND_OUTPUT_PORT_TOOLTIP, Color.white, null, Assets.GetSprite("logicOutput"), true),
+                new LegendEntry(STRINGS.UI.STORAGE_NETWORK.LEGEND_CONNECTED_INPUT, STRINGS.UI.STORAGE_NETWORK.LEGEND_CONNECTED_INPUT_TOOLTIP, StorageNetworkPortVisualizer.ConnectedInputColor, null, null, true),
+                new LegendEntry(STRINGS.UI.STORAGE_NETWORK.LEGEND_CONNECTED_OUTPUT, STRINGS.UI.STORAGE_NETWORK.LEGEND_CONNECTED_OUTPUT_TOOLTIP, StorageNetworkPortVisualizer.ConnectedOutputColor, null, null, true),
+                new LegendEntry(STRINGS.UI.STORAGE_NETWORK.LEGEND_DISCONNECTED, STRINGS.UI.STORAGE_NETWORK.LEGEND_DISCONNECTED_TOOLTIP, StorageNetworkPortVisualizer.DisconnectedColor, null, null, true),
                 new LegendEntry(STRINGS.UI.STORAGE_NETWORK.LEGEND_CABLE, STRINGS.UI.STORAGE_NETWORK.LEGEND_CABLE_TOOLTIP, cableColor, null, null, true),
                 new LegendEntry(STRINGS.UI.STORAGE_NETWORK.LEGEND_HUB, STRINGS.UI.STORAGE_NETWORK.LEGEND_HUB_TOOLTIP, hubColor, null, null, true),
                 new LegendEntry(STRINGS.UI.STORAGE_NETWORK.LEGEND_STORAGE, STRINGS.UI.STORAGE_NETWORK.LEGEND_STORAGE_TOOLTIP, storageColor, null, null, true)
@@ -194,24 +199,12 @@ namespace StorageNetwork.UI
         {
             foreach (StorageNetworkStorageConnector connector in StorageNetworkRegistry.RegisteredStorageConnectors)
             {
-                if (connector == null)
-                {
-                    continue;
-                }
+                DrawPortIcon(connector);
+            }
 
-                StorageNetworkPortVisualizer visualizer = connector.GetComponent<StorageNetworkPortVisualizer>();
-                if (visualizer != null)
-                {
-                    SaveLoadRoot root = connector.GetComponent<SaveLoadRoot>();
-                    if (focusHub == null || (root != null && desiredTargets.Contains(root)))
-                    {
-                        visualizer.Draw();
-                    }
-                    else
-                    {
-                        visualizer.Hide();
-                    }
-                }
+            foreach (StorageNetworkHub hub in StorageNetworkRegistry.RegisteredHubs)
+            {
+                DrawPortIcon(hub);
             }
         }
 
@@ -229,6 +222,44 @@ namespace StorageNetwork.UI
                 {
                     visualizer.Hide();
                 }
+            }
+
+            foreach (StorageNetworkHub hub in StorageNetworkRegistry.RegisteredHubs)
+            {
+                if (hub == null)
+                {
+                    continue;
+                }
+
+                StorageNetworkPortVisualizer visualizer = hub.GetComponent<StorageNetworkPortVisualizer>();
+                if (visualizer != null)
+                {
+                    visualizer.Hide();
+                }
+            }
+        }
+
+        private void DrawPortIcon(KMonoBehaviour connectable)
+        {
+            if (connectable == null)
+            {
+                return;
+            }
+
+            StorageNetworkPortVisualizer visualizer = connectable.GetComponent<StorageNetworkPortVisualizer>();
+            if (visualizer == null)
+            {
+                return;
+            }
+
+            SaveLoadRoot root = connectable.GetComponent<SaveLoadRoot>();
+            if (focusHub == null || (root != null && desiredTargets.Contains(root)))
+            {
+                visualizer.Draw();
+            }
+            else
+            {
+                visualizer.Hide();
             }
         }
     }

@@ -42,6 +42,20 @@ namespace StorageNetwork.Patches
             }
         }
 
+        [HarmonyPatch(typeof(ComplexFabricator), "UpdateFetches")]
+        public static class ComplexFabricatorUpdateFetchesPatch
+        {
+            public static void Prefix(ComplexFabricator __instance, DictionaryPool<Tag, float, ComplexFabricator>.PooledDictionary missingAmounts)
+            {
+                if (__instance?.inStorage == null || missingAmounts == null || missingAmounts.Count == 0)
+                {
+                    return;
+                }
+
+                StorageNetworkTransferService.TryPullMissingAmounts(__instance.inStorage, missingAmounts);
+            }
+        }
+
         [HarmonyPatch(typeof(ComplexFabricator), "TransferCurrentRecipeIngredientsForBuild")]
         public static class ComplexFabricatorIngredientTransferPatch
         {

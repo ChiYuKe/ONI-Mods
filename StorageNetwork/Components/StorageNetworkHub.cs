@@ -1,12 +1,35 @@
 using System.Collections.Generic;
+using KSerialization;
 using StorageNetwork.Core;
 using StorageNetwork.UI;
 
 namespace StorageNetwork.Components
 {
-    public class StorageNetworkHub : KMonoBehaviour, ISim1000ms, ISidescreenButtonControl
+    [SerializationConfig(MemberSerialization.OptIn)]
+    public class StorageNetworkHub : KMonoBehaviour, ISim1000ms, ISidescreenButtonControl, IStorageNetworkConnectable
     {
+        [Serialize]
+        private bool allowsNetworkPull = true;
+
         private StorageNetworkSnapshot snapshot = StorageNetworkSnapshot.Empty;
+
+        public int Cell => Grid.PosToCell(this);
+
+        public int InputCell => Cell;
+
+        public int OutputCell => Grid.CellRight(Cell);
+
+        public string DisplayName => gameObject.GetProperName();
+
+        public Storage Storage => null;
+
+        public bool AllowsNetworkPull
+        {
+            get => allowsNetworkPull;
+            set => allowsNetworkPull = value;
+        }
+
+        public bool CanShareStorage => true;
 
         public IReadOnlyList<StorageNetworkStorageInfo> ConnectedStorages => snapshot.Storages;
 
@@ -18,6 +41,7 @@ namespace StorageNetwork.Components
         {
             base.OnSpawn();
             StorageNetworkRegistry.Register(this);
+            gameObject.AddOrGet<StorageNetworkPortVisualizer>();
             RefreshNetwork();
         }
 

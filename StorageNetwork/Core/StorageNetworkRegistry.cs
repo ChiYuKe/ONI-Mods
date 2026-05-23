@@ -95,7 +95,7 @@ namespace StorageNetwork.Core
         public static IEnumerable<StorageNetworkCable> GetConnectedCables(StorageNetworkHub hub)
         {
             HashSet<int> networkCells = FindConnectedCableCells(hub);
-            return Cables.Where(cable => cable != null && networkCells.Contains(cable.Cell));
+            return Cables.ToList().Where(cable => IsLiveCable(cable) && networkCells.Contains(cable.Cell));
         }
 
         public static IEnumerable<Storage> GetSharedStorages(Storage requesterStorage)
@@ -111,24 +111,53 @@ namespace StorageNetwork.Core
 
         public static float GetMassAvailable(Storage requesterStorage, Tag tag)
         {
+            if (!CanPullFromNetwork(requesterStorage))
+            {
+                return 0f;
+            }
+
             return GetSharedStorages(requesterStorage)
                 .SelectMany(storage => storage.items)
                 .Where(item => item != null && item.TryGetComponent(out KPrefabID prefabId) && prefabId.HasTag(tag))
                 .Sum(item => item.GetComponent<PrimaryElement>()?.Mass ?? 0f);
         }
 
+        public static bool CanPullFromNetwork(Storage requesterStorage)
+        {
+            HashSet<int> networkCells = FindConnectedCableCells(requesterStorage);
+            if (networkCells.Count == 0)
+            {
+                return false;
+            }
+
+            return Hubs.Any(hub => hub != null && hub.AllowsNetworkPull && IsHubConnectedToNetwork(hub, networkCells));
+        }
+
         private static HashSet<int> FindConnectedCableCells(StorageNetworkHub hub)
         {
             HashSet<int> startCells = new HashSet<int>();
-            Building building = hub.GetComponent<Building>();
-            if (building == null)
+            if (hub == null)
             {
                 return startCells;
             }
 
-            foreach (int cell in building.PlacementCells)
+            if (IsCableCell(hub.InputCell))
             {
-                AddAdjacentCableCells(cell, startCells);
+                startCells.Add(hub.InputCell);
+            }
+
+            if (IsCableCell(hub.OutputCell))
+            {
+                startCells.Add(hub.OutputCell);
+            }
+
+            Building building = hub.GetComponent<Building>();
+            if (building != null)
+            {
+                foreach (int cell in building.PlacementCells)
+                {
+                    AddAdjacentCableCells(cell, startCells);
+                }
             }
 
             return ExpandCableNetwork(startCells);
@@ -146,6 +175,11 @@ namespace StorageNetwork.Core
             if (IsCableCell(connector.InputCell))
             {
                 startCells.Add(connector.InputCell);
+            }
+
+            if (connector.Storage == null && IsCableCell(connector.OutputCell))
+            {
+                startCells.Add(connector.OutputCell);
             }
 
             return ExpandCableNetwork(startCells);
@@ -241,7 +275,21 @@ namespace StorageNetwork.Core
                 return null;
             }
 
-            return Cables.FirstOrDefault(cable => cable != null && cable.Cell == cell);
+            foreach (StorageNetworkCable cable in Cables.ToList())
+            {
+                if (!IsLiveCable(cable))
+                {
+                    Cables.Remove(cable);
+                    continue;
+                }
+
+                if (cable.Cell == cell)
+                {
+                    return cable;
+                }
+            }
+
+            return null;
         }
 
         public static bool IsCableCell(int cell)
@@ -255,6 +303,28 @@ namespace StorageNetwork.Core
             yield return Grid.CellBelow(cell);
             yield return Grid.CellLeft(cell);
             yield return Grid.CellRight(cell);
+        }
+
+        private static bool IsHubConnectedToNetwork(StorageNetworkHub hub, HashSet<int> networkCells)
+        {
+            if (networkCells.Contains(hub.InputCell) || networkCells.Contains(hub.OutputCell))
+            {
+                return true;
+            }
+
+            Building building = hub.GetComponent<Building>();
+            return building != null && building.PlacementCells.Any(cell => GetCardinalCells(cell).Any(networkCells.Contains));
+        }
+
+        private static bool IsLiveCable(StorageNetworkCable cable)
+        {
+            if (cable == null || cable.gameObject == null || !cable.isSpawned || cable.GetComponent<BuildingComplete>() == null)
+            {
+                return false;
+            }
+
+            int cell = cable.Cell;
+            return Grid.IsValidCell(cell) && Grid.Objects[cell, (int)ObjectLayer.LogicWire] == cable.gameObject;
         }
     }
 }

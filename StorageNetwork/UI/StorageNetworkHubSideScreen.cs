@@ -11,6 +11,8 @@ namespace StorageNetwork.UI
         private StorageNetworkHub targetHub;
         private LocText contentText;
         private Button viewNetworkButton;
+        private Button pullToggleButton;
+        private LocText pullToggleLabel;
 
         public override string GetTitle()
         {
@@ -87,6 +89,19 @@ namespace StorageNetwork.UI
                     StorageNetworkPanel.Show(targetHub);
                 }
             });
+
+            GameObject toggleObject = CreateButton(root.transform);
+            pullToggleButton = toggleObject.GetComponent<Button>();
+            pullToggleLabel = toggleObject.transform.Find("Label")?.GetComponent<LocText>();
+            pullToggleButton.onClick.AddListener(() =>
+            {
+                if (targetHub != null)
+                {
+                    targetHub.AllowsNetworkPull = !targetHub.AllowsNetworkPull;
+                    targetHub.RefreshNetwork();
+                    Refresh();
+                }
+            });
         }
 
         private static GameObject CreateButton(Transform parent)
@@ -135,6 +150,11 @@ namespace StorageNetwork.UI
             }
 
             targetHub.RefreshNetwork();
+            if (pullToggleLabel != null)
+            {
+                pullToggleLabel.SetText(targetHub.AllowsNetworkPull ? "允许建筑从网络取料" : "禁止建筑从网络取料");
+            }
+
             StringBuilder builder = new StringBuilder();
             builder.AppendLine(string.Format(
                 STRINGS.UI.STORAGE_NETWORK.SUMMARY,

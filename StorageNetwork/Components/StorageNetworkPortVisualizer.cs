@@ -6,7 +6,11 @@ namespace StorageNetwork.Components
 {
     public sealed class StorageNetworkPortVisualizer : KMonoBehaviour
     {
-        private StorageNetworkStorageConnector connector;
+        public static readonly Color ConnectedInputColor = new Color(0.25f, 0.70f, 1f, 1f);
+        public static readonly Color ConnectedOutputColor = new Color(1f, 0.82f, 0.20f, 1f);
+        public static readonly Color DisconnectedColor = new Color(0.72f, 0.18f, 0.18f, 1f);
+
+        private IStorageNetworkConnectable connector;
         private GameObject inputVisualizer;
         private GameObject outputVisualizer;
         private Image inputIcon;
@@ -17,7 +21,7 @@ namespace StorageNetwork.Components
         protected override void OnSpawn()
         {
             base.OnSpawn();
-            connector = GetComponent<StorageNetworkStorageConnector>();
+            connector = GetComponent<IStorageNetworkConnectable>();
         }
 
         protected override void OnCleanUp()
@@ -31,7 +35,7 @@ namespace StorageNetwork.Components
         {
             if (connector == null)
             {
-                connector = GetComponent<StorageNetworkStorageConnector>();
+                connector = GetComponent<IStorageNetworkConnectable>();
             }
 
             if (connector == null)
@@ -39,7 +43,6 @@ namespace StorageNetwork.Components
                 return;
             }
 
-            BuildingCellVisualizerResources resources = BuildingCellVisualizerResources.Instance();
             logicInputSprite = logicInputSprite ?? Assets.GetSprite("logicInput");
             logicOutputSprite = logicOutputSprite ?? Assets.GetSprite("logicOutput");
 
@@ -49,8 +52,8 @@ namespace StorageNetwork.Components
                 ref inputVisualizer,
                 ref inputIcon,
                 StorageNetworkRegistry.IsCableCell(connector.InputCell)
-                    ? new Color(0.25f, 0.70f, 1f, 1f)
-                    : Color.gray);
+                    ? ConnectedInputColor
+                    : DisconnectedColor);
 
             DrawIcon(
                 connector.OutputCell,
@@ -58,8 +61,8 @@ namespace StorageNetwork.Components
                 ref outputVisualizer,
                 ref outputIcon,
                 StorageNetworkRegistry.IsCableCell(connector.OutputCell)
-                    ? new Color(1f, 0.82f, 0.20f, 1f)
-                    : Color.gray);
+                    ? ConnectedOutputColor
+                    : DisconnectedColor);
         }
 
         public void Hide()
@@ -80,7 +83,7 @@ namespace StorageNetwork.Components
                 visualizer = Util.KInstantiate(Assets.UIPrefabs.ResourceVisualizer, GameScreenManager.Instance.worldSpaceCanvas, null);
                 visualizer.transform.SetAsFirstSibling();
                 icon = visualizer.transform.GetChild(0).GetComponent<Image>();
-                visualizer.transform.localScale = Vector3.one * 1.5f;
+                visualizer.transform.localScale = Vector3.one * 0.95f;
             }
 
             SetActive(visualizer, true);

@@ -37,6 +37,16 @@ namespace StorageNetwork
                 public static LocString OVERVIEW_TOOLTIP = "高亮储存网络线缆、核心和已连接储存建筑。";
                 public static LocString VIEW_NETWORK_BUTTON = "查看储存网络";
                 public static LocString VIEW_NETWORK_TOOLTIP = "打开储存网络面板，查看当前核心连接的所有储存建筑和容量状态。";
+                public static LocString LEGEND_INPUT_PORT = "输入端";
+                public static LocString LEGEND_INPUT_PORT_TOOLTIP = "储存网络从这里接入建筑。";
+                public static LocString LEGEND_OUTPUT_PORT = "输出端";
+                public static LocString LEGEND_OUTPUT_PORT_TOOLTIP = "储存网络从这里继续连接到其他建筑。";
+                public static LocString LEGEND_CONNECTED_INPUT = "输入端已连接";
+                public static LocString LEGEND_CONNECTED_INPUT_TOOLTIP = "输入端所在格有储存网络线缆。";
+                public static LocString LEGEND_CONNECTED_OUTPUT = "输出端已连接";
+                public static LocString LEGEND_CONNECTED_OUTPUT_TOOLTIP = "输出端所在格有储存网络线缆。";
+                public static LocString LEGEND_DISCONNECTED = "未连接";
+                public static LocString LEGEND_DISCONNECTED_TOOLTIP = "端口所在格没有储存网络线缆。";
                 public static LocString LEGEND_CABLE = "储存网络线缆";
                 public static LocString LEGEND_CABLE_TOOLTIP = "连接储存网络核心与储存建筑。";
                 public static LocString LEGEND_HUB = "储存网络核心";

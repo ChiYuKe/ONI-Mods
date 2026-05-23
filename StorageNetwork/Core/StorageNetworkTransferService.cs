@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using UnityEngine;
 
 namespace StorageNetwork.Core
 {
@@ -9,6 +10,11 @@ namespace StorageNetwork.Core
         {
             transferred = 0f;
             if (destination == null || !tag.IsValid || amount <= 0f)
+            {
+                return false;
+            }
+
+            if (!StorageNetworkRegistry.CanPullFromNetwork(destination))
             {
                 return false;
             }
@@ -47,6 +53,32 @@ namespace StorageNetwork.Core
                 if (TryPull(destination, ingredient.material, missingAmount, out _))
                 {
                     transferredAny = true;
+                }
+            }
+
+            return transferredAny;
+        }
+
+        public static bool TryPullMissingAmounts(Storage destination, IDictionary<Tag, float> missingAmounts)
+        {
+            if (destination == null || missingAmounts == null)
+            {
+                return false;
+            }
+
+            bool transferredAny = false;
+            foreach (Tag tag in missingAmounts.Keys.ToList())
+            {
+                float missingAmount = missingAmounts[tag];
+                if (missingAmount <= 0f)
+                {
+                    continue;
+                }
+
+                if (TryPull(destination, tag, missingAmount, out float transferred))
+                {
+                    transferredAny = true;
+                    missingAmounts[tag] = Mathf.Max(0f, missingAmount - transferred);
                 }
             }
 
