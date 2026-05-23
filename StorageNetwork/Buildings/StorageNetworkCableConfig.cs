@@ -15,7 +15,7 @@ namespace StorageNetwork.Buildings
                 ID,
                 1,
                 1,
-                "logic_wires_kanim",
+                "storage_network_wires_kanim",
                 10,
                 3f,
                 TUNING.BUILDINGS.CONSTRUCTION_MASS_KG.TIER_TINY,
@@ -40,7 +40,6 @@ namespace StorageNetwork.Buildings
             buildingDef.isUtility = true;
             buildingDef.DragBuild = true;
             buildingDef.AddSearchTerms(global::STRINGS.SEARCH_TERMS.AUTOMATION);
-            GeneratedBuildings.RegisterWithOverlay(OverlayModes.Logic.HighlightItemIDs, ID);
             return buildingDef;
         }
 

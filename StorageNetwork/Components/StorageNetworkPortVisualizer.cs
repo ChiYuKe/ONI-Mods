@@ -91,7 +91,7 @@ namespace StorageNetwork.Components
             icon.sprite = sprite;
             icon.raycastTarget = true;
             icon.color = tint;
-            visualizer.transform.SetPosition(Grid.CellToPosCCC(cell, Grid.SceneLayer.Building));
+            visualizer.transform.SetPosition(Grid.CellToPosCCC(cell, Grid.SceneLayer.BuildingFront));
         }
 
         private static void SetActive(GameObject visualizer, bool active)

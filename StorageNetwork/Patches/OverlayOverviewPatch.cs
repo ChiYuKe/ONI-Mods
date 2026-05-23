@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using HarmonyLib;
-using StorageNetwork.Components;
 using StorageNetwork.UI;
 using UnityEngine;
 
@@ -55,22 +54,5 @@ namespace StorageNetwork.Patches
             }
         }
 
-        [HarmonyPatch(typeof(OverlayModes.Logic), nameof(OverlayModes.Logic.GetCustomLegendData))]
-        public static class LogicOverlayLegendPatch
-        {
-            public static void Postfix(ref List<LegendEntry> __result)
-            {
-                if (__result == null)
-                {
-                    __result = new List<LegendEntry>();
-                }
-
-                __result.Add(new LegendEntry(STRINGS.UI.STORAGE_NETWORK.LEGEND_INPUT_PORT, STRINGS.UI.STORAGE_NETWORK.LEGEND_INPUT_PORT_TOOLTIP, Color.white, null, Assets.GetSprite("logicInput"), true));
-                __result.Add(new LegendEntry(STRINGS.UI.STORAGE_NETWORK.LEGEND_OUTPUT_PORT, STRINGS.UI.STORAGE_NETWORK.LEGEND_OUTPUT_PORT_TOOLTIP, Color.white, null, Assets.GetSprite("logicOutput"), true));
-                __result.Add(new LegendEntry(STRINGS.UI.STORAGE_NETWORK.LEGEND_CONNECTED_INPUT, STRINGS.UI.STORAGE_NETWORK.LEGEND_CONNECTED_INPUT_TOOLTIP, StorageNetworkPortVisualizer.ConnectedInputColor, null, null, true));
-                __result.Add(new LegendEntry(STRINGS.UI.STORAGE_NETWORK.LEGEND_CONNECTED_OUTPUT, STRINGS.UI.STORAGE_NETWORK.LEGEND_CONNECTED_OUTPUT_TOOLTIP, StorageNetworkPortVisualizer.ConnectedOutputColor, null, null, true));
-                __result.Add(new LegendEntry(STRINGS.UI.STORAGE_NETWORK.LEGEND_DISCONNECTED, STRINGS.UI.STORAGE_NETWORK.LEGEND_DISCONNECTED_TOOLTIP, StorageNetworkPortVisualizer.DisconnectedColor, null, null, true));
-            }
-        }
     }
 }

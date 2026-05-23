@@ -49,6 +49,10 @@ namespace StorageNetwork
                 public static LocString LEGEND_DISCONNECTED_TOOLTIP = "端口所在格没有储存网络线缆。";
                 public static LocString LEGEND_CABLE = "储存网络线缆";
                 public static LocString LEGEND_CABLE_TOOLTIP = "连接储存网络核心与储存建筑。";
+                public static LocString LEGEND_CONNECTED_CABLE = "线缆已连接";
+                public static LocString LEGEND_CONNECTED_CABLE_TOOLTIP = "这段储存网络线缆已连到储存网络核心。";
+                public static LocString LEGEND_DISCONNECTED_CABLE = "线缆未连接";
+                public static LocString LEGEND_DISCONNECTED_CABLE_TOOLTIP = "这段储存网络线缆没有连到储存网络核心。";
                 public static LocString LEGEND_HUB = "储存网络核心";
                 public static LocString LEGEND_HUB_TOOLTIP = "扫描并汇总相连储存建筑。";
                 public static LocString LEGEND_STORAGE = "已连接储存";

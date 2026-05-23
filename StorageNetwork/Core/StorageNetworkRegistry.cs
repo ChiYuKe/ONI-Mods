@@ -73,6 +73,22 @@ namespace StorageNetwork.Core
         {
         }
 
+        public static bool IsCableConnectedToAnyHub(StorageNetworkCable cable)
+        {
+            if (!IsLiveCable(cable))
+            {
+                return false;
+            }
+
+            int cell = cable.Cell;
+            return Hubs.ToList().Any(hub => hub != null && FindConnectedCableCells(hub).Contains(cell));
+        }
+
+        public static bool IsCableConnectedToHub(StorageNetworkCable cable, StorageNetworkHub hub)
+        {
+            return IsLiveCable(cable) && hub != null && FindConnectedCableCells(hub).Contains(cable.Cell);
+        }
+
         public static StorageNetworkSnapshot BuildSnapshot(StorageNetworkHub hub)
         {
             if (hub == null)
@@ -141,12 +157,12 @@ namespace StorageNetwork.Core
                 return startCells;
             }
 
-            if (IsCableCell(hub.InputCell))
+            if (IsConnectedCableCell(hub.InputCell))
             {
                 startCells.Add(hub.InputCell);
             }
 
-            if (IsCableCell(hub.OutputCell))
+            if (IsConnectedCableCell(hub.OutputCell))
             {
                 startCells.Add(hub.OutputCell);
             }
@@ -172,12 +188,12 @@ namespace StorageNetwork.Core
                 return startCells;
             }
 
-            if (IsCableCell(connector.InputCell))
+            if (IsConnectedCableCell(connector.InputCell))
             {
                 startCells.Add(connector.InputCell);
             }
 
-            if (connector.Storage == null && IsCableCell(connector.OutputCell))
+            if (connector.Storage == null && IsConnectedCableCell(connector.OutputCell))
             {
                 startCells.Add(connector.OutputCell);
             }
@@ -200,7 +216,7 @@ namespace StorageNetwork.Core
 
                 foreach (int adjacentCell in GetCardinalCells(cell))
                 {
-                    if (IsCableCell(adjacentCell) && !visited.Contains(adjacentCell))
+                    if (AreCableCellsConnected(cell, adjacentCell) && !visited.Contains(adjacentCell))
                     {
                         pending.Enqueue(adjacentCell);
                     }
@@ -213,7 +229,7 @@ namespace StorageNetwork.Core
                         continue;
                     }
 
-                    if (IsCableCell(connector.OutputCell) && !visited.Contains(connector.OutputCell))
+                    if (IsConnectedCableCell(connector.OutputCell) && !visited.Contains(connector.OutputCell))
                     {
                         pending.Enqueue(connector.OutputCell);
                     }
@@ -261,7 +277,7 @@ namespace StorageNetwork.Core
         {
             foreach (int adjacentCell in GetCardinalCells(cell))
             {
-                if (IsCableCell(adjacentCell))
+                if (IsConnectedCableCell(adjacentCell))
                 {
                     result.Add(adjacentCell);
                 }
@@ -297,6 +313,27 @@ namespace StorageNetwork.Core
             return GetCableAtCell(cell) != null;
         }
 
+        private static bool IsConnectedCableCell(int cell)
+        {
+            StorageNetworkCable cable = GetCableAtCell(cell);
+            return IsLiveCable(cable) && !cable.IsDisconnected();
+        }
+
+        public static bool AreCableCellsConnected(int cell, int adjacentCell)
+        {
+            StorageNetworkCable cable = GetCableAtCell(cell);
+            StorageNetworkCable adjacentCable = GetCableAtCell(adjacentCell);
+            if (!IsLiveCable(cable) || !IsLiveCable(adjacentCable))
+            {
+                return false;
+            }
+
+            UtilityConnections direction = UtilityConnectionsExtensions.DirectionFromToCell(cell, adjacentCell);
+            return direction != (UtilityConnections)0 &&
+                HasConnection(cable, direction) &&
+                HasConnection(adjacentCable, direction.InverseDirection());
+        }
+
         private static IEnumerable<int> GetCardinalCells(int cell)
         {
             yield return Grid.CellAbove(cell);
@@ -325,6 +362,20 @@ namespace StorageNetwork.Core
 
             int cell = cable.Cell;
             return Grid.IsValidCell(cell) && Grid.Objects[cell, (int)ObjectLayer.LogicWire] == cable.gameObject;
+        }
+
+        private static bool HasConnection(StorageNetworkCable cable, UtilityConnections direction)
+        {
+            if (cable == null || cable.IsDisconnected())
+            {
+                return false;
+            }
+
+            KAnimGraphTileVisualizer visualizer = cable.GetComponent<KAnimGraphTileVisualizer>();
+            UtilityConnections connections = visualizer != null
+                ? visualizer.Connections
+                : (UtilityConnections)0;
+            return (connections & direction) != (UtilityConnections)0;
         }
     }
 }

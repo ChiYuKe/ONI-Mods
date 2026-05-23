@@ -11,18 +11,22 @@ namespace StorageNetwork.UI
         public static readonly HashedString ID = "StorageNetworkOverview";
         private static StorageNetworkHub focusHub;
 
-        private readonly HashSet<SaveLoadRoot> layerTargets = new HashSet<SaveLoadRoot>();
+        private readonly HashSet<SaveLoadRoot> cableTargets = new HashSet<SaveLoadRoot>();
+        private readonly HashSet<SaveLoadRoot> objectTargets = new HashSet<SaveLoadRoot>();
         private readonly HashSet<SaveLoadRoot> desiredTargets = new HashSet<SaveLoadRoot>();
-        private readonly Color32 cableColor = new Color32(118, 86, 150, 0);
+        private readonly Color32 connectedCableColor = new Color32(75, 190, 92, 0);
+        private readonly Color32 disconnectedCableColor = new Color32(220, 54, 54, 0);
         private readonly Color32 hubColor = new Color32(72, 128, 150, 0);
         private readonly Color32 storageColor = new Color32(150, 132, 82, 0);
-        private readonly int targetLayer;
+        private readonly int cableTargetLayer;
+        private readonly int objectTargetLayer;
         private readonly int cameraLayerMask;
         private readonly int selectionMask;
 
         public StorageNetworkOverviewMode()
         {
-            targetLayer = LayerMask.NameToLayer("MaskedOverlay");
+            cableTargetLayer = LayerMask.NameToLayer("MaskedOverlay");
+            objectTargetLayer = LayerMask.NameToLayer("MaskedOverlayBG");
             cameraLayerMask = LayerMask.GetMask("MaskedOverlay", "MaskedOverlayBG");
             selectionMask = cameraLayerMask;
         }
@@ -52,9 +56,11 @@ namespace StorageNetwork.UI
 
         public override void Disable()
         {
-            OverlayModes.Mode.ResetDisplayValues<SaveLoadRoot>(layerTargets);
+            ResetTargets(cableTargets);
+            ResetTargets(objectTargets);
             HidePortIcons();
-            layerTargets.Clear();
+            cableTargets.Clear();
+            objectTargets.Clear();
             desiredTargets.Clear();
             Camera.main.cullingMask &= ~cameraLayerMask;
             SelectTool.Instance.ClearLayerMask();
@@ -83,7 +89,8 @@ namespace StorageNetwork.UI
                 new LegendEntry(STRINGS.UI.STORAGE_NETWORK.LEGEND_CONNECTED_INPUT, STRINGS.UI.STORAGE_NETWORK.LEGEND_CONNECTED_INPUT_TOOLTIP, StorageNetworkPortVisualizer.ConnectedInputColor, null, null, true),
                 new LegendEntry(STRINGS.UI.STORAGE_NETWORK.LEGEND_CONNECTED_OUTPUT, STRINGS.UI.STORAGE_NETWORK.LEGEND_CONNECTED_OUTPUT_TOOLTIP, StorageNetworkPortVisualizer.ConnectedOutputColor, null, null, true),
                 new LegendEntry(STRINGS.UI.STORAGE_NETWORK.LEGEND_DISCONNECTED, STRINGS.UI.STORAGE_NETWORK.LEGEND_DISCONNECTED_TOOLTIP, StorageNetworkPortVisualizer.DisconnectedColor, null, null, true),
-                new LegendEntry(STRINGS.UI.STORAGE_NETWORK.LEGEND_CABLE, STRINGS.UI.STORAGE_NETWORK.LEGEND_CABLE_TOOLTIP, cableColor, null, null, true),
+                new LegendEntry(STRINGS.UI.STORAGE_NETWORK.LEGEND_CONNECTED_CABLE, STRINGS.UI.STORAGE_NETWORK.LEGEND_CONNECTED_CABLE_TOOLTIP, connectedCableColor, null, null, true),
+                new LegendEntry(STRINGS.UI.STORAGE_NETWORK.LEGEND_DISCONNECTED_CABLE, STRINGS.UI.STORAGE_NETWORK.LEGEND_DISCONNECTED_CABLE_TOOLTIP, disconnectedCableColor, null, null, true),
                 new LegendEntry(STRINGS.UI.STORAGE_NETWORK.LEGEND_HUB, STRINGS.UI.STORAGE_NETWORK.LEGEND_HUB_TOOLTIP, hubColor, null, null, true),
                 new LegendEntry(STRINGS.UI.STORAGE_NETWORK.LEGEND_STORAGE, STRINGS.UI.STORAGE_NETWORK.LEGEND_STORAGE_TOOLTIP, storageColor, null, null, true)
             };
@@ -95,10 +102,7 @@ namespace StorageNetwork.UI
 
             foreach (StorageNetworkCable cable in StorageNetworkRegistry.RegisteredCables)
             {
-                if (focusHub == null)
-                {
-                    AddRoot(cable);
-                }
+                AddRoot(cable);
             }
 
             IEnumerable<StorageNetworkHub> hubs = focusHub != null
@@ -129,36 +133,28 @@ namespace StorageNetwork.UI
 
         private void ClearStaleTargets()
         {
-            List<SaveLoadRoot> staleTargets = layerTargets
-                .Where(target => target == null || !desiredTargets.Contains(target))
-                .ToList();
-
-            foreach (SaveLoadRoot target in staleTargets)
-            {
-                if (target != null)
-                {
-                    KBatchedAnimController controller = target.GetComponent<KBatchedAnimController>();
-                    if (controller != null)
-                    {
-                        OverlayModes.Mode.ResetDisplayValues(controller);
-                    }
-                }
-
-                layerTargets.Remove(target);
-            }
+            ClearStaleTargets(cableTargets);
+            ClearStaleTargets(objectTargets);
         }
 
         private void AddVisibleTargets(Vector2I visibleMin, Vector2I visibleMax)
         {
             foreach (SaveLoadRoot target in desiredTargets)
             {
-                AddTargetIfVisible(target, visibleMin, visibleMax, layerTargets, targetLayer, null, null);
+                if (target.GetComponent<StorageNetworkCable>() != null)
+                {
+                    AddTargetIfVisible(target, visibleMin, visibleMax, cableTargets, cableTargetLayer, SetCableOverlayDepth, null);
+                }
+                else
+                {
+                    AddTargetIfVisible(target, visibleMin, visibleMax, objectTargets, objectTargetLayer, null, null);
+                }
             }
         }
 
         private void TintTargets()
         {
-            foreach (SaveLoadRoot target in layerTargets)
+            foreach (SaveLoadRoot target in cableTargets)
             {
                 if (target == null)
                 {
@@ -171,11 +167,31 @@ namespace StorageNetwork.UI
                     continue;
                 }
 
-                if (target.GetComponent<StorageNetworkCable>() != null)
+                StorageNetworkCable cable = target.GetComponent<StorageNetworkCable>();
+                if (cable == null)
                 {
-                    controller.TintColour = cableColor;
+                    continue;
                 }
-                else if (target.GetComponent<StorageNetworkHub>() != null)
+
+                controller.TintColour = IsCableConnected(cable)
+                    ? connectedCableColor
+                    : disconnectedCableColor;
+            }
+
+            foreach (SaveLoadRoot target in objectTargets)
+            {
+                if (target == null)
+                {
+                    continue;
+                }
+
+                KBatchedAnimController controller = target.GetComponent<KBatchedAnimController>();
+                if (controller == null)
+                {
+                    continue;
+                }
+
+                if (target.GetComponent<StorageNetworkHub>() != null)
                 {
                     controller.TintColour = hubColor;
                 }
@@ -184,6 +200,71 @@ namespace StorageNetwork.UI
                     controller.TintColour = storageColor;
                 }
             }
+        }
+
+        private void ClearStaleTargets(HashSet<SaveLoadRoot> targets)
+        {
+            List<SaveLoadRoot> staleTargets = targets
+                .Where(target => target == null || !desiredTargets.Contains(target))
+                .ToList();
+
+            foreach (SaveLoadRoot target in staleTargets)
+            {
+                ResetTarget(target);
+                targets.Remove(target);
+            }
+        }
+
+        private static void ResetTargets(HashSet<SaveLoadRoot> targets)
+        {
+            foreach (SaveLoadRoot target in targets)
+            {
+                ResetTarget(target);
+            }
+        }
+
+        private static void ResetTarget(SaveLoadRoot target)
+        {
+            if (target == null)
+            {
+                return;
+            }
+
+            KBatchedAnimController controller = target.GetComponent<KBatchedAnimController>();
+            if (controller != null)
+            {
+                OverlayModes.Mode.ResetDisplayValues(controller);
+            }
+
+            Vector3 position = target.transform.GetPosition();
+            position.z = OverlayModes.Mode.GetDefaultDepth(target);
+            target.transform.SetPosition(position);
+            if (controller != null)
+            {
+                controller.enabled = false;
+                controller.enabled = true;
+            }
+        }
+
+        private static void SetCableOverlayDepth(SaveLoadRoot target)
+        {
+            Vector3 position = target.transform.GetPosition();
+            position.z = Grid.GetLayerZ(Grid.SceneLayer.Building) - 0.1f;
+            target.transform.SetPosition(position);
+
+            KBatchedAnimController controller = target.GetComponent<KBatchedAnimController>();
+            if (controller != null)
+            {
+                controller.enabled = false;
+                controller.enabled = true;
+            }
+        }
+
+        private static bool IsCableConnected(StorageNetworkCable cable)
+        {
+            return focusHub != null
+                ? StorageNetworkRegistry.IsCableConnectedToHub(cable, focusHub)
+                : StorageNetworkRegistry.IsCableConnectedToAnyHub(cable);
         }
 
         private void AddRoot(KMonoBehaviour component)

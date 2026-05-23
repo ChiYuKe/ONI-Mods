@@ -1,17 +1,48 @@
 using System.Collections;
 using System.Collections.Generic;
+using KSerialization;
 using StorageNetwork.Core;
 using UnityEngine;
 
 namespace StorageNetwork.Components
 {
-    public class StorageNetworkCable : KMonoBehaviour, IHaveUtilityNetworkMgr
+    [SerializationConfig(MemberSerialization.OptIn)]
+    public class StorageNetworkCable : KMonoBehaviour, IHaveUtilityNetworkMgr, IDisconnectable
     {
+        [Serialize]
+        private bool disconnected;
+
         public int Cell => Grid.PosToCell(this);
+
+        public bool IsConnected => !disconnected;
 
         public IUtilityNetworkMgr GetNetworkManager()
         {
             return Game.Instance.logicCircuitSystem;
+        }
+
+        public bool IsDisconnected()
+        {
+            return disconnected;
+        }
+
+        public bool Connect()
+        {
+            disconnected = false;
+            StorageNetworkRegistry.MarkDirty();
+            RefreshSelfAndNeighbours();
+            return true;
+        }
+
+        public void Disconnect()
+        {
+            disconnected = true;
+            GetComponent<KSelectable>()?.SetStatusItem(
+                Db.Get().StatusItemCategories.Power,
+                Db.Get().BuildingStatusItems.WireDisconnected,
+                null);
+            StorageNetworkRegistry.MarkDirty();
+            RefreshSelfAndNeighbours();
         }
 
         protected override void OnSpawn()
@@ -20,6 +51,11 @@ namespace StorageNetwork.Components
             if (GetComponent<BuildingComplete>() != null)
             {
                 StorageNetworkRegistry.Register(this);
+            }
+
+            if (!disconnected)
+            {
+                Connect();
             }
 
             StartCoroutine(RefreshVisualNextFrame());
@@ -36,19 +72,30 @@ namespace StorageNetwork.Components
             yield return null;
 
             RefreshVisual(Cell);
+            RefreshSelfAndNeighbours();
+        }
+
+        public void RefreshSelfAndNeighbours()
+        {
+            RefreshVisual(Cell);
             foreach (int adjacentCell in GetCardinalCells(Cell))
             {
                 RefreshVisual(adjacentCell);
             }
         }
 
-        private static void RefreshVisual(int cell)
+        public UtilityConnections GetActiveConnections()
         {
-            if (!Grid.IsValidCell(cell))
+            if (disconnected)
             {
-                return;
+                return (UtilityConnections)0;
             }
 
+            return GetConnections(Cell);
+        }
+
+        private static void RefreshVisual(int cell)
+        {
             StorageNetworkCable cable = StorageNetworkRegistry.GetCableAtCell(cell);
             KBatchedAnimController controller = cable?.GetComponent<KBatchedAnimController>();
             if (controller == null)
@@ -56,28 +103,28 @@ namespace StorageNetwork.Components
                 return;
             }
 
-            controller.Play(GetVisualizerString(GetConnections(cell)), KAnim.PlayMode.Once, 1f, 0f);
+            controller.Play(GetVisualizerString(cable.GetActiveConnections()), KAnim.PlayMode.Once, 1f, 0f);
         }
 
         private static UtilityConnections GetConnections(int cell)
         {
             UtilityConnections connections = (UtilityConnections)0;
-            if (StorageNetworkRegistry.IsCableCell(Grid.CellLeft(cell)))
+            if (StorageNetworkRegistry.AreCableCellsConnected(cell, Grid.CellLeft(cell)))
             {
                 connections |= UtilityConnections.Left;
             }
 
-            if (StorageNetworkRegistry.IsCableCell(Grid.CellRight(cell)))
+            if (StorageNetworkRegistry.AreCableCellsConnected(cell, Grid.CellRight(cell)))
             {
                 connections |= UtilityConnections.Right;
             }
 
-            if (StorageNetworkRegistry.IsCableCell(Grid.CellAbove(cell)))
+            if (StorageNetworkRegistry.AreCableCellsConnected(cell, Grid.CellAbove(cell)))
             {
                 connections |= UtilityConnections.Up;
             }
 
-            if (StorageNetworkRegistry.IsCableCell(Grid.CellBelow(cell)))
+            if (StorageNetworkRegistry.AreCableCellsConnected(cell, Grid.CellBelow(cell)))
             {
                 connections |= UtilityConnections.Down;
             }
