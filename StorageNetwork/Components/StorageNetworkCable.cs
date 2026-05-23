@@ -6,6 +6,11 @@ using UnityEngine;
 
 namespace StorageNetwork.Components
 {
+    /// <summary>
+    /// 储存网络线缆组件。
+    /// 挂在储存网络线缆建筑上，用于注册线缆节点、维护连接/断开状态，
+    /// 计算相邻线缆连接方向，并刷新线缆连接动画。
+    /// </summary>
     [SerializationConfig(MemberSerialization.OptIn)]
     public class StorageNetworkCable : KMonoBehaviour, IHaveUtilityNetworkMgr, IDisconnectable
     {

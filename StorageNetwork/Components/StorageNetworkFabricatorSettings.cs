@@ -1,11 +1,20 @@
 using KSerialization;
 using StorageNetwork.Core;
+using UnityEngine;
 
 namespace StorageNetwork.Components
 {
+    /// <summary>
+    /// 储存网络制造器设置组件。
+    /// 挂在 ComplexFabricator 建筑上，用于控制制造器是否从储存网络请求配方材料，
+    /// 以及是否将生产完成的产物存入储存网络。
+    /// 同时会定时检测当前配方缺少的网络材料，并在建筑状态栏显示缺料提示。
+    /// </summary>
     [SerializationConfig(MemberSerialization.OptIn)]
     public sealed class StorageNetworkFabricatorSettings : KMonoBehaviour, ISim1000ms
     {
+        private const int StableTickThreshold = 2;
+
         private static StatusItem missingNetworkMaterialStatus;
 
         private ComplexFabricator fabricator;
@@ -17,6 +26,11 @@ namespace StorageNetwork.Components
         private bool storeProductsToNetwork;
 
         private KSelectable selectable;
+        private Tag missingNetworkMaterial = Tag.Invalid;
+        private Tag observedMissingNetworkMaterial = Tag.Invalid;
+        private int observedMissingTicks;
+        private int observedClearTicks;
+        private bool missingStatusVisible;
 
         public bool RequestIngredientsFromNetwork
         {
@@ -25,7 +39,10 @@ namespace StorageNetwork.Components
             {
                 requestIngredientsFromNetwork = value;
                 RefreshFabricatorQueue();
-                UpdateMissingMaterialStatus(false);
+                if (!requestIngredientsFromNetwork)
+                {
+                    ClearMissingMaterialStatus();
+                }
             }
         }
 
@@ -40,28 +57,25 @@ namespace StorageNetwork.Components
             GetFabricator().GetRecipes() != null &&
             GetFabricator().GetRecipes().Length > 0;
 
+        public string MissingNetworkMaterialName => GetMaterialName(missingNetworkMaterial);
+
         protected override void OnSpawn()
         {
             base.OnSpawn();
             fabricator = GetComponent<ComplexFabricator>();
             selectable = GetComponent<KSelectable>();
-            UpdateMissingMaterialStatus(false);
+            ClearMissingMaterialStatus();
         }
 
         protected override void OnCleanUp()
         {
-            UpdateMissingMaterialStatus(false);
+            ClearMissingMaterialStatus();
             base.OnCleanUp();
         }
 
         public void Sim1000ms(float dt)
         {
-            UpdateMissingMaterialStatus(StorageNetworkTransferService.HasMissingNetworkRecipeIngredients(GetFabricator()));
-        }
-
-        public void OnNetworkMaterialFallback()
-        {
-            UpdateMissingMaterialStatus(true);
+            RefreshMissingMaterialStatus();
         }
 
         private void RefreshFabricatorQueue()
@@ -82,14 +96,63 @@ namespace StorageNetwork.Components
             return fabricator;
         }
 
-        private void UpdateMissingMaterialStatus(bool show)
+        private void RefreshMissingMaterialStatus()
+        {
+            if (!requestIngredientsFromNetwork ||
+                !StorageNetworkTransferService.TryGetMissingNetworkRecipeIngredient(GetFabricator(), out Tag missingTag))
+            {
+                observedMissingNetworkMaterial = Tag.Invalid;
+                observedMissingTicks = 0;
+                observedClearTicks++;
+                if (observedClearTicks >= StableTickThreshold)
+                {
+                    SetMissingMaterialStatus(Tag.Invalid);
+                }
+
+                return;
+            }
+
+            observedClearTicks = 0;
+            if (observedMissingNetworkMaterial == missingTag)
+            {
+                observedMissingTicks++;
+            }
+            else
+            {
+                observedMissingNetworkMaterial = missingTag;
+                observedMissingTicks = 1;
+            }
+
+            if (observedMissingTicks >= StableTickThreshold)
+            {
+                SetMissingMaterialStatus(missingTag);
+            }
+        }
+
+        private void ClearMissingMaterialStatus()
+        {
+            observedMissingNetworkMaterial = Tag.Invalid;
+            observedMissingTicks = 0;
+            observedClearTicks = StableTickThreshold;
+            SetMissingMaterialStatus(Tag.Invalid);
+        }
+
+        private void SetMissingMaterialStatus(Tag missingTag)
         {
             if (selectable == null)
             {
                 selectable = GetComponent<KSelectable>();
             }
 
-            selectable?.ToggleStatusItem(GetMissingNetworkMaterialStatus(), requestIngredientsFromNetwork && show, this);
+            bool show = requestIngredientsFromNetwork && missingTag.IsValid;
+            missingNetworkMaterial = show ? missingTag : Tag.Invalid;
+            if (missingStatusVisible == show)
+            {
+                return;
+            }
+
+            missingStatusVisible = show;
+            selectable?.ToggleStatusItem(GetMissingNetworkMaterialStatus(), show, this);
         }
 
         private static StatusItem GetMissingNetworkMaterialStatus()
@@ -107,10 +170,38 @@ namespace StorageNetwork.Components
                     OverlayModes.None.ID,
                     129022,
                     true,
-                    null);
+                    ResolveMissingNetworkMaterialString);
+                missingNetworkMaterialStatus.resolveTooltipCallback = ResolveMissingNetworkMaterialString;
             }
 
             return missingNetworkMaterialStatus;
+        }
+
+        private static string ResolveMissingNetworkMaterialString(string text, object data)
+        {
+            StorageNetworkFabricatorSettings settings = data as StorageNetworkFabricatorSettings;
+            string materialName = settings != null
+                ? settings.MissingNetworkMaterialName
+                : STRINGS.UI.STORAGE_NETWORK.MISSING_RECIPE_MATERIAL_FALLBACK;
+
+            return text.Replace("{Material}", materialName);
+        }
+
+        private static string GetMaterialName(Tag tag)
+        {
+            if (!tag.IsValid)
+            {
+                return STRINGS.UI.STORAGE_NETWORK.MISSING_RECIPE_MATERIAL_FALLBACK;
+            }
+
+            GameObject prefab = Assets.TryGetPrefab(tag);
+            if (prefab != null)
+            {
+                return prefab.GetProperName();
+            }
+
+            Element element = ElementLoader.GetElement(tag);
+            return element != null ? element.name : tag.ProperName();
         }
     }
 }

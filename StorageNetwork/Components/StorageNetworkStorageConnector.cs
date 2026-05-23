@@ -3,6 +3,11 @@ using UnityEngine;
 
 namespace StorageNetwork.Components
 {
+    /// <summary>
+    /// 储存网络连接器组件。
+    /// 挂在拥有 Storage 的建筑上，用于把该建筑注册为储存网络中的可连接节点。
+    /// 负责向网络系统提供建筑所在格子、输入/输出端口格子、显示名称以及 Storage 引用。
+    /// </summary>
     public class StorageNetworkStorageConnector : KMonoBehaviour, IStorageNetworkConnectable
     {
         private Storage storage;

@@ -5,6 +5,13 @@ using StorageNetwork.UI;
 
 namespace StorageNetwork.Components
 {
+    /// <summary>
+    /// 储存网络中心组件。
+    /// 挂在 Storage Network Hub 建筑上，作为储存网络的核心连接节点。
+    /// 负责注册到 StorageNetworkRegistry，定时构建网络快照，
+    /// 统计当前网络中连接的储存建筑、总容量和总储存量。
+    /// 同时实现侧边栏按钮，用于打开储存网络详情面板。
+    /// </summary>
     [SerializationConfig(MemberSerialization.OptIn)]
     public class StorageNetworkHub : KMonoBehaviour, ISim1000ms, ISidescreenButtonControl, IStorageNetworkConnectable
     {

@@ -4,6 +4,13 @@ using UnityEngine.UI;
 
 namespace StorageNetwork.Components
 {
+    /// <summary>
+    /// 储存网络端口显示组件。
+    /// 挂在实现 IStorageNetworkConnectable 的建筑上，
+    /// 用于在世界空间中绘制输入端口和输出端口图标。
+    /// 如果端口所在格子连接了储存网络线缆，则显示连接颜色；
+    /// 否则显示断开颜色。
+    /// </summary>
     public sealed class StorageNetworkPortVisualizer : KMonoBehaviour
     {
         public static readonly Color ConnectedInputColor = new Color(0.25f, 0.70f, 1f, 1f);
