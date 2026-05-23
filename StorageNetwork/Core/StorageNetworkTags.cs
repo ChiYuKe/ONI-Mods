@@ -6,6 +6,7 @@ namespace StorageNetwork.Core
 {
     public static class StorageNetworkTags
     {
+        public static readonly Tag NetworkConnectable = TagManager.Create("StorageNetworkConnectable");
         public static readonly Tag Storage = TagManager.Create("StorageNetworkCategoryStorage");
         public static readonly Tag Liquid = TagManager.Create("StorageNetworkCategoryLiquid");
         public static readonly Tag Gas = TagManager.Create("StorageNetworkCategoryGas");

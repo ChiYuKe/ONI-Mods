@@ -286,8 +286,19 @@ namespace StorageNetwork.Core
             }
 
             return buildingObject.GetComponent<Storage>() != null
-                ? buildingObject.AddOrGet<StorageNetworkStorageConnector>()
+                ? GetStorageConnector(buildingObject)
                 : null;
+        }
+
+        private static IStorageNetworkConnectable GetStorageConnector(GameObject buildingObject)
+        {
+            KPrefabID prefabId = buildingObject.GetComponent<KPrefabID>();
+            if (prefabId == null || !prefabId.HasTag(StorageNetworkTags.NetworkConnectable))
+            {
+                return null;
+            }
+
+            return buildingObject.AddOrGet<StorageNetworkStorageConnector>();
         }
 
         private static void AddAdjacentCableCells(int cell, HashSet<int> result)

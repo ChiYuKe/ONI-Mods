@@ -14,6 +14,12 @@ namespace StorageNetwork.Patches
                 return;
             }
 
+            KPrefabID prefabId = __instance.GetComponent<KPrefabID>();
+            if (prefabId == null || !prefabId.HasTag(StorageNetworkTags.NetworkConnectable))
+            {
+                return;
+            }
+
             StorageNetworkTags.EnsureStorageCategoryTag(__instance);
             __instance.gameObject.AddOrGet<StorageNetworkStorageConnector>();
             __instance.gameObject.AddOrGet<StorageNetworkPortVisualizer>();
