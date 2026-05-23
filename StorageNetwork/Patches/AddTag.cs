@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using HarmonyLib;
 using StorageNetwork.Buildings;
+using StorageNetwork.Components;
 using StorageNetwork.Core;
 using UnityEngine;
 
@@ -40,5 +41,26 @@ namespace StorageNetwork.Patches
                 prefabId.AddTag(StorageNetworkTags.NetworkConnectable, false);
             }
         }
+
+        [HarmonyPatch(typeof(ComplexFabricator), "OnPrefabInit")]
+        public static class ComplexFabricatorPatch
+        {
+            public static void Postfix(ComplexFabricator __instance)
+            {
+                if (__instance == null || __instance.gameObject == null)
+                {
+                    return;
+                }
+
+                KPrefabID prefabId = __instance.GetComponent<KPrefabID>();
+                if (prefabId != null)
+                {
+                    prefabId.AddTag(StorageNetworkTags.NetworkConnectable, false);
+                }
+
+                __instance.gameObject.AddOrGet<StorageNetworkFabricatorSettings>();
+            }
+        }
+
     }
 }

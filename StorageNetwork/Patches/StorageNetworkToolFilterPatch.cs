@@ -36,6 +36,21 @@ namespace StorageNetwork.Patches
             }
         }
 
+        [HarmonyPatch(typeof(FilteredDragTool), "GetObjectLayerFromFilterLayer")]
+        public static class FilteredDragToolGetObjectLayerFromFilterLayerPatch
+        {
+            public static bool Prefix(string filter_layer, ref ObjectLayer __result)
+            {
+                if (filter_layer == StorageNetworkToolFilters.StorageNetwork)
+                {
+                    __result = ObjectLayer.LogicWire;
+                    return false;
+                }
+
+                return true;
+            }
+        }
+
         [HarmonyPatch(typeof(ToolParameterMenu), nameof(ToolParameterMenu.PopulateMenu))]
         public static class ToolParameterMenuPopulateMenuPatch
         {

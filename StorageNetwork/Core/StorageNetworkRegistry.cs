@@ -174,23 +174,9 @@ namespace StorageNetwork.Core
                 return startCells;
             }
 
-            if (IsConnectedCableCell(hub.InputCell))
-            {
-                startCells.Add(hub.InputCell);
-            }
-
             if (IsConnectedCableCell(hub.OutputCell))
             {
                 startCells.Add(hub.OutputCell);
-            }
-
-            Building building = hub.GetComponent<Building>();
-            if (building != null)
-            {
-                foreach (int cell in building.PlacementCells)
-                {
-                    AddAdjacentCableCells(cell, startCells);
-                }
             }
 
             return ExpandCableNetwork(startCells);
@@ -301,17 +287,6 @@ namespace StorageNetwork.Core
             return buildingObject.AddOrGet<StorageNetworkStorageConnector>();
         }
 
-        private static void AddAdjacentCableCells(int cell, HashSet<int> result)
-        {
-            foreach (int adjacentCell in GetCardinalCells(cell))
-            {
-                if (IsConnectedCableCell(adjacentCell))
-                {
-                    result.Add(adjacentCell);
-                }
-            }
-        }
-
         public static StorageNetworkCable GetCableAtCell(int cell)
         {
             if (!Grid.IsValidCell(cell))
@@ -392,13 +367,7 @@ namespace StorageNetwork.Core
 
         private static bool IsHubConnectedToNetwork(StorageNetworkHub hub, HashSet<int> networkCells)
         {
-            if (networkCells.Contains(hub.InputCell) || networkCells.Contains(hub.OutputCell))
-            {
-                return true;
-            }
-
-            Building building = hub.GetComponent<Building>();
-            return building != null && building.PlacementCells.Any(cell => GetCardinalCells(cell).Any(networkCells.Contains));
+            return hub != null && networkCells.Contains(hub.OutputCell);
         }
 
         private static bool IsLiveCable(StorageNetworkCable cable)

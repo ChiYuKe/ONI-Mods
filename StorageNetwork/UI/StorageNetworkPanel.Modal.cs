@@ -106,8 +106,11 @@ namespace StorageNetwork.UI
                 return;
             }
 
+            StorageNetworkFabricatorSettings fabricatorSettings = storage.GetComponent<StorageNetworkFabricatorSettings>();
+            bool hasFabricatorSettings = fabricatorSettings != null && fabricatorSettings.SupportsNetworkRecipeSettings;
+
             CloseModal();
-            modalRoot = CreateModalFrame("箱子设置", 420f, 335f, out GameObject body);
+            modalRoot = CreateModalFrame("建筑设置", 420f, hasFabricatorSettings ? 275f : 210f, out GameObject body);
             AddModalText(body.transform, storage.GetProperName(), 15, FontStyles.Bold);
             AddModalText(
                 body.transform,
@@ -118,17 +121,19 @@ namespace StorageNetwork.UI
                 12,
                 FontStyles.Normal);
 
-            AddSettingToggleRow(body.transform, "允许网络取出", storage.allowItemRemoval, value => storage.allowItemRemoval = value);
-            AddSettingToggleRow(body.transform, "允许界面移除", storage.allowUIItemRemoval, value => storage.allowUIItemRemoval = value);
-            AddSettingToggleRow(body.transform, "只收已标记清扫", storage.GetOnlyFetchMarkedItems(), value =>
+            if (hasFabricatorSettings)
             {
-                if (storage.allowSettingOnlyFetchMarkedItems)
-                {
-                    storage.SetOnlyFetchMarkedItems(value);
-                }
-            });
-            AddSettingToggleRow(body.transform, "忽略来源优先级", storage.ignoreSourcePriority, value => storage.ignoreSourcePriority = value);
-            AddSettingToggleRow(body.transform, "只从低优先级转入", storage.onlyTransferFromLowerPriority, value => storage.onlyTransferFromLowerPriority = value);
+                AddSettingToggleRow(
+                    body.transform,
+                    STRINGS.UI.STORAGE_NETWORK.REQUEST_RECIPE_MATERIALS,
+                    fabricatorSettings.RequestIngredientsFromNetwork,
+                    value => fabricatorSettings.RequestIngredientsFromNetwork = value);
+                AddSettingToggleRow(
+                    body.transform,
+                    STRINGS.UI.STORAGE_NETWORK.STORE_RECIPE_PRODUCTS,
+                    fabricatorSettings.StoreProductsToNetwork,
+                    value => fabricatorSettings.StoreProductsToNetwork = value);
+            }
 
             GameObject footer = AddHorizontalRow(body.transform, 6f);
             AddFooterSpacer(footer.transform);
