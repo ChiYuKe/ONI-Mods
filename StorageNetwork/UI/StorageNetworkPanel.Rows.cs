@@ -153,6 +153,42 @@ namespace StorageNetwork.UI
             RebuildLayout();
         }
 
+        private void CreateCategoryButton(StorageNetworkCategoryGroup group)
+        {
+            if (categoryContent == null || group == null)
+            {
+                return;
+            }
+
+            bool selected = group.Key == selectedCategoryKey;
+            GameObject button = CreateStyledButton(
+                "CategoryButton",
+                categoryContent,
+                string.Empty,
+                () =>
+                {
+                    selectedCategoryKey = group.Key;
+                    selectedItemStorage = null;
+                    selectedItemKey = null;
+                    Refresh(true);
+                },
+                selected ? KleiPinkStyle() : KleiBlueStyle());
+            button.AddComponent<LayoutElement>().preferredHeight = 48f;
+
+            TextMeshProUGUI label = CreateText(
+                "CategoryLabel",
+                button.transform,
+                string.Format("<b>{0}</b>\n<size=10>{1} 个</size>", group.Name, group.Storages.Count),
+                12,
+                TextAlignmentOptions.Left);
+            label.color = Color.white;
+            label.richText = true;
+            label.textWrappingMode = TextWrappingModes.NoWrap;
+            label.overflowMode = TextOverflowModes.Ellipsis;
+            label.lineSpacing = -4f;
+            Stretch(label.rectTransform(), 8f, 5f);
+        }
+
         private void CreateStoredItemRow(Storage storage, Transform parent, string itemKey, string itemName, string formattedMass, GameObject representative)
         {
             GameObject row = new GameObject("ItemRow");

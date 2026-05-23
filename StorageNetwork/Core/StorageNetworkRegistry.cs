@@ -10,6 +10,9 @@ namespace StorageNetwork.Core
         private static readonly HashSet<StorageNetworkCable> Cables = new HashSet<StorageNetworkCable>();
         private static readonly HashSet<StorageNetworkHub> Hubs = new HashSet<StorageNetworkHub>();
         private static readonly HashSet<StorageNetworkStorageConnector> StorageConnectors = new HashSet<StorageNetworkStorageConnector>();
+        private static readonly Dictionary<int, StorageNetworkCable> CablesByCell = new Dictionary<int, StorageNetworkCable>();
+
+        public static int Revision { get; private set; }
 
         public static IReadOnlyCollection<StorageNetworkHub> RegisteredHubs => Hubs;
 
@@ -38,6 +41,7 @@ namespace StorageNetwork.Core
             if (cable != null)
             {
                 Cables.Add(cable);
+                CacheCable(cable);
                 MarkDirty();
             }
         }
@@ -47,6 +51,13 @@ namespace StorageNetwork.Core
             if (cable != null)
             {
                 Cables.Remove(cable);
+                if (Grid.IsValidCell(cable.Cell) &&
+                    CablesByCell.TryGetValue(cable.Cell, out StorageNetworkCable cachedCable) &&
+                    cachedCable == cable)
+                {
+                    CablesByCell.Remove(cable.Cell);
+                }
+
                 MarkDirty();
             }
         }
@@ -71,6 +82,7 @@ namespace StorageNetwork.Core
 
         public static void MarkDirty()
         {
+            Revision++;
         }
 
         public static bool IsCableConnectedToAnyHub(StorageNetworkCable cable)
@@ -112,6 +124,11 @@ namespace StorageNetwork.Core
         {
             HashSet<int> networkCells = FindConnectedCableCells(hub);
             return Cables.ToList().Where(cable => IsLiveCable(cable) && networkCells.Contains(cable.Cell));
+        }
+
+        public static HashSet<int> GetConnectedCableCells(StorageNetworkHub hub)
+        {
+            return FindConnectedCableCells(hub);
         }
 
         public static IEnumerable<Storage> GetSharedStorages(Storage requesterStorage)
@@ -291,20 +308,40 @@ namespace StorageNetwork.Core
                 return null;
             }
 
-            foreach (StorageNetworkCable cable in Cables.ToList())
+            if (CablesByCell.TryGetValue(cell, out StorageNetworkCable cachedCable))
+            {
+                if (IsLiveCable(cachedCable) && cachedCable.Cell == cell)
+                {
+                    return cachedCable;
+                }
+
+                CablesByCell.Remove(cell);
+                Cables.Remove(cachedCable);
+            }
+
+            List<StorageNetworkCable> staleCables = null;
+            foreach (StorageNetworkCable cable in Cables)
             {
                 if (!IsLiveCable(cable))
                 {
-                    Cables.Remove(cable);
+                    if (staleCables == null)
+                    {
+                        staleCables = new List<StorageNetworkCable>();
+                    }
+
+                    staleCables.Add(cable);
                     continue;
                 }
 
                 if (cable.Cell == cell)
                 {
+                    CacheCable(cable);
+                    RemoveStaleCables(staleCables);
                     return cable;
                 }
             }
 
+            RemoveStaleCables(staleCables);
             return null;
         }
 
@@ -376,6 +413,33 @@ namespace StorageNetwork.Core
                 ? visualizer.Connections
                 : (UtilityConnections)0;
             return (connections & direction) != (UtilityConnections)0;
+        }
+
+        private static void CacheCable(StorageNetworkCable cable)
+        {
+            if (IsLiveCable(cable))
+            {
+                CablesByCell[cable.Cell] = cable;
+            }
+        }
+
+        private static void RemoveStaleCables(List<StorageNetworkCable> staleCables)
+        {
+            if (staleCables == null)
+            {
+                return;
+            }
+
+            foreach (StorageNetworkCable staleCable in staleCables)
+            {
+                Cables.Remove(staleCable);
+                if (staleCable != null && Grid.IsValidCell(staleCable.Cell) &&
+                    CablesByCell.TryGetValue(staleCable.Cell, out StorageNetworkCable cachedCable) &&
+                    cachedCable == staleCable)
+                {
+                    CablesByCell.Remove(staleCable.Cell);
+                }
+            }
         }
     }
 }

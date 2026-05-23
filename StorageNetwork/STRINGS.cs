@@ -26,6 +26,18 @@ namespace StorageNetwork
 
         public class UI
         {
+            public class TOOLS
+            {
+                public class FILTERLAYERS
+                {
+                    public class STORAGENETWORK
+                    {
+                        public static LocString NAME = "储存网络";
+                        public static LocString TOOLTIP = "仅储存网络线缆";
+                    }
+                }
+            }
+
             public class STORAGE_NETWORK
             {
                 public static LocString NETWORK_READY = "储存网络已连接";

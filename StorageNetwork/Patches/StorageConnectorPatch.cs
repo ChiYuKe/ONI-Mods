@@ -1,5 +1,6 @@
 using HarmonyLib;
 using StorageNetwork.Components;
+using StorageNetwork.Core;
 
 namespace StorageNetwork.Patches
 {
@@ -13,6 +14,7 @@ namespace StorageNetwork.Patches
                 return;
             }
 
+            StorageNetworkTags.EnsureStorageCategoryTag(__instance);
             __instance.gameObject.AddOrGet<StorageNetworkStorageConnector>();
             __instance.gameObject.AddOrGet<StorageNetworkPortVisualizer>();
         }

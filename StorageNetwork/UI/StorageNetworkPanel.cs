@@ -18,10 +18,12 @@ namespace StorageNetwork.UI
         private StorageNetworkHub targetHub;
         private bool overviewMode;
         private TextMeshProUGUI summaryText;
+        private RectTransform categoryContent;
         private RectTransform listContent;
         private RectTransform windowRect;
         private GameObject modalRoot;
         private KInputController registeredController;
+        private string selectedCategoryKey;
         private string selectedItemKey;
         private Storage selectedItemStorage;
         private readonly Dictionary<string, bool> expandedStorageTypes = new Dictionary<string, bool>();
@@ -29,6 +31,11 @@ namespace StorageNetwork.UI
         private float refreshElapsed;
         private string lastListSignature;
         private const bool DebugLogging = true;
+        private const string CategoryStorage = "storage";
+        private const string CategoryLiquid = "liquid";
+        private const string CategoryGas = "gas";
+        private const string CategoryConveyor = "conveyor";
+        private const string CategoryOther = "other";
 
         public string handlerName => gameObject.name;
 
@@ -180,8 +187,38 @@ namespace StorageNetwork.UI
             GameObject list = CreateBox("List", content.transform, new Color(0.80f, 0.79f, 0.74f, 1f));
             SetStretch(list.GetComponent<RectTransform>(), 8f, 8f, 8f, 70f);
 
+            HorizontalLayoutGroup listColumns = list.AddComponent<HorizontalLayoutGroup>();
+            listColumns.padding = new RectOffset(8, 8, 8, 8);
+            listColumns.spacing = 8f;
+            listColumns.childAlignment = TextAnchor.UpperLeft;
+            listColumns.childControlWidth = true;
+            listColumns.childControlHeight = true;
+            listColumns.childForceExpandWidth = false;
+            listColumns.childForceExpandHeight = true;
+
+            GameObject categories = CreateBox("Categories", list.transform, new Color(0.74f, 0.73f, 0.68f, 1f));
+            LayoutElement categoryLayout = categories.AddComponent<LayoutElement>();
+            categoryLayout.minWidth = 130f;
+            categoryLayout.preferredWidth = 130f;
+            categoryLayout.flexibleWidth = 0f;
+            AddVerticalContainer(categories, 4f, 4, 4, 4, 4);
+
+            GameObject categoryContentObject = new GameObject("CategoryContent");
+            categoryContentObject.transform.SetParent(categories.transform, false);
+            categoryContent = categoryContentObject.AddComponent<RectTransform>();
+            categoryContent.anchorMin = new Vector2(0f, 1f);
+            categoryContent.anchorMax = new Vector2(1f, 1f);
+            categoryContent.pivot = new Vector2(0.5f, 1f);
+            categoryContent.offsetMin = Vector2.zero;
+            categoryContent.offsetMax = Vector2.zero;
+            AddVerticalContainer(categoryContentObject, 5f, 0, 0, 0, 0);
+            categoryContentObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+            GameObject rightList = CreateBox("RightList", list.transform, new Color(0.80f, 0.79f, 0.74f, 1f));
+            rightList.AddComponent<LayoutElement>().flexibleWidth = 1f;
+
             GameObject viewport = new GameObject("Viewport");
-            viewport.transform.SetParent(list.transform, false);
+            viewport.transform.SetParent(rightList.transform, false);
             RectTransform viewportRect = viewport.AddComponent<RectTransform>();
             SetStretch(viewportRect, 8f, 22f, 8f, 8f);
             viewport.AddComponent<RectMask2D>();
@@ -205,9 +242,9 @@ namespace StorageNetwork.UI
             ContentSizeFitter fitter = contentObject.AddComponent<ContentSizeFitter>();
             fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
-            Scrollbar scrollbar = CreateScrollbar(list.transform);
+            Scrollbar scrollbar = CreateScrollbar(rightList.transform);
 
-            ScrollRect scrollRect = list.AddComponent<ScrollRect>();
+            ScrollRect scrollRect = rightList.AddComponent<ScrollRect>();
             scrollRect.viewport = viewportRect;
             scrollRect.content = listContent;
             scrollRect.horizontal = false;
@@ -218,7 +255,7 @@ namespace StorageNetwork.UI
             scrollRect.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHideAndExpandViewport;
             scrollRect.verticalScrollbarSpacing = 4f;
 
-            list.AddComponent<ScrollWheelBlocker>();
+            rightList.AddComponent<ScrollWheelBlocker>();
         }
 
         private void Refresh(bool forceRebuild = false)
@@ -246,6 +283,7 @@ namespace StorageNetwork.UI
                 if (forceRebuild || lastListSignature != "empty")
                 {
                     lastListSignature = "empty";
+                    ClearCategories();
                     ClearList();
                     CreateInfoRow("未连接储存建筑", "把储存建筑贴近储存网络线缆，或让线缆经过建筑相邻格。");
                 }
@@ -264,8 +302,24 @@ namespace StorageNetwork.UI
         private void RebuildStorageRows(IEnumerable<StorageNetworkStorageInfo> storages)
         {
             ClearList();
+            ClearCategories();
 
-            foreach (IGrouping<string, StorageNetworkStorageInfo> group in storages.GroupBy(GetStorageTypeKey).OrderBy(group => GetStorageTypeName(group.First())))
+            List<StorageNetworkCategoryGroup> groups = BuildCategoryGroups(storages).ToList();
+            EnsureSelectedCategory(groups);
+            foreach (StorageNetworkCategoryGroup group in groups)
+            {
+                CreateCategoryButton(group);
+            }
+
+            StorageNetworkCategoryGroup selectedGroup = groups.FirstOrDefault(group => group.Key == selectedCategoryKey);
+            if (selectedGroup == null)
+            {
+                CreateInfoRow("没有储存内容", string.Empty);
+                RebuildLayout();
+                return;
+            }
+
+            foreach (IGrouping<string, StorageNetworkStorageInfo> group in selectedGroup.Storages.GroupBy(GetStorageTypeKey).OrderBy(group => GetStorageTypeName(group.First())))
             {
                 CreateStorageTypeRow(group.ToList());
             }
@@ -280,7 +334,7 @@ namespace StorageNetwork.UI
                 .ThenBy(storage => storage.Storage != null ? storage.Storage.GetInstanceID() : 0)
                 .Select(storage =>
                 {
-                    string items = string.Join(",", storage.Storage.items
+                string items = string.Join(",", storage.Storage.items
                         .Where(item => item != null)
                         .GroupBy(GetStoredItemKey)
                         .OrderBy(group => group.Key)
@@ -331,6 +385,7 @@ namespace StorageNetwork.UI
                 if (forceRebuild || lastListSignature != "overview-empty")
                 {
                     lastListSignature = "overview-empty";
+                    ClearCategories();
                     ClearList();
                     CreateInfoRow("未建造储存网络核心", string.Empty);
                 }
@@ -351,6 +406,7 @@ namespace StorageNetwork.UI
             }
 
             lastListSignature = overviewSignature;
+            ClearCategories();
             ClearList();
             foreach (StorageNetworkHub hub in hubs)
             {
@@ -388,6 +444,19 @@ namespace StorageNetwork.UI
             for (int i = listContent.childCount - 1; i >= 0; i--)
             {
                 Destroy(listContent.GetChild(i).gameObject);
+            }
+        }
+
+        private void ClearCategories()
+        {
+            if (categoryContent == null)
+            {
+                return;
+            }
+
+            for (int i = categoryContent.childCount - 1; i >= 0; i--)
+            {
+                Destroy(categoryContent.GetChild(i).gameObject);
             }
         }
 

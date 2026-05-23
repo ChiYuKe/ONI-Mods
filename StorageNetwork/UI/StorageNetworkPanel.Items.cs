@@ -140,6 +140,98 @@ namespace StorageNetwork.UI
             return primaryElement != null ? primaryElement.ElementID.CreateTag() : Tag.Invalid;
         }
 
+        private IEnumerable<StorageNetworkCategoryGroup> BuildCategoryGroups(IEnumerable<StorageNetworkStorageInfo> storages)
+        {
+            Dictionary<string, StorageNetworkCategoryGroup> groups = new Dictionary<string, StorageNetworkCategoryGroup>();
+            foreach (StorageNetworkStorageInfo storageInfo in storages)
+            {
+                string key = GetStorageCategoryKey(storageInfo.Storage);
+                if (!groups.TryGetValue(key, out StorageNetworkCategoryGroup group))
+                {
+                    group = new StorageNetworkCategoryGroup(key, GetStorageCategoryName(key));
+                    groups.Add(key, group);
+                }
+
+                group.Storages.Add(storageInfo);
+            }
+
+            return groups.Values.OrderBy(group => GetStorageCategoryOrder(group.Key));
+        }
+
+        private void EnsureSelectedCategory(List<StorageNetworkCategoryGroup> groups)
+        {
+            if (groups.Count == 0)
+            {
+                selectedCategoryKey = null;
+                return;
+            }
+
+            if (string.IsNullOrEmpty(selectedCategoryKey) || groups.All(group => group.Key != selectedCategoryKey))
+            {
+                selectedCategoryKey = groups[0].Key;
+            }
+        }
+
+        private static string GetStorageCategoryKey(Storage storage)
+        {
+            Tag category = StorageNetworkTags.GetStorageCategoryTag(storage);
+            if (category == StorageNetworkTags.Liquid)
+            {
+                return CategoryLiquid;
+            }
+
+            if (category == StorageNetworkTags.Gas)
+            {
+                return CategoryGas;
+            }
+
+            if (category == StorageNetworkTags.Conveyor)
+            {
+                return CategoryConveyor;
+            }
+
+            if (category == StorageNetworkTags.Storage)
+            {
+                return CategoryStorage;
+            }
+
+            return CategoryOther;
+        }
+
+        private static string GetStorageCategoryName(string key)
+        {
+            switch (key)
+            {
+            case CategoryLiquid:
+                return "液库";
+            case CategoryGas:
+                return "气库";
+            case CategoryConveyor:
+                return "运输轨道";
+            case CategoryOther:
+                return "其他";
+            default:
+                return "储存箱";
+            }
+        }
+
+        private static int GetStorageCategoryOrder(string key)
+        {
+            switch (key)
+            {
+            case CategoryStorage:
+                return 0;
+            case CategoryLiquid:
+                return 1;
+            case CategoryGas:
+                return 2;
+            case CategoryConveyor:
+                return 3;
+            default:
+                return 99;
+            }
+        }
+
         private static string GetStoredItemKey(GameObject item)
         {
             if (item == null)
@@ -219,6 +311,21 @@ namespace StorageNetwork.UI
             {
                 SelectTool.Instance.SelectAndFocus(storage.transform.position, selectable, Vector3.zero);
             }
+        }
+
+        private sealed class StorageNetworkCategoryGroup
+        {
+            public StorageNetworkCategoryGroup(string key, string name)
+            {
+                Key = key;
+                Name = name;
+            }
+
+            public string Key { get; }
+
+            public string Name { get; }
+
+            public List<StorageNetworkStorageInfo> Storages { get; } = new List<StorageNetworkStorageInfo>();
         }
     }
 }
