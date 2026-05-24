@@ -42,7 +42,7 @@ namespace StorageNetwork.UI
                 return;
             }
 
-            targetHub.RefreshNetwork();
+            targetHub.RefreshNetworkTotals();
             List<Storage> targets = targetHub.ConnectedStorages
                 .Select(info => info.Storage)
                 .Where(storage => storage != null && storage != source && storage.RemainingCapacity() > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
@@ -128,11 +128,68 @@ namespace StorageNetwork.UI
                     STRINGS.UI.STORAGE_NETWORK.REQUEST_RECIPE_MATERIALS,
                     fabricatorSettings.RequestIngredientsFromNetwork,
                     value => fabricatorSettings.RequestIngredientsFromNetwork = value);
+                if (fabricatorSettings.SupportsStoreProductsToNetwork)
+                {
+                    AddSettingToggleRow(
+                        body.transform,
+                        STRINGS.UI.STORAGE_NETWORK.STORE_RECIPE_PRODUCTS,
+                        fabricatorSettings.StoreProductsToNetwork,
+                        value => fabricatorSettings.StoreProductsToNetwork = value);
+                }
+            }
+
+            GameObject footer = AddHorizontalRow(body.transform, 6f);
+            AddFooterSpacer(footer.transform);
+            AddModalButton(footer.transform, "关闭", 90f, CloseModal);
+        }
+
+        private void ShowStorageTypeSettingsDialog(string typeName, List<StorageNetworkStorageInfo> storages)
+        {
+            List<StorageNetworkFabricatorSettings> settings = storages
+                .Select(info => info.Storage != null ? info.Storage.GetComponent<StorageNetworkFabricatorSettings>() : null)
+                .Where(setting => setting != null && setting.SupportsNetworkRecipeSettings)
+                .Distinct()
+                .ToList();
+            if (settings.Count == 0)
+            {
+                return;
+            }
+
+            bool allRequestIngredients = settings.All(setting => setting.RequestIngredientsFromNetwork);
+            bool anyStoreProductsSupported = settings.Any(setting => setting.SupportsStoreProductsToNetwork);
+            bool allStoreProducts = anyStoreProductsSupported &&
+                settings.Where(setting => setting.SupportsStoreProductsToNetwork).All(setting => setting.StoreProductsToNetwork);
+
+            CloseModal();
+            modalRoot = CreateModalFrame("批量建筑设置", 460f, anyStoreProductsSupported ? 260f : 215f, out GameObject body);
+            AddModalText(body.transform, string.Format("{0}  x{1}", typeName, settings.Count), 15, FontStyles.Bold);
+            AddModalText(body.transform, "这些设置会应用到当前折叠栏下的所有同类建筑。", 12, FontStyles.Normal);
+
+            AddSettingToggleRow(
+                body.transform,
+                STRINGS.UI.STORAGE_NETWORK.REQUEST_RECIPE_MATERIALS,
+                allRequestIngredients,
+                value =>
+                {
+                    foreach (StorageNetworkFabricatorSettings setting in settings)
+                    {
+                        setting.RequestIngredientsFromNetwork = value;
+                    }
+                });
+
+            if (anyStoreProductsSupported)
+            {
                 AddSettingToggleRow(
                     body.transform,
                     STRINGS.UI.STORAGE_NETWORK.STORE_RECIPE_PRODUCTS,
-                    fabricatorSettings.StoreProductsToNetwork,
-                    value => fabricatorSettings.StoreProductsToNetwork = value);
+                    allStoreProducts,
+                    value =>
+                    {
+                        foreach (StorageNetworkFabricatorSettings setting in settings.Where(setting => setting.SupportsStoreProductsToNetwork))
+                        {
+                            setting.StoreProductsToNetwork = value;
+                        }
+                    });
             }
 
             GameObject footer = AddHorizontalRow(body.transform, 6f);
@@ -410,7 +467,7 @@ namespace StorageNetwork.UI
                 current = !current;
                 onChanged?.Invoke(current);
                 refreshLabel();
-                targetHub?.RefreshNetwork();
+                targetHub?.RefreshNetworkTotals();
                 lastListSignature = null;
             });
             LayoutElement buttonLayout = stateButton.AddComponent<LayoutElement>();

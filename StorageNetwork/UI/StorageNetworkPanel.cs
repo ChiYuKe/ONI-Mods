@@ -20,9 +20,14 @@ namespace StorageNetwork.UI
         private TextMeshProUGUI summaryText;
         private RectTransform categoryContent;
         private RectTransform listContent;
+        private ScrollRect listScrollRect;
         private RectTransform windowRect;
         private GameObject modalRoot;
         private KInputController registeredController;
+        private const int InputPriority = int.MaxValue - 100;
+        private bool rightClickCloseCandidate;
+        private Vector3 rightClickStartPosition;
+        private const float RightClickDragThresholdPixels = 8f;
         private string selectedCategoryKey;
         private string selectedItemKey;
         private Storage selectedItemStorage;
@@ -31,17 +36,16 @@ namespace StorageNetwork.UI
         private float refreshElapsed;
         private string lastListSignature;
         private const bool DebugLogging = true;
-        private const string CategoryStorage = "storage";
-        private const string CategoryLiquid = "liquid";
-        private const string CategoryGas = "gas";
-        private const string CategoryConveyor = "conveyor";
-        private const string CategoryOther = "other";
-
         public string handlerName => gameObject.name;
 
         public KInputHandler inputHandler { get; set; }
 
         public static void Show(StorageNetworkHub hub)
+        {
+            Show(hub, null);
+        }
+
+        public static void Show(StorageNetworkHub hub, Storage focusStorage)
         {
             if (hub == null)
             {
@@ -53,7 +57,7 @@ namespace StorageNetwork.UI
                 instance = Create();
             }
 
-            instance.SetTarget(hub);
+            instance.SetTarget(hub, focusStorage);
             instance.gameObject.SetActive(true);
         }
 
@@ -84,6 +88,61 @@ namespace StorageNetwork.UI
             }
         }
 
+        public static bool IsOpen()
+        {
+            return instance != null && instance.gameObject != null && instance.gameObject.activeInHierarchy;
+        }
+
+        public static bool CloseFromRightClick()
+        {
+            if (!IsOpen())
+            {
+                return false;
+            }
+
+            if (instance.modalRoot != null)
+            {
+                instance.CloseModal();
+            }
+            else
+            {
+                instance.Close();
+            }
+
+            return true;
+        }
+
+        public static bool BeginRightClickCloseCandidate()
+        {
+            if (!IsOpen())
+            {
+                return false;
+            }
+
+            instance.rightClickCloseCandidate = true;
+            instance.rightClickStartPosition = KInputManager.GetMousePos();
+            return true;
+        }
+
+        public static bool FinishRightClickCloseCandidate(out bool closed)
+        {
+            closed = false;
+            if (!IsOpen() || !instance.rightClickCloseCandidate)
+            {
+                return false;
+            }
+
+            instance.rightClickCloseCandidate = false;
+            Vector3 delta = KInputManager.GetMousePos() - instance.rightClickStartPosition;
+            if (delta.sqrMagnitude > RightClickDragThresholdPixels * RightClickDragThresholdPixels)
+            {
+                return true;
+            }
+
+            closed = CloseFromRightClick();
+            return true;
+        }
+
         private static StorageNetworkPanel Create()
         {
             Transform parent = GameScreenManager.Instance?.ssOverlayCanvas?.transform;
@@ -108,11 +167,12 @@ namespace StorageNetwork.UI
             return panel;
         }
 
-        private void SetTarget(StorageNetworkHub hub)
+        private void SetTarget(StorageNetworkHub hub, Storage focusStorage = null)
         {
             targetHub = hub;
             overviewMode = false;
             lastListSignature = null;
+            FocusStorageRow(focusStorage);
             Refresh(true);
         }
 
@@ -141,11 +201,27 @@ namespace StorageNetwork.UI
                 return;
             }
 
+            TrackRightClickCloseGesture();
+
             refreshElapsed += Time.unscaledDeltaTime;
             if (refreshElapsed >= 1f)
             {
                 refreshElapsed = 0f;
                 Refresh();
+            }
+        }
+
+        private void TrackRightClickCloseGesture()
+        {
+            if (Input.GetMouseButtonDown(1))
+            {
+                BeginRightClickCloseCandidate();
+                return;
+            }
+
+            if (Input.GetMouseButtonUp(1))
+            {
+                FinishRightClickCloseCandidate(out _);
             }
         }
 
@@ -245,6 +321,7 @@ namespace StorageNetwork.UI
             Scrollbar scrollbar = CreateScrollbar(rightList.transform);
 
             ScrollRect scrollRect = rightList.AddComponent<ScrollRect>();
+            listScrollRect = scrollRect;
             scrollRect.viewport = viewportRect;
             scrollRect.content = listContent;
             scrollRect.horizontal = false;
@@ -256,6 +333,20 @@ namespace StorageNetwork.UI
             scrollRect.verticalScrollbarSpacing = 4f;
 
             rightList.AddComponent<ScrollWheelBlocker>();
+        }
+
+        private void FocusStorageRow(Storage storage)
+        {
+            if (storage == null)
+            {
+                return;
+            }
+
+            selectedCategoryKey = StorageNetworkTags.GetStorageCategoryKey(storage);
+            selectedItemStorage = storage;
+            selectedItemKey = null;
+            expandedStorageTypes[GetStoragePrefabKey(storage)] = true;
+            expandedStorages[storage] = true;
         }
 
         private void Refresh(bool forceRebuild = false)
@@ -270,7 +361,7 @@ namespace StorageNetwork.UI
                 return;
             }
 
-            targetHub.RefreshNetwork();
+            targetHub.RefreshNetworkTotals();
             summaryText.text =
                 "<b>网络总览</b>\n" +
                 string.Format("已连接储存：{0}    容量：{1} / {2}",
@@ -338,15 +429,13 @@ namespace StorageNetwork.UI
                         .Where(item => item != null)
                         .GroupBy(GetStoredItemKey)
                         .OrderBy(group => group.Key)
-                        .Select(group => string.Format("{0}:{1}:{2:0.###}",
+                        .Select(group => string.Format("{0}:{1}",
                             group.Key,
-                            group.Count(),
-                            group.Sum(item => item.GetComponent<PrimaryElement>()?.Mass ?? 0f))));
+                            group.Count())));
 
-                    return string.Format("{0}:{1}:{2:0.###}:{3:0.###}:{4}",
+                    return string.Format("{0}:{1}:{2:0.###}:{3}",
                         GetStorageTypeKey(storage),
                         storage.Storage != null ? storage.Storage.GetInstanceID() : 0,
-                        storage.StoredKg,
                         storage.CapacityKg,
                         items);
                 }));
@@ -368,7 +457,7 @@ namespace StorageNetwork.UI
             float totalCapacity = 0f;
             foreach (StorageNetworkHub hub in hubs)
             {
-                hub.RefreshNetwork();
+                hub.RefreshNetworkTotals();
                 totalStored += hub.TotalStoredKg;
                 totalCapacity += hub.TotalCapacityKg;
             }
@@ -432,6 +521,10 @@ namespace StorageNetwork.UI
 
             Canvas.ForceUpdateCanvases();
             LayoutRebuilder.ForceRebuildLayoutImmediate(listContent);
+            if (listScrollRect != null && selectedItemStorage != null)
+            {
+                listScrollRect.verticalNormalizedPosition = 1f;
+            }
         }
 
         private void ClearList()
@@ -530,7 +623,7 @@ namespace StorageNetwork.UI
             }
 
             registeredController = KInputManager.currentController;
-            KInputHandler.Add(registeredController, this, 100);
+            KInputHandler.Add(registeredController, this, InputPriority);
         }
 
         private void UnregisterInputHandler()

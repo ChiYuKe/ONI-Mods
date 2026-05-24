@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Collections.Generic;
 using KSerialization;
 using StorageNetwork.Core;
@@ -7,13 +6,16 @@ using UnityEngine;
 namespace StorageNetwork.Components
 {
     /// <summary>
-    /// ´¢´æÍøÂçÏßÀÂ×é¼ş¡£
-    /// ¹ÒÔÚ´¢´æÍøÂçÏßÀÂ½¨ÖşÉÏ£¬ÓÃÓÚ×¢²áÏßÀÂ½Úµã¡¢Î¬»¤Á¬½Ó/¶Ï¿ª×´Ì¬£¬
-    /// ¼ÆËãÏàÁÚÏßÀÂÁ¬½Ó·½Ïò£¬²¢Ë¢ĞÂÏßÀÂÁ¬½Ó¶¯»­¡£
+    /// å‚¨å­˜ç½‘ç»œçº¿ç¼†ç»„ä»¶ã€‚
+    /// æŒ‚åœ¨å‚¨å­˜ç½‘ç»œçº¿ç¼†å»ºç­‘ä¸Šï¼Œç”¨äºæ³¨å†Œçº¿ç¼†èŠ‚ç‚¹ã€ç»´æŠ¤è¿æ¥/æ–­å¼€çŠ¶æ€ï¼Œ
+    /// è®¡ç®—ç›¸é‚»çº¿ç¼†è¿æ¥æ–¹å‘ï¼Œå¹¶åˆ·æ–°çº¿ç¼†è¿æ¥åŠ¨ç”»ã€‚
     /// </summary>
     [SerializationConfig(MemberSerialization.OptIn)]
     public class StorageNetworkCable : KMonoBehaviour, IHaveUtilityNetworkMgr, IDisconnectable
     {
+        private static readonly HashSet<int> PendingVisualRefreshCells = new HashSet<int>();
+        private static bool visualRefreshQueued;
+
         [Serialize]
         private bool disconnected;
 
@@ -63,29 +65,28 @@ namespace StorageNetwork.Components
                 Connect();
             }
 
-            StartCoroutine(RefreshVisualNextFrame());
+            QueueVisualRefresh(Cell);
+            QueueSelfAndNeighboursVisualRefresh();
         }
 
         protected override void OnCleanUp()
         {
+            QueueSelfAndNeighboursVisualRefresh();
             StorageNetworkRegistry.Unregister(this);
             base.OnCleanUp();
         }
 
-        private IEnumerator RefreshVisualNextFrame()
-        {
-            yield return null;
-
-            RefreshVisual(Cell);
-            RefreshSelfAndNeighbours();
-        }
-
         public void RefreshSelfAndNeighbours()
         {
-            RefreshVisual(Cell);
+            QueueSelfAndNeighboursVisualRefresh();
+        }
+
+        private void QueueSelfAndNeighboursVisualRefresh()
+        {
+            QueueVisualRefresh(Cell);
             foreach (int adjacentCell in GetCardinalCells(Cell))
             {
-                RefreshVisual(adjacentCell);
+                QueueVisualRefresh(adjacentCell);
             }
         }
 
@@ -109,6 +110,47 @@ namespace StorageNetwork.Components
             }
 
             controller.Play(GetVisualizerString(cable.GetActiveConnections()), KAnim.PlayMode.Once, 1f, 0f);
+        }
+
+        private static void QueueVisualRefresh(int cell)
+        {
+            if (!Grid.IsValidCell(cell))
+            {
+                return;
+            }
+
+            PendingVisualRefreshCells.Add(cell);
+            if (visualRefreshQueued)
+            {
+                return;
+            }
+
+            visualRefreshQueued = true;
+            if (GameScheduler.Instance != null)
+            {
+                GameScheduler.Instance.ScheduleNextFrame(
+                    "StorageNetworkCableVisualRefresh",
+                    _ => FlushVisualRefreshes());
+                return;
+            }
+
+            FlushVisualRefreshes();
+        }
+
+        private static void FlushVisualRefreshes()
+        {
+            visualRefreshQueued = false;
+            if (PendingVisualRefreshCells.Count == 0)
+            {
+                return;
+            }
+
+            List<int> cells = new List<int>(PendingVisualRefreshCells);
+            PendingVisualRefreshCells.Clear();
+            foreach (int cell in cells)
+            {
+                RefreshVisual(cell);
+            }
         }
 
         private static UtilityConnections GetConnections(int cell)

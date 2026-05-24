@@ -14,8 +14,7 @@ namespace StorageNetwork.Patches
                 return;
             }
 
-            KPrefabID prefabId = __instance.GetComponent<KPrefabID>();
-            if (prefabId == null || !prefabId.HasTag(StorageNetworkTags.NetworkConnectable))
+            if (!StorageNetworkTags.CanConnectToNetwork(__instance.gameObject))
             {
                 return;
             }
@@ -23,6 +22,7 @@ namespace StorageNetwork.Patches
             StorageNetworkTags.EnsureStorageCategoryTag(__instance);
             __instance.gameObject.AddOrGet<StorageNetworkStorageConnector>();
             __instance.gameObject.AddOrGet<StorageNetworkPortVisualizer>();
+            __instance.gameObject.AddOrGet<StorageNetworkConnectorSideScreenButton>();
         }
     }
 }

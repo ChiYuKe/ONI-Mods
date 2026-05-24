@@ -27,6 +27,7 @@ namespace StorageNetwork.UI
             float storedKg = storages.Sum(storage => storage.StoredKg);
             float capacityKg = storages.Sum(storage => storage.CapacityKg);
             float percent = capacityKg > 0f ? storedKg / capacityKg : 0f;
+            bool hasGroupSettings = storages.Any(HasNetworkRecipeSettings);
 
             GameObject row = CreateBox("StorageTypeRow", listContent, new Color(0.86f, 0.85f, 0.80f, 1f));
             AddVerticalContainer(row, 0f, 0, 0, 0, 0);
@@ -46,7 +47,9 @@ namespace StorageNetwork.UI
                 {
                     expandedStorageTypes[typeKey] = !expanded;
                     Refresh(true);
-                });
+                },
+                hasGroupSettings ? "总设置" : null,
+                hasGroupSettings ? () => ShowStorageTypeSettingsDialog(typeName, storages) : (System.Action)null);
 
             header.GetComponent<HorizontalLayoutGroup>().padding = new RectOffset(10, 10, 0, 0);
 
@@ -77,9 +80,13 @@ namespace StorageNetwork.UI
             }
 
             bool expanded = expandedStorages.TryGetValue(storage, out bool isExpanded) && isExpanded;
+            bool selected = selectedItemStorage == storage && string.IsNullOrEmpty(selectedItemKey);
             float percent = storageInfo.CapacityKg > 0f ? storageInfo.StoredKg / storageInfo.CapacityKg : 0f;
 
-            GameObject row = CreateBox("StorageRow", parent, new Color(0.88f, 0.87f, 0.82f, 1f));
+            GameObject row = CreateBox(
+                "StorageRow",
+                parent,
+                selected ? new Color(0.72f, 0.77f, 0.80f, 1f) : new Color(0.88f, 0.87f, 0.82f, 1f));
             AddVerticalContainer(row, 0f, 0, 0, 0, 0);
 
             CreateFoldoutHeader(
@@ -141,6 +148,14 @@ namespace StorageNetwork.UI
             ContentSizeFitter fitter = details.AddComponent<ContentSizeFitter>();
             fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
             row.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        }
+
+        private static bool HasNetworkRecipeSettings(StorageNetworkStorageInfo storageInfo)
+        {
+            StorageNetworkFabricatorSettings settings = storageInfo.Storage != null
+                ? storageInfo.Storage.GetComponent<StorageNetworkFabricatorSettings>()
+                : null;
+            return settings != null && settings.SupportsNetworkRecipeSettings;
         }
 
         private void CreateInfoRow(string title, string details)

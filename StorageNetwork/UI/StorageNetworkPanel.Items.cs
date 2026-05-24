@@ -64,7 +64,7 @@ namespace StorageNetwork.UI
 
             selectedItemStorage = null;
             selectedItemKey = null;
-            targetHub?.RefreshNetwork();
+            targetHub?.RefreshNetworkTotals();
             lastListSignature = null;
             Refresh(true);
             LogDebug("DropSelectedItem end");
@@ -106,7 +106,7 @@ namespace StorageNetwork.UI
 
             selectedItemStorage = null;
             selectedItemKey = null;
-            targetHub?.RefreshNetwork();
+            targetHub?.RefreshNetworkTotals();
             lastListSignature = null;
             Refresh(true);
         }
@@ -174,62 +174,17 @@ namespace StorageNetwork.UI
 
         private static string GetStorageCategoryKey(Storage storage)
         {
-            Tag category = StorageNetworkTags.GetStorageCategoryTag(storage);
-            if (category == StorageNetworkTags.Liquid)
-            {
-                return CategoryLiquid;
-            }
-
-            if (category == StorageNetworkTags.Gas)
-            {
-                return CategoryGas;
-            }
-
-            if (category == StorageNetworkTags.Conveyor)
-            {
-                return CategoryConveyor;
-            }
-
-            if (category == StorageNetworkTags.Storage)
-            {
-                return CategoryStorage;
-            }
-
-            return CategoryOther;
+            return StorageNetworkTags.GetStorageCategoryKey(storage);
         }
 
         private static string GetStorageCategoryName(string key)
         {
-            switch (key)
-            {
-            case CategoryLiquid:
-                return "液库";
-            case CategoryGas:
-                return "气库";
-            case CategoryConveyor:
-                return "运输轨道";
-            case CategoryOther:
-                return "其他";
-            default:
-                return "储存箱";
-            }
+            return StorageNetworkTags.GetStorageCategoryName(key);
         }
 
         private static int GetStorageCategoryOrder(string key)
         {
-            switch (key)
-            {
-            case CategoryStorage:
-                return 0;
-            case CategoryLiquid:
-                return 1;
-            case CategoryGas:
-                return 2;
-            case CategoryConveyor:
-                return 3;
-            default:
-                return 99;
-            }
+            return StorageNetworkTags.GetStorageCategoryOrder(key);
         }
 
         private static string GetStoredItemKey(GameObject item)
@@ -251,8 +206,13 @@ namespace StorageNetwork.UI
 
         private static string GetStorageTypeKey(StorageNetworkStorageInfo storageInfo)
         {
-            KPrefabID prefabId = storageInfo.Storage?.GetComponent<KPrefabID>();
-            return prefabId != null ? prefabId.PrefabID().ToString() : GetStorageTypeName(storageInfo);
+            return GetStoragePrefabKey(storageInfo.Storage, GetStorageTypeName(storageInfo));
+        }
+
+        private static string GetStoragePrefabKey(Storage storage, string fallback = null)
+        {
+            KPrefabID prefabId = storage?.GetComponent<KPrefabID>();
+            return prefabId != null ? prefabId.PrefabID().ToString() : (fallback ?? string.Empty);
         }
 
         private static string GetStorageTypeName(StorageNetworkStorageInfo storageInfo)

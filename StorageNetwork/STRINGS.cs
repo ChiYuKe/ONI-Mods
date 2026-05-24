@@ -21,6 +21,13 @@ namespace StorageNetwork
                     public static LocString DESC = "显示并管理连接到储存网络线缆的储存建筑。";
                     public static LocString EFFECT = "扫描相连的储存网络线缆，并汇总所有连接储存的容量状态。";
                 }
+
+                public class STORAGENETWORKCABLEBRIDGE
+                {
+                    public static LocString NAME = "储存网络线缆桥";
+                    public static LocString DESC = "让两段储存网络线缆跨越障碍或其他线路。";
+                    public static LocString EFFECT = "连接桥两端的储存网络线缆，不与桥下线路相连。";
+                }
             }
         }
 
@@ -45,10 +52,12 @@ namespace StorageNetwork
                 public static LocString SIDE_SCREEN_TITLE = "储存网络";
                 public static LocString NO_STORAGES = "未连接储存建筑";
                 public static LocString SUMMARY = "总计：{0} / {1}";
-                public static LocString OVERVIEW_BUTTON = "概览";
-                public static LocString OVERVIEW_TOOLTIP = "高亮储存网络线缆、核心和已连接储存建筑。";
+                public static LocString OVERVIEW_BUTTON = "储存网络概览";
+                public static LocString OVERVIEW_TOOLTIP = "显示当前储存网络";
                 public static LocString VIEW_NETWORK_BUTTON = "查看储存网络";
                 public static LocString VIEW_NETWORK_TOOLTIP = "打开储存网络面板，查看当前核心连接的所有储存建筑和容量状态。";
+                public static LocString VIEW_CONNECTED_NETWORK_TOOLTIP = "打开已连接的储存网络，并定位到当前建筑。";
+                public static LocString VIEW_CONNECTED_NETWORK_UNAVAILABLE_TOOLTIP = "当前建筑未连接到储存网络核心。";
                 public static LocString PORT_INPUT_HOVER_FORMAT = "{Name} 的 {Port}";
                 public static LocString PORT_OUTPUT_HOVER_FORMAT = "{Name} 的 {Port}";
                 public static LocString PORT_CONNECTED = "已连接储存网络";
@@ -57,8 +66,17 @@ namespace StorageNetwork
                 public static LocString PORT_STORAGE_UNAVAILABLE = "储存当前不可用";
                 public static LocString REQUEST_RECIPE_MATERIALS = "从网络中请求材料";
                 public static LocString STORE_RECIPE_PRODUCTS = "生产完成后将成品输入网络";
-                public static LocString MISSING_RECIPE_MATERIAL_STATUS = "网络中缺失此类材料";
-                public static LocString MISSING_RECIPE_MATERIAL_TOOLTIP = "网络中缺失此类材料，将由复制人补充材料。";
+                public static LocString REQUEST_RECIPE_MATERIALS_ENABLED_STATUS = "从网络中请求材料：已开启";
+                public static LocString REQUEST_RECIPE_MATERIALS_ENABLED_TOOLTIP = "此建筑会尝试从储存网络补充生产所需材料。";
+                public static LocString REQUEST_RECIPE_MATERIALS_DISABLED_STATUS = "从网络中请求材料：已关闭";
+                public static LocString REQUEST_RECIPE_MATERIALS_DISABLED_TOOLTIP = "此建筑不会从储存网络补充生产所需材料。";
+                public static LocString STORE_RECIPE_PRODUCTS_ENABLED_STATUS = "生产完成后将成品输入网络：已开启";
+                public static LocString STORE_RECIPE_PRODUCTS_ENABLED_TOOLTIP = "此建筑会尝试把生产成品输入储存网络。";
+                public static LocString STORE_RECIPE_PRODUCTS_DISABLED_STATUS = "生产完成后将成品输入网络：已关闭";
+                public static LocString STORE_RECIPE_PRODUCTS_DISABLED_TOOLTIP = "此建筑不会把生产成品输入储存网络。";
+                public static LocString MISSING_RECIPE_MATERIAL_STATUS = "网络中缺失{Material}";
+                public static LocString MISSING_RECIPE_MATERIAL_TOOLTIP = "网络中缺失{Material}，将由复制人补充材料。";
+                public static LocString MISSING_RECIPE_MATERIAL_FALLBACK = "所需材料";
                 public static LocString LEGEND_INPUT_PORT = "输入端";
                 public static LocString LEGEND_INPUT_PORT_TOOLTIP = "储存网络从这里接入建筑。";
                 public static LocString LEGEND_OUTPUT_PORT = "输出端";
@@ -79,6 +97,23 @@ namespace StorageNetwork
                 public static LocString LEGEND_HUB_TOOLTIP = "扫描并汇总相连储存建筑。";
                 public static LocString LEGEND_STORAGE = "已连接储存";
                 public static LocString LEGEND_STORAGE_TOOLTIP = "当前储存网络可共享的储存建筑。";
+            }
+        }
+
+        public class RESEARCH
+        {
+            public class TREES
+            {
+                public static LocString TITLE_STORAGENETWORK = "储存网络";
+            }
+
+            public class TECHS
+            {
+                public class STORAGENETWORK
+                {
+                    public static LocString NAME = "储存网络";
+                    public static LocString DESC = "解锁储存网络核心和储存网络线缆，用于集中管理相连建筑中的物品。";
+                }
             }
         }
     }

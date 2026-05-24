@@ -8,15 +8,31 @@ namespace StorageNetwork.Core
     public static class StorageNetworkRegistry
     {
         private static readonly HashSet<StorageNetworkCable> Cables = new HashSet<StorageNetworkCable>();
+        private static readonly HashSet<StorageNetworkCableBridge> Bridges = new HashSet<StorageNetworkCableBridge>();
         private static readonly HashSet<StorageNetworkHub> Hubs = new HashSet<StorageNetworkHub>();
         private static readonly HashSet<StorageNetworkStorageConnector> StorageConnectors = new HashSet<StorageNetworkStorageConnector>();
         private static readonly Dictionary<int, StorageNetworkCable> CablesByCell = new Dictionary<int, StorageNetworkCable>();
+        private static readonly Dictionary<int, List<StorageNetworkCableBridge>> BridgesByEndpointCell =
+            new Dictionary<int, List<StorageNetworkCableBridge>>();
+        private static readonly Dictionary<int, List<StorageNetworkStorageConnector>> ConnectorsByInputCell =
+            new Dictionary<int, List<StorageNetworkStorageConnector>>();
+        private static readonly Dictionary<int, List<StorageNetworkStorageConnector>> ConnectorsByOutputCell =
+            new Dictionary<int, List<StorageNetworkStorageConnector>>();
+        private static readonly Dictionary<StorageNetworkHub, HashSet<int>> HubCableCellsCache =
+            new Dictionary<StorageNetworkHub, HashSet<int>>();
+        private static readonly Dictionary<Storage, HashSet<int>> StorageCableCellsCache =
+            new Dictionary<Storage, HashSet<int>>();
+        private static readonly Dictionary<StorageMassKey, float> MassAvailableCache =
+            new Dictionary<StorageMassKey, float>();
+        private static bool dirtyQueued;
 
         public static int Revision { get; private set; }
 
         public static IReadOnlyCollection<StorageNetworkHub> RegisteredHubs => Hubs;
 
         public static IReadOnlyCollection<StorageNetworkCable> RegisteredCables => Cables;
+
+        public static IReadOnlyCollection<StorageNetworkCableBridge> RegisteredBridges => Bridges;
 
         public static IReadOnlyCollection<StorageNetworkStorageConnector> RegisteredStorageConnectors => StorageConnectors;
 
@@ -62,11 +78,32 @@ namespace StorageNetwork.Core
             }
         }
 
+        public static void Register(StorageNetworkCableBridge bridge)
+        {
+            if (bridge != null)
+            {
+                Bridges.Add(bridge);
+                CacheBridge(bridge);
+                MarkDirty();
+            }
+        }
+
+        public static void Unregister(StorageNetworkCableBridge bridge)
+        {
+            if (bridge != null)
+            {
+                Bridges.Remove(bridge);
+                UncacheBridge(bridge);
+                MarkDirty();
+            }
+        }
+
         public static void Register(StorageNetworkStorageConnector connector)
         {
             if (connector != null)
             {
                 StorageConnectors.Add(connector);
+                CacheConnector(connector);
                 MarkDirty();
             }
         }
@@ -76,13 +113,55 @@ namespace StorageNetwork.Core
             if (connector != null)
             {
                 StorageConnectors.Remove(connector);
+                UncacheConnector(connector);
                 MarkDirty();
             }
         }
 
         public static void MarkDirty()
         {
+            if (dirtyQueued)
+            {
+                return;
+            }
+
+            dirtyQueued = true;
+            if (GameScheduler.Instance != null)
+            {
+                GameScheduler.Instance.ScheduleNextFrame(
+                    "StorageNetworkRegistryDirty",
+                    _ => FlushDirty());
+                return;
+            }
+
+            FlushDirty();
+        }
+
+        private static void FlushDirty()
+        {
+            dirtyQueued = false;
             Revision++;
+            HubCableCellsCache.Clear();
+            StorageCableCellsCache.Clear();
+            MassAvailableCache.Clear();
+            QueueAllFabricatorRefreshes();
+        }
+
+        public static void QueueNetworkRefreshes(Storage changedStorage)
+        {
+            if (changedStorage == null)
+            {
+                return;
+            }
+
+            MassAvailableCache.Clear();
+            HashSet<int> networkCells = FindConnectedCableCells(changedStorage);
+            if (networkCells.Count == 0)
+            {
+                return;
+            }
+
+            QueueFabricatorRefreshes(networkCells);
         }
 
         public static bool IsCableConnectedToAnyHub(StorageNetworkCable cable)
@@ -93,7 +172,15 @@ namespace StorageNetwork.Core
             }
 
             int cell = cable.Cell;
-            return Hubs.ToList().Any(hub => hub != null && FindConnectedCableCells(hub).Contains(cell));
+            foreach (StorageNetworkHub hub in Hubs)
+            {
+                if (hub != null && FindConnectedCableCells(hub).Contains(cell))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         public static bool IsCableConnectedToHub(StorageNetworkCable cable, StorageNetworkHub hub)
@@ -123,7 +210,7 @@ namespace StorageNetwork.Core
         public static IEnumerable<StorageNetworkCable> GetConnectedCables(StorageNetworkHub hub)
         {
             HashSet<int> networkCells = FindConnectedCableCells(hub);
-            return Cables.ToList().Where(cable => IsLiveCable(cable) && networkCells.Contains(cable.Cell));
+            return Cables.Where(cable => IsLiveCable(cable) && networkCells.Contains(cable.Cell));
         }
 
         public static HashSet<int> GetConnectedCableCells(StorageNetworkHub hub)
@@ -139,20 +226,40 @@ namespace StorageNetwork.Core
             }
 
             HashSet<int> networkCells = FindConnectedCableCells(requesterStorage);
-            return FindConnectedStorages(networkCells).Where(storage => storage != requesterStorage);
+            return FindConnectedStorages(networkCells).Where(storage => storage != requesterStorage).ToList();
         }
 
         public static float GetMassAvailable(Storage requesterStorage, Tag tag)
         {
-            if (!CanPullFromNetwork(requesterStorage))
+            if (requesterStorage == null || !tag.IsValid)
             {
                 return 0f;
             }
 
-            return GetSharedStorages(requesterStorage)
-                .SelectMany(storage => storage.items)
-                .Where(item => item != null && item.TryGetComponent(out KPrefabID prefabId) && prefabId.HasTag(tag))
-                .Sum(item => item.GetComponent<PrimaryElement>()?.Mass ?? 0f);
+            StorageMassKey cacheKey = new StorageMassKey(requesterStorage, tag);
+            if (MassAvailableCache.TryGetValue(cacheKey, out float cachedMass))
+            {
+                return cachedMass;
+            }
+
+            HashSet<int> networkCells = FindConnectedCableCells(requesterStorage);
+            if (!CanPullFromNetwork(networkCells))
+            {
+                MassAvailableCache[cacheKey] = 0f;
+                return 0f;
+            }
+
+            float mass = 0f;
+            foreach (Storage storage in FindConnectedStorages(networkCells))
+            {
+                if (storage != requesterStorage)
+                {
+                    mass += storage.GetAmountAvailable(tag);
+                }
+            }
+
+            MassAvailableCache[cacheKey] = mass;
+            return mass;
         }
 
         public static bool CanPullFromNetwork(Storage requesterStorage)
@@ -163,11 +270,59 @@ namespace StorageNetwork.Core
                 return false;
             }
 
-            return Hubs.Any(hub => hub != null && hub.AllowsNetworkPull && IsHubConnectedToNetwork(hub, networkCells));
+            return CanPullFromNetwork(networkCells);
+        }
+
+        private static bool CanPullFromNetwork(HashSet<int> networkCells)
+        {
+            if (networkCells == null || networkCells.Count == 0)
+            {
+                return false;
+            }
+
+            foreach (StorageNetworkHub hub in Hubs)
+            {
+                if (hub != null && hub.AllowsNetworkPull && IsHubConnectedToNetwork(hub, networkCells))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        public static StorageNetworkHub GetConnectedHub(StorageNetworkStorageConnector connector)
+        {
+            if (connector == null)
+            {
+                return null;
+            }
+
+            HashSet<int> networkCells = FindConnectedCableCells(connector.Storage);
+            StorageNetworkHub connectedHub = null;
+            foreach (StorageNetworkHub hub in Hubs)
+            {
+                if (hub == null || !IsHubConnectedToNetwork(hub, networkCells))
+                {
+                    continue;
+                }
+
+                if (connectedHub == null || hub.GetInstanceID() < connectedHub.GetInstanceID())
+                {
+                    connectedHub = hub;
+                }
+            }
+
+            return connectedHub;
         }
 
         private static HashSet<int> FindConnectedCableCells(StorageNetworkHub hub)
         {
+            if (hub != null && HubCableCellsCache.TryGetValue(hub, out HashSet<int> cachedCells))
+            {
+                return cachedCells;
+            }
+
             HashSet<int> startCells = new HashSet<int>();
             if (hub == null)
             {
@@ -179,11 +334,18 @@ namespace StorageNetwork.Core
                 startCells.Add(hub.OutputCell);
             }
 
-            return ExpandCableNetwork(startCells);
+            HashSet<int> result = ExpandCableNetwork(startCells);
+            HubCableCellsCache[hub] = result;
+            return result;
         }
 
         private static HashSet<int> FindConnectedCableCells(Storage requesterStorage)
         {
+            if (requesterStorage != null && StorageCableCellsCache.TryGetValue(requesterStorage, out HashSet<int> cachedCells))
+            {
+                return cachedCells;
+            }
+
             IStorageNetworkConnectable connector = GetConnector(requesterStorage?.gameObject);
             HashSet<int> startCells = new HashSet<int>();
             if (connector == null)
@@ -196,12 +358,18 @@ namespace StorageNetwork.Core
                 startCells.Add(connector.InputCell);
             }
 
-            if (connector.Storage == null && IsConnectedCableCell(connector.OutputCell))
+            if (connector.HasOutputPort && connector.Storage == null && IsConnectedCableCell(connector.OutputCell))
             {
                 startCells.Add(connector.OutputCell);
             }
 
-            return ExpandCableNetwork(startCells);
+            HashSet<int> result = ExpandCableNetwork(startCells);
+            if (requesterStorage != null)
+            {
+                StorageCableCellsCache[requesterStorage] = result;
+            }
+
+            return result;
         }
 
         private static HashSet<int> ExpandCableNetwork(HashSet<int> startCells)
@@ -225,37 +393,159 @@ namespace StorageNetwork.Core
                     }
                 }
 
-                foreach (StorageNetworkStorageConnector connector in StorageConnectors)
-                {
-                    if (connector == null || !connector.CanShareStorage || connector.InputCell != cell)
-                    {
-                        continue;
-                    }
+                EnqueueConnectorBridges(cell, visited, pending);
+                EnqueueCableBridges(cell, visited, pending);
+            }
 
-                    if (IsConnectedCableCell(connector.OutputCell) && !visited.Contains(connector.OutputCell))
+            return visited;
+        }
+
+        private static void EnqueueCableBridges(int cell, HashSet<int> visited, Queue<int> pending)
+        {
+            if (!BridgesByEndpointCell.TryGetValue(cell, out List<StorageNetworkCableBridge> bridges))
+            {
+                return;
+            }
+
+            foreach (StorageNetworkCableBridge bridge in bridges)
+            {
+                if (!IsLiveBridge(bridge))
+                {
+                    continue;
+                }
+
+                int otherCell = ResolveBridgeOppositeCableCell(bridge, cell);
+                if (Grid.IsValidCell(otherCell) && IsConnectedCableCell(otherCell) && !visited.Contains(otherCell))
+                {
+                    pending.Enqueue(otherCell);
+                }
+            }
+        }
+
+        private static int ResolveBridgeOppositeCableCell(StorageNetworkCableBridge bridge, int cableCell)
+        {
+            if (bridge == null)
+            {
+                return Grid.InvalidCell;
+            }
+
+            int inputCableCell = ResolveBridgeCableCell(bridge.Link1Cell);
+            int outputCableCell = ResolveBridgeCableCell(bridge.Link2Cell);
+
+            if (cableCell == inputCableCell)
+            {
+                return outputCableCell;
+            }
+
+            if (cableCell == outputCableCell)
+            {
+                return inputCableCell;
+            }
+
+            return Grid.InvalidCell;
+        }
+
+        private static int ResolveBridgeCableCell(int linkCell)
+        {
+            if (!Grid.IsValidCell(linkCell))
+            {
+                return Grid.InvalidCell;
+            }
+
+            return IsConnectedCableCell(linkCell) ? linkCell : Grid.InvalidCell;
+        }
+
+        private static void EnqueueConnectorBridges(int cell, HashSet<int> visited, Queue<int> pending)
+        {
+            if (ConnectorsByInputCell.TryGetValue(cell, out List<StorageNetworkStorageConnector> inputConnectors))
+            {
+                foreach (StorageNetworkStorageConnector connector in inputConnectors)
+                {
+                    if (connector != null &&
+                        connector.HasOutputPort &&
+                        connector.CanShareStorage &&
+                        IsConnectedCableCell(connector.OutputCell) &&
+                        !visited.Contains(connector.OutputCell))
                     {
                         pending.Enqueue(connector.OutputCell);
                     }
                 }
             }
 
-            return visited;
+            if (ConnectorsByOutputCell.TryGetValue(cell, out List<StorageNetworkStorageConnector> outputConnectors))
+            {
+                foreach (StorageNetworkStorageConnector connector in outputConnectors)
+                {
+                    if (connector != null &&
+                        connector.HasOutputPort &&
+                        connector.CanShareStorage &&
+                        IsConnectedCableCell(connector.InputCell) &&
+                        !visited.Contains(connector.InputCell))
+                    {
+                        pending.Enqueue(connector.InputCell);
+                    }
+                }
+            }
         }
 
         private static IEnumerable<Storage> FindConnectedStorages(HashSet<int> networkCells)
         {
             HashSet<Storage> storages = new HashSet<Storage>();
-            foreach (StorageNetworkStorageConnector connector in StorageConnectors)
+            foreach (int cell in networkCells)
             {
-                if (connector?.Storage != null &&
-                    connector.CanShareStorage &&
-                    networkCells.Contains(connector.InputCell))
+                if (!ConnectorsByInputCell.TryGetValue(cell, out List<StorageNetworkStorageConnector> connectors))
                 {
-                    storages.Add(connector.Storage);
+                    continue;
+                }
+
+                foreach (StorageNetworkStorageConnector connector in connectors)
+                {
+                    if (connector?.Storage != null && connector.CanShareStorage)
+                    {
+                        storages.Add(connector.Storage);
+                    }
                 }
             }
 
             return storages;
+        }
+
+        private static void QueueAllFabricatorRefreshes()
+        {
+            foreach (StorageNetworkStorageConnector connector in StorageConnectors)
+            {
+                connector?.QueueNetworkRefresh();
+            }
+        }
+
+        private static void QueueFabricatorRefreshes(HashSet<int> networkCells)
+        {
+            HashSet<StorageNetworkStorageConnector> queuedConnectors = null;
+            foreach (int cell in networkCells)
+            {
+                if (!ConnectorsByInputCell.TryGetValue(cell, out List<StorageNetworkStorageConnector> connectors))
+                {
+                    continue;
+                }
+
+                foreach (StorageNetworkStorageConnector connector in connectors)
+                {
+                    if (connector?.Storage == null || !connector.CanShareStorage)
+                    {
+                        continue;
+                    }
+
+                    if (queuedConnectors == null)
+                    {
+                        queuedConnectors = new HashSet<StorageNetworkStorageConnector>();
+                    }
+
+                    if (queuedConnectors.Add(connector))
+                    {
+                        connector.QueueNetworkRefresh();
+                    }
+                }
+            }
         }
 
         private static IStorageNetworkConnectable GetConnector(GameObject buildingObject)
@@ -278,8 +568,7 @@ namespace StorageNetwork.Core
 
         private static IStorageNetworkConnectable GetStorageConnector(GameObject buildingObject)
         {
-            KPrefabID prefabId = buildingObject.GetComponent<KPrefabID>();
-            if (prefabId == null || !prefabId.HasTag(StorageNetworkTags.NetworkConnectable))
+            if (!StorageNetworkTags.CanConnectToNetwork(buildingObject))
             {
                 return null;
             }
@@ -381,6 +670,16 @@ namespace StorageNetwork.Core
             return Grid.IsValidCell(cell) && Grid.Objects[cell, (int)ObjectLayer.LogicWire] == cable.gameObject;
         }
 
+        private static bool IsLiveBridge(StorageNetworkCableBridge bridge)
+        {
+            if (bridge == null || bridge.gameObject == null || !bridge.isSpawned || bridge.GetComponent<BuildingComplete>() == null)
+            {
+                return false;
+            }
+
+            return Grid.IsValidCell(bridge.Link1Cell) && Grid.IsValidCell(bridge.Link2Cell);
+        }
+
         private static bool HasConnection(StorageNetworkCable cable, UtilityConnections direction)
         {
             if (cable == null || cable.IsDisconnected())
@@ -403,6 +702,137 @@ namespace StorageNetwork.Core
             }
         }
 
+        private static void CacheConnector(StorageNetworkStorageConnector connector)
+        {
+            AddConnectorCell(ConnectorsByInputCell, connector.InputCell, connector);
+            if (connector.HasOutputPort)
+            {
+                AddConnectorCell(ConnectorsByOutputCell, connector.OutputCell, connector);
+            }
+        }
+
+        private static void UncacheConnector(StorageNetworkStorageConnector connector)
+        {
+            RemoveConnectorCell(ConnectorsByInputCell, connector.InputCell, connector);
+            RemoveConnectorCell(ConnectorsByOutputCell, connector.OutputCell, connector);
+        }
+
+        private static void CacheBridge(StorageNetworkCableBridge bridge)
+        {
+            AddBridgeCell(bridge.Link1Cell, bridge);
+            AddBridgeCell(bridge.Link2Cell, bridge);
+        }
+
+        private static void UncacheBridge(StorageNetworkCableBridge bridge)
+        {
+            RemoveBridgeCell(bridge.Link1Cell, bridge);
+            RemoveBridgeCell(bridge.Link2Cell, bridge);
+        }
+
+        public static bool IsStorageNetworkPortCell(int cell)
+        {
+            if (!Grid.IsValidCell(cell))
+            {
+                return false;
+            }
+
+            foreach (StorageNetworkHub hub in Hubs)
+            {
+                if (hub != null && IsConnectablePortCell(hub, cell))
+                {
+                    return true;
+                }
+            }
+
+            foreach (StorageNetworkStorageConnector connector in StorageConnectors)
+            {
+                if (connector != null && IsConnectablePortCell(connector, cell))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool IsConnectablePortCell(IStorageNetworkConnectable connectable, int cell)
+        {
+            return connectable != null &&
+                (connectable.InputCell == cell || (connectable.HasOutputPort && connectable.OutputCell == cell));
+        }
+
+        private static void AddBridgeCell(int cell, StorageNetworkCableBridge bridge)
+        {
+            if (!Grid.IsValidCell(cell))
+            {
+                return;
+            }
+
+            if (!BridgesByEndpointCell.TryGetValue(cell, out List<StorageNetworkCableBridge> bridges))
+            {
+                bridges = new List<StorageNetworkCableBridge>();
+                BridgesByEndpointCell[cell] = bridges;
+            }
+
+            if (!bridges.Contains(bridge))
+            {
+                bridges.Add(bridge);
+            }
+        }
+
+        private static void RemoveBridgeCell(int cell, StorageNetworkCableBridge bridge)
+        {
+            if (!BridgesByEndpointCell.TryGetValue(cell, out List<StorageNetworkCableBridge> bridges))
+            {
+                return;
+            }
+
+            bridges.Remove(bridge);
+            if (bridges.Count == 0)
+            {
+                BridgesByEndpointCell.Remove(cell);
+            }
+        }
+
+        private static void AddConnectorCell(
+            Dictionary<int, List<StorageNetworkStorageConnector>> connectorsByCell,
+            int cell,
+            StorageNetworkStorageConnector connector)
+        {
+            if (!Grid.IsValidCell(cell))
+            {
+                return;
+            }
+
+            if (!connectorsByCell.TryGetValue(cell, out List<StorageNetworkStorageConnector> connectors))
+            {
+                connectors = new List<StorageNetworkStorageConnector>();
+                connectorsByCell[cell] = connectors;
+            }
+
+            if (!connectors.Contains(connector))
+            {
+                connectors.Add(connector);
+            }
+        }
+
+        private static void RemoveConnectorCell(
+            Dictionary<int, List<StorageNetworkStorageConnector>> connectorsByCell,
+            int cell,
+            StorageNetworkStorageConnector connector)
+        {
+            if (!connectorsByCell.TryGetValue(cell, out List<StorageNetworkStorageConnector> connectors))
+            {
+                return;
+            }
+
+            connectors.Remove(connector);
+            if (connectors.Count == 0)
+            {
+                connectorsByCell.Remove(cell);
+            }
+        }
+
         private static void RemoveStaleCables(List<StorageNetworkCable> staleCables)
         {
             if (staleCables == null)
@@ -418,6 +848,31 @@ namespace StorageNetwork.Core
                     cachedCable == staleCable)
                 {
                     CablesByCell.Remove(staleCable.Cell);
+                }
+            }
+        }
+
+        private struct StorageMassKey
+        {
+            private readonly Storage storage;
+            private readonly Tag tag;
+
+            public StorageMassKey(Storage storage, Tag tag)
+            {
+                this.storage = storage;
+                this.tag = tag;
+            }
+
+            public override bool Equals(object obj)
+            {
+                return obj is StorageMassKey other && storage == other.storage && tag == other.tag;
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    return ((storage != null ? storage.GetInstanceID() : 0) * 397) ^ tag.GetHashCode();
                 }
             }
         }

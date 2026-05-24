@@ -10,6 +10,15 @@ namespace StorageNetwork.Patches
 {
     public static class OverlayOverviewPatch
     {
+        [HarmonyPatch(typeof(Assets), "OnPrefabInit")]
+        public static class AssetsOnPrefabInitPatch
+        {
+            public static void Postfix()
+            {
+                StorageNetworkSprites.RegisterPending();
+            }
+        }
+
         [HarmonyPatch(typeof(OverlayScreen), "RegisterModes")]
         public static class OverlayScreenRegisterModesPatch
         {
@@ -40,7 +49,7 @@ namespace StorageNetwork.Patches
                     object toggle = Activator.CreateInstance(
                         toggleType,
                         STRINGS.UI.STORAGE_NETWORK.OVERVIEW_BUTTON.ToString(),
-                        "OverviewUI_consumables_icon",
+                        StorageNetworkSprites.GetOverviewIconName(),
                         StorageNetworkOverviewMode.ID,
                         string.Empty,
                         Action.NumActions,
@@ -151,7 +160,7 @@ namespace StorageNetwork.Patches
                     return true;
                 }
 
-                return connectable.OutputCell == cell;
+                return connectable.HasOutputPort && connectable.OutputCell == cell;
             }
 
             private static void DrawPortHover(

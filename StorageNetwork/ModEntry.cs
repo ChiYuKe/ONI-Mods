@@ -1,5 +1,6 @@
 using HarmonyLib;
 using KMod;
+using StorageNetwork.Core;
 
 namespace StorageNetwork
 {
@@ -8,6 +9,7 @@ namespace StorageNetwork
         public override void OnLoad(Harmony harmony)
         {
             base.OnLoad(harmony);
+            StorageNetworkSprites.SetModPath(mod.ContentPath);
         }
     }
 }

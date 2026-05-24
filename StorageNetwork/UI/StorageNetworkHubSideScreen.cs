@@ -98,7 +98,7 @@ namespace StorageNetwork.UI
                 if (targetHub != null)
                 {
                     targetHub.AllowsNetworkPull = !targetHub.AllowsNetworkPull;
-                    targetHub.RefreshNetwork();
+                    targetHub.RefreshNetworkTotals();
                     Refresh();
                 }
             });
@@ -149,7 +149,7 @@ namespace StorageNetwork.UI
                 return;
             }
 
-            targetHub.RefreshNetwork();
+            targetHub.RefreshNetworkTotals();
             if (pullToggleLabel != null)
             {
                 pullToggleLabel.SetText(targetHub.AllowsNetworkPull ? "允许建筑从网络取料" : "禁止建筑从网络取料");

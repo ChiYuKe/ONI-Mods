@@ -26,6 +26,9 @@ namespace StorageNetwork.UI
         private readonly int cameraLayerMask;
         private readonly int selectionMask;
         private int cachedRegistryRevision = -1;
+        private Vector2I cachedVisibleMin;
+        private Vector2I cachedVisibleMax;
+        private bool hasCachedVisibleExtents;
 
         public StorageNetworkOverviewMode()
         {
@@ -57,6 +60,7 @@ namespace StorageNetwork.UI
             SelectTool.Instance.SetLayerMask(selectionMask);
             GridCompositor.Instance.ToggleMinor(true);
             cachedRegistryRevision = -1;
+            hasCachedVisibleExtents = false;
             RefreshCachedNetworkTargets();
         }
 
@@ -72,6 +76,7 @@ namespace StorageNetwork.UI
             visiblePortTargets.Clear();
             connectedCableCells.Clear();
             cachedRegistryRevision = -1;
+            hasCachedVisibleExtents = false;
             Camera.main.cullingMask &= ~cameraLayerMask;
             SelectTool.Instance.ClearLayerMask();
             GridCompositor.Instance.ToggleMinor(false);
@@ -87,6 +92,21 @@ namespace StorageNetwork.UI
             {
                 RefreshCachedNetworkTargets();
             }
+
+            bool visibleChanged = !hasCachedVisibleExtents ||
+                visibleMin.x != cachedVisibleMin.x ||
+                visibleMin.y != cachedVisibleMin.y ||
+                visibleMax.x != cachedVisibleMax.x ||
+                visibleMax.y != cachedVisibleMax.y;
+
+            if (!visibleChanged && cachedRegistryRevision == StorageNetworkRegistry.Revision)
+            {
+                return;
+            }
+
+            cachedVisibleMin = visibleMin;
+            cachedVisibleMax = visibleMax;
+            hasCachedVisibleExtents = true;
 
             ClearStaleTargets();
             AddVisibleTargets(visibleMin, visibleMax);
@@ -115,10 +135,16 @@ namespace StorageNetwork.UI
             desiredTargets.Clear();
             desiredPortTargets.Clear();
             connectedCableCells.Clear();
+            hasCachedVisibleExtents = false;
 
             foreach (StorageNetworkCable cable in StorageNetworkRegistry.RegisteredCables)
             {
                 AddRoot(cable);
+            }
+
+            foreach (StorageNetworkCableBridge bridge in StorageNetworkRegistry.RegisteredBridges)
+            {
+                AddRoot(bridge);
             }
 
             IEnumerable<StorageNetworkHub> hubs = focusHub != null
@@ -169,9 +195,18 @@ namespace StorageNetwork.UI
         {
             foreach (SaveLoadRoot target in desiredTargets)
             {
+                if (target == null)
+                {
+                    continue;
+                }
+
                 if (target.GetComponent<StorageNetworkCable>() != null)
                 {
                     AddTargetIfVisible(target, visibleMin, visibleMax, cableTargets, cableTargetLayer, SetCableOverlayDepth, null);
+                }
+                else if (target.GetComponent<StorageNetworkCableBridge>() != null)
+                {
+                    AddTargetIfVisible(target, visibleMin, visibleMax, objectTargets, cableTargetLayer, SetBridgeOverlayDepth, null);
                 }
                 else
                 {
@@ -222,6 +257,13 @@ namespace StorageNetwork.UI
                 if (target.GetComponent<StorageNetworkHub>() != null)
                 {
                     controller.TintColour = hubColor;
+                }
+                else if (target.GetComponent<StorageNetworkCableBridge>() != null)
+                {
+                    StorageNetworkCableBridge bridge = target.GetComponent<StorageNetworkCableBridge>();
+                    controller.TintColour = IsBridgeConnected(bridge)
+                        ? connectedCableColor
+                        : disconnectedCableColor;
                 }
                 else
                 {
@@ -289,9 +331,45 @@ namespace StorageNetwork.UI
             }
         }
 
+        private static void SetBridgeOverlayDepth(SaveLoadRoot target)
+        {
+            Vector3 position = target.transform.GetPosition();
+            position.z = Grid.GetLayerZ(Grid.SceneLayer.Building) - 0.2f;
+            target.transform.SetPosition(position);
+
+            KBatchedAnimController controller = target.GetComponent<KBatchedAnimController>();
+            if (controller != null)
+            {
+                controller.enabled = false;
+                controller.enabled = true;
+            }
+        }
+
         private bool IsCableConnected(StorageNetworkCable cable)
         {
             return cable != null && connectedCableCells.Contains(cable.Cell);
+        }
+
+        private bool IsBridgeConnected(StorageNetworkCableBridge bridge)
+        {
+            if (bridge == null)
+            {
+                return false;
+            }
+
+            int inputCableCell = ResolveBridgeCableCell(bridge.Link1Cell);
+            int outputCableCell = ResolveBridgeCableCell(bridge.Link2Cell);
+            return connectedCableCells.Contains(inputCableCell) && connectedCableCells.Contains(outputCableCell);
+        }
+
+        private int ResolveBridgeCableCell(int linkCell)
+        {
+            if (!Grid.IsValidCell(linkCell))
+            {
+                return Grid.InvalidCell;
+            }
+
+            return connectedCableCells.Contains(linkCell) ? linkCell : Grid.InvalidCell;
         }
 
         private void AddRoot(KMonoBehaviour component)
@@ -314,12 +392,27 @@ namespace StorageNetwork.UI
 
         private void DrawPortIcons(Vector2I visibleMin, Vector2I visibleMax)
         {
-            foreach (SaveLoadRoot target in visiblePortTargets
-                .Where(target => target == null || !desiredPortTargets.Contains(target) || !IsVisible(target, visibleMin, visibleMax))
-                .ToList())
+            List<SaveLoadRoot> staleTargets = null;
+            foreach (SaveLoadRoot target in visiblePortTargets)
             {
-                HidePortIcon(target);
-                visiblePortTargets.Remove(target);
+                if (target == null || !desiredPortTargets.Contains(target) || !IsVisible(target, visibleMin, visibleMax))
+                {
+                    if (staleTargets == null)
+                    {
+                        staleTargets = new List<SaveLoadRoot>();
+                    }
+
+                    staleTargets.Add(target);
+                }
+            }
+
+            if (staleTargets != null)
+            {
+                foreach (SaveLoadRoot target in staleTargets)
+                {
+                    HidePortIcon(target);
+                    visiblePortTargets.Remove(target);
+                }
             }
 
             foreach (SaveLoadRoot target in desiredPortTargets)

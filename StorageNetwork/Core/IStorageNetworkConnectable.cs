@@ -8,6 +8,8 @@ namespace StorageNetwork.Core
 
         int OutputCell { get; }
 
+        bool HasOutputPort { get; }
+
         string DisplayName { get; }
 
         Storage Storage { get; }

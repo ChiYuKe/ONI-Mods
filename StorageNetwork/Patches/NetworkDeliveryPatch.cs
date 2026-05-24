@@ -20,6 +20,12 @@ namespace StorageNetwork.Patches
                     return true;
                 }
 
+                StorageNetworkFabricatorSettings settings = destination.GetComponent<StorageNetworkFabricatorSettings>();
+                if (settings == null || !settings.RequestIngredientsFromNetwork)
+                {
+                    return true;
+                }
+
                 float missingAmount = __instance.Capacity - destination.GetAmountAvailable(requestedTag);
                 if (missingAmount <= 0f)
                 {
@@ -58,10 +64,7 @@ namespace StorageNetwork.Patches
                     return;
                 }
 
-                if (!StorageNetworkTransferService.TryPullMissingAmounts(__instance.inStorage, missingAmounts))
-                {
-                    __instance.GetComponent<StorageNetworkFabricatorSettings>()?.OnNetworkMaterialFallback();
-                }
+                StorageNetworkTransferService.TryPullMissingAmounts(__instance.inStorage, missingAmounts);
             }
         }
 

@@ -3,14 +3,15 @@ using UnityEngine;
 
 namespace StorageNetwork.Components
 {
-    /// <summary>
-    /// 储存网络连接器组件。
-    /// 挂在拥有 Storage 的建筑上，用于把该建筑注册为储存网络中的可连接节点。
-    /// 负责向网络系统提供建筑所在格子、输入/输出端口格子、显示名称以及 Storage 引用。
-    /// </summary>
     public class StorageNetworkStorageConnector : KMonoBehaviour, IStorageNetworkConnectable
     {
+        private static readonly EventSystem.IntraObjectHandler<StorageNetworkStorageConnector> OnStorageChangeDelegate =
+            new EventSystem.IntraObjectHandler<StorageNetworkStorageConnector>((component, data) => component.OnStorageChange(data));
+
+        private Building building;
         private Storage storage;
+        private StorageNetworkFabricatorSettings fabricatorSettings;
+        public bool HasOutputPort { get; set; } = StorageNetworkUiOptions.DefaultConnectorHasOutputPort;
 
         public int Cell => Grid.PosToCell(this);
 
@@ -29,8 +30,11 @@ namespace StorageNetwork.Components
         protected override void OnSpawn()
         {
             base.OnSpawn();
+            building = GetComponent<Building>();
             storage = GetComponent<Storage>();
+            fabricatorSettings = GetComponent<StorageNetworkFabricatorSettings>();
             StorageNetworkRegistry.Register(this);
+            Subscribe((int)GameHashes.OnStorageChange, OnStorageChangeDelegate);
         }
 
         protected override void OnCleanUp()
@@ -40,6 +44,47 @@ namespace StorageNetwork.Components
         }
 
         private int GetPortCell(bool input)
+        {
+            Building currentBuilding = GetBuilding();
+            if (currentBuilding == null)
+            {
+                return GetFallbackPortCell(input);
+            }
+
+            Extents extents = currentBuilding.GetExtents();
+            if (extents.width <= 0 || extents.height <= 0)
+            {
+                return GetFallbackPortCell(input);
+            }
+
+            if (extents.height >= 2)
+            {
+                int x = extents.x + (extents.width - 1) / 2;
+                int y = input ? extents.y : extents.y + Mathf.Min(extents.height - 1, 3);
+                return Grid.XYToCell(x, y);
+            }
+
+            if (extents.width >= 2)
+            {
+                int x = input ? extents.x : extents.x + extents.width - 1;
+                int y = extents.y;
+                return Grid.XYToCell(x, y);
+            }
+
+            return GetFallbackPortCell(input);
+        }
+
+        private Building GetBuilding()
+        {
+            if (building == null)
+            {
+                building = GetComponent<Building>();
+            }
+
+            return building;
+        }
+
+        private int GetFallbackPortCell(bool input)
         {
             int cell = Cell;
             return input ? cell : Grid.CellAbove(cell);
@@ -56,6 +101,21 @@ namespace StorageNetwork.Components
             Grid.CellToXY(cell, out int originX, out int originY);
             Grid.CellToXY(portCell, out int portX, out int portY);
             return new CellOffset(portX - originX, portY - originY);
+        }
+
+        public void QueueNetworkRefresh()
+        {
+            if (fabricatorSettings == null)
+            {
+                fabricatorSettings = GetComponent<StorageNetworkFabricatorSettings>();
+            }
+
+            fabricatorSettings?.QueueNetworkRefresh();
+        }
+
+        private void OnStorageChange(object data)
+        {
+            StorageNetworkRegistry.QueueNetworkRefreshes(storage);
         }
     }
 }
