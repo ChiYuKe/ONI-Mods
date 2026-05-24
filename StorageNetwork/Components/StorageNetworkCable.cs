@@ -25,7 +25,7 @@ namespace StorageNetwork.Components
 
         public IUtilityNetworkMgr GetNetworkManager()
         {
-            return Game.Instance.logicCircuitSystem;
+            return StorageNetworkUtilityNetworkManager.Instance;
         }
 
         public bool IsDisconnected()
@@ -71,8 +71,8 @@ namespace StorageNetwork.Components
 
         protected override void OnCleanUp()
         {
-            QueueSelfAndNeighboursVisualRefresh();
             StorageNetworkRegistry.Unregister(this);
+            QueueNeighbourVisualRefresh();
             base.OnCleanUp();
         }
 
@@ -84,6 +84,11 @@ namespace StorageNetwork.Components
         private void QueueSelfAndNeighboursVisualRefresh()
         {
             QueueVisualRefresh(Cell);
+            QueueNeighbourVisualRefresh();
+        }
+
+        private void QueueNeighbourVisualRefresh()
+        {
             foreach (int adjacentCell in GetCardinalCells(Cell))
             {
                 QueueVisualRefresh(adjacentCell);
