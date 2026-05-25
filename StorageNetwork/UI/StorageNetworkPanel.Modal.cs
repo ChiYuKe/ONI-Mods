@@ -36,14 +36,13 @@ namespace StorageNetwork.UI
         private void ShowTransferDialog(Storage source, string itemKey)
         {
             List<GameObject> items = FindStoredItems(source, itemKey);
-            if (targetHub == null || source == null || items.Count == 0)
+            if (source == null || items.Count == 0)
             {
                 Refresh(true);
                 return;
             }
 
-            targetHub.RefreshNetworkTotals();
-            List<Storage> targets = targetHub.ConnectedStorages
+            List<Storage> targets = StorageSceneCollector.Collect().Storages
                 .Select(info => info.Storage)
                 .Where(storage => storage != null && storage != source && storage.RemainingCapacity() > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
                 .OrderBy(storage => storage.GetProperName())
@@ -51,7 +50,7 @@ namespace StorageNetwork.UI
 
             if (targets.Count == 0)
             {
-                ShowMessageDialog("转移物品", "同一网络中没有可接收物品的目标箱子。");
+                ShowMessageDialog("转移物品", "当前场景中没有可接收物品的目标箱子。");
                 return;
             }
 
@@ -85,7 +84,7 @@ namespace StorageNetwork.UI
         {
             CloseModal();
             modalRoot = CreateModalFrame("选择目标箱子", 620f, 430f, out GameObject body);
-            AddModalText(body.transform, "同一网络中的可接收目标", 14, FontStyles.Bold);
+            AddModalText(body.transform, "当前场景中的可接收目标", 14, FontStyles.Bold);
 
             RectTransform targetContent = CreateModalScrollList(body.transform, 300f);
 
@@ -106,11 +105,8 @@ namespace StorageNetwork.UI
                 return;
             }
 
-            StorageNetworkFabricatorSettings fabricatorSettings = storage.GetComponent<StorageNetworkFabricatorSettings>();
-            bool hasFabricatorSettings = fabricatorSettings != null && fabricatorSettings.SupportsNetworkRecipeSettings;
-
             CloseModal();
-            modalRoot = CreateModalFrame("建筑设置", 420f, hasFabricatorSettings ? 275f : 210f, out GameObject body);
+            modalRoot = CreateModalFrame("建筑设置", 420f, 210f, out GameObject body);
             AddModalText(body.transform, storage.GetProperName(), 15, FontStyles.Bold);
             AddModalText(
                 body.transform,
@@ -120,77 +116,6 @@ namespace StorageNetwork.UI
                     GameUtil.GetFormattedMass(Mathf.Max(0f, storage.RemainingCapacity()))),
                 12,
                 FontStyles.Normal);
-
-            if (hasFabricatorSettings)
-            {
-                AddSettingToggleRow(
-                    body.transform,
-                    STRINGS.UI.STORAGE_NETWORK.REQUEST_RECIPE_MATERIALS,
-                    fabricatorSettings.RequestIngredientsFromNetwork,
-                    value => fabricatorSettings.RequestIngredientsFromNetwork = value);
-                if (fabricatorSettings.SupportsStoreProductsToNetwork)
-                {
-                    AddSettingToggleRow(
-                        body.transform,
-                        STRINGS.UI.STORAGE_NETWORK.STORE_RECIPE_PRODUCTS,
-                        fabricatorSettings.StoreProductsToNetwork,
-                        value => fabricatorSettings.StoreProductsToNetwork = value);
-                }
-            }
-
-            GameObject footer = AddHorizontalRow(body.transform, 6f);
-            AddFooterSpacer(footer.transform);
-            AddModalButton(footer.transform, "关闭", 90f, CloseModal);
-        }
-
-        private void ShowStorageTypeSettingsDialog(string typeName, List<StorageNetworkStorageInfo> storages)
-        {
-            List<StorageNetworkFabricatorSettings> settings = storages
-                .Select(info => info.Storage != null ? info.Storage.GetComponent<StorageNetworkFabricatorSettings>() : null)
-                .Where(setting => setting != null && setting.SupportsNetworkRecipeSettings)
-                .Distinct()
-                .ToList();
-            if (settings.Count == 0)
-            {
-                return;
-            }
-
-            bool allRequestIngredients = settings.All(setting => setting.RequestIngredientsFromNetwork);
-            bool anyStoreProductsSupported = settings.Any(setting => setting.SupportsStoreProductsToNetwork);
-            bool allStoreProducts = anyStoreProductsSupported &&
-                settings.Where(setting => setting.SupportsStoreProductsToNetwork).All(setting => setting.StoreProductsToNetwork);
-
-            CloseModal();
-            modalRoot = CreateModalFrame("批量建筑设置", 460f, anyStoreProductsSupported ? 260f : 215f, out GameObject body);
-            AddModalText(body.transform, string.Format("{0}  x{1}", typeName, settings.Count), 15, FontStyles.Bold);
-            AddModalText(body.transform, "这些设置会应用到当前折叠栏下的所有同类建筑。", 12, FontStyles.Normal);
-
-            AddSettingToggleRow(
-                body.transform,
-                STRINGS.UI.STORAGE_NETWORK.REQUEST_RECIPE_MATERIALS,
-                allRequestIngredients,
-                value =>
-                {
-                    foreach (StorageNetworkFabricatorSettings setting in settings)
-                    {
-                        setting.RequestIngredientsFromNetwork = value;
-                    }
-                });
-
-            if (anyStoreProductsSupported)
-            {
-                AddSettingToggleRow(
-                    body.transform,
-                    STRINGS.UI.STORAGE_NETWORK.STORE_RECIPE_PRODUCTS,
-                    allStoreProducts,
-                    value =>
-                    {
-                        foreach (StorageNetworkFabricatorSettings setting in settings.Where(setting => setting.SupportsStoreProductsToNetwork))
-                        {
-                            setting.StoreProductsToNetwork = value;
-                        }
-                    });
-            }
 
             GameObject footer = AddHorizontalRow(body.transform, 6f);
             AddFooterSpacer(footer.transform);
@@ -467,7 +392,6 @@ namespace StorageNetwork.UI
                 current = !current;
                 onChanged?.Invoke(current);
                 refreshLabel();
-                targetHub?.RefreshNetworkTotals();
                 lastListSignature = null;
             });
             LayoutElement buttonLayout = stateButton.AddComponent<LayoutElement>();

@@ -15,8 +15,7 @@ namespace StorageNetwork.UI
 
         private static StorageNetworkPanel instance;
         private static Dictionary<string, Sprite> spriteCache;
-        private StorageNetworkHub targetHub;
-        private bool overviewMode;
+        private StorageSceneSnapshot currentSnapshot;
         private TextMeshProUGUI summaryText;
         private RectTransform categoryContent;
         private RectTransform listContent;
@@ -40,52 +39,15 @@ namespace StorageNetwork.UI
 
         public KInputHandler inputHandler { get; set; }
 
-        public static void Show(StorageNetworkHub hub)
-        {
-            Show(hub, null);
-        }
-
-        public static void Show(StorageNetworkHub hub, Storage focusStorage)
-        {
-            if (hub == null)
-            {
-                return;
-            }
-
-            if (instance == null)
-            {
-                instance = Create();
-            }
-
-            instance.SetTarget(hub, focusStorage);
-            instance.gameObject.SetActive(true);
-        }
-
-        public static void ShowOverview()
+        public static void Show(Storage focusStorage = null)
         {
             if (instance == null)
             {
                 instance = Create();
             }
 
-            instance.SetOverview();
+            instance.SetSnapshot(focusStorage);
             instance.gameObject.SetActive(true);
-        }
-
-        public static void CloseOverview()
-        {
-            if (instance != null && instance.overviewMode)
-            {
-                instance.Close();
-            }
-        }
-
-        public static void CloseIfTarget(StorageNetworkHub hub)
-        {
-            if (instance != null && instance.targetHub == hub)
-            {
-                instance.Close();
-            }
         }
 
         public static bool IsOpen()
@@ -167,20 +129,11 @@ namespace StorageNetwork.UI
             return panel;
         }
 
-        private void SetTarget(StorageNetworkHub hub, Storage focusStorage = null)
+        private void SetSnapshot(Storage focusStorage = null)
         {
-            targetHub = hub;
-            overviewMode = false;
+            currentSnapshot = null;
             lastListSignature = null;
             FocusStorageRow(focusStorage);
-            Refresh(true);
-        }
-
-        private void SetOverview()
-        {
-            targetHub = null;
-            overviewMode = true;
-            lastListSignature = null;
             Refresh(true);
         }
 
@@ -196,12 +149,13 @@ namespace StorageNetwork.UI
 
         private void Update()
         {
-            if (targetHub == null && !overviewMode)
+            if (summaryText == null || listContent == null)
             {
                 return;
             }
 
             TrackRightClickCloseGesture();
+            UpdatePanelDrag();
 
             refreshElapsed += Time.unscaledDeltaTime;
             if (refreshElapsed >= 1f)
@@ -342,7 +296,7 @@ namespace StorageNetwork.UI
                 return;
             }
 
-            selectedCategoryKey = StorageNetworkTags.GetStorageCategoryKey(storage);
+            selectedCategoryKey = StorageCategories.GetKey(storage);
             selectedItemStorage = storage;
             selectedItemKey = null;
             expandedStorageTypes[GetStoragePrefabKey(storage)] = true;
@@ -351,47 +305,43 @@ namespace StorageNetwork.UI
 
         private void Refresh(bool forceRebuild = false)
         {
-            if (targetHub == null || summaryText == null || listContent == null)
+            if (summaryText == null || listContent == null)
             {
-                if (overviewMode)
-                {
-                    RefreshOverview(forceRebuild);
-                }
-
                 return;
             }
 
-            targetHub.RefreshNetworkTotals();
+            currentSnapshot = StorageSceneCollector.Collect();
             summaryText.text =
-                "<b>网络总览</b>\n" +
-                string.Format("已连接储存：{0}    容量：{1} / {2}",
-                    targetHub.ConnectedStorages.Count,
-                    GameUtil.GetFormattedMass(targetHub.TotalStoredKg),
-                    GameUtil.GetFormattedMass(targetHub.TotalCapacityKg));
+                "<b>场景储存总览</b>\n" +
+                string.Format("储存建筑：{0}    容量：{1} / {2}",
+                    currentSnapshot.Storages.Count,
+                    GameUtil.GetFormattedMass(currentSnapshot.TotalStoredKg),
+                    GameUtil.GetFormattedMass(currentSnapshot.TotalCapacityKg));
 
-            if (targetHub.ConnectedStorages.Count == 0)
+            if (currentSnapshot.Storages.Count == 0)
             {
                 if (forceRebuild || lastListSignature != "empty")
                 {
                     lastListSignature = "empty";
                     ClearCategories();
                     ClearList();
-                    CreateInfoRow("未连接储存建筑", "把储存建筑贴近储存网络线缆，或让线缆经过建筑相邻格。");
+                    CreateInfoRow("当前场景没有可收集的储存建筑", "会收集专用场景储存箱，以及手动加入的原版储物箱。");
                 }
 
                 return;
             }
 
-            string listSignature = BuildListSignature(targetHub.ConnectedStorages);
+            string listSignature = BuildListSignature(currentSnapshot.Storages);
             if (forceRebuild || listSignature != lastListSignature)
             {
                 lastListSignature = listSignature;
-                RebuildStorageRows(targetHub.ConnectedStorages);
+                RebuildStorageRows(currentSnapshot.Storages);
             }
         }
 
-        private void RebuildStorageRows(IEnumerable<StorageNetworkStorageInfo> storages)
+        private void RebuildStorageRows(IEnumerable<StorageInfo> storages)
         {
+            ClearStorageDropAreas();
             ClearList();
             ClearCategories();
 
@@ -410,7 +360,7 @@ namespace StorageNetwork.UI
                 return;
             }
 
-            foreach (IGrouping<string, StorageNetworkStorageInfo> group in selectedGroup.Storages.GroupBy(GetStorageTypeKey).OrderBy(group => GetStorageTypeName(group.First())))
+            foreach (IGrouping<string, StorageInfo> group in selectedGroup.Storages.GroupBy(GetStorageTypeKey).OrderBy(group => GetStorageTypeName(group.First())))
             {
                 CreateStorageTypeRow(group.ToList());
             }
@@ -418,7 +368,7 @@ namespace StorageNetwork.UI
             RebuildLayout();
         }
 
-        private static string BuildListSignature(IEnumerable<StorageNetworkStorageInfo> storages)
+        private static string BuildListSignature(IEnumerable<StorageInfo> storages)
         {
             return string.Join("|", storages
                 .OrderBy(GetStorageTypeKey)
@@ -439,77 +389,6 @@ namespace StorageNetwork.UI
                         storage.CapacityKg,
                         items);
                 }));
-        }
-
-        private void RefreshOverview(bool forceRebuild = false)
-        {
-            if (summaryText == null || listContent == null)
-            {
-                return;
-            }
-
-            StorageNetworkHub[] hubs = StorageNetworkRegistry.RegisteredHubs
-                .Where(hub => hub != null)
-                .OrderBy(hub => hub.GetProperName())
-                .ToArray();
-
-            float totalStored = 0f;
-            float totalCapacity = 0f;
-            foreach (StorageNetworkHub hub in hubs)
-            {
-                hub.RefreshNetworkTotals();
-                totalStored += hub.TotalStoredKg;
-                totalCapacity += hub.TotalCapacityKg;
-            }
-
-            summaryText.text =
-                "<b>储存网络概览</b>\n" +
-                string.Format("网络核心：{0}    总容量：{1} / {2}",
-                    hubs.Length,
-                    GameUtil.GetFormattedMass(totalStored),
-                    GameUtil.GetFormattedMass(totalCapacity));
-
-            if (hubs.Length == 0)
-            {
-                if (forceRebuild || lastListSignature != "overview-empty")
-                {
-                    lastListSignature = "overview-empty";
-                    ClearCategories();
-                    ClearList();
-                    CreateInfoRow("未建造储存网络核心", string.Empty);
-                }
-
-                return;
-            }
-
-            string overviewSignature = "overview|" + string.Join("|", hubs.Select(hub =>
-                string.Format("{0}:{1:0.###}:{2:0.###}:{3}",
-                    hub.GetInstanceID(),
-                    hub.TotalStoredKg,
-                    hub.TotalCapacityKg,
-                    hub.ConnectedStorages.Count)));
-
-            if (!forceRebuild && overviewSignature == lastListSignature)
-            {
-                return;
-            }
-
-            lastListSignature = overviewSignature;
-            ClearCategories();
-            ClearList();
-            foreach (StorageNetworkHub hub in hubs)
-            {
-                float percent = hub.TotalCapacityKg > 0f ? hub.TotalStoredKg / hub.TotalCapacityKg : 0f;
-                CreateInfoRow(
-                    hub.GetProperName(),
-                    string.Format("{0} / {1}  {2}%  {3} 个储存",
-                        GameUtil.GetFormattedMass(hub.TotalStoredKg),
-                        GameUtil.GetFormattedMass(hub.TotalCapacityKg),
-                        Mathf.RoundToInt(percent * 100f),
-                        hub.ConnectedStorages.Count));
-            }
-
-            RebuildLayout();
         }
 
         private void RebuildLayout()

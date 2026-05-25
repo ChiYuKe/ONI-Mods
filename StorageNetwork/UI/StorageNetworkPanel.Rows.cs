@@ -14,7 +14,7 @@ namespace StorageNetwork.UI
     {
 
 
-        private void CreateStorageTypeRow(List<StorageNetworkStorageInfo> storages)
+        private void CreateStorageTypeRow(List<StorageInfo> storages)
         {
             if (storages == null || storages.Count == 0)
             {
@@ -27,7 +27,6 @@ namespace StorageNetwork.UI
             float storedKg = storages.Sum(storage => storage.StoredKg);
             float capacityKg = storages.Sum(storage => storage.CapacityKg);
             float percent = capacityKg > 0f ? storedKg / capacityKg : 0f;
-            bool hasGroupSettings = storages.Any(HasNetworkRecipeSettings);
 
             GameObject row = CreateBox("StorageTypeRow", listContent, new Color(0.86f, 0.85f, 0.80f, 1f));
             AddVerticalContainer(row, 0f, 0, 0, 0, 0);
@@ -47,9 +46,7 @@ namespace StorageNetwork.UI
                 {
                     expandedStorageTypes[typeKey] = !expanded;
                     Refresh(true);
-                },
-                hasGroupSettings ? "总设置" : null,
-                hasGroupSettings ? () => ShowStorageTypeSettingsDialog(typeName, storages) : (System.Action)null);
+                });
 
             header.GetComponent<HorizontalLayoutGroup>().padding = new RectOffset(10, 10, 0, 0);
 
@@ -63,7 +60,7 @@ namespace StorageNetwork.UI
             AddVerticalContainer(storageList, 4f, 18, 0, 4, 4);
             storageList.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
-            foreach (StorageNetworkStorageInfo storage in storages.OrderBy(storage => storage.Name))
+            foreach (StorageInfo storage in storages.OrderBy(storage => storage.Name))
             {
                 CreateStorageRow(storage, storageList.transform);
             }
@@ -71,7 +68,7 @@ namespace StorageNetwork.UI
             row.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
         }
 
-        private void CreateStorageRow(StorageNetworkStorageInfo storageInfo, Transform parent)
+        private void CreateStorageRow(StorageInfo storageInfo, Transform parent)
         {
             Storage storage = storageInfo.Storage;
             if (storage == null)
@@ -107,6 +104,8 @@ namespace StorageNetwork.UI
                 },
                 "设置",
                 () => ShowStorageSettingsDialog(storage));
+
+            RegisterStorageDropTarget(row, storage);
 
             if (!expanded)
             {
@@ -150,14 +149,6 @@ namespace StorageNetwork.UI
             row.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
         }
 
-        private static bool HasNetworkRecipeSettings(StorageNetworkStorageInfo storageInfo)
-        {
-            StorageNetworkFabricatorSettings settings = storageInfo.Storage != null
-                ? storageInfo.Storage.GetComponent<StorageNetworkFabricatorSettings>()
-                : null;
-            return settings != null && settings.SupportsNetworkRecipeSettings;
-        }
-
         private void CreateInfoRow(string title, string details)
         {
             GameObject row = CreateBox("InfoRow", listContent, new Color(0.88f, 0.87f, 0.82f, 1f));
@@ -189,6 +180,7 @@ namespace StorageNetwork.UI
                 },
                 selected ? KleiPinkStyle() : KleiBlueStyle());
             button.AddComponent<LayoutElement>().preferredHeight = 48f;
+            RegisterCategoryDropTarget(button, group.Key);
 
             TextMeshProUGUI label = CreateText(
                 "CategoryLabel",
@@ -244,6 +236,8 @@ namespace StorageNetwork.UI
                 Refresh(true);
             };
 
+            RegisterItemDragSource(row, storage, itemKey, itemName, representative);
+
             GameObject iconObject = new GameObject("Icon");
             iconObject.transform.SetParent(row.transform, false);
             iconObject.AddComponent<RectTransform>();
@@ -270,7 +264,7 @@ namespace StorageNetwork.UI
                 transferLayout.preferredWidth = 58f;
                 transferLayout.preferredHeight = 20f;
                 ToolTip transferTooltip = transferButton.AddComponent<ToolTip>();
-                transferTooltip.toolTip = "把这个物品转移到同一网络中的目标储存建筑";
+                transferTooltip.toolTip = "把这个物品转移到当前场景中的目标储存箱";
 
                 GameObject dropButton = CreateGameButton("DropButton", row.transform, "丢弃", () => ShowDropDialog(storage, itemKey));
                 LayoutElement dropLayout = dropButton.AddComponent<LayoutElement>();
@@ -344,10 +338,10 @@ namespace StorageNetwork.UI
             iconObject.transform.SetParent(parent, false);
             iconObject.AddComponent<RectTransform>();
             LayoutElement layout = iconObject.AddComponent<LayoutElement>();
-            layout.minWidth = 22f;
-            layout.preferredWidth = 22f;
-            layout.minHeight = 22f;
-            layout.preferredHeight = 22f;
+            layout.minWidth = 18f;
+            layout.preferredWidth = 18f;
+            layout.minHeight = 18f;
+            layout.preferredHeight = 18f;
 
             Image icon = iconObject.AddComponent<Image>();
             icon.raycastTarget = false;
@@ -357,13 +351,13 @@ namespace StorageNetwork.UI
             {
                 icon.sprite = sprite;
                 icon.type = Image.Type.Simple;
-                icon.color = new Color(0.12f, 0.13f, 0.13f, 1f);
+                icon.color = new Color(0.28f, 0.30f, 0.30f, 0.72f);
                 return;
             }
 
             UnityEngine.Object.DestroyImmediate(icon);
-            TextMeshProUGUI arrow = CreateText("Arrow", iconObject.transform, expanded ? "▼" : "▶", 16, TextAlignmentOptions.Center);
-            arrow.color = new Color(0.1f, 0.11f, 0.12f, 1f);
+            TextMeshProUGUI arrow = CreateText("Arrow", iconObject.transform, expanded ? "▼" : "▶", 12, TextAlignmentOptions.Center);
+            arrow.color = new Color(0.28f, 0.30f, 0.30f, 0.72f);
             Stretch(arrow.rectTransform(), 0f, 0f);
         }
 

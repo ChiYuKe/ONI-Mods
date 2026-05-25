@@ -2,13 +2,13 @@ using System.Collections.Generic;
 
 namespace StorageNetwork.Core
 {
-    public sealed class StorageNetworkSnapshot
+    public sealed class StorageSceneSnapshot
     {
-        public static readonly StorageNetworkSnapshot Empty =
-            new StorageNetworkSnapshot(new List<StorageNetworkStorageInfo>(), 0f, 0f);
+        public static readonly StorageSceneSnapshot Empty =
+            new StorageSceneSnapshot(new List<StorageInfo>(), 0f, 0f);
 
-        public StorageNetworkSnapshot(
-            IReadOnlyList<StorageNetworkStorageInfo> storages,
+        public StorageSceneSnapshot(
+            IReadOnlyList<StorageInfo> storages,
             float totalStoredKg,
             float totalCapacityKg)
         {
@@ -17,16 +17,16 @@ namespace StorageNetwork.Core
             TotalCapacityKg = totalCapacityKg;
         }
 
-        public IReadOnlyList<StorageNetworkStorageInfo> Storages { get; }
+        public IReadOnlyList<StorageInfo> Storages { get; }
 
         public float TotalStoredKg { get; }
 
         public float TotalCapacityKg { get; }
     }
 
-    public sealed class StorageNetworkStorageInfo
+    public sealed class StorageInfo
     {
-        public StorageNetworkStorageInfo(Storage storage)
+        public StorageInfo(Storage storage)
         {
             Storage = storage;
             Name = storage.GetProperName();

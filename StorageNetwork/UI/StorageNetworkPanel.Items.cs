@@ -64,7 +64,6 @@ namespace StorageNetwork.UI
 
             selectedItemStorage = null;
             selectedItemKey = null;
-            targetHub?.RefreshNetworkTotals();
             lastListSignature = null;
             Refresh(true);
             LogDebug("DropSelectedItem end");
@@ -106,7 +105,6 @@ namespace StorageNetwork.UI
 
             selectedItemStorage = null;
             selectedItemKey = null;
-            targetHub?.RefreshNetworkTotals();
             lastListSignature = null;
             Refresh(true);
         }
@@ -140,10 +138,10 @@ namespace StorageNetwork.UI
             return primaryElement != null ? primaryElement.ElementID.CreateTag() : Tag.Invalid;
         }
 
-        private IEnumerable<StorageNetworkCategoryGroup> BuildCategoryGroups(IEnumerable<StorageNetworkStorageInfo> storages)
+        private IEnumerable<StorageNetworkCategoryGroup> BuildCategoryGroups(IEnumerable<StorageInfo> storages)
         {
             Dictionary<string, StorageNetworkCategoryGroup> groups = new Dictionary<string, StorageNetworkCategoryGroup>();
-            foreach (StorageNetworkStorageInfo storageInfo in storages)
+            foreach (StorageInfo storageInfo in storages)
             {
                 string key = GetStorageCategoryKey(storageInfo.Storage);
                 if (!groups.TryGetValue(key, out StorageNetworkCategoryGroup group))
@@ -174,17 +172,17 @@ namespace StorageNetwork.UI
 
         private static string GetStorageCategoryKey(Storage storage)
         {
-            return StorageNetworkTags.GetStorageCategoryKey(storage);
+            return StorageCategories.GetKey(storage);
         }
 
         private static string GetStorageCategoryName(string key)
         {
-            return StorageNetworkTags.GetStorageCategoryName(key);
+            return StorageCategories.GetName(key);
         }
 
         private static int GetStorageCategoryOrder(string key)
         {
-            return StorageNetworkTags.GetStorageCategoryOrder(key);
+            return StorageCategories.GetOrder(key);
         }
 
         private static string GetStoredItemKey(GameObject item)
@@ -204,7 +202,7 @@ namespace StorageNetwork.UI
             return primaryElement != null ? primaryElement.ElementID.ToString() : item.name;
         }
 
-        private static string GetStorageTypeKey(StorageNetworkStorageInfo storageInfo)
+        private static string GetStorageTypeKey(StorageInfo storageInfo)
         {
             return GetStoragePrefabKey(storageInfo.Storage, GetStorageTypeName(storageInfo));
         }
@@ -215,7 +213,7 @@ namespace StorageNetwork.UI
             return prefabId != null ? prefabId.PrefabID().ToString() : (fallback ?? string.Empty);
         }
 
-        private static string GetStorageTypeName(StorageNetworkStorageInfo storageInfo)
+        private static string GetStorageTypeName(StorageInfo storageInfo)
         {
             GameObject gameObject = storageInfo.Storage?.gameObject;
             return gameObject != null ? gameObject.GetProperName() : storageInfo.Name;
@@ -285,7 +283,7 @@ namespace StorageNetwork.UI
 
             public string Name { get; }
 
-            public List<StorageNetworkStorageInfo> Storages { get; } = new List<StorageNetworkStorageInfo>();
+            public List<StorageInfo> Storages { get; } = new List<StorageInfo>();
         }
     }
 }

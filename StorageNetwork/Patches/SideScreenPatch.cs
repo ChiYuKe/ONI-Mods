@@ -1,227 +1,193 @@
 using System.Collections.Generic;
 using HarmonyLib;
-using StorageNetwork.Components;
 using StorageNetwork.Core;
 using StorageNetwork.UI;
 using UnityEngine;
 using UnityEngine.UI;
+using System.Linq;
 
 namespace StorageNetwork.Patches
 {
     public static class SideScreenPatch
     {
-        private const string SideScreenName = "StorageNetworkHubSideScreen";
-
-        [HarmonyPatch(typeof(DetailsScreen), "OnPrefabInit")]
-        public static class DetailsScreenOnPrefabInitPatch
+        [HarmonyPatch(typeof(ManagementMenu), "OnPrefabInit")]
+        public static class ManagementMenuOnPrefabInitPatch
         {
-            public static void Postfix(DetailsScreen __instance)
+            public static void Postfix(ManagementMenu __instance)
             {
-                EnsureRegistered(__instance);
-            }
-        }
-
-        [HarmonyPatch(typeof(DetailsScreen), nameof(DetailsScreen.Refresh))]
-        public static class DetailsScreenRefreshPatch
-        {
-            public static void Postfix(DetailsScreen __instance)
-            {
-                EnsureRegistered(__instance);
-                StorageNetworkTitleButton.Refresh(__instance);
-            }
-        }
-
-        private static void EnsureRegistered(DetailsScreen detailsScreen)
-        {
-            if (detailsScreen == null)
-            {
-                return;
-            }
-
-            try
-            {
-                Register(detailsScreen);
-            }
-            catch (System.Exception exception)
-            {
-                Debug.LogWarning("[StorageNetwork] Failed to register side screen: " + exception);
-            }
-        }
-
-        private static void Register(DetailsScreen detailsScreen)
-        {
-            Traverse traverse = Traverse.Create(detailsScreen);
-            List<DetailsScreen.SideScreenRef> sideScreens =
-                traverse.Field("sideScreens").GetValue<List<DetailsScreen.SideScreenRef>>();
-            GameObject contentBody = traverse.Field("sideScreenContentBody").GetValue<GameObject>();
-
-            if (sideScreens == null || contentBody == null || sideScreens.Exists(screen => screen.name == SideScreenName))
-            {
-                return;
-            }
-
-            GameObject screenObject = new GameObject(SideScreenName);
-            screenObject.transform.SetParent(contentBody.transform, false);
-            screenObject.SetActive(false);
-
-            RectTransform rectTransform = screenObject.AddComponent<RectTransform>();
-            rectTransform.anchorMin = Vector2.zero;
-            rectTransform.anchorMax = Vector2.one;
-            rectTransform.offsetMin = Vector2.zero;
-            rectTransform.offsetMax = Vector2.zero;
-
-            StorageNetworkHubSideScreen sideScreen = screenObject.AddComponent<StorageNetworkHubSideScreen>();
-            sideScreen.name = SideScreenName;
-            sideScreen.ContentContainer = screenObject;
-
-            sideScreens.Add(new DetailsScreen.SideScreenRef
-            {
-                name = SideScreenName,
-                offset = Vector2.zero,
-                screenPrefab = sideScreen,
-                tab = DetailsScreen.SidescreenTabTypes.Config
-            });
-
-            Debug.Log("[StorageNetwork] Registered hub side screen.");
-        }
-
-        private static class StorageNetworkTitleButton
-        {
-            private const string ButtonName = "StorageNetworkTitleButton";
-
-            public static void Refresh(DetailsScreen detailsScreen)
-            {
-                if (detailsScreen == null)
+                if (__instance == null)
                 {
                     return;
                 }
 
-                KButton button = GetOrCreate(detailsScreen);
-                if (button == null)
+                try
                 {
-                    return;
+                    StorageNetworkManagementButton.Add(__instance);
                 }
-
-                if (!StorageNetworkUiOptions.UseTitleBarNetworkButton)
+                catch (System.Exception exception)
                 {
-                    button.gameObject.SetActive(false);
-                    return;
+                    Debug.LogWarning("[StorageNetwork] Failed to add management menu button: " + exception);
                 }
-
-                StorageNetworkStorageConnector connector = detailsScreen.target != null
-                    ? detailsScreen.target.GetComponent<StorageNetworkStorageConnector>()
-                    : null;
-
-                bool show = connector != null;
-                button.gameObject.SetActive(show);
-                if (!show)
-                {
-                    return;
-                }
-
-                StorageNetworkHub hub = StorageNetworkRegistry.GetConnectedHub(connector);
-                button.isInteractable = hub != null;
-                button.ClearOnClick();
-                button.onClick += () =>
-                {
-                    StorageNetworkHub connectedHub = StorageNetworkRegistry.GetConnectedHub(connector);
-                    if (connectedHub != null)
-                    {
-                        StorageNetworkPanel.Show(connectedHub, connector.Storage);
-                    }
-                };
-
-                ToolTip tooltip = button.GetComponent<ToolTip>() ?? button.gameObject.AddComponent<ToolTip>();
-                tooltip.SetSimpleTooltip(hub != null
-                    ? STRINGS.UI.STORAGE_NETWORK.VIEW_CONNECTED_NETWORK_TOOLTIP
-                    : STRINGS.UI.STORAGE_NETWORK.VIEW_CONNECTED_NETWORK_UNAVAILABLE_TOOLTIP);
             }
+        }
 
-            private static KButton GetOrCreate(DetailsScreen detailsScreen)
+        private static class StorageNetworkManagementButton
+        {
+            private const string ButtonName = "StorageNetworkManagementButton";
+            private const string ToggleText = "储存网络";
+            private const string IconName = "storage_network_overlay";
+
+            public static void Add(ManagementMenu menu)
             {
-                Component title = Traverse.Create(detailsScreen).Field("TabTitle").GetValue<Component>();
-                EditableTitleBar titleBar = title as EditableTitleBar;
-                KButton anchorButton = titleBar != null ? titleBar.editNameButton : null;
-                Transform parent = anchorButton != null && anchorButton.transform.parent != null
-                    ? anchorButton.transform.parent
-                    : title != null ? title.transform : null;
+                Transform parent = ResolveToggleParent(menu);
                 if (parent == null)
                 {
-                    return null;
+                    return;
                 }
 
                 Transform existing = parent.Find(ButtonName);
                 if (existing != null)
                 {
-                    return existing.GetComponent<KButton>();
+                    return;
                 }
 
-                KButton template = Traverse.Create(detailsScreen).Field("PinResourceButton").GetValue<KButton>();
+                KToggle template = ResolveTemplate(menu);
                 if (template == null)
                 {
-                    template = Traverse.Create(detailsScreen).Field("CodexEntryButton").GetValue<KButton>();
-                }
-
-                if (template == null)
-                {
-                    return null;
+                    return;
                 }
 
                 GameObject buttonObject = Object.Instantiate(template.gameObject, parent, false);
                 buttonObject.name = ButtonName;
+                buttonObject.SetActive(true);
 
-                RectTransform rect = buttonObject.GetComponent<RectTransform>();
-                if (rect != null)
-                {
-                    RectTransform anchorRect = anchorButton != null ? anchorButton.GetComponent<RectTransform>() : null;
-                    if (anchorRect != null)
-                    {
-                        rect.anchorMin = anchorRect.anchorMin;
-                        rect.anchorMax = anchorRect.anchorMax;
-                        rect.pivot = anchorRect.pivot;
-                        rect.anchoredPosition = anchorRect.anchoredPosition + new Vector2(-26f, 0f);
-                    }
-
-                    rect.sizeDelta = new Vector2(24f, 24f);
-                    rect.SetAsLastSibling();
-                }
-
-                KButton button = buttonObject.GetComponent<KButton>();
+                KToggle button = buttonObject.GetComponent<KToggle>();
                 button.ClearOnClick();
+                button.group = null;
+                button.isOn = false;
+                button.interactable = true;
 
-                foreach (LocText text in buttonObject.GetComponentsInChildren<LocText>(true))
+                ImageToggleState toggleState = buttonObject.GetComponent<ImageToggleState>();
+                toggleState?.SetInactive();
+
+                LocText label = buttonObject.GetComponentInChildren<LocText>(true);
+                if (label != null)
                 {
-                    text.gameObject.SetActive(false);
+                    label.SetText(ToggleText);
                 }
 
-                Image buttonBackground = buttonObject.GetComponent<Image>();
-                foreach (Image childImage in buttonObject.GetComponentsInChildren<Image>(true))
+                if (button.fgImage != null)
                 {
-                    if (childImage != buttonBackground)
+                    Sprite sprite = StorageNetworkSpriteLoader.GetSprite(IconName);
+                    if (sprite != null)
                     {
-                        childImage.gameObject.SetActive(false);
+                        button.fgImage.sprite = sprite;
+                        button.fgImage.color = Color.white;
                     }
                 }
 
-                GameObject iconObject = new GameObject("StorageNetworkIcon");
-                iconObject.transform.SetParent(buttonObject.transform, false);
-                RectTransform iconRect = iconObject.AddComponent<RectTransform>();
-                iconRect.anchorMin = Vector2.zero;
-                iconRect.anchorMax = Vector2.one;
-                iconRect.offsetMin = new Vector2(5f, 5f);
-                iconRect.offsetMax = new Vector2(-5f, -5f);
-
-                Image icon = iconObject.AddComponent<Image>();
-                icon.raycastTarget = false;
-                icon.preserveAspect = true;
-                icon.color = Color.white;
-                Sprite sprite = StorageNetworkSprites.GetOverviewIcon();
-                if (sprite != null)
+                HierarchyReferences references = buttonObject.GetComponent<HierarchyReferences>();
+                if (references != null)
                 {
-                    icon.sprite = sprite;
+                    DisableIfPresent(references, "ResearchIcon");
+                    DisableIfPresent(references, "AlertImage");
+                    DisableIfPresent(references, "GlowImage");
+                    DisableIfPresent(references, "CheckMark");
+                    DisableIfPresent(references, "Checkmark");
+                    DisableIfPresent(references, "Notification");
+                    DisableIfPresent(references, "TopRightIcon");
                 }
 
-                return button;
+                ToolTip toolTip = button.GetComponent<ToolTip>() ?? button.gameObject.AddComponent<ToolTip>();
+                toolTip.SetSimpleTooltip(STRINGS.UI.STORAGE_NETWORK.OVERVIEW_TOOLTIP);
+                button.onClick += () =>
+                {
+                    button.isOn = false;
+                    toggleState?.SetInactive();
+                    KMonoBehaviour.PlaySound(GlobalAssets.GetSound("HUD_Click", false));
+                    StorageNetworkPanel.Show();
+                };
+
+                button.transform.SetSiblingIndex(GetInsertIndex(parent));
+            }
+
+            private static Transform ResolveToggleParent(ManagementMenu menu)
+            {
+                Traverse traverse = Traverse.Create(menu);
+                Transform toggleParent = traverse.Field("toggleParent").GetValue<Transform>();
+                return toggleParent != null ? toggleParent : menu.transform;
+            }
+
+            private static KToggle ResolveTemplate(ManagementMenu menu)
+            {
+                Traverse traverse = Traverse.Create(menu);
+                List<KToggle> toggles = traverse.Field("toggles").GetValue<List<KToggle>>();
+                KToggle liveTemplate = toggles != null
+                    ? toggles.FirstOrDefault(toggle =>
+                        toggle != null &&
+                        toggle.gameObject != null &&
+                        toggle.gameObject.activeSelf &&
+                        IsPrimaryManagementButton(toggle))
+                    : null;
+                if (liveTemplate != null)
+                {
+                    return liveTemplate;
+                }
+
+                KToggle template = traverse.Field("researchButtonPrefab").GetValue<KToggle>();
+                if (template != null)
+                {
+                    return template;
+                }
+
+                template = traverse.Field("smallPrefab").GetValue<KToggle>();
+                if (template != null)
+                {
+                    return template;
+                }
+
+                return toggles != null ? toggles.FirstOrDefault(toggle => toggle != null) : null;
+            }
+
+            private static int GetInsertIndex(Transform parent)
+            {
+                int starMapIndex = parent.childCount;
+                for (int i = 0; i < parent.childCount; i++)
+                {
+                    string name = parent.GetChild(i).name;
+                    if (name.Contains("星图") || name.Contains("STARMAP"))
+                    {
+                        starMapIndex = i;
+                        break;
+                    }
+                }
+
+                return Mathf.Clamp(starMapIndex, 0, parent.childCount);
+            }
+
+            private static void DisableIfPresent(HierarchyReferences references, string key)
+            {
+                Component component = references.GetReference(key);
+                if (component != null)
+                {
+                    component.gameObject.SetActive(false);
+                }
+            }
+
+            private static bool IsPrimaryManagementButton(KToggle toggle)
+            {
+                LocText label = toggle.GetComponentInChildren<LocText>(true);
+                if (label == null)
+                {
+                    return false;
+                }
+
+                string text = label.text;
+                return text == global::STRINGS.UI.VITALS ||
+                       text == global::STRINGS.UI.CONSUMABLES ||
+                       text == global::STRINGS.UI.JOBS ||
+                       text == global::STRINGS.UI.SCHEDULE ||
+                       text == global::STRINGS.UI.SKILLS;
             }
         }
     }
