@@ -1,4 +1,5 @@
 using StorageNetwork.Components;
+using Loc = StorageNetwork.STRINGS;
 
 namespace StorageNetwork.Core
 {
@@ -6,6 +7,7 @@ namespace StorageNetwork.Core
     {
         private const string SceneStorageKey = "scene_storage";
         private const string VanillaStorageKey = "vanilla_storage";
+        private const string RecipeBuildingKey = "recipe_building";
 
         public static string GetKey(Storage storage)
         {
@@ -15,18 +17,33 @@ namespace StorageNetwork.Core
             }
 
             StorageNetworkEnrollment enrollment = storage.GetComponent<StorageNetworkEnrollment>();
-            return enrollment != null && enrollment.IncludedInSceneNetwork
-                ? VanillaStorageKey
-                : SceneStorageKey;
+            if (enrollment == null || !enrollment.IncludedInSceneNetwork)
+            {
+                return SceneStorageKey;
+            }
+
+            return enrollment.IsComplexRecipeBuilding() ? RecipeBuildingKey : VanillaStorageKey;
         }
 
         public static string GetName(string key)
         {
-            return key == VanillaStorageKey ? "原版储存" : "储存箱";
+            if (key == RecipeBuildingKey)
+            {
+                return Loc.Get(Loc.UI.STORAGE_NETWORK.CATEGORY_RECIPE_BUILDING);
+            }
+
+            return key == VanillaStorageKey
+                ? Loc.Get(Loc.UI.STORAGE_NETWORK.CATEGORY_VANILLA_STORAGE)
+                : Loc.Get(Loc.UI.STORAGE_NETWORK.CATEGORY_SCENE_STORAGE);
         }
 
         public static int GetOrder(string key)
         {
+            if (key == RecipeBuildingKey)
+            {
+                return 2;
+            }
+
             return key == VanillaStorageKey ? 1 : 0;
         }
     }

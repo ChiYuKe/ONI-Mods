@@ -43,14 +43,38 @@ namespace StorageNetwork.UI
                 mass,
                 items[0] != null ? items[0].GetProperName() : "null"));
 
-            bool dropped = dropTag.IsValid && mass > 0f && storage.DropSome(dropTag, mass, false, false, default(Vector3), true, true);
-            LogDebug(string.Format("DropSelectedItem DropSome result={0} remainingItems={1}", dropped, storage.items.Count));
+            bool dropped = false;
+            float remainingToDrop = mass;
+            foreach (Storage sourceStorage in GetContentStorages(storage))
+            {
+                if (!dropTag.IsValid || remainingToDrop <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+                {
+                    break;
+                }
+
+                float sourceMass = GetStoredItemsMass(FindStoredItemsInStorage(sourceStorage, itemKey));
+                float dropMass = Mathf.Min(remainingToDrop, sourceMass);
+                if (dropMass <= 0f)
+                {
+                    continue;
+                }
+
+                bool sourceDropped = sourceStorage.DropSome(dropTag, dropMass, false, false, default(Vector3), true, true);
+                dropped |= sourceDropped;
+                if (sourceDropped)
+                {
+                    remainingToDrop -= dropMass;
+                }
+            }
+
+            LogDebug(string.Format("DropSelectedItem DropSome result={0} remainingMass={1:0.###}", dropped, remainingToDrop));
 
             if (!dropped)
             {
                 foreach (GameObject item in items.ToList())
                 {
-                    GameObject droppedItem = storage.Drop(item, true);
+                    Storage sourceStorage = FindItemStorage(storage, item);
+                    GameObject droppedItem = sourceStorage != null ? sourceStorage.Drop(item, true) : null;
                     LogDebug(string.Format(
                         "DropSelectedItem fallback Drop item={0} result={1}",
                         item != null ? item.GetProperName() : "null",
@@ -83,16 +107,30 @@ namespace StorageNetwork.UI
             float remaining = Mathf.Clamp(requestedMass, 0f, maxTransfer);
             float transferred = 0f;
 
-            while (tag.IsValid && remaining > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+            foreach (Storage sourceStorage in GetContentStorages(source))
             {
-                float moved = source.Transfer(destination, tag, remaining, block_events: false, hide_popups: true);
-                if (moved <= 0f)
+                while (tag.IsValid && remaining > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+                {
+                    float sourceMass = GetStoredItemsMass(FindStoredItemsInStorage(sourceStorage, itemKey));
+                    if (sourceMass <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+                    {
+                        break;
+                    }
+
+                    float moved = sourceStorage.Transfer(destination, tag, Mathf.Min(remaining, sourceMass), block_events: false, hide_popups: true);
+                    if (moved <= 0f)
+                    {
+                        break;
+                    }
+
+                    transferred += moved;
+                    remaining -= moved;
+                }
+
+                if (remaining <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
                 {
                     break;
                 }
-
-                transferred += moved;
-                remaining -= moved;
             }
 
             LogDebug(string.Format(
@@ -116,9 +154,46 @@ namespace StorageNetwork.UI
 
         private static List<GameObject> FindStoredItems(Storage storage, string itemKey)
         {
+            return GetContentStorages(storage)
+                .SelectMany(contentStorage => FindStoredItemsInStorage(contentStorage, itemKey))
+                .ToList();
+        }
+
+        private static List<GameObject> FindStoredItemsInStorage(Storage storage, string itemKey)
+        {
             return storage?.items
                 .Where(item => item != null && GetStoredItemKey(item) == itemKey)
                 .ToList() ?? new List<GameObject>();
+        }
+
+        private static IEnumerable<Storage> GetContentStorages(Storage storage)
+        {
+            HashSet<Storage> storages = new HashSet<Storage>();
+            AddContentStorage(storages, storage);
+
+            ComplexFabricator fabricator = storage != null ? storage.GetComponent<ComplexFabricator>() : null;
+            if (fabricator != null)
+            {
+                AddContentStorage(storages, fabricator.inStorage);
+                AddContentStorage(storages, fabricator.buildStorage);
+                AddContentStorage(storages, fabricator.outStorage);
+            }
+
+            return storages;
+        }
+
+        private static void AddContentStorage(HashSet<Storage> storages, Storage storage)
+        {
+            if (storage != null)
+            {
+                storages.Add(storage);
+            }
+        }
+
+        private static Storage FindItemStorage(Storage ownerStorage, GameObject item)
+        {
+            return GetContentStorages(ownerStorage)
+                .FirstOrDefault(storage => storage.items.Contains(item));
         }
 
         private static Tag GetStoredItemTag(GameObject item)

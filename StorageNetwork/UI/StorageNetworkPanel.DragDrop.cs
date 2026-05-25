@@ -5,6 +5,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using static StorageNetwork.STRINGS;
 
 namespace StorageNetwork.UI
 {
@@ -149,7 +150,9 @@ namespace StorageNetwork.UI
             float amount = Mathf.Min(GetStoredItemsMass(items), Mathf.Max(0f, targetStorage.RemainingCapacity()));
             if (amount <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
             {
-                ShowMessageDialog("转移物品", "目标箱子没有足够容量。");
+                ShowMessageDialog(
+                    Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRANSFER_ITEM_TITLE),
+                    Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TARGET_NOT_ENOUGH_CAPACITY));
                 return;
             }
 

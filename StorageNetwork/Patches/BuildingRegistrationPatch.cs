@@ -1,5 +1,6 @@
 using HarmonyLib;
 using StorageNetwork.Buildings;
+using StorageNetwork.Core;
 
 namespace StorageNetwork.Patches
 {
@@ -32,7 +33,7 @@ namespace StorageNetwork.Patches
         {
             public static void Postfix()
             {
-                LocString.CreateLocStringKeys(typeof(STRINGS), null);
+                StorageNetworkLocalization.Translate(typeof(STRINGS), false);
             }
         }
     }

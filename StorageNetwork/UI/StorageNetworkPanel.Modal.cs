@@ -7,6 +7,7 @@ using StorageNetwork.Core;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using static StorageNetwork.STRINGS;
 
 namespace StorageNetwork.UI
 {
@@ -26,9 +27,9 @@ namespace StorageNetwork.UI
             string itemName = GetStoredItemName(items[0]);
             float availableMass = GetStoredItemsMass(items);
             ShowAmountDialog(
-                "丢弃数量",
+                Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.DROP_AMOUNT_TITLE),
                 itemName,
-                string.Format("当前箱子可丢弃：{0}", GameUtil.GetFormattedMass(availableMass)),
+                string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.DROP_AVAILABLE), GameUtil.GetFormattedMass(availableMass)),
                 availableMass,
                 amount => DropSelectedItem(storage, itemKey, amount));
         }
@@ -50,7 +51,9 @@ namespace StorageNetwork.UI
 
             if (targets.Count == 0)
             {
-                ShowMessageDialog("转移物品", "当前场景中没有可接收物品的目标箱子。");
+                ShowMessageDialog(
+                    Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRANSFER_ITEM_TITLE),
+                    Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.NO_TRANSFER_TARGET));
                 return;
             }
 
@@ -62,18 +65,18 @@ namespace StorageNetwork.UI
                 float remainingCapacity = Mathf.Max(0f, destination.RemainingCapacity());
                 float maxTransfer = Mathf.Min(sourceMass, remainingCapacity);
                 string details = string.Format(
-                    "目标容量：{0} / {1}\n最大可转移：{2}",
+                    Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TARGET_CAPACITY_DETAILS),
                     GameUtil.GetFormattedMass(destination.MassStored()),
                     GameUtil.GetFormattedMass(destination.Capacity()),
                     GameUtil.GetFormattedMass(maxTransfer));
 
                 ShowAmountDialog(
-                    "转移数量",
+                    Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRANSFER_AMOUNT_TITLE),
                     itemName,
                     details,
                     maxTransfer,
                     amount => TransferSelectedItem(source, itemKey, destination, amount),
-                    "目标：" + destination.GetProperName(),
+                    string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TARGET_PREFIX), destination.GetProperName()),
                     () => ShowTargetSelectionDialog(source, targets, destination, ShowTransferAmountDialog));
             }
 
@@ -83,8 +86,8 @@ namespace StorageNetwork.UI
         private void ShowTargetSelectionDialog(Storage source, List<Storage> targets, Storage selectedTarget, System.Action<Storage> onSelected)
         {
             CloseModal();
-            modalRoot = CreateModalFrame("选择目标箱子", 620f, 430f, out GameObject body);
-            AddModalText(body.transform, "当前场景中的可接收目标", 14, FontStyles.Bold);
+            modalRoot = CreateModalFrame(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TARGET_SELECTION_TITLE), 620f, 430f, out GameObject body);
+            AddModalText(body.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TARGET_SELECTION_HEADER), 14, FontStyles.Bold);
 
             RectTransform targetContent = CreateModalScrollList(body.transform, 300f);
 
@@ -95,7 +98,7 @@ namespace StorageNetwork.UI
 
             GameObject footer = AddHorizontalRow(body.transform, 6f);
             AddFooterSpacer(footer.transform);
-            AddModalButton(footer.transform, "取消", 90f, () => onSelected?.Invoke(selectedTarget));
+            AddModalButton(footer.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CANCEL), 90f, () => onSelected?.Invoke(selectedTarget));
         }
 
         private void ShowStorageSettingsDialog(Storage storage)
@@ -105,12 +108,20 @@ namespace StorageNetwork.UI
                 return;
             }
 
+            StorageNetworkEnrollment enrollment = storage.GetComponent<StorageNetworkEnrollment>();
+            if (enrollment != null && enrollment.IsComplexRecipeBuilding())
+            {
+                CloseModal();
+                ShowProductionSettingsPanel(storage);
+                return;
+            }
+
             CloseModal();
-            modalRoot = CreateModalFrame("建筑设置", 420f, 210f, out GameObject body);
+            modalRoot = CreateModalFrame(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.BUILDING_SETTINGS_TITLE), 420f, 210f, out GameObject body);
             AddModalText(body.transform, storage.GetProperName(), 15, FontStyles.Bold);
             AddModalText(
                 body.transform,
-                string.Format("储存：{0} / {1}\n剩余容量：{2}",
+                string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STORAGE_DETAILS),
                     GameUtil.GetFormattedMass(storage.MassStored()),
                     GameUtil.GetFormattedMass(storage.Capacity()),
                     GameUtil.GetFormattedMass(Mathf.Max(0f, storage.RemainingCapacity()))),
@@ -119,7 +130,7 @@ namespace StorageNetwork.UI
 
             GameObject footer = AddHorizontalRow(body.transform, 6f);
             AddFooterSpacer(footer.transform);
-            AddModalButton(footer.transform, "关闭", 90f, CloseModal);
+            AddModalButton(footer.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CLOSE), 90f, CloseModal);
         }
 
         private void ShowAmountDialog(
@@ -155,7 +166,7 @@ namespace StorageNetwork.UI
             System.Action<float> setAmount = value =>
             {
                 currentAmount = Mathf.Clamp(value, 0f, maxAmount);
-                valueLabel.text = string.Format("数量：{0}", GameUtil.GetFormattedMass(currentAmount));
+                valueLabel.text = string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.AMOUNT_LABEL), GameUtil.GetFormattedMass(currentAmount));
                 if (!updating)
                 {
                     updating = true;
@@ -189,12 +200,12 @@ namespace StorageNetwork.UI
 
             GameObject shortcutRow = AddHorizontalRow(body.transform, 6f);
             AddFooterSpacer(shortcutRow.transform);
-            AddModalButton(shortcutRow.transform, "全部", 80f, () => setAmount(maxAmount));
+            AddModalButton(shortcutRow.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ALL), 80f, () => setAmount(maxAmount));
 
             GameObject footer = AddHorizontalRow(body.transform, 6f);
             AddFooterSpacer(footer.transform);
-            AddModalButton(footer.transform, "取消", 80f, CloseModal);
-            AddModalButton(footer.transform, "确定", 90f, () =>
+            AddModalButton(footer.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CANCEL), 80f, CloseModal);
+            AddModalButton(footer.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIRM), 90f, () =>
             {
                 float finalAmount = Mathf.Clamp(currentAmount, 0f, maxAmount);
                 CloseModal();
@@ -212,7 +223,7 @@ namespace StorageNetwork.UI
             AddModalText(body.transform, message, 13, FontStyles.Normal);
             GameObject footer = AddHorizontalRow(body.transform, 6f);
             AddFooterSpacer(footer.transform);
-            AddModalButton(footer.transform, "确定", 90f, CloseModal);
+            AddModalButton(footer.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIRM), 90f, CloseModal);
         }
 
         private GameObject CreateModalFrame(string title, float width, float height, out GameObject body)
@@ -293,7 +304,7 @@ namespace StorageNetwork.UI
             GameObject viewport = new GameObject("Viewport");
             viewport.transform.SetParent(list.transform, false);
             RectTransform viewportRect = viewport.AddComponent<RectTransform>();
-            SetStretch(viewportRect, 6f, 34f, 6f, 6f);
+            SetStretch(viewportRect, 6f, 46f, 6f, 6f);
             viewport.AddComponent<RectMask2D>();
 
             GameObject contentObject = new GameObject("Content");
@@ -358,7 +369,7 @@ namespace StorageNetwork.UI
                 TextMeshProUGUI text = stateButton?.GetComponentInChildren<TextMeshProUGUI>();
                 if (text != null)
                 {
-                    text.text = current ? "开" : string.Empty;
+                    text.text = current ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ON) : string.Empty;
                 }
 
                 KImage image = stateButton?.GetComponent<KImage>();
@@ -443,7 +454,7 @@ namespace StorageNetwork.UI
         private static KInputTextField CreateAmountInputRow(Transform parent)
         {
             GameObject row = AddHorizontalRow(parent, 8f);
-            TextMeshProUGUI label = CreateText("AmountInputLabel", row.transform, "输入数量", 12, TextAlignmentOptions.MidlineLeft);
+            TextMeshProUGUI label = CreateText("AmountInputLabel", row.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.AMOUNT_INPUT), 12, TextAlignmentOptions.MidlineLeft);
             label.color = new Color(0.92f, 0.94f, 0.95f, 1f);
             label.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
             return CreateAmountInput(row.transform);

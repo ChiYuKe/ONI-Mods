@@ -7,11 +7,15 @@ using StorageNetwork.Core;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using static StorageNetwork.STRINGS;
 
 namespace StorageNetwork.UI
 {
     public sealed partial class StorageNetworkPanel : MonoBehaviour, IInputHandler
     {
+        // Deprecated: plain storage settings currently do not provide useful controls.
+        // Keep this switch so the old entry point can be restored deliberately if needed.
+        private const bool ShowDeprecatedStorageSettingsButton = false;
 
 
         private void CreateStorageTypeRow(List<StorageInfo> storages)
@@ -79,6 +83,8 @@ namespace StorageNetwork.UI
             bool expanded = expandedStorages.TryGetValue(storage, out bool isExpanded) && isExpanded;
             bool selected = selectedItemStorage == storage && string.IsNullOrEmpty(selectedItemKey);
             float percent = storageInfo.CapacityKg > 0f ? storageInfo.StoredKg / storageInfo.CapacityKg : 0f;
+            StorageNetworkEnrollment enrollment = storage.GetComponent<StorageNetworkEnrollment>();
+            bool showSettingsButton = (enrollment != null && enrollment.IsComplexRecipeBuilding()) || ShowDeprecatedStorageSettingsButton;
 
             GameObject row = CreateBox(
                 "StorageRow",
@@ -102,8 +108,8 @@ namespace StorageNetwork.UI
                     expandedStorages[storage] = !expanded;
                     Refresh(true);
                 },
-                "设置",
-                () => ShowStorageSettingsDialog(storage));
+                showSettingsButton ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STORAGE_SETTINGS) : null,
+                showSettingsButton ? () => ShowStorageSettingsDialog(storage) : null);
 
             RegisterStorageDropTarget(row, storage);
 
@@ -122,10 +128,10 @@ namespace StorageNetwork.UI
             detailsLayout.childForceExpandHeight = false;
             detailsLayout.childForceExpandWidth = true;
 
-            List<GameObject> items = storage.items.Where(item => item != null).ToList();
+            List<GameObject> items = storageInfo.StoredItems.ToList();
             if (items.Count == 0)
             {
-                TextMeshProUGUI empty = CreateText("Empty", details.transform, "没有储存内容", 12, TextAlignmentOptions.MidlineLeft);
+                TextMeshProUGUI empty = CreateText("Empty", details.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.NO_STORAGE_CONTENT), 12, TextAlignmentOptions.MidlineLeft);
                 empty.color = new Color(0.34f, 0.35f, 0.35f, 1f);
                 empty.gameObject.AddComponent<LayoutElement>().preferredHeight = 22f;
             }
@@ -177,6 +183,7 @@ namespace StorageNetwork.UI
                     selectedItemStorage = null;
                     selectedItemKey = null;
                     Refresh(true);
+                    UpdateCategorySummaryPanel();
                 },
                 selected ? KleiPinkStyle() : KleiBlueStyle());
             button.AddComponent<LayoutElement>().preferredHeight = 48f;
@@ -185,7 +192,7 @@ namespace StorageNetwork.UI
             TextMeshProUGUI label = CreateText(
                 "CategoryLabel",
                 button.transform,
-                string.Format("<b>{0}</b>\n<size=10>{1} 个</size>", group.Name, group.Storages.Count),
+                string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CATEGORY_COUNT), group.Name, group.Storages.Count),
                 12,
                 TextAlignmentOptions.Left);
             label.color = Color.white;
@@ -259,19 +266,19 @@ namespace StorageNetwork.UI
 
             if (selected)
             {
-                GameObject transferButton = CreateGameButton("TransferButton", row.transform, "转移", () => ShowTransferDialog(storage, itemKey));
+                GameObject transferButton = CreateGameButton("TransferButton", row.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRANSFER), () => ShowTransferDialog(storage, itemKey));
                 LayoutElement transferLayout = transferButton.AddComponent<LayoutElement>();
                 transferLayout.preferredWidth = 58f;
                 transferLayout.preferredHeight = 20f;
                 ToolTip transferTooltip = transferButton.AddComponent<ToolTip>();
-                transferTooltip.toolTip = "把这个物品转移到当前场景中的目标储存箱";
+                transferTooltip.toolTip = Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRANSFER_TOOLTIP);
 
-                GameObject dropButton = CreateGameButton("DropButton", row.transform, "丢弃", () => ShowDropDialog(storage, itemKey));
+                GameObject dropButton = CreateGameButton("DropButton", row.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.DROP), () => ShowDropDialog(storage, itemKey));
                 LayoutElement dropLayout = dropButton.AddComponent<LayoutElement>();
                 dropLayout.preferredWidth = 58f;
                 dropLayout.preferredHeight = 20f;
                 ToolTip tooltip = dropButton.AddComponent<ToolTip>();
-                tooltip.toolTip = "丢弃这个储存建筑中的目标物品";
+                tooltip.toolTip = Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.DROP_TOOLTIP);
             }
         }
 
@@ -298,7 +305,7 @@ namespace StorageNetwork.UI
             TextMeshProUGUI remaining = CreateText(
                 "Remaining",
                 row.transform,
-                "剩余 " + GameUtil.GetFormattedMass(Mathf.Max(0f, target.RemainingCapacity())),
+                string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.REMAINING_CAPACITY), GameUtil.GetFormattedMass(Mathf.Max(0f, target.RemainingCapacity()))),
                 11,
                 TextAlignmentOptions.MidlineRight);
             remaining.color = new Color(0.88f, 0.90f, 0.92f, 1f);
@@ -309,17 +316,17 @@ namespace StorageNetwork.UI
             LayoutElement sourceLocateLayout = sourceLocateButton.AddComponent<LayoutElement>();
             sourceLocateLayout.preferredWidth = 28f;
             sourceLocateLayout.preferredHeight = 22f;
-            AddButtonIcon(sourceLocateButton.transform, "action_follow_cam", "源");
+            AddButtonIcon(sourceLocateButton.transform, "action_follow_cam", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SOURCE_FALLBACK));
             ToolTip sourceTooltip = sourceLocateButton.AddComponent<ToolTip>();
-            sourceTooltip.toolTip = "定位当前箱子";
+            sourceTooltip.toolTip = Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOCATE_SOURCE_TOOLTIP);
 
             GameObject targetLocateButton = CreateGameButton("LocateTargetButton", row.transform, string.Empty, () => FocusStorage(target));
             LayoutElement targetLocateLayout = targetLocateButton.AddComponent<LayoutElement>();
             targetLocateLayout.preferredWidth = 28f;
             targetLocateLayout.preferredHeight = 22f;
-            AddButtonIcon(targetLocateButton.transform, "action_follow_cam", "目");
+            AddButtonIcon(targetLocateButton.transform, "action_follow_cam", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TARGET_FALLBACK));
             ToolTip targetTooltip = targetLocateButton.AddComponent<ToolTip>();
-            targetTooltip.toolTip = "定位目标箱子";
+            targetTooltip.toolTip = Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOCATE_TARGET_TOOLTIP);
 
             TextMeshProUGUI capacity = CreateText(
                 "Capacity",

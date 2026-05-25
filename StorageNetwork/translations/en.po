@@ -1,0 +1,360 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: StorageNetwork\n"
+"Language: en\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Application: Oxygen Not Included\n"
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKSCENESTORAGEBOX.NAME"
+msgid "场景储存箱"
+msgstr "Scene Storage Box"
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKSCENESTORAGEBOX.DESC"
+msgid "供场景储存总览面板识别的专用储物箱。"
+msgstr "A dedicated storage bin recognized by the scene storage overview panel."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKSCENESTORAGEBOX.EFFECT"
+msgid "复用原版储物箱动画与基础储存行为，并纳入当前场景储存总览。"
+msgstr "Reuses the vanilla storage bin animation and basic storage behavior, and is included in the current scene storage overview."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OVERVIEW_TOOLTIP"
+msgid "显示当前场景中的储存箱总览。"
+msgstr "Show an overview of storage buildings in the current scene."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TITLE"
+msgid "储存网络"
+msgstr "Storage Network"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SUMMARY_TITLE"
+msgid "<b>场景储存总览</b>"
+msgstr "<b>Scene Storage Overview</b>"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SUMMARY_LINE"
+msgid "储存建筑：{0}    容量：{1} / {2}"
+msgstr "Storage Buildings: {0}    Capacity: {1} / {2}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.EMPTY_TITLE"
+msgid "当前场景没有可收集的储存建筑"
+msgstr "No collectible storage buildings in the current scene"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.EMPTY_DETAILS"
+msgid "会收集专用场景储存箱，以及手动加入的原版储物箱。"
+msgstr "Collects dedicated scene storage boxes and vanilla storage bins that were manually added."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.NO_STORAGE_CONTENT"
+msgid "没有储存内容"
+msgstr "No stored contents"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STORAGE_SETTINGS"
+msgid "设置"
+msgstr "Settings"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CATEGORY_COUNT"
+msgid "<b>{0}</b>\n<size=10>{1} 个</size>"
+msgstr "<b>{0}</b>\n<size=10>{1}</size>"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRANSFER"
+msgid "转移"
+msgstr "Transfer"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRANSFER_TOOLTIP"
+msgid "把这个物品转移到当前场景中的目标储存箱"
+msgstr "Transfer this item to a target storage building in the current scene."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.DROP"
+msgid "丢弃"
+msgstr "Drop"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.DROP_TOOLTIP"
+msgid "丢弃这个储存建筑中的目标物品"
+msgstr "Drop the selected item from this storage building."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.REMAINING_CAPACITY"
+msgid "剩余 {0}"
+msgstr "Free {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SOURCE_FALLBACK"
+msgid "源"
+msgstr "S"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TARGET_FALLBACK"
+msgid "目"
+msgstr "T"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOCATE_SOURCE_TOOLTIP"
+msgid "定位当前箱子"
+msgstr "Locate the current storage building."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOCATE_TARGET_TOOLTIP"
+msgid "定位目标箱子"
+msgstr "Locate the target storage building."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CATEGORY_SCENE_STORAGE"
+msgid "储存箱"
+msgstr "Storage Boxes"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CATEGORY_VANILLA_STORAGE"
+msgid "原版储存"
+msgstr "Vanilla Storage"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CATEGORY_RECIPE_BUILDING"
+msgid "生产建筑"
+msgstr "Production Buildings"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SUMMARY_BUTTON"
+msgid "汇总"
+msgstr "Summary"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SUMMARY_TOOLTIP"
+msgid "汇总当前分类中所有箱子的物品"
+msgstr "Summarize items in all storage buildings in the current category."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENROLLABLE_BUTTON_TOOLTIP"
+msgid "显示当前场景中所有可接入储存网络的建筑。"
+msgstr "Show all buildings in the current scene that can join the Storage Network."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENROLLABLE_TITLE"
+msgid "可接入建筑"
+msgstr "Joinable Buildings"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENROLLABLE_HEADER"
+msgid "当前场景中可接入储存网络的建筑"
+msgstr "Buildings in the current scene that can join the Storage Network"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENROLLABLE_EMPTY"
+msgid "当前场景中没有可接入的建筑。"
+msgstr "There are no joinable buildings in the current scene."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENROLLABLE_CONNECTED"
+msgid "已接入"
+msgstr "Joined"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENROLLABLE_NOT_CONNECTED"
+msgid "未接入"
+msgstr "Not Joined"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENROLLABLE_CATEGORY_COUNT"
+msgid "{0} 个"
+msgstr "{0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENROLLABLE_CATEGORY_OTHER"
+msgid "其他建筑"
+msgstr "Other Buildings"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SUMMARY_EMPTY"
+msgid "当前分类没有储存内容"
+msgstr "The current category has no stored contents."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SUMMARY_TITLE_LINE"
+msgid "<b>{0}</b>\n箱子：{1}    总量：{2}"
+msgstr "<b>{0}</b>\nBoxes: {1}    Total: {2}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TREND_NO_DATA"
+msgid "--/周期"
+msgstr "--/cycle"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TREND_ZERO"
+msgid "0/周期"
+msgstr "0/cycle"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TREND_PER_CYCLE"
+msgid "{0}{1}/周期"
+msgstr "{0}{1}/cycle"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.DROP_AMOUNT_TITLE"
+msgid "丢弃数量"
+msgstr "Drop Amount"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.DROP_AVAILABLE"
+msgid "当前箱子可丢弃：{0}"
+msgstr "Available to drop from current storage: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRANSFER_ITEM_TITLE"
+msgid "转移物品"
+msgstr "Transfer Item"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.NO_TRANSFER_TARGET"
+msgid "当前场景中没有可接收物品的目标箱子。"
+msgstr "There are no target storage buildings in the current scene that can receive this item."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TARGET_NOT_ENOUGH_CAPACITY"
+msgid "目标箱子没有足够容量。"
+msgstr "The target storage building does not have enough capacity."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TARGET_CAPACITY_DETAILS"
+msgid "目标容量：{0} / {1}\n最大可转移：{2}"
+msgstr "Target capacity: {0} / {1}\nMaximum transfer: {2}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRANSFER_AMOUNT_TITLE"
+msgid "转移数量"
+msgstr "Transfer Amount"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TARGET_PREFIX"
+msgid "目标：{0}"
+msgstr "Target: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TARGET_SELECTION_TITLE"
+msgid "选择目标箱子"
+msgstr "Select Target Storage"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TARGET_SELECTION_HEADER"
+msgid "当前场景中的可接收目标"
+msgstr "Available targets in the current scene"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CANCEL"
+msgid "取消"
+msgstr "Cancel"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.BUILDING_SETTINGS_TITLE"
+msgid "建筑设置"
+msgstr "Building Settings"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STORAGE_DETAILS"
+msgid "储存：{0} / {1}\n剩余容量：{2}"
+msgstr "Stored: {0} / {1}\nFree capacity: {2}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_STATUS_TITLE"
+msgid "运行状态"
+msgstr "Operating Status"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_CONTENT_TITLE"
+msgid "内容物"
+msgstr "Contents"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_STATUS_IDLE"
+msgid "当前状态：待机"
+msgstr "Current status: Idle"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_STATUS_CRAFTING"
+msgid "当前状态：正在制作"
+msgstr "Current status: Crafting"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_STATUS_WAITING_WORKER"
+msgid "当前状态：等待复制人"
+msgstr "Current status: Waiting for duplicant"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_CURRENT_RECIPE"
+msgid "当前配方：{0}"
+msgstr "Current recipe: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_PROGRESS"
+msgid "制作进度：{0}%"
+msgstr "Progress: {0}%"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_NO_RECIPE"
+msgid "当前没有正在制作的配方"
+msgstr "No recipe is currently being crafted"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_TITLE"
+msgid "材料请求"
+msgstr "Material Requests"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_ENABLED"
+msgid "向网络请求材料"
+msgstr "Request materials from network"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_MODE"
+msgid "请求方式：{0}"
+msgstr "Request mode: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_MODE_SEARCH"
+msgid "从网络箱子中寻找合适材料"
+msgstr "Find suitable materials in network storage"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_MODE_SPECIFIC"
+msgid "指定网络中某个箱子提供材料"
+msgstr "Use a specific network storage building"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_SOURCE"
+msgid "指定箱子：{0}"
+msgstr "Specific storage: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_SOURCE_NONE"
+msgid "未指定"
+msgstr "None"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_SELECT_SOURCE"
+msgid "选择箱子"
+msgstr "Select Storage"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_LIMIT_ENABLED"
+msgid "启用请求限额"
+msgstr "Enable request limit"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_LIMIT"
+msgid "限额：{0} / {1}"
+msgstr "Limit: {0} / {1}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_SET_LIMIT"
+msgid "设置限额"
+msgstr "Set Limit"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_STATUS"
+msgid "请求状态：{0}"
+msgstr "Request status: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_RESET"
+msgid "重置已请求"
+msgstr "Reset Requested"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_STATUS_ITEM"
+msgid "材料提供由储存网络供给"
+msgstr "Materials supplied by Storage Network"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_STATUS_TOOLTIP"
+msgid "这个建筑会从储存网络中请求当前生产需要的材料。\n{0}"
+msgstr "This building requests materials needed for production from the Storage Network.\n{0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CLOSE"
+msgid "关闭"
+msgstr "Close"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.AMOUNT_LABEL"
+msgid "数量：{0}"
+msgstr "Amount: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ALL"
+msgid "全部"
+msgstr "All"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIRM"
+msgid "确定"
+msgstr "OK"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ON"
+msgid "开"
+msgstr "On"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.AMOUNT_INPUT"
+msgid "输入数量"
+msgstr "Enter Amount"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENROLL_STATUS"
+msgid "已经接入储存网络"
+msgstr "Connected to Storage Network"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENROLL_STATUS_TOOLTIP"
+msgid "这个建筑已经接入储存网络，会显示在储存网络面板中。"
+msgstr "This building is connected to the Storage Network and will appear in the Storage Network panel."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENROLL_ADD"
+msgid "加入网络"
+msgstr "Join Network"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENROLL_REMOVE"
+msgid "移出网络"
+msgstr "Remove from Network"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENROLL_ADD_TOOLTIP"
+msgid "将这个建筑加入储存网络面板。"
+msgstr "Add this building to the Storage Network panel."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENROLL_REMOVE_TOOLTIP"
+msgid "将这个建筑从储存网络面板中移除。"
+msgstr "Remove this building from the Storage Network panel."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STARMAP_NAME_HINT"
+msgid "星图"
+msgstr "Starmap"

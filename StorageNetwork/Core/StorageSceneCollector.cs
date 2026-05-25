@@ -35,11 +35,33 @@ namespace StorageNetwork.Core
             }
 
             StorageNetworkEnrollment enrollment = storage.GetComponent<StorageNetworkEnrollment>();
-            KPrefabID prefabId = storage.GetComponent<KPrefabID>();
-            return enrollment != null &&
-                   enrollment.IncludedInSceneNetwork &&
-                   prefabId != null &&
-                   prefabId.PrefabID().ToString() == "StorageLocker";
+            if (enrollment == null || !enrollment.IncludedInSceneNetwork)
+            {
+                return false;
+            }
+
+            if (enrollment.IsStorageLocker())
+            {
+                return true;
+            }
+
+            if (enrollment.IsComplexRecipeBuilding())
+            {
+                return IsPrimaryComplexFabricatorStorage(storage);
+            }
+
+            return false;
+        }
+
+        private static bool IsPrimaryComplexFabricatorStorage(Storage storage)
+        {
+            ComplexFabricator fabricator = storage.GetComponent<ComplexFabricator>();
+            if (fabricator == null)
+            {
+                return false;
+            }
+
+            return fabricator.inStorage == null || fabricator.inStorage == storage;
         }
     }
 }

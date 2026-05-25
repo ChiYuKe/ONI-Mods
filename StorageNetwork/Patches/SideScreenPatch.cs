@@ -34,7 +34,6 @@ namespace StorageNetwork.Patches
         private static class StorageNetworkManagementButton
         {
             private const string ButtonName = "StorageNetworkManagementButton";
-            private const string ToggleText = "储存网络";
             private const string IconName = "storage_network_overlay";
 
             public static void Add(ManagementMenu menu)
@@ -73,7 +72,7 @@ namespace StorageNetwork.Patches
                 LocText label = buttonObject.GetComponentInChildren<LocText>(true);
                 if (label != null)
                 {
-                    label.SetText(ToggleText);
+                    SetButtonLabel(label);
                 }
 
                 if (button.fgImage != null)
@@ -109,6 +108,30 @@ namespace StorageNetwork.Patches
                 };
 
                 button.transform.SetSiblingIndex(GetInsertIndex(parent));
+            }
+
+            private static void SetButtonLabel(LocText label)
+            {
+                string title = STRINGS.Get(STRINGS.UI.STORAGE_NETWORK.TITLE);
+                label.key = string.Empty;
+                label.enableAutoSizing = false;
+                label.fontSize = Mathf.Min(label.fontSize, 15f);
+                label.overflowMode = TMPro.TextOverflowModes.Ellipsis;
+                label.textWrappingMode = TMPro.TextWrappingModes.NoWrap;
+                label.SetText(title);
+                label.text = title;
+
+                RectTransform labelRect = label.rectTransform();
+                if (labelRect != null)
+                {
+                    labelRect.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, 96f);
+                }
+
+                RectTransform buttonRect = label.GetComponentInParent<KToggle>()?.GetComponent<RectTransform>();
+                if (buttonRect != null)
+                {
+                    buttonRect.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, Mathf.Max(buttonRect.rect.width, 112f));
+                }
             }
 
             private static Transform ResolveToggleParent(ManagementMenu menu)
@@ -155,7 +178,7 @@ namespace StorageNetwork.Patches
                 for (int i = 0; i < parent.childCount; i++)
                 {
                     string name = parent.GetChild(i).name;
-                    if (name.Contains("星图") || name.Contains("STARMAP"))
+                    if (name.Contains(STRINGS.Get(STRINGS.UI.STORAGE_NETWORK.STARMAP_NAME_HINT)) || name.Contains("STARMAP"))
                     {
                         starMapIndex = i;
                         break;

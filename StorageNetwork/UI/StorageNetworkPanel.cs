@@ -7,6 +7,7 @@ using StorageNetwork.Core;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using static StorageNetwork.STRINGS;
 
 namespace StorageNetwork.UI
 {
@@ -22,6 +23,11 @@ namespace StorageNetwork.UI
         private ScrollRect listScrollRect;
         private RectTransform windowRect;
         private GameObject modalRoot;
+        private GameObject categorySummaryRoot;
+        private RectTransform categorySummaryContent;
+        private GameObject productionSettingsRoot;
+        private RectTransform productionSettingsContent;
+        private Storage productionSettingsStorage;
         private KInputController registeredController;
         private const int InputPriority = int.MaxValue - 100;
         private bool rightClickCloseCandidate;
@@ -162,6 +168,7 @@ namespace StorageNetwork.UI
             {
                 refreshElapsed = 0f;
                 Refresh();
+                UpdateProductionSettingsPanel();
             }
         }
 
@@ -179,6 +186,29 @@ namespace StorageNetwork.UI
             }
         }
 
+        private bool IsMouseOverAnyPanel()
+        {
+            Vector2 mousePosition = KInputManager.GetMousePos();
+            return ContainsScreenPoint(windowRect, mousePosition) ||
+                ContainsScreenPoint(productionSettingsRoot, mousePosition) ||
+                ContainsScreenPoint(categorySummaryRoot, mousePosition) ||
+                ContainsScreenPoint(modalRoot, mousePosition);
+        }
+
+        private static bool ContainsScreenPoint(GameObject gameObject, Vector2 screenPoint)
+        {
+            return gameObject != null &&
+                gameObject.activeInHierarchy &&
+                ContainsScreenPoint(gameObject.GetComponent<RectTransform>(), screenPoint);
+        }
+
+        private static bool ContainsScreenPoint(RectTransform rectTransform, Vector2 screenPoint)
+        {
+            return rectTransform != null &&
+                rectTransform.gameObject.activeInHierarchy &&
+                RectTransformUtility.RectangleContainsScreenPoint(rectTransform, screenPoint, null);
+        }
+
         private void BuildWindow(Transform parent)
         {
             GameObject window = CreateBox("Window", parent, new Color(0.78f, 0.79f, 0.80f, 0.98f));
@@ -193,9 +223,21 @@ namespace StorageNetwork.UI
             GameObject header = CreateBox("Header", window.transform, new Color(0.43f, 0.20f, 0.34f, 1f));
             SetTopStretch(header.GetComponent<RectTransform>(), 6f, 6f, 6f, 28f);
 
-            TextMeshProUGUI title = CreateText("Title", header.transform, "储存网络", 14, TextAlignmentOptions.MidlineLeft);
+            TextMeshProUGUI title = CreateText("Title", header.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TITLE), 14, TextAlignmentOptions.MidlineLeft);
             title.fontStyle = FontStyles.Bold;
             Stretch(title.rectTransform(), 12f, 0f);
+            title.rectTransform().offsetMax = new Vector2(-92f, 0f);
+
+            GameObject enrollableButton = CreateGameButton("EnrollableButton", header.transform, string.Empty, ShowEnrollableBuildingsDialog);
+            RectTransform enrollableRect = enrollableButton.GetComponent<RectTransform>();
+            enrollableRect.anchorMin = new Vector2(0f, 0.5f);
+            enrollableRect.anchorMax = new Vector2(0f, 0.5f);
+            enrollableRect.pivot = new Vector2(0f, 0.5f);
+            enrollableRect.anchoredPosition = new Vector2(92f, 0f);
+            enrollableRect.sizeDelta = new Vector2(26f, 22f);
+            AddButtonIcon(enrollableButton.transform, "storage_network_overlay", "+");
+            ToolTip enrollableTooltip = enrollableButton.AddComponent<ToolTip>();
+            enrollableTooltip.toolTip = Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENROLLABLE_BUTTON_TOOLTIP);
 
             GameObject closeButton = CreateGameButton("CloseButton", header.transform, "X", Close);
             RectTransform closeRect = closeButton.GetComponent<RectTransform>();
@@ -212,7 +254,11 @@ namespace StorageNetwork.UI
             SetTopStretch(summary.GetComponent<RectTransform>(), 8f, 8f, 8f, 54f);
             summaryText = CreateText("SummaryText", summary.transform, string.Empty, 14, TextAlignmentOptions.TopLeft);
             summaryText.lineSpacing = 4f;
-            Stretch(summaryText.rectTransform(), 12f, 7f);
+            summaryText.rectTransform().anchorMin = Vector2.zero;
+            summaryText.rectTransform().anchorMax = Vector2.one;
+            summaryText.rectTransform().offsetMin = new Vector2(12f, 7f);
+            summaryText.rectTransform().offsetMax = new Vector2(-76f, -7f);
+            CreateCategorySummaryButton(summary.transform);
 
             GameObject list = CreateBox("List", content.transform, new Color(0.80f, 0.79f, 0.74f, 1f));
             SetStretch(list.GetComponent<RectTransform>(), 8f, 8f, 8f, 70f);
@@ -312,8 +358,8 @@ namespace StorageNetwork.UI
 
             currentSnapshot = StorageSceneCollector.Collect();
             summaryText.text =
-                "<b>场景储存总览</b>\n" +
-                string.Format("储存建筑：{0}    容量：{1} / {2}",
+                Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SUMMARY_TITLE) + "\n" +
+                string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SUMMARY_LINE),
                     currentSnapshot.Storages.Count,
                     GameUtil.GetFormattedMass(currentSnapshot.TotalStoredKg),
                     GameUtil.GetFormattedMass(currentSnapshot.TotalCapacityKg));
@@ -325,7 +371,10 @@ namespace StorageNetwork.UI
                     lastListSignature = "empty";
                     ClearCategories();
                     ClearList();
-                    CreateInfoRow("当前场景没有可收集的储存建筑", "会收集专用场景储存箱，以及手动加入的原版储物箱。");
+                    CreateInfoRow(
+                        Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.EMPTY_TITLE),
+                        Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.EMPTY_DETAILS));
+                    UpdateCategorySummaryPanel();
                 }
 
                 return;
@@ -337,6 +386,8 @@ namespace StorageNetwork.UI
                 lastListSignature = listSignature;
                 RebuildStorageRows(currentSnapshot.Storages);
             }
+
+            UpdateCategorySummaryPanel();
         }
 
         private void RebuildStorageRows(IEnumerable<StorageInfo> storages)
@@ -355,14 +406,22 @@ namespace StorageNetwork.UI
             StorageNetworkCategoryGroup selectedGroup = groups.FirstOrDefault(group => group.Key == selectedCategoryKey);
             if (selectedGroup == null)
             {
-                CreateInfoRow("没有储存内容", string.Empty);
+                CreateInfoRow(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.NO_STORAGE_CONTENT), string.Empty);
                 RebuildLayout();
                 return;
             }
 
             foreach (IGrouping<string, StorageInfo> group in selectedGroup.Storages.GroupBy(GetStorageTypeKey).OrderBy(group => GetStorageTypeName(group.First())))
             {
-                CreateStorageTypeRow(group.ToList());
+                List<StorageInfo> typeStorages = group.ToList();
+                if (typeStorages.Count == 1)
+                {
+                    CreateStorageRow(typeStorages[0], listContent);
+                }
+                else
+                {
+                    CreateStorageTypeRow(typeStorages);
+                }
             }
 
             RebuildLayout();
@@ -375,17 +434,19 @@ namespace StorageNetwork.UI
                 .ThenBy(storage => storage.Storage != null ? storage.Storage.GetInstanceID() : 0)
                 .Select(storage =>
                 {
-                string items = string.Join(",", storage.Storage.items
-                        .Where(item => item != null)
+                    IEnumerable<GameObject> storedItems = storage.StoredItems;
+                    string items = string.Join(",", storedItems
                         .GroupBy(GetStoredItemKey)
                         .OrderBy(group => group.Key)
-                        .Select(group => string.Format("{0}:{1}",
+                        .Select(group => string.Format("{0}:{1}:{2:0.###}",
                             group.Key,
-                            group.Count())));
+                            group.Count(),
+                            group.Sum(item => item.GetComponent<PrimaryElement>()?.Mass ?? 0f))));
 
-                    return string.Format("{0}:{1}:{2:0.###}:{3}",
+                    return string.Format("{0}:{1}:{2:0.###}:{3:0.###}:{4}",
                         GetStorageTypeKey(storage),
                         storage.Storage != null ? storage.Storage.GetInstanceID() : 0,
+                        storage.StoredKg,
                         storage.CapacityKg,
                         items);
                 }));
@@ -444,6 +505,8 @@ namespace StorageNetwork.UI
         private void Close()
         {
             CloseModal();
+            CloseCategorySummaryPanel();
+            CloseProductionSettingsPanel();
             gameObject.SetActive(false);
         }
 
@@ -472,7 +535,7 @@ namespace StorageNetwork.UI
                 return;
             }
 
-            if (!IsMouseOverWindow())
+            if (!IsMouseOverAnyPanel())
             {
                 return;
             }
@@ -481,17 +544,6 @@ namespace StorageNetwork.UI
             {
                 e.TryConsume(global::Action.ZoomOut);
             }
-        }
-
-        private bool IsMouseOverWindow()
-        {
-            if (windowRect == null)
-            {
-                return false;
-            }
-
-            Vector2 localMousePosition = windowRect.InverseTransformPoint(KInputManager.GetMousePos());
-            return windowRect.rect.Contains(localMousePosition);
         }
 
         private void RegisterInputHandler()

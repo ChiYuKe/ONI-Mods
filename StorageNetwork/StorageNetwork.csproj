@@ -64,4 +64,7 @@
       <Private>False</Private>
     </Reference>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="translations\*.po" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

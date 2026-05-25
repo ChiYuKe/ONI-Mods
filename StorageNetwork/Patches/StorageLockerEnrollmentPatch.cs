@@ -13,5 +13,6 @@ namespace StorageNetwork.Patches
                 go.AddOrGet<StorageNetworkEnrollment>();
             }
         }
+
     }
 }

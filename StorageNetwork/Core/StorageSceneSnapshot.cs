@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using System.Linq;
+using UnityEngine;
 
 namespace StorageNetwork.Core
 {
@@ -30,7 +32,11 @@ namespace StorageNetwork.Core
         {
             Storage = storage;
             Name = storage.GetProperName();
-            StoredKg = storage.MassStored();
+            ContentStorages = GetContentStorages(storage);
+            StoredItems = ContentStorages
+                .SelectMany(contentStorage => contentStorage.items.Where(item => item != null))
+                .ToList();
+            StoredKg = ContentStorages.Sum(contentStorage => contentStorage.MassStored());
             CapacityKg = storage.Capacity();
         }
 
@@ -38,8 +44,36 @@ namespace StorageNetwork.Core
 
         public string Name { get; }
 
+        public IReadOnlyList<Storage> ContentStorages { get; }
+
+        public IReadOnlyList<GameObject> StoredItems { get; }
+
         public float StoredKg { get; }
 
         public float CapacityKg { get; }
+
+        private static IReadOnlyList<Storage> GetContentStorages(Storage storage)
+        {
+            HashSet<Storage> storages = new HashSet<Storage>();
+            AddStorage(storages, storage);
+
+            ComplexFabricator fabricator = storage.GetComponent<ComplexFabricator>();
+            if (fabricator != null)
+            {
+                AddStorage(storages, fabricator.inStorage);
+                AddStorage(storages, fabricator.buildStorage);
+                AddStorage(storages, fabricator.outStorage);
+            }
+
+            return storages.ToList();
+        }
+
+        private static void AddStorage(HashSet<Storage> storages, Storage storage)
+        {
+            if (storage != null)
+            {
+                storages.Add(storage);
+            }
+        }
     }
 }

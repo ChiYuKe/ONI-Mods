@@ -54,6 +54,15 @@ namespace StorageNetwork.UI
 
         private static Sprite GetSpriteByName(string spriteName)
         {
+            if (spriteName == "storage_network_overlay")
+            {
+                Sprite modSprite = StorageNetworkSprites.GetOverviewIcon();
+                if (modSprite != null)
+                {
+                    return modSprite;
+                }
+            }
+
             Sprite sprite = Assets.GetSprite(spriteName);
             if (sprite != null)
             {
