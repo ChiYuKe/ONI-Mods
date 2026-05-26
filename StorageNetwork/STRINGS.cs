@@ -133,6 +133,16 @@ namespace StorageNetwork
                 public static LocString MATERIAL_REQUEST_RESET = "重置已请求";
                 public static LocString MATERIAL_REQUEST_STATUS_ITEM = "材料提供由储存网络供给";
                 public static LocString MATERIAL_REQUEST_STATUS_TOOLTIP = "这个建筑会从储存网络中请求当前生产需要的材料。\n{0}";
+                public static LocString MATERIAL_REQUEST_AUTO_DESC = "自动从已接入网络的箱子中寻找材料，优先使用库存最多的来源。";
+                public static LocString OUTPUT_STORE_TITLE = "成品入网";
+                public static LocString OUTPUT_STORE_ENABLED = "加工完成后自动存入网络";
+                public static LocString OUTPUT_STORE_MODE = "存放方式：{0}";
+                public static LocString OUTPUT_STORE_MODE_AUTO = "自动寻找匹配箱子";
+                public static LocString OUTPUT_STORE_MODE_SPECIFIC = "指定网络中某个箱子存放";
+                public static LocString OUTPUT_STORE_AUTO_DESC = "自动寻找已接入网络的匹配箱子，优先堆到已有同类物品的箱子；容量不足时会按剩余空间分批存入。";
+                public static LocString OUTPUT_STORE_STATUS = "入网状态：{0}";
+                public static LocString OUTPUT_STORE_TARGET = "目标箱子：{0}";
+                public static LocString OUTPUT_STORE_TARGET_DETAILS = "当前 {0} / {1}    剩余 {2}";
                 public static LocString CLOSE = "关闭";
                 public static LocString AMOUNT_LABEL = "数量：{0}";
                 public static LocString ALL = "全部";

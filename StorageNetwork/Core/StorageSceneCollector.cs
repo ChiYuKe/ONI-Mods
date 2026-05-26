@@ -7,8 +7,18 @@ namespace StorageNetwork.Core
 {
     public static class StorageSceneCollector
     {
-        public static StorageSceneSnapshot Collect()
+        private const float CacheSeconds = 0.25f;
+        private static StorageSceneSnapshot cachedSnapshot;
+        private static float cachedAtUnscaledTime = -1f;
+        private static int cachedFrame = -1;
+
+        public static StorageSceneSnapshot Collect(bool force = false)
         {
+            if (!force && cachedSnapshot != null && (cachedFrame == Time.frameCount || Time.unscaledTime - cachedAtUnscaledTime <= CacheSeconds))
+            {
+                return cachedSnapshot;
+            }
+
             Storage[] storages = Object.FindObjectsByType<Storage>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
             List<StorageInfo> collected = storages
                 .Where(IsSupportedStorage)
@@ -18,7 +28,10 @@ namespace StorageNetwork.Core
 
             float totalStoredKg = collected.Sum(info => info.StoredKg);
             float totalCapacityKg = collected.Sum(info => info.CapacityKg);
-            return new StorageSceneSnapshot(collected, totalStoredKg, totalCapacityKg);
+            cachedSnapshot = new StorageSceneSnapshot(collected, totalStoredKg, totalCapacityKg);
+            cachedAtUnscaledTime = Time.unscaledTime;
+            cachedFrame = Time.frameCount;
+            return cachedSnapshot;
         }
 
         private static bool IsSupportedStorage(Storage storage)

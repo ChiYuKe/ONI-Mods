@@ -147,7 +147,7 @@ namespace StorageNetwork.UI
                 .Select(group => new ItemTotal(
                     group.Key,
                     GetStoredItemName(group.FirstOrDefault()),
-                    group.Sum(item => item.GetComponent<PrimaryElement>()?.Mass ?? 0f),
+                    group.Sum(GetStoredItemMass),
                     group.FirstOrDefault()))
                 .OrderByDescending(total => total.MassKg)
                 .ThenBy(total => total.Name)

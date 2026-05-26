@@ -193,6 +193,8 @@ namespace StorageNetwork.UI
             state.textWrappingMode = TextWrappingModes.NoWrap;
             state.gameObject.AddComponent<LayoutElement>().preferredWidth = 72f;
 
+            CreateWorldCell(row.transform, enrollment.gameObject);
+
             Storage storage = enrollment.GetComponent<Storage>();
             TextMeshProUGUI capacity = CreateText(
                 "Capacity",
@@ -204,9 +206,9 @@ namespace StorageNetwork.UI
                 TextAlignmentOptions.MidlineRight);
             capacity.color = new Color(0.28f, 0.29f, 0.29f, 1f);
             capacity.textWrappingMode = TextWrappingModes.NoWrap;
-            capacity.gameObject.AddComponent<LayoutElement>().preferredWidth = 130f;
+            capacity.gameObject.AddComponent<LayoutElement>().preferredWidth = 120f;
 
-            GameObject locateButton = CreateGameButton("LocateButton", row.transform, string.Empty, () => FocusStorage(storage));
+            GameObject locateButton = CreateGameButton("LocateButton", row.transform, string.Empty, () => FocusStorage(storage, 500f));
             LayoutElement locateLayout = locateButton.AddComponent<LayoutElement>();
             locateLayout.preferredWidth = 28f;
             locateLayout.preferredHeight = 22f;
@@ -294,6 +296,109 @@ namespace StorageNetwork.UI
             }
 
             return "Other";
+        }
+
+        private static string GetBuildingWorldName(GameObject gameObject)
+        {
+            WorldContainer world = GetBuildingWorld(gameObject);
+            if (world != null)
+            {
+                string worldName = world.GetProperName();
+                if (!string.IsNullOrEmpty(worldName))
+                {
+                    return StripKleiLinkFormatting(worldName);
+                }
+            }
+
+            return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STARMAP_NAME_HINT);
+        }
+
+        private static void CreateWorldCell(Transform parent, GameObject gameObject)
+        {
+            GameObject cell = new GameObject("WorldCell");
+            cell.transform.SetParent(parent, false);
+            cell.AddComponent<RectTransform>();
+            cell.AddComponent<LayoutElement>().preferredWidth = 118f;
+
+            HorizontalLayoutGroup layout = cell.AddComponent<HorizontalLayoutGroup>();
+            layout.padding = new RectOffset(0, 0, 0, 0);
+            layout.spacing = 3f;
+            layout.childAlignment = TextAnchor.MiddleRight;
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.childForceExpandWidth = false;
+            layout.childForceExpandHeight = false;
+
+            CreateWorldIcon(cell.transform, gameObject);
+
+            TextMeshProUGUI world = CreateText(
+                "World",
+                cell.transform,
+                GetBuildingWorldName(gameObject),
+                11,
+                TextAlignmentOptions.MidlineLeft);
+            world.color = new Color(0.30f, 0.34f, 0.34f, 1f);
+            world.textWrappingMode = TextWrappingModes.NoWrap;
+            world.overflowMode = TextOverflowModes.Ellipsis;
+            world.gameObject.AddComponent<LayoutElement>().preferredWidth = 88f;
+        }
+
+        private static void CreateWorldIcon(Transform parent, GameObject gameObject)
+        {
+            GameObject iconObject = new GameObject("WorldIcon");
+            iconObject.transform.SetParent(parent, false);
+            iconObject.AddComponent<RectTransform>();
+            LayoutElement layout = iconObject.AddComponent<LayoutElement>();
+            layout.preferredWidth = 22f;
+            layout.preferredHeight = 22f;
+
+            Image image = iconObject.AddComponent<Image>();
+            image.raycastTarget = false;
+            image.preserveAspect = true;
+            image.sprite = GetBuildingWorldSprite(gameObject);
+            image.color = image.sprite != null ? Color.white : Color.clear;
+        }
+
+        private static Sprite GetBuildingWorldSprite(GameObject gameObject)
+        {
+            WorldContainer world = GetBuildingWorld(gameObject);
+            ClusterGridEntity clusterEntity = world != null ? world.GetComponent<ClusterGridEntity>() : null;
+            Sprite sprite = clusterEntity != null ? clusterEntity.GetUISprite() : null;
+            return sprite != null ? sprite : Assets.GetSprite("unknown_far");
+        }
+
+        private static WorldContainer GetBuildingWorld(GameObject gameObject)
+        {
+            if (TryGetBuildingWorldId(gameObject, out int worldId) && ClusterManager.Instance != null)
+            {
+                return ClusterManager.Instance.GetWorld(worldId);
+            }
+
+            return null;
+        }
+
+        private static bool TryGetBuildingWorldId(GameObject gameObject, out int worldId)
+        {
+            worldId = byte.MaxValue;
+            if (gameObject == null)
+            {
+                return false;
+            }
+
+            worldId = gameObject.GetMyWorldId();
+            if (worldId != byte.MaxValue && worldId >= 0)
+            {
+                return true;
+            }
+
+            int cell = Grid.PosToCell(gameObject);
+            if (!Grid.IsValidCell(cell))
+            {
+                return false;
+            }
+
+            worldId = Grid.WorldIdx[cell];
+            return worldId != byte.MaxValue && worldId >= 0;
         }
 
         private static int GetPlanCategorySortOrder(string categoryKey)

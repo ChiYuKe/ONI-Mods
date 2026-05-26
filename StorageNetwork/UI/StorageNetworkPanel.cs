@@ -30,6 +30,8 @@ namespace StorageNetwork.UI
         private GameObject productionSettingsRoot;
         private RectTransform productionSettingsContent;
         private Storage productionSettingsStorage;
+        private GameObject productionPickerRoot;
+        private string productionSettingsSignature;
         private KInputController registeredController;
         private const int InputPriority = int.MaxValue - 100;
         private bool rightClickCloseCandidate;
@@ -73,6 +75,14 @@ namespace StorageNetwork.UI
             if (instance.modalRoot != null)
             {
                 instance.CloseModal();
+            }
+            else if (instance.productionPickerRoot != null)
+            {
+                instance.CloseProductionPicker();
+            }
+            else if (instance.productionSettingsRoot != null && instance.productionSettingsRoot.activeSelf)
+            {
+                instance.CloseProductionSettingsPanel();
             }
             else if (instance.enrollableWindowRoot != null && instance.enrollableWindowRoot.activeSelf)
             {
@@ -179,6 +189,7 @@ namespace StorageNetwork.UI
                 refreshElapsed = 0f;
                 Refresh();
                 UpdateProductionSettingsPanel();
+                UpdateOrderPanelAutoRefresh(1f);
             }
         }
 
@@ -379,7 +390,7 @@ namespace StorageNetwork.UI
                 return;
             }
 
-            currentSnapshot = StorageSceneCollector.Collect();
+            currentSnapshot = StorageSceneCollector.Collect(forceRebuild);
             summaryText.text =
                 Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SUMMARY_TITLE) + "\n" +
                 string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SUMMARY_LINE),
@@ -457,14 +468,14 @@ namespace StorageNetwork.UI
                 .ThenBy(storage => storage.Storage != null ? storage.Storage.GetInstanceID() : 0)
                 .Select(storage =>
                 {
-                    IEnumerable<GameObject> storedItems = storage.StoredItems;
+                    IEnumerable<GameObject> storedItems = storage.StoredItems ?? Enumerable.Empty<GameObject>();
                     string items = string.Join(",", storedItems
                         .GroupBy(GetStoredItemKey)
                         .OrderBy(group => group.Key)
                         .Select(group => string.Format("{0}:{1}:{2:0.###}",
                             group.Key,
                             group.Count(),
-                            group.Sum(item => item.GetComponent<PrimaryElement>()?.Mass ?? 0f))));
+                            group.Sum(GetStoredItemMass))));
 
                     return string.Format("{0}:{1}:{2:0.###}:{3:0.###}:{4}",
                         GetStorageTypeKey(storage),

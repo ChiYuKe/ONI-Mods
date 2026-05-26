@@ -139,7 +139,7 @@ namespace StorageNetwork.UI
             {
                 foreach (IGrouping<string, GameObject> group in items.GroupBy(GetStoredItemKey).OrderBy(group => GetStoredItemName(group.FirstOrDefault())))
                 {
-                    float mass = group.Sum(item => item.GetComponent<PrimaryElement>()?.Mass ?? 0f);
+                    float mass = group.Sum(GetStoredItemMass);
                     CreateStoredItemRow(
                         storage,
                         details.transform,

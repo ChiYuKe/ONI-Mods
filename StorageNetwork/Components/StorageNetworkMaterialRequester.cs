@@ -16,6 +16,12 @@ namespace StorageNetwork.Components
             SpecificStorage = 1
         }
 
+        public enum OutputStoreMode
+        {
+            AutoNetwork = 0,
+            SpecificStorage = 1
+        }
+
         [Serialize]
         public bool RequestEnabled;
 
@@ -34,6 +40,15 @@ namespace StorageNetwork.Components
         [Serialize]
         public float RequestedKg;
 
+        [Serialize]
+        public bool OutputStoreEnabled;
+
+        [Serialize]
+        public int OutputStoreModeValue;
+
+        [Serialize]
+        public int OutputStorageInstanceId = KPrefabID.InvalidInstanceID;
+
         [MyCmpGet]
         private ComplexFabricator fabricator;
 
@@ -41,8 +56,10 @@ namespace StorageNetwork.Components
         private Guid materialRequestStatusHandle = Guid.Empty;
         private float requestCooldown;
         private string lastStatus;
+        private string lastOutputStatus;
 
         public string LastStatus => lastStatus;
+        public string LastOutputStatus => lastOutputStatus;
 
         public RequestMode CurrentMode
         {
@@ -50,11 +67,27 @@ namespace StorageNetwork.Components
             set => Mode = (int)value;
         }
 
+        public OutputStoreMode CurrentOutputStoreMode
+        {
+            get => (OutputStoreMode)Mathf.Clamp(OutputStoreModeValue, 0, 1);
+            set => OutputStoreModeValue = (int)value;
+        }
+
         public void Sim1000ms(float dt)
         {
-            if (!RequestEnabled || fabricator == null || fabricator.inStorage == null)
+            EnsureFabricator();
+            if (fabricator == null)
             {
                 lastStatus = string.Empty;
+                lastOutputStatus = string.Empty;
+                RemoveMaterialRequestStatus();
+                return;
+            }
+
+            StoreOutputsToNetwork();
+
+            if (!RequestEnabled || fabricator.inStorage == null)
+            {
                 RemoveMaterialRequestStatus();
                 return;
             }
@@ -137,9 +170,26 @@ namespace StorageNetwork.Components
                 .FirstOrDefault(storage => GetStorageInstanceId(storage) == SourceStorageInstanceId);
         }
 
+        public Storage ResolveOutputStorage()
+        {
+            if (OutputStorageInstanceId == KPrefabID.InvalidInstanceID)
+            {
+                return null;
+            }
+
+            return StorageSceneCollector.Collect().Storages
+                .Select(info => info.Storage)
+                .FirstOrDefault(storage => GetStorageInstanceId(storage) == OutputStorageInstanceId);
+        }
+
         public void SetSourceStorage(Storage storage)
         {
             SourceStorageInstanceId = GetStorageInstanceId(storage);
+        }
+
+        public void SetOutputStorage(Storage storage)
+        {
+            OutputStorageInstanceId = GetStorageInstanceId(storage);
         }
 
         public float GetRequestedAmountForDisplay()
@@ -152,10 +202,51 @@ namespace StorageNetwork.Components
             RequestedKg = 0f;
         }
 
+        protected override void OnSpawn()
+        {
+            base.OnSpawn();
+            EnsureFabricator();
+        }
+
         protected override void OnCleanUp()
         {
             RemoveMaterialRequestStatus();
             base.OnCleanUp();
+        }
+
+        public void ForceStoreProducedOutputs(IEnumerable<GameObject> producedOutputs)
+        {
+            EnsureFabricator();
+            if (!OutputStoreEnabled)
+            {
+                lastOutputStatus = string.Empty;
+                return;
+            }
+
+            float totalMoved = 0f;
+            string lastBlockedItem = null;
+            if (producedOutputs != null)
+            {
+                foreach (GameObject output in producedOutputs.Where(output => output != null).ToList())
+                {
+                    if (TryStoreLooseOutput(output, out float moved, out string blockedItem))
+                    {
+                        totalMoved += moved;
+                    }
+                    else if (!string.IsNullOrEmpty(blockedItem))
+                    {
+                        lastBlockedItem = blockedItem;
+                    }
+                }
+            }
+
+            totalMoved += StoreOutputsFromOutputStorage(out string outputStorageBlockedItem);
+            if (!string.IsNullOrEmpty(outputStorageBlockedItem))
+            {
+                lastBlockedItem = outputStorageBlockedItem;
+            }
+
+            UpdateOutputStatus(totalMoved, lastBlockedItem, "等待下一批成品");
         }
 
         private void RefreshMaterialRequestStatus()
@@ -312,6 +403,215 @@ namespace StorageNetwork.Components
             return moved;
         }
 
+        private void StoreOutputsToNetwork()
+        {
+            if (!OutputStoreEnabled)
+            {
+                lastOutputStatus = string.Empty;
+                return;
+            }
+
+            float totalMoved = StoreOutputsFromOutputStorage(out string lastBlockedItem);
+            UpdateOutputStatus(totalMoved, lastBlockedItem, "等待成品进入输出栏");
+        }
+
+        private float StoreOutputsFromOutputStorage(out string lastBlockedItem)
+        {
+            lastBlockedItem = null;
+            EnsureFabricator();
+            if (fabricator.outStorage == null || fabricator.outStorage.items == null)
+            {
+                lastOutputStatus = "建筑没有可读取的输出栏";
+                return 0f;
+            }
+
+            List<GameObject> outputs = fabricator.outStorage.items
+                .Where(item => item != null)
+                .ToList();
+            if (outputs.Count == 0)
+            {
+                return 0f;
+            }
+
+            float totalMoved = 0f;
+            foreach (GameObject output in outputs)
+            {
+                PrimaryElement primaryElement = output.GetComponent<PrimaryElement>();
+                if (primaryElement == null || primaryElement.Mass <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+                {
+                    continue;
+                }
+
+                Tag tag = GetStorageTransferTag(output);
+                float remaining = primaryElement.Mass;
+                Storage target = FindOutputTarget(output);
+                if (target == null)
+                {
+                    lastBlockedItem = GetTagDisplayName(tag);
+                    continue;
+                }
+
+                while (target != null && remaining > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+                {
+                    float transferAmount = Mathf.Min(remaining, Mathf.Max(0f, target.RemainingCapacity()));
+                    if (transferAmount <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+                    {
+                        break;
+                    }
+
+                    float moved = fabricator.outStorage.Transfer(target, tag, transferAmount, block_events: false, hide_popups: true);
+                    if (moved <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+                    {
+                        break;
+                    }
+
+                    totalMoved += moved;
+                    remaining -= moved;
+                    target = FindOutputTarget(output);
+                }
+
+                if (remaining > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+                {
+                    lastBlockedItem = GetTagDisplayName(tag);
+                }
+            }
+
+            return totalMoved;
+        }
+
+        private bool TryStoreLooseOutput(GameObject output, out float moved, out string blockedItem)
+        {
+            moved = 0f;
+            blockedItem = null;
+            if (output == null)
+            {
+                return false;
+            }
+
+            PrimaryElement primaryElement = output.GetComponent<PrimaryElement>();
+            if (primaryElement == null || primaryElement.Mass <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+            {
+                return false;
+            }
+
+            Tag tag = GetStorageTransferTag(output);
+            Storage target = FindOutputTarget(output);
+            if (target == null)
+            {
+                blockedItem = GetTagDisplayName(tag);
+                return false;
+            }
+
+            Pickupable pickupable = output.GetComponent<Pickupable>();
+            if (pickupable == null)
+            {
+                blockedItem = GetTagDisplayName(tag);
+                return false;
+            }
+
+            while (target != null && output != null && primaryElement.Mass > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+            {
+                float transferAmount = Mathf.Min(primaryElement.Mass, Mathf.Max(0f, target.RemainingCapacity()));
+                if (transferAmount <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+                {
+                    break;
+                }
+
+                Pickupable taken = pickupable.Take(transferAmount);
+                if (taken == null)
+                {
+                    break;
+                }
+
+                float takenMass = GetMass(taken.gameObject);
+                if (takenMass <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+                {
+                    break;
+                }
+
+                target.Store(taken.gameObject, hide_popups: true, block_events: false, do_disease_transfer: true, is_deserializing: false);
+                moved += takenMass;
+                if (taken.gameObject == output)
+                {
+                    break;
+                }
+
+                target = FindOutputTarget(output);
+            }
+
+            if (moved <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+            {
+                blockedItem = GetTagDisplayName(tag);
+            }
+
+            return moved > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT;
+        }
+
+        private void UpdateOutputStatus(float totalMoved, string lastBlockedItem, string idleText)
+        {
+            if (totalMoved > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+            {
+                lastOutputStatus = string.Format("已入网 {0}", GameUtil.GetFormattedMass(totalMoved));
+            }
+            else if (!string.IsNullOrEmpty(lastBlockedItem))
+            {
+                lastOutputStatus = string.Format("无法存入 {0}：没有匹配箱子或容量不足", lastBlockedItem);
+            }
+            else
+            {
+                lastOutputStatus = idleText;
+            }
+        }
+
+        private Storage FindOutputTarget(GameObject output)
+        {
+            Tag tag = GetStorageTransferTag(output);
+            if (CurrentOutputStoreMode == OutputStoreMode.SpecificStorage)
+            {
+                Storage target = ResolveOutputStorage();
+                return IsUsableOutputTarget(target, output) ? target : null;
+            }
+
+            return StorageSceneCollector.Collect().Storages
+                .Select(info => info.Storage)
+                .Where(storage => IsUsableOutputTarget(storage, output))
+                .Where(storage => IsAutoOutputMatch(storage, output))
+                .OrderByDescending(storage => storage.GetAmountAvailable(tag))
+                .ThenByDescending(storage => IsFilterAccepting(storage, tag))
+                .ThenByDescending(storage => storage.RemainingCapacity())
+                .FirstOrDefault();
+        }
+
+        private bool IsUsableOutputTarget(Storage storage, GameObject output)
+        {
+            return storage != null &&
+                   storage != fabricator.inStorage &&
+                   storage != fabricator.buildStorage &&
+                   storage != fabricator.outStorage &&
+                   storage.GetComponent<ComplexFabricator>() == null &&
+                   storage.RemainingCapacity() > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT;
+        }
+
+        private static bool IsAutoOutputMatch(Storage storage, GameObject output)
+        {
+            Tag tag = GetStorageTransferTag(output);
+            return storage.GetAmountAvailable(tag) > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ||
+                   IsFilterAccepting(storage, tag) ||
+                   HasNoExplicitStorageFilter(storage);
+        }
+
+        private static bool IsFilterAccepting(Storage storage, Tag tag)
+        {
+            TreeFilterable filterable = storage != null ? storage.GetComponent<TreeFilterable>() : null;
+            return filterable != null && filterable.ContainsTag(tag);
+        }
+
+        private static bool HasNoExplicitStorageFilter(Storage storage)
+        {
+            TreeFilterable filterable = storage != null ? storage.GetComponent<TreeFilterable>() : null;
+            return filterable == null || filterable.GetTags() == null || filterable.GetTags().Count == 0;
+        }
+
         private IEnumerable<Storage> GetSourceStorages(Tag tag)
         {
             if (CurrentMode == RequestMode.SpecificStorage)
@@ -353,6 +653,41 @@ namespace StorageNetwork.Components
         private static float GetAmountAvailable(Storage storage, Tag tag)
         {
             return storage != null ? storage.GetAmountAvailable(tag) : 0f;
+        }
+
+        private void EnsureFabricator()
+        {
+            if (fabricator == null)
+            {
+                fabricator = GetComponent<ComplexFabricator>();
+            }
+        }
+
+        public static Tag GetStorageTransferTag(GameObject item)
+        {
+            PrimaryElement primaryElement = item != null ? item.GetComponent<PrimaryElement>() : null;
+            if (primaryElement != null)
+            {
+                Tag elementTag = primaryElement.ElementID.CreateTag();
+                if (elementTag != Tag.Invalid && item.HasTag(elementTag))
+                {
+                    return elementTag;
+                }
+            }
+
+            KPrefabID prefabID = item != null ? item.GetComponent<KPrefabID>() : null;
+            return prefabID != null ? prefabID.PrefabTag : Tag.Invalid;
+        }
+
+        public static bool MatchesStorageTag(GameObject item, Tag tag)
+        {
+            return item != null && tag != Tag.Invalid && item.HasTag(tag);
+        }
+
+        private static float GetMass(GameObject item)
+        {
+            PrimaryElement primaryElement = item != null ? item.GetComponent<PrimaryElement>() : null;
+            return primaryElement != null ? primaryElement.Mass : 0f;
         }
 
         public static int GetStorageInstanceId(Storage storage)

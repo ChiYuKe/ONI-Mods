@@ -149,7 +149,18 @@ namespace StorageNetwork.UI
 
         private static float GetStoredItemsMass(IEnumerable<GameObject> items)
         {
-            return items.Sum(item => item.GetComponent<PrimaryElement>()?.Mass ?? 0f);
+            return items?.Sum(GetStoredItemMass) ?? 0f;
+        }
+
+        private static float GetStoredItemMass(GameObject item)
+        {
+            if (item == null)
+            {
+                return 0f;
+            }
+
+            PrimaryElement primaryElement = item.GetComponent<PrimaryElement>();
+            return primaryElement != null ? primaryElement.Mass : 0f;
         }
 
         private static List<GameObject> FindStoredItems(Storage storage, string itemKey)
@@ -334,6 +345,11 @@ namespace StorageNetwork.UI
 
         private static void FocusStorage(Storage storage)
         {
+            FocusStorage(storage, 0f);
+        }
+
+        private static void FocusStorage(Storage storage, float screenOffsetRightPixels)
+        {
             if (storage == null || SelectTool.Instance == null)
             {
                 return;
@@ -342,8 +358,22 @@ namespace StorageNetwork.UI
             KSelectable selectable = storage.GetComponent<KSelectable>();
             if (selectable != null)
             {
-                SelectTool.Instance.SelectAndFocus(storage.transform.position, selectable, Vector3.zero);
+                SelectTool.Instance.SelectAndFocus(GetOffsetFocusPosition(storage.transform.position, screenOffsetRightPixels), selectable, Vector3.zero);
             }
+        }
+
+        private static Vector3 GetOffsetFocusPosition(Vector3 targetPosition, float screenOffsetRightPixels)
+        {
+            if (screenOffsetRightPixels <= 0f || Camera.main == null || Screen.width <= 0)
+            {
+                return targetPosition;
+            }
+
+            float worldUnitsPerPixel = Camera.main.orthographic
+                ? Camera.main.orthographicSize * 2f / Mathf.Max(1f, Screen.height)
+                : 1f / Mathf.Max(1f, Screen.height);
+            targetPosition.x -= screenOffsetRightPixels * worldUnitsPerPixel;
+            return targetPosition;
         }
 
         private sealed class StorageNetworkCategoryGroup
