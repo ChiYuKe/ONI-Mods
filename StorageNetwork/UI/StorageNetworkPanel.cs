@@ -25,6 +25,8 @@ namespace StorageNetwork.UI
         private GameObject modalRoot;
         private GameObject categorySummaryRoot;
         private RectTransform categorySummaryContent;
+        private GameObject enrollableWindowRoot;
+        private GameObject headerWindowRoot;
         private GameObject productionSettingsRoot;
         private RectTransform productionSettingsContent;
         private Storage productionSettingsStorage;
@@ -71,6 +73,14 @@ namespace StorageNetwork.UI
             if (instance.modalRoot != null)
             {
                 instance.CloseModal();
+            }
+            else if (instance.enrollableWindowRoot != null && instance.enrollableWindowRoot.activeSelf)
+            {
+                instance.CloseEnrollableWindow();
+            }
+            else if (instance.headerWindowRoot != null && instance.headerWindowRoot.activeSelf)
+            {
+                instance.CloseHeaderWindow();
             }
             else
             {
@@ -192,6 +202,8 @@ namespace StorageNetwork.UI
             return ContainsScreenPoint(windowRect, mousePosition) ||
                 ContainsScreenPoint(productionSettingsRoot, mousePosition) ||
                 ContainsScreenPoint(categorySummaryRoot, mousePosition) ||
+                ContainsScreenPoint(enrollableWindowRoot, mousePosition) ||
+                ContainsScreenPoint(headerWindowRoot, mousePosition) ||
                 ContainsScreenPoint(modalRoot, mousePosition);
         }
 
@@ -238,6 +250,17 @@ namespace StorageNetwork.UI
             AddButtonIcon(enrollableButton.transform, "storage_network_overlay", "+");
             ToolTip enrollableTooltip = enrollableButton.AddComponent<ToolTip>();
             enrollableTooltip.toolTip = Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENROLLABLE_BUTTON_TOOLTIP);
+
+            GameObject headerWindowButton = CreateGameButton("HeaderWindowButton", header.transform, string.Empty, ToggleHeaderWindow);
+            RectTransform headerWindowRect = headerWindowButton.GetComponent<RectTransform>();
+            headerWindowRect.anchorMin = new Vector2(0f, 0.5f);
+            headerWindowRect.anchorMax = new Vector2(0f, 0.5f);
+            headerWindowRect.pivot = new Vector2(0f, 0.5f);
+            headerWindowRect.anchoredPosition = new Vector2(124f, 0f);
+            headerWindowRect.sizeDelta = new Vector2(26f, 22f);
+            AddButtonIcon(headerWindowButton.transform, "icon_action_building_disabled", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.HEADER_WINDOW_BUTTON));
+            ToolTip headerWindowTooltip = headerWindowButton.AddComponent<ToolTip>();
+            headerWindowTooltip.toolTip = Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.HEADER_WINDOW_TOOLTIP);
 
             GameObject closeButton = CreateGameButton("CloseButton", header.transform, "X", Close);
             RectTransform closeRect = closeButton.GetComponent<RectTransform>();
@@ -507,6 +530,8 @@ namespace StorageNetwork.UI
             CloseModal();
             CloseCategorySummaryPanel();
             CloseProductionSettingsPanel();
+            CloseEnrollableWindow();
+            CloseHeaderWindow();
             gameObject.SetActive(false);
         }
 
@@ -531,6 +556,18 @@ namespace StorageNetwork.UI
 
             if (e.TryConsume(global::Action.Escape))
             {
+                if (enrollableWindowRoot != null && enrollableWindowRoot.activeSelf)
+                {
+                    CloseEnrollableWindow();
+                    return;
+                }
+
+                if (headerWindowRoot != null && headerWindowRoot.activeSelf)
+                {
+                    CloseHeaderWindow();
+                    return;
+                }
+
                 Close();
                 return;
             }

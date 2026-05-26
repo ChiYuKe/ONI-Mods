@@ -31,23 +31,26 @@ namespace StorageNetwork.UI
 
         private void ShowEnrollableBuildingsDialog()
         {
-            CloseModal();
+            EnsureEnrollableWindow();
+            ClearEnrollableWindowContent();
             List<StorageNetworkEnrollment> enrollments = Object
                 .FindObjectsByType<StorageNetworkEnrollment>(FindObjectsInactive.Exclude, FindObjectsSortMode.None)
                 .Where(enrollment => enrollment != null && enrollment.CanShowInEnrollableList())
                 .ToList();
 
-            modalRoot = CreateModalFrame(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENROLLABLE_TITLE), 760f, 560f, out GameObject body);
-            TextMeshProUGUI header = AddModalText(body.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENROLLABLE_HEADER), 14, FontStyles.Bold);
+            TextMeshProUGUI header = CreateText("Header", enrollableWindowContent, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENROLLABLE_HEADER), 14, TextAlignmentOptions.MidlineLeft);
             header.color = new Color(0.95f, 0.91f, 0.78f, 1f);
+            header.fontStyle = FontStyles.Bold;
+            header.gameObject.AddComponent<LayoutElement>().preferredHeight = 28f;
 
             if (enrollments.Count == 0)
             {
-                AddModalText(body.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENROLLABLE_EMPTY), 12, FontStyles.Normal);
+                TextMeshProUGUI empty = CreateText("Empty", enrollableWindowContent, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENROLLABLE_EMPTY), 12, TextAlignmentOptions.TopLeft);
+                empty.color = new Color(0.18f, 0.19f, 0.19f, 1f);
+                empty.gameObject.AddComponent<LayoutElement>().preferredHeight = 36f;
             }
             else
             {
-                RectTransform content = CreateModalScrollList(body.transform, 420f);
                 foreach (IGrouping<string, StorageNetworkEnrollment> categoryGroup in enrollments
                     .GroupBy(GetPlanCategoryKey)
                     .OrderBy(group => GetPlanCategorySortOrder(group.Key))
@@ -56,18 +59,103 @@ namespace StorageNetwork.UI
                     List<StorageNetworkEnrollment> categoryEnrollments = categoryGroup
                         .OrderBy(enrollment => enrollment.gameObject.GetProperName())
                         .ToList();
-                    CreateEnrollableCategoryHeader(content, categoryGroup.Key, categoryEnrollments.Count);
+                    CreateEnrollableCategoryHeader(enrollableWindowContent, categoryGroup.Key, categoryEnrollments.Count);
 
                     foreach (StorageNetworkEnrollment enrollment in categoryEnrollments)
                     {
-                        CreateEnrollableBuildingRow(content, enrollment);
+                        CreateEnrollableBuildingRow(enrollableWindowContent, enrollment);
                     }
                 }
             }
 
-            GameObject footer = AddHorizontalRow(body.transform, 6f);
-            AddFooterSpacer(footer.transform);
-            AddModalButton(footer.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CLOSE), 90f, CloseModal);
+            enrollableWindowRoot.SetActive(true);
+            Canvas.ForceUpdateCanvases();
+            LayoutRebuilder.ForceRebuildLayoutImmediate(enrollableWindowContent);
+        }
+
+        private RectTransform enrollableWindowContent;
+
+        private void EnsureEnrollableWindow()
+        {
+            if (enrollableWindowRoot != null)
+            {
+                return;
+            }
+
+            enrollableWindowRoot = CreateBox("EnrollableWindowPanel", windowRect, new Color(0.78f, 0.79f, 0.80f, 0.98f));
+            ApplyThinBoxSprite(enrollableWindowRoot.GetComponent<Image>());
+            RectTransform panelRect = enrollableWindowRoot.GetComponent<RectTransform>();
+            SetStretch(panelRect, 8f, 8f, 8f, 42f);
+
+            GameObject header = CreateBox("Header", enrollableWindowRoot.transform, new Color(0.36f, 0.42f, 0.47f, 1f));
+            SetTopStretch(header.GetComponent<RectTransform>(), 8f, 8f, 8f, 42f);
+
+            TextMeshProUGUI title = CreateText("Title", header.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENROLLABLE_TITLE), 14, TextAlignmentOptions.MidlineLeft);
+            title.fontStyle = FontStyles.Bold;
+            Stretch(title.rectTransform(), 12f, 0f);
+            title.rectTransform().offsetMax = new Vector2(-42f, 0f);
+
+            GameObject closeButton = CreateGameButton("CloseButton", header.transform, "X", CloseEnrollableWindow);
+            RectTransform closeRect = closeButton.GetComponent<RectTransform>();
+            closeRect.anchorMin = new Vector2(1f, 0.5f);
+            closeRect.anchorMax = new Vector2(1f, 0.5f);
+            closeRect.pivot = new Vector2(1f, 0.5f);
+            closeRect.anchoredPosition = new Vector2(-10f, 0f);
+            closeRect.sizeDelta = new Vector2(24f, 22f);
+
+            GameObject viewport = CreateBox("Viewport", enrollableWindowRoot.transform, new Color(0.80f, 0.79f, 0.74f, 1f));
+            SetStretch(viewport.GetComponent<RectTransform>(), 10f, 10f, 10f, 58f);
+            viewport.AddComponent<RectMask2D>();
+
+            GameObject content = new GameObject("Content");
+            content.transform.SetParent(viewport.transform, false);
+            enrollableWindowContent = content.AddComponent<RectTransform>();
+            enrollableWindowContent.anchorMin = new Vector2(0f, 1f);
+            enrollableWindowContent.anchorMax = new Vector2(1f, 1f);
+            enrollableWindowContent.pivot = new Vector2(0.5f, 1f);
+            enrollableWindowContent.offsetMin = Vector2.zero;
+            enrollableWindowContent.offsetMax = Vector2.zero;
+
+            VerticalLayoutGroup layout = content.AddComponent<VerticalLayoutGroup>();
+            layout.padding = new RectOffset(10, 10, 10, 10);
+            layout.spacing = 5f;
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.childForceExpandWidth = true;
+            layout.childForceExpandHeight = false;
+            content.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+            Scrollbar scrollbar = CreateScrollbar(enrollableWindowRoot.transform);
+
+            ScrollRect scrollRect = viewport.AddComponent<ScrollRect>();
+            scrollRect.viewport = viewport.GetComponent<RectTransform>();
+            scrollRect.content = enrollableWindowContent;
+            scrollRect.horizontal = false;
+            scrollRect.vertical = true;
+            scrollRect.movementType = ScrollRect.MovementType.Clamped;
+            scrollRect.scrollSensitivity = 24f;
+            scrollRect.verticalScrollbar = scrollbar;
+            scrollRect.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHideAndExpandViewport;
+            scrollRect.verticalScrollbarSpacing = 2f;
+            viewport.AddComponent<ScrollWheelBlocker>();
+
+            enrollableWindowRoot.SetActive(false);
+        }
+
+        private void ClearEnrollableWindowContent()
+        {
+            for (int i = enrollableWindowContent.childCount - 1; i >= 0; i--)
+            {
+                Destroy(enrollableWindowContent.GetChild(i).gameObject);
+            }
+        }
+
+        private void CloseEnrollableWindow()
+        {
+            if (enrollableWindowRoot != null)
+            {
+                enrollableWindowRoot.SetActive(false);
+            }
         }
 
         private void CreateEnrollableBuildingRow(Transform parent, StorageNetworkEnrollment enrollment)

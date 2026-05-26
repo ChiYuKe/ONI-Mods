@@ -111,6 +111,134 @@ msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SUMMARY_TOOLTIP"
 msgid "汇总当前分类中所有箱子的物品"
 msgstr "Summarize items in all storage buildings in the current category."
 
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.HEADER_WINDOW_BUTTON"
+msgid "窗"
+msgstr "W"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.HEADER_WINDOW_TOOLTIP"
+msgid "显示当前场景中生产建筑可制作的配方。"
+msgstr "Show recipes craftable by production buildings in the current scene."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.HEADER_WINDOW_TITLE"
+msgid "可制作配方"
+msgstr "Craftable Recipes"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.RECIPE_WINDOW_HEADER"
+msgid "当前可下单成品：{0}"
+msgstr "Orderable products: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.RECIPE_WINDOW_EMPTY"
+msgid "当前场景中没有可制作配方。\n建造或接入生产建筑后会显示在这里。"
+msgstr "There are no craftable recipes in the current scene.\nBuild or connect production buildings to show them here."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.RECIPE_WINDOW_DETAILS"
+msgid "<b>原料：</b>{0}\n<b>产物：</b>{1}"
+msgstr "<b>Inputs:</b>{0}\n<b>Outputs:</b>{1}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.RECIPE_PRODUCT_ROUTES"
+msgid "{0} 条路线"
+msgstr "{0} routes"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.RECIPE_PRODUCT_STOCK"
+msgid "网络库存：{0}    单次产出：{1}"
+msgstr "Network stock: {0}    Output per craft: {1}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.RECIPE_ORDER"
+msgid "下单"
+msgstr "Order"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.RECIPE_ORDER_TITLE"
+msgid "生产订单"
+msgstr "Production Order"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.RECIPE_ORDER_RESULT"
+msgid "单次产出：{0}"
+msgstr "Output per craft: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.RECIPE_PREVIEW"
+msgid "预览"
+msgstr "Preview"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.RECIPE_PLAN_TITLE"
+msgid "执行方案"
+msgstr "Execution Plan"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.RECIPE_PLAN_SUMMARY"
+msgid "订单总量：{0}    生产批次：{1}"
+msgstr "Order total: {0}    Production batches: {1}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_TIME_SUMMARY"
+msgid "当前周期：{0}    预计完成：{1}"
+msgstr "Current cycle: {0}    Estimated completion: {1}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_TIME_UNKNOWN"
+msgid "当前周期：{0}    预计完成：未知（队列无限）"
+msgstr "Current cycle: {0}    Estimated completion: unknown (infinite queue)"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_MATERIAL_TITLE"
+msgid "资源校验"
+msgstr "Resource Check"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_MATERIAL_ROW"
+msgid "{0}    需要 {1}    库存 {2}    缺口 {3}"
+msgstr "{0}    Need {1}    Stock {2}    Missing {3}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_MATERIAL_PRODUCED"
+msgid "缺口将由产线补齐：{0}"
+msgstr "Shortage will be produced by: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_PRODUCT_LIST_TITLE"
+msgid "成品目录"
+msgstr "Products"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_PRODUCT_META"
+msgid "库存 {0}    {1} 方案"
+msgstr "Stock {0}    {1} plans"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_AMOUNT_LABEL"
+msgid "订单数量"
+msgstr "Order Qty"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_ROUTE_TITLE"
+msgid "生产设备"
+msgstr "Production Equipment"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CONFIRM"
+msgid "提交订单"
+msgstr "Submit Order"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_RECIPE_TITLE"
+msgid "配方方案"
+msgstr "Recipe Plan"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_ASSIGNMENT_TITLE"
+msgid "任务分配"
+msgstr "Task Assignment"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CHAIN_TITLE"
+msgid "产线链路"
+msgstr "Production Chain"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_STATUS_READY"
+msgid "库存充足"
+msgstr "In Stock"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_STATUS_PRODUCE"
+msgid "补产"
+msgstr "Produce"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_STATUS_BLOCKED"
+msgid "缺料"
+msgstr "Blocked"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_DISPATCH_TITLE"
+msgid "调度策略"
+msgstr "Dispatch Policy"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_DISPATCH_SUMMARY"
+msgid "优先调拨网络库存；缺口由已接入生产建筑补产；提交后自动开启材料请求。"
+msgstr "Prioritize network stock; connected production buildings cover shortages; material requests are enabled on submit."
+
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENROLLABLE_BUTTON_TOOLTIP"
 msgid "显示当前场景中所有可接入储存网络的建筑。"
 msgstr "Show all buildings in the current scene that can join the Storage Network."
