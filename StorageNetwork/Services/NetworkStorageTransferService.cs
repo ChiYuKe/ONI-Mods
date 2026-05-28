@@ -171,6 +171,7 @@ namespace StorageNetwork.Services
                    !excludedStorages.Contains(target) &&
                    target.GetComponent<ComplexFabricator>() == null &&
                    target.RemainingCapacity() > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT &&
+                   IsStorageAccepting(target, StorageItemUtility.GetStorageTransferTag(item)) &&
                    (target.items == null || !target.items.Contains(item));
         }
 
@@ -187,10 +188,20 @@ namespace StorageNetwork.Services
             return filterable != null && filterable.ContainsTag(tag);
         }
 
+        private static bool IsStorageAccepting(Storage target, Tag tag)
+        {
+            return target != null &&
+                   (IsFilterAccepting(target, tag) ||
+                    target.storageFilters == null ||
+                    target.storageFilters.Count == 0 ||
+                    target.storageFilters.Contains(tag));
+        }
+
         private static bool HasNoExplicitStorageFilter(Storage target)
         {
             TreeFilterable filterable = target != null ? target.GetComponent<TreeFilterable>() : null;
-            return filterable == null || filterable.GetTags() == null || filterable.GetTags().Count == 0;
+            return (filterable == null || filterable.GetTags() == null || filterable.GetTags().Count == 0) &&
+                   (target.storageFilters == null || target.storageFilters.Count == 0);
         }
 
         private static HashSet<Storage> BuildExclusionSet(IEnumerable<Storage> excludedStorages)

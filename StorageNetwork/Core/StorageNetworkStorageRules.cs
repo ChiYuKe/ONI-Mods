@@ -23,7 +23,10 @@ namespace StorageNetwork.Core
         /// </summary>
         public static bool HasSettingsButtonTag(Storage storage)
         {
-            return HasTag(storage, StorageNetworkTags.ShowSettingsButton);
+            return storage != null &&
+                   storage.GetComponent<Refrigerator>() == null &&
+                   storage.GetComponent<Reservoir>() == null &&
+                   HasTag(storage, StorageNetworkTags.ShowSettingsButton);
         }
 
         /// <summary>

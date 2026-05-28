@@ -25,11 +25,22 @@ namespace StorageNetwork.UI
         private float requestedProductAmount;
         private float orderPanelRefreshElapsed;
         private KInputTextField orderAmountInput;
+        private KInputTextField keepRuleAmountInput;
+        private string keepRuleDraftProductKey;
+        private float keepRuleDraftAmount;
+        private static readonly Color OrderHeaderAccentColor = new Color(0.56f, 0.27f, 0.44f, 1f);
+        private static readonly Color OrderSelectedAccentColor = new Color(0.60f, 0.29f, 0.47f, 1f);
 
         private void ToggleHeaderWindow()
         {
             EnsureHeaderWindow();
-            headerWindowRoot.SetActive(!headerWindowRoot.activeSelf);
+            bool shouldOpen = !headerWindowRoot.activeSelf;
+            if (!shouldOpen)
+            {
+                DeactivateOrderInputs();
+            }
+
+            headerWindowRoot.SetActive(shouldOpen);
             if (headerWindowRoot.activeSelf)
             {
                 orderPanelRefreshElapsed = 0f;
@@ -41,6 +52,7 @@ namespace StorageNetwork.UI
         {
             if (headerWindowRoot != null)
             {
+                DeactivateOrderInputs();
                 headerWindowRoot.SetActive(false);
             }
         }
@@ -57,7 +69,7 @@ namespace StorageNetwork.UI
             ApplyThinBoxSprite(headerWindowRoot.GetComponent<Image>());
             SetStretch(headerWindowRoot.GetComponent<RectTransform>(), 72f, 96f, 44f, 72f);
 
-            GameObject header = CreateBox("Header", headerWindowRoot.transform, new Color(0.23f, 0.27f, 0.29f, 1f));
+            GameObject header = CreateBox("Header", headerWindowRoot.transform, OrderHeaderAccentColor);
             SetTopStretch(header.GetComponent<RectTransform>(), 8f, 8f, 8f, 50f);
 
             TextMeshProUGUI title = CreateText("Title", header.transform, "生产订单中心", 18, TextAlignmentOptions.MidlineLeft);
@@ -104,7 +116,7 @@ namespace StorageNetwork.UI
         {
             GameObject pane = CreatePane(parent, "ProductPane", "成品目录", 330f, 310f, 0f);
             RectTransform viewport = CreateScrollViewport(pane.transform, "ProductViewport", out productListContent, 42f, 8f, 8f, 8f, 8f);
-            Scrollbar scrollbar = CreateScrollbar(pane.transform);
+            Scrollbar scrollbar = CreateScrollbar(pane.transform, 42f, 8f);
             WireScrollRect(viewport.gameObject, productListContent, scrollbar, 24f);
         }
 
@@ -112,7 +124,7 @@ namespace StorageNetwork.UI
         {
             GameObject pane = CreatePane(parent, "OrderWorkspacePane", "订单工作台", 0f, 640f, 1f);
             RectTransform viewport = CreateScrollViewport(pane.transform, "OrderWorkspaceViewport", out orderDetailsContent, 42f, 8f, 8f, 8f, 8f);
-            Scrollbar scrollbar = CreateScrollbar(pane.transform);
+            Scrollbar scrollbar = CreateScrollbar(pane.transform, 42f, 8f);
             WireScrollRect(viewport.gameObject, orderDetailsContent, scrollbar, 26f);
         }
 
@@ -120,7 +132,7 @@ namespace StorageNetwork.UI
         {
             GameObject pane = CreatePane(parent, "OrderTrackingPane", "活动订单追踪", 310f, 290f, 0f);
             RectTransform viewport = CreateScrollViewport(pane.transform, "OrderTrackingViewport", out orderTrackingContent, 42f, 8f, 8f, 8f, 8f);
-            Scrollbar scrollbar = CreateScrollbar(pane.transform);
+            Scrollbar scrollbar = CreateScrollbar(pane.transform, 42f, 8f);
             WireScrollRect(viewport.gameObject, orderTrackingContent, scrollbar, 22f);
         }
 
@@ -172,10 +184,7 @@ namespace StorageNetwork.UI
             ScrollRect scrollRect = viewport.AddComponent<ScrollRect>();
             scrollRect.viewport = viewport.GetComponent<RectTransform>();
             scrollRect.content = content;
-            scrollRect.horizontal = false;
-            scrollRect.vertical = true;
-            scrollRect.movementType = ScrollRect.MovementType.Clamped;
-            scrollRect.scrollSensitivity = sensitivity;
+            ConfigureSmoothVerticalScroll(scrollRect, sensitivity);
             scrollRect.verticalScrollbar = scrollbar;
             scrollRect.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHideAndExpandViewport;
             scrollRect.verticalScrollbarSpacing = 2f;
@@ -219,7 +228,7 @@ namespace StorageNetwork.UI
 
             orderPanelRefreshElapsed = 0f;
             productionOrderService.Refresh();
-            if (orderAmountInput != null && orderAmountInput.isFocused)
+            if (IsOrderInputFocused())
             {
                 RebuildOrderTracking(GetSelectedProduct());
                 return;
@@ -249,7 +258,7 @@ namespace StorageNetwork.UI
         private void CreateProductButton(ProductDisplayGroup product)
         {
             bool selected = product.ProductKey == selectedProductKey;
-            GameObject button = CreateStyledButton("ProductButton", productListContent, string.Empty, () => SelectProduct(product.ProductKey), selected ? KleiPinkStyle() : KleiBlueStyle());
+            GameObject button = CreateStyledButton("ProductButton", productListContent, string.Empty, () => SelectProduct(product.ProductKey), selected ? OrderProductSelectedStyle() : KleiBlueStyle());
             button.AddComponent<LayoutElement>().preferredHeight = 56f;
             HorizontalLayoutGroup layout = button.AddComponent<HorizontalLayoutGroup>();
             layout.padding = new RectOffset(8, 8, 5, 5);
@@ -287,8 +296,20 @@ namespace StorageNetwork.UI
             meta.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
         }
 
+        /// <summary>
+        /// 生产订单中心左侧成品选中态使用的红紫按钮色。
+        /// </summary>
+        private static ColorStyleSetting OrderProductSelectedStyle()
+        {
+            return CreateColorStyle(
+                OrderSelectedAccentColor,
+                new Color(0.68f, 0.36f, 0.54f, 1f),
+                new Color(0.48f, 0.20f, 0.37f, 1f));
+        }
+
         private void RebuildOrderDetails()
         {
+            DeactivateOrderInputs();
             ClearChildren(orderDetailsContent);
             ProductDisplayGroup product = GetSelectedProduct();
             if (product == null || product.Routes.Count == 0)
@@ -377,18 +398,20 @@ namespace StorageNetwork.UI
         {
             AddSmallTitle(parent, "订单数量");
             GameObject row = CreatePlainImage("AmountRow", parent, new Color(0.78f, 0.78f, 0.72f, 1f));
-            row.AddComponent<LayoutElement>().preferredHeight = 34f;
+            LayoutElement rowLayout = row.AddComponent<LayoutElement>();
+            rowLayout.minHeight = 82f;
+            rowLayout.preferredHeight = 82f;
+            rowLayout.flexibleHeight = 0f;
             HorizontalLayoutGroup layout = row.AddComponent<HorizontalLayoutGroup>();
             layout.padding = new RectOffset(7, 7, 5, 5);
             layout.spacing = 6f;
             layout.childAlignment = TextAnchor.MiddleLeft;
             layout.childControlWidth = true;
-            layout.childControlHeight = true;
+            layout.childControlHeight = false;
             layout.childForceExpandWidth = false;
             layout.childForceExpandHeight = false;
 
-            orderAmountInput = CreateAmountInput(row.transform);
-            orderAmountInput.gameObject.GetComponent<LayoutElement>().preferredWidth = 88f;
+            orderAmountInput = CreateFixedAmountInput(row.transform, 88f, 24f);
             orderAmountInput.text = FormatAmount(requestedProductAmount);
             orderAmountInput.onEndEdit.AddListener(value =>
             {
@@ -400,9 +423,9 @@ namespace StorageNetwork.UI
                 RebuildOrderDetails();
             });
 
-            AddQuickAmountButton(row.transform, 100f, "100kg");
-            AddQuickAmountButton(row.transform, 500f, "500kg");
-            AddQuickAmountButton(row.transform, 1000f, "1t");
+            AddAmountStepper(row.transform, 100f, "100kg");
+            AddAmountStepper(row.transform, 500f, "500kg");
+            AddAmountStepper(row.transform, 1000f, "1t");
         }
 
         private void AddKeepRuleEditor(Transform parent, ProductDisplayGroup product, RecipeDisplayInfo route)
@@ -430,15 +453,27 @@ namespace StorageNetwork.UI
             status.overflowMode = TextOverflowModes.Ellipsis;
             status.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
 
+            EnsureKeepRuleDraft(product, rule);
+            keepRuleAmountInput = CreateFixedAmountInput(row.transform, 78f, 24f);
+            keepRuleAmountInput.text = FormatAmount(keepRuleDraftAmount);
+            keepRuleAmountInput.onEndEdit.AddListener(value =>
+            {
+                if (TryParseAmount(value, out float parsed))
+                {
+                    keepRuleDraftAmount = Mathf.Max(PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT, parsed);
+                }
+            });
+
             GameObject enableButton = CreateStyledButton("EnableKeepRule", row.transform, "保持", () =>
             {
-                productionOrderService.SetKeepRule(product, route, requestedProductAmount);
-                lastOrderStatus = string.Format("货物保持：{0} 低于 {1} 时自动下单。", product.ProductName, GameUtil.GetFormattedMass(requestedProductAmount));
+                float keepAmount = GetKeepRuleAmountFromInput(rule);
+                productionOrderService.SetKeepRule(product, route, keepAmount);
+                lastOrderStatus = string.Format("货物保持：{0} 低于 {1} 时自动下单。", product.ProductName, GameUtil.GetFormattedMass(keepAmount));
                 productionOrderService.Refresh();
                 RebuildOrderDetails();
             }, KleiBlueStyle());
             LayoutElement enableLayout = enableButton.AddComponent<LayoutElement>();
-            enableLayout.preferredWidth = 50f;
+            enableLayout.preferredWidth = 44f;
             enableLayout.preferredHeight = 24f;
 
             GameObject clearButton = CreateStyledButton("ClearKeepRule", row.transform, "关闭", () =>
@@ -448,7 +483,7 @@ namespace StorageNetwork.UI
                 RebuildOrderDetails();
             }, rule != null ? KleiPinkStyle() : KleiBlueStyle());
             LayoutElement clearLayout = clearButton.AddComponent<LayoutElement>();
-            clearLayout.preferredWidth = 50f;
+            clearLayout.preferredWidth = 44f;
             clearLayout.preferredHeight = 24f;
             clearButton.GetComponent<KButton>().isInteractable = rule != null;
         }
@@ -843,6 +878,183 @@ namespace StorageNetwork.UI
             layout.preferredHeight = 24f;
         }
 
+        private void AddAmountStepper(Transform parent, float amount, string label)
+        {
+            GameObject column = new GameObject("AmountStepper");
+            column.transform.SetParent(parent, false);
+            column.AddComponent<RectTransform>();
+            LayoutElement columnLayout = column.AddComponent<LayoutElement>();
+            columnLayout.preferredWidth = 44f;
+            columnLayout.preferredHeight = 72f;
+            columnLayout.minHeight = 72f;
+            columnLayout.flexibleHeight = 0f;
+
+            VerticalLayoutGroup layout = column.AddComponent<VerticalLayoutGroup>();
+            layout.spacing = 2f;
+            layout.childAlignment = TextAnchor.MiddleCenter;
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.childForceExpandWidth = true;
+            layout.childForceExpandHeight = false;
+
+            AddAmountAdjustButton(column.transform, "-", () => AdjustRequestedAmount(-amount));
+            AddQuickAmountButton(column.transform, amount, label);
+            AddAmountAdjustButton(column.transform, "+", () => AdjustRequestedAmount(amount));
+        }
+
+        private void AddAmountAdjustButton(Transform parent, string label, System.Action onClick)
+        {
+            GameObject button = CreateGameButton("AmountAdjust", parent, label, onClick);
+            LayoutElement layout = button.AddComponent<LayoutElement>();
+            layout.preferredWidth = 44f;
+            layout.preferredHeight = 18f;
+        }
+
+        private KInputTextField CreateFixedAmountInput(Transform parent, float width, float height)
+        {
+            GameObject slot = new GameObject("AmountInputSlot");
+            slot.transform.SetParent(parent, false);
+            RectTransform slotRect = slot.AddComponent<RectTransform>();
+            slotRect.sizeDelta = new Vector2(width, height);
+            LayoutElement slotLayout = slot.AddComponent<LayoutElement>();
+            slotLayout.minWidth = width;
+            slotLayout.preferredWidth = width;
+            slotLayout.minHeight = height;
+            slotLayout.preferredHeight = height;
+            slotLayout.flexibleWidth = 0f;
+            slotLayout.flexibleHeight = 0f;
+
+            KInputTextField input = CreateAmountInput(slot.transform);
+            RectTransform inputRect = input.gameObject.GetComponent<RectTransform>();
+            inputRect.anchorMin = new Vector2(0.5f, 0.5f);
+            inputRect.anchorMax = new Vector2(0.5f, 0.5f);
+            inputRect.pivot = new Vector2(0.5f, 0.5f);
+            inputRect.anchoredPosition = Vector2.zero;
+            inputRect.sizeDelta = new Vector2(width, height);
+            EnsureInputFieldDragReferences(input, width, height);
+            return input;
+        }
+
+        /// <summary>
+        /// TMP_InputField 在拖拽选择文本时会调用 MouseDragOutsideRect，内部强依赖 textViewport。
+        /// 有些运行时动态创建的 KInputTextField 没有把 textViewport 正确挂上，拖拽时会在
+        /// RectTransformUtility.ScreenPointToLocalPointInRectangle 里空引用。这里强制补齐引用。
+        /// </summary>
+        private static void EnsureInputFieldDragReferences(TMP_InputField input, float width, float height)
+        {
+            if (input == null)
+            {
+                return;
+            }
+
+            RectTransform inputRect = input.GetComponent<RectTransform>();
+            if (inputRect == null)
+            {
+                inputRect = input.gameObject.AddComponent<RectTransform>();
+            }
+
+            if (input.textComponent == null)
+            {
+                input.textComponent = input.GetComponentInChildren<TMP_Text>(true);
+            }
+
+            if (input.textViewport == null)
+            {
+                RectTransform viewport = null;
+                if (input.textComponent != null)
+                {
+                    viewport = input.textComponent.rectTransform.parent as RectTransform;
+                }
+
+                input.textViewport = viewport != null ? viewport : inputRect;
+            }
+
+            input.textViewport.anchorMin = Vector2.zero;
+            input.textViewport.anchorMax = Vector2.one;
+            input.textViewport.pivot = new Vector2(0.5f, 0.5f);
+            input.textViewport.offsetMin = new Vector2(4f, 1f);
+            input.textViewport.offsetMax = new Vector2(-4f, -1f);
+
+            if (input.textComponent != null)
+            {
+                RectTransform textRect = input.textComponent.rectTransform;
+                textRect.anchorMin = Vector2.zero;
+                textRect.anchorMax = Vector2.one;
+                textRect.pivot = new Vector2(0.5f, 0.5f);
+                textRect.offsetMin = Vector2.zero;
+                textRect.offsetMax = Vector2.zero;
+                input.textComponent.enableWordWrapping = false;
+                input.textComponent.overflowMode = TextOverflowModes.Overflow;
+            }
+        }
+
+        private void AdjustRequestedAmount(float delta)
+        {
+            requestedProductAmount = Mathf.Max(PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT, requestedProductAmount + delta);
+            lastOrderStatus = null;
+            RebuildOrderDetails();
+        }
+
+        private void EnsureKeepRuleDraft(ProductDisplayGroup product, ProductionKeepRule rule)
+        {
+            string productKey = product != null ? product.ProductKey : string.Empty;
+            if (keepRuleDraftProductKey == productKey)
+            {
+                return;
+            }
+
+            keepRuleDraftProductKey = productKey;
+            keepRuleDraftAmount = rule != null
+                ? Mathf.Max(PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT, rule.TargetAmount)
+                : Mathf.Max(PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT, requestedProductAmount);
+        }
+
+        private bool IsOrderInputFocused()
+        {
+            return (orderAmountInput != null && orderAmountInput.isFocused) ||
+                   (keepRuleAmountInput != null && keepRuleAmountInput.isFocused);
+        }
+
+        private void DeactivateOrderInputs()
+        {
+            SafeDeactivateInput(orderAmountInput);
+            SafeDeactivateInput(keepRuleAmountInput);
+            orderAmountInput = null;
+            keepRuleAmountInput = null;
+        }
+
+        private static void SafeDeactivateInput(TMP_InputField input)
+        {
+            if (input == null)
+            {
+                return;
+            }
+
+            try
+            {
+                input.DeactivateInputField();
+            }
+            catch (System.Exception exception)
+            {
+                Debug.LogWarning("[StorageNetwork] Failed to deactivate input field before rebuilding UI: " + exception);
+            }
+        }
+
+        private float GetKeepRuleAmountFromInput(ProductionKeepRule currentRule)
+        {
+            if (keepRuleAmountInput != null && TryParseAmount(keepRuleAmountInput.text, out float parsed))
+            {
+                return Mathf.Max(PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT, parsed);
+            }
+
+            if (currentRule != null)
+            {
+                return Mathf.Max(PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT, currentRule.TargetAmount);
+            }
+
+            return Mathf.Max(PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT, requestedProductAmount);
+        }
+
         private void AddTableHeader(Transform parent, string left, string middle, string right)
         {
             AddTableRow(parent, left, middle, right, new Color(0.18f, 0.19f, 0.18f, 1f), true);
@@ -1053,7 +1265,13 @@ namespace StorageNetwork.UI
 
             for (int i = parent.childCount - 1; i >= 0; i--)
             {
-                Destroy(parent.GetChild(i).gameObject);
+                GameObject child = parent.GetChild(i).gameObject;
+                foreach (TMP_InputField input in child.GetComponentsInChildren<TMP_InputField>(true))
+                {
+                    SafeDeactivateInput(input);
+                }
+
+                Destroy(child);
             }
         }
 

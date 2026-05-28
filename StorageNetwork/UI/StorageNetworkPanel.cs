@@ -65,6 +65,11 @@ namespace StorageNetwork.UI
             return instance != null && instance.gameObject != null && instance.gameObject.activeInHierarchy;
         }
 
+        public static bool IsTextInputFocused()
+        {
+            return IsOpen() && StorageNetworkTextInputGuard.IsAnyFocused;
+        }
+
         public static bool CloseFromRightClick()
         {
             if (!IsOpen())
@@ -249,7 +254,7 @@ namespace StorageNetwork.UI
             TextMeshProUGUI title = CreateText("Title", header.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TITLE), 14, TextAlignmentOptions.MidlineLeft);
             title.fontStyle = FontStyles.Bold;
             Stretch(title.rectTransform(), 12f, 0f);
-            title.rectTransform().offsetMax = new Vector2(-92f, 0f);
+            title.rectTransform().offsetMax = new Vector2(-210f, 0f);
 
             GameObject enrollableButton = CreateGameButton("EnrollableButton", header.transform, string.Empty, ShowEnrollableBuildingsDialog);
             RectTransform enrollableRect = enrollableButton.GetComponent<RectTransform>();
@@ -257,8 +262,8 @@ namespace StorageNetwork.UI
             enrollableRect.anchorMax = new Vector2(0f, 0.5f);
             enrollableRect.pivot = new Vector2(0f, 0.5f);
             enrollableRect.anchoredPosition = new Vector2(92f, 0f);
-            enrollableRect.sizeDelta = new Vector2(26f, 22f);
-            AddButtonIcon(enrollableButton.transform, "storage_network_overlay", "+");
+            enrollableRect.sizeDelta = new Vector2(72f, 22f);
+            AddButtonIconLabel(enrollableButton.transform, "storage_network_overlay", "+", "可接入");
             ToolTip enrollableTooltip = enrollableButton.AddComponent<ToolTip>();
             enrollableTooltip.toolTip = Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENROLLABLE_BUTTON_TOOLTIP);
 
@@ -267,9 +272,9 @@ namespace StorageNetwork.UI
             headerWindowRect.anchorMin = new Vector2(0f, 0.5f);
             headerWindowRect.anchorMax = new Vector2(0f, 0.5f);
             headerWindowRect.pivot = new Vector2(0f, 0.5f);
-            headerWindowRect.anchoredPosition = new Vector2(124f, 0f);
-            headerWindowRect.sizeDelta = new Vector2(26f, 22f);
-            AddButtonIcon(headerWindowButton.transform, "icon_action_building_disabled", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.HEADER_WINDOW_BUTTON));
+            headerWindowRect.anchoredPosition = new Vector2(170f, 0f);
+            headerWindowRect.sizeDelta = new Vector2(58f, 22f);
+            AddButtonIconLabel(headerWindowButton.transform, "icon_action_building_disabled", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.HEADER_WINDOW_BUTTON), "配方");
             ToolTip headerWindowTooltip = headerWindowButton.AddComponent<ToolTip>();
             headerWindowTooltip.toolTip = Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.HEADER_WINDOW_TOOLTIP);
 
@@ -358,10 +363,7 @@ namespace StorageNetwork.UI
             listScrollRect = scrollRect;
             scrollRect.viewport = viewportRect;
             scrollRect.content = listContent;
-            scrollRect.horizontal = false;
-            scrollRect.vertical = true;
-            scrollRect.movementType = ScrollRect.MovementType.Clamped;
-            scrollRect.scrollSensitivity = 28f;
+            ConfigureSmoothVerticalScroll(scrollRect, 30f);
             scrollRect.verticalScrollbar = scrollbar;
             scrollRect.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHideAndExpandViewport;
             scrollRect.verticalScrollbarSpacing = 4f;
@@ -417,8 +419,10 @@ namespace StorageNetwork.UI
             string listSignature = BuildListSignature(currentSnapshot.Storages);
             if (forceRebuild || listSignature != lastListSignature)
             {
+                float scrollOffset = GetListScrollOffset();
                 lastListSignature = listSignature;
                 RebuildStorageRows(currentSnapshot.Storages);
+                RestoreListScrollOffset(scrollOffset);
             }
 
             UpdateCategorySummaryPanel();
@@ -495,10 +499,28 @@ namespace StorageNetwork.UI
 
             Canvas.ForceUpdateCanvases();
             LayoutRebuilder.ForceRebuildLayoutImmediate(listContent);
-            if (listScrollRect != null && selectedItemStorage != null)
+        }
+
+        private float GetListScrollOffset()
+        {
+            return listContent != null ? Mathf.Max(0f, listContent.anchoredPosition.y) : 0f;
+        }
+
+        private void RestoreListScrollOffset(float scrollOffset)
+        {
+            if (listScrollRect == null || listContent == null)
             {
-                listScrollRect.verticalNormalizedPosition = 1f;
+                return;
             }
+
+            Canvas.ForceUpdateCanvases();
+            LayoutRebuilder.ForceRebuildLayoutImmediate(listContent);
+            listScrollRect.StopMovement();
+            float viewportHeight = listScrollRect.viewport != null ? listScrollRect.viewport.rect.height : 0f;
+            float maxOffset = Mathf.Max(0f, listContent.rect.height - viewportHeight);
+            Vector2 position = listContent.anchoredPosition;
+            position.y = Mathf.Clamp(scrollOffset, 0f, maxOffset);
+            listContent.anchoredPosition = position;
         }
 
         private void ClearList()
@@ -510,7 +532,9 @@ namespace StorageNetwork.UI
 
             for (int i = listContent.childCount - 1; i >= 0; i--)
             {
-                Destroy(listContent.GetChild(i).gameObject);
+                GameObject child = listContent.GetChild(i).gameObject;
+                child.SetActive(false);
+                Destroy(child);
             }
         }
 
@@ -523,7 +547,9 @@ namespace StorageNetwork.UI
 
             for (int i = categoryContent.childCount - 1; i >= 0; i--)
             {
-                Destroy(categoryContent.GetChild(i).gameObject);
+                GameObject child = categoryContent.GetChild(i).gameObject;
+                child.SetActive(false);
+                Destroy(child);
             }
         }
 
@@ -550,6 +576,12 @@ namespace StorageNetwork.UI
         {
             if (e.Consumed)
             {
+                return;
+            }
+
+            if (IsTextInputFocused())
+            {
+                e.Consumed = true;
                 return;
             }
 

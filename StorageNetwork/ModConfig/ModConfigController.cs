@@ -77,6 +77,9 @@ namespace ModConfig
                     Label = binding.Option.Label,
                     Description = binding.Option.Description,
                     Value = binding.GetValue(config),
+                    Min = binding.Option.Min,
+                    Max = binding.Option.Max,
+                    Integer = binding.Option.Integer || binding.Property.PropertyType == typeof(int),
                     Apply = value => binding.SetValue(config, value)
                 });
             }

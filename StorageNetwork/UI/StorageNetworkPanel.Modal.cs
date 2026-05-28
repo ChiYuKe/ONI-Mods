@@ -331,10 +331,7 @@ namespace StorageNetwork.UI
             ScrollRect scrollRect = list.AddComponent<ScrollRect>();
             scrollRect.viewport = viewportRect;
             scrollRect.content = content;
-            scrollRect.horizontal = false;
-            scrollRect.vertical = true;
-            scrollRect.movementType = ScrollRect.MovementType.Clamped;
-            scrollRect.scrollSensitivity = 24f;
+            ConfigureSmoothVerticalScroll(scrollRect, 26f);
             scrollRect.verticalScrollbar = scrollbar;
             scrollRect.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHideAndExpandViewport;
             scrollRect.verticalScrollbarSpacing = 2f;
@@ -416,35 +413,63 @@ namespace StorageNetwork.UI
             sliderObject.SetActive(false);
             sliderObject.transform.SetParent(parent, false);
             sliderObject.AddComponent<RectTransform>();
-            sliderObject.AddComponent<LayoutElement>().preferredHeight = 20f;
+            sliderObject.AddComponent<LayoutElement>().preferredHeight = 32f;
 
-            GameObject background = CreatePlainImage("Background", sliderObject.transform, new Color(0.10f, 0.11f, 0.13f, 1f));
-            Stretch(background.GetComponent<RectTransform>(), 0f, 6f);
+            GameObject background = CreatePlainImage("Background", sliderObject.transform, Color.white);
+            RectTransform backgroundRect = background.GetComponent<RectTransform>();
+            backgroundRect.anchorMin = new Vector2(0f, 0.25f);
+            backgroundRect.anchorMax = new Vector2(1f, 0.75f);
+            backgroundRect.offsetMin = Vector2.zero;
+            backgroundRect.offsetMax = Vector2.zero;
+            ApplyOniSliderFrame(background.GetComponent<Image>());
 
             GameObject fillArea = new GameObject("Fill Area");
             fillArea.transform.SetParent(sliderObject.transform, false);
             RectTransform fillAreaRect = fillArea.AddComponent<RectTransform>();
-            Stretch(fillAreaRect, 3f, 6f);
+            fillAreaRect.anchorMin = new Vector2(0f, 0.25f);
+            fillAreaRect.anchorMax = new Vector2(1f, 0.75f);
+            fillAreaRect.anchoredPosition = Vector2.zero;
+            fillAreaRect.sizeDelta = new Vector2(-20f, 0f);
 
-            GameObject fill = CreatePlainImage("Fill", fillArea.transform, new Color(0.58f, 0.22f, 0.43f, 1f));
-            Stretch(fill.GetComponent<RectTransform>(), 0f, 0f);
+            GameObject fillStart = CreatePlainImage("Fill Start", fillArea.transform, Color.white);
+            RectTransform fillStartRect = fillStart.GetComponent<RectTransform>();
+            fillStartRect.anchorMin = Vector2.zero;
+            fillStartRect.anchorMax = new Vector2(0f, 1f);
+            fillStartRect.anchoredPosition = Vector2.zero;
+            fillStartRect.sizeDelta = new Vector2(12f, 0f);
+            ApplyOniSliderFillCap(fillStart.GetComponent<Image>());
+
+            GameObject fill = CreatePlainImage("Fill", fillArea.transform, Color.white);
+            RectTransform fillRect = fill.GetComponent<RectTransform>();
+            fillRect.anchorMin = Vector2.zero;
+            fillRect.anchorMax = Vector2.one;
+            fillRect.offsetMin = Vector2.zero;
+            fillRect.offsetMax = Vector2.zero;
+            ApplyOniSliderFill(fill.GetComponent<Image>());
 
             GameObject handleArea = new GameObject("Handle Slide Area");
             handleArea.transform.SetParent(sliderObject.transform, false);
             RectTransform handleAreaRect = handleArea.AddComponent<RectTransform>();
-            Stretch(handleAreaRect, 8f, 0f);
+            handleAreaRect.anchorMin = Vector2.zero;
+            handleAreaRect.anchorMax = Vector2.one;
+            handleAreaRect.anchoredPosition = Vector2.zero;
+            handleAreaRect.sizeDelta = new Vector2(-20f, 0f);
 
-            GameObject handle = CreatePlainImage("Handle", handleArea.transform, new Color(0.66f, 0.37f, 0.55f, 1f));
+            GameObject handle = CreatePlainImage("Handle", handleArea.transform, Color.white);
             RectTransform handleRect = handle.GetComponent<RectTransform>();
-            handleRect.sizeDelta = new Vector2(12f, 16f);
+            handleRect.anchorMin = Vector2.zero;
+            handleRect.anchorMax = Vector2.zero;
+            handleRect.anchoredPosition = new Vector2(0.9f, 0f);
+            handleRect.sizeDelta = new Vector2(22.7f, -5.8f);
+            ApplyOniSliderHandle(handle.GetComponent<Image>());
 
             KSlider slider = sliderObject.AddComponent<KSlider>();
             slider.minValue = 0f;
             slider.maxValue = Mathf.Max(0.001f, maxAmount);
             slider.value = maxAmount;
-            slider.fillRect = fill.GetComponent<RectTransform>();
+            slider.fillRect = fillRect;
             slider.handleRect = handleRect;
-            slider.targetGraphic = handle.GetComponent<Image>();
+            slider.targetGraphic = null;
             slider.direction = Slider.Direction.LeftToRight;
             sliderObject.SetActive(true);
             return slider;
@@ -461,21 +486,34 @@ namespace StorageNetwork.UI
 
         private static KInputTextField CreateAmountInput(Transform parent)
         {
-            GameObject inputObject = CreatePlainImage("AmountInput", parent, new Color(0.14f, 0.16f, 0.20f, 1f));
+            GameObject inputObject = CreatePlainImage("AmountInput", parent, Color.white);
             LayoutElement inputLayout = inputObject.AddComponent<LayoutElement>();
             inputLayout.preferredWidth = 150f;
             inputLayout.preferredHeight = 24f;
+            ApplyOniInputSlotStyle(inputObject.GetComponent<Image>());
 
             TextMeshProUGUI text = CreateText("Text", inputObject.transform, string.Empty, 13, TextAlignmentOptions.MidlineLeft);
-            text.color = Color.white;
-            Stretch(text.rectTransform(), 8f, 3f);
+            text.color = new Color(0.08f, 0.09f, 0.10f, 1f);
+            Stretch(text.rectTransform(), 12f, 3f);
+
+            GameObject indicator = CreatePlainImage("InputIndicator", inputObject.transform, new Color(0.10f, 0.12f, 0.14f, 0.88f));
+            RectTransform indicatorRect = indicator.GetComponent<RectTransform>();
+            indicatorRect.anchorMin = new Vector2(0f, 0.5f);
+            indicatorRect.anchorMax = new Vector2(0f, 0.5f);
+            indicatorRect.pivot = new Vector2(0f, 0.5f);
+            indicatorRect.anchoredPosition = new Vector2(5f, 0f);
+            indicatorRect.sizeDelta = new Vector2(2f, 14f);
+            indicator.GetComponent<Image>().raycastTarget = false;
 
             KInputTextField input = inputObject.AddComponent<KInputTextField>();
             input.textComponent = text;
             input.contentType = TMP_InputField.ContentType.DecimalNumber;
             input.lineType = TMP_InputField.LineType.SingleLine;
-            input.caretColor = Color.white;
-            input.selectionColor = new Color(0.55f, 0.67f, 0.76f, 0.55f);
+            input.customCaretColor = true;
+            input.caretColor = new Color(0.19607843f, 0.19607843f, 0.19607843f, 1f);
+            input.caretWidth = 2;
+            input.selectionColor = new Color(0.65882355f, 0.80784315f, 1f, 0.7529412f);
+            inputObject.AddComponent<StorageNetworkTextInputGuard>().Configure(input);
             return input;
         }
 

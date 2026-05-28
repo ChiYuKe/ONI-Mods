@@ -111,10 +111,7 @@ namespace StorageNetwork.UI
             ScrollRect scrollRect = viewport.AddComponent<ScrollRect>();
             scrollRect.viewport = viewport.GetComponent<RectTransform>();
             scrollRect.content = categorySummaryContent;
-            scrollRect.horizontal = false;
-            scrollRect.vertical = true;
-            scrollRect.movementType = ScrollRect.MovementType.Clamped;
-            scrollRect.scrollSensitivity = 24f;
+            ConfigureSmoothVerticalScroll(scrollRect, 26f);
             scrollRect.verticalScrollbar = scrollbar;
             scrollRect.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHideAndExpandViewport;
             scrollRect.verticalScrollbarSpacing = 2f;

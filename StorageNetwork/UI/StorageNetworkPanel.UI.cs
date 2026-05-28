@@ -104,6 +104,61 @@ namespace StorageNetwork.UI
             return gameObject;
         }
 
+        private static void ApplyOniInputSlotStyle(Image image)
+        {
+            ApplyOniSprite(image, "web_box", Color.white, Image.Type.Sliced, preserveAspect: false);
+        }
+
+        private static void ApplyOniSliderFrame(Image image)
+        {
+            ApplyOniSprite(image, "build_menu_scrollbar_frame_horizontal", Color.white, Image.Type.Sliced, preserveAspect: false);
+        }
+
+        private static void ApplyOniSliderFill(Image image)
+        {
+            if (image == null)
+            {
+                return;
+            }
+
+            image.sprite = null;
+            image.type = Image.Type.Simple;
+            image.preserveAspect = false;
+            image.color = new Color(0.65882355f, 0.2901961f, 0.47450984f, 1f);
+        }
+
+        private static void ApplyOniSliderFillCap(Image image)
+        {
+            ApplyOniSprite(image, "build_menu_scrollbar_inner_horizontal", new Color(0.65882355f, 0.2901961f, 0.47450984f, 1f), Image.Type.Simple, preserveAspect: false);
+        }
+
+        private static void ApplyOniSliderHandle(Image image)
+        {
+            ApplyOniSprite(image, "game_speed_selected_med", Color.white, Image.Type.Simple, preserveAspect: true);
+        }
+
+        private static void ApplyOniSprite(Image image, string spriteName, Color color, Image.Type type, bool preserveAspect)
+        {
+            if (image == null)
+            {
+                return;
+            }
+
+            Sprite sprite = GetSpriteByName(spriteName);
+            if (sprite == null)
+            {
+                image.color = color;
+                return;
+            }
+
+            image.sprite = sprite;
+            image.type = type;
+            image.color = color;
+            image.preserveAspect = preserveAspect;
+            image.fillCenter = true;
+            image.pixelsPerUnitMultiplier = 1f;
+        }
+
         private static GameObject CreateBox(string name, Transform parent, Color color)
         {
             GameObject box = new GameObject(name);
@@ -193,34 +248,113 @@ namespace StorageNetwork.UI
 
         private static Scrollbar CreateScrollbar(Transform parent)
         {
+            return CreateScrollbar(parent, 4f, 4f);
+        }
+
+        private static Scrollbar CreateScrollbar(Transform parent, float topInset, float bottomInset)
+        {
             GameObject scrollbarObject = new GameObject("Scrollbar");
             scrollbarObject.transform.SetParent(parent, false);
             RectTransform scrollbarRect = scrollbarObject.AddComponent<RectTransform>();
             scrollbarRect.anchorMin = new Vector2(1f, 0f);
             scrollbarRect.anchorMax = Vector2.one;
             scrollbarRect.pivot = new Vector2(1f, 0.5f);
-            scrollbarRect.offsetMin = new Vector2(-18f, 8f);
-            scrollbarRect.offsetMax = new Vector2(-8f, -8f);
+            scrollbarRect.offsetMin = new Vector2(-13f, bottomInset);
+            scrollbarRect.offsetMax = new Vector2(-4f, -topInset);
 
             Image background = scrollbarObject.AddComponent<Image>();
-            background.color = new Color(0.48f, 0.49f, 0.50f, 1f);
+            ApplyVerticalScrollbarFrame(background);
+
+            GameObject slidingArea = new GameObject("Sliding Area");
+            slidingArea.transform.SetParent(scrollbarObject.transform, false);
+            RectTransform slidingRect = slidingArea.AddComponent<RectTransform>();
+            slidingRect.anchorMin = Vector2.zero;
+            slidingRect.anchorMax = Vector2.one;
+            slidingRect.anchoredPosition = Vector2.zero;
+            slidingRect.sizeDelta = new Vector2(-20f, 0f);
 
             GameObject handleObject = new GameObject("Handle");
-            handleObject.transform.SetParent(scrollbarObject.transform, false);
+            handleObject.transform.SetParent(slidingArea.transform, false);
             RectTransform handleRect = handleObject.AddComponent<RectTransform>();
             handleRect.anchorMin = Vector2.zero;
-            handleRect.anchorMax = Vector2.one;
-            handleRect.offsetMin = Vector2.zero;
-            handleRect.offsetMax = Vector2.zero;
+            handleRect.anchorMax = Vector2.zero;
+            handleRect.anchoredPosition = Vector2.zero;
+            handleRect.sizeDelta = new Vector2(16f, -10f);
 
             Image handleImage = handleObject.AddComponent<Image>();
-            handleImage.color = new Color(0.22f, 0.25f, 0.34f, 1f);
+            ApplyVerticalScrollbarHandle(handleImage);
 
             Scrollbar scrollbar = scrollbarObject.AddComponent<Scrollbar>();
+            scrollbar.interactable = true;
+            scrollbar.transition = Selectable.Transition.None;
             scrollbar.direction = Scrollbar.Direction.BottomToTop;
             scrollbar.handleRect = handleRect;
             scrollbar.targetGraphic = handleImage;
             return scrollbar;
         }
+
+        private static void ConfigureSmoothVerticalScroll(ScrollRect scrollRect, float sensitivity)
+        {
+            if (scrollRect == null)
+            {
+                return;
+            }
+
+            scrollRect.horizontal = false;
+            scrollRect.vertical = true;
+            scrollRect.movementType = ScrollRect.MovementType.Elastic;
+            scrollRect.elasticity = 0.10f;
+            scrollRect.inertia = true;
+            scrollRect.decelerationRate = 0.08f;
+            scrollRect.scrollSensitivity = sensitivity;
+
+            SmoothScrollEdgeBounce edgeBounce = scrollRect.gameObject.GetComponent<SmoothScrollEdgeBounce>();
+            if (edgeBounce == null)
+            {
+                edgeBounce = scrollRect.gameObject.AddComponent<SmoothScrollEdgeBounce>();
+            }
+
+            edgeBounce.Configure(scrollRect);
+        }
+
+        /// <summary>
+        /// 使用原版建造菜单竖滚动条轨道纹理。
+        /// </summary>
+        private static void ApplyVerticalScrollbarFrame(Image image)
+        {
+            ApplyScrollbarSprite(image, "build_menu_scrollbar_frame", Color.white, new Color(0.09f, 0.1f, 0.12f, 1f));
+        }
+
+        /// <summary>
+        /// 使用原版建造菜单竖滚动条滑块纹理。
+        /// </summary>
+        private static void ApplyVerticalScrollbarHandle(Image image)
+        {
+            ApplyScrollbarSprite(image, "build_menu_scrollbar_inner", new Color(0.6313726f, 0.6392157f, 0.682353f, 1f), new Color(0.6313726f, 0.6392157f, 0.682353f, 1f));
+        }
+
+        private static void ApplyScrollbarSprite(Image image, string spriteName, Color spriteColor, Color fallbackColor)
+        {
+            if (image == null)
+            {
+                return;
+            }
+
+            Sprite sprite = GetSpriteByName(spriteName);
+            if (sprite != null)
+            {
+                image.sprite = sprite;
+                image.type = Image.Type.Sliced;
+                image.fillCenter = true;
+                image.pixelsPerUnitMultiplier = 1f;
+                image.color = spriteColor;
+                return;
+            }
+
+            image.sprite = null;
+            image.type = Image.Type.Simple;
+            image.color = fallbackColor;
+        }
+
     }
 }

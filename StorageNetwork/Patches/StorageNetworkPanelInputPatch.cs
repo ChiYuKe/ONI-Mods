@@ -10,6 +10,12 @@ namespace StorageNetwork.Patches
         {
             public static bool Prefix(KButtonEvent e)
             {
+                if (StorageNetworkPanel.IsTextInputFocused())
+                {
+                    e.Consumed = true;
+                    return false;
+                }
+
                 return !ConsumeStorageNetworkRightClick(e);
             }
         }
@@ -19,6 +25,12 @@ namespace StorageNetwork.Patches
         {
             public static bool Prefix(KButtonEvent e)
             {
+                if (StorageNetworkPanel.IsTextInputFocused())
+                {
+                    e.Consumed = true;
+                    return false;
+                }
+
                 return !ConsumeStorageNetworkRightClick(e, true);
             }
         }
@@ -28,6 +40,12 @@ namespace StorageNetwork.Patches
         {
             public static bool Prefix(KButtonEvent e)
             {
+                if (StorageNetworkPanel.IsTextInputFocused())
+                {
+                    e.Consumed = true;
+                    return false;
+                }
+
                 return !ConsumeStorageNetworkRightClick(e, true);
             }
         }
@@ -37,6 +55,12 @@ namespace StorageNetwork.Patches
         {
             public static bool Prefix(KButtonEvent e)
             {
+                if (StorageNetworkPanel.IsTextInputFocused())
+                {
+                    e.Consumed = true;
+                    return false;
+                }
+
                 return !ConsumeStorageNetworkRightClick(e, true);
             }
         }

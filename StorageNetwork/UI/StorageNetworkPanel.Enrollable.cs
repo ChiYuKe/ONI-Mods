@@ -39,8 +39,8 @@ namespace StorageNetwork.UI
                 .ToList();
 
             TextMeshProUGUI header = CreateText("Header", enrollableWindowContent, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENROLLABLE_HEADER), 14, TextAlignmentOptions.MidlineLeft);
-            header.color = new Color(0.95f, 0.91f, 0.78f, 1f);
-            header.fontStyle = FontStyles.Bold;
+            header.color = new Color(0.34f, 0.39f, 0.38f, 1f);
+            header.fontStyle = FontStyles.Normal;
             header.gameObject.AddComponent<LayoutElement>().preferredHeight = 28f;
 
             if (enrollments.Count == 0)
@@ -125,15 +125,12 @@ namespace StorageNetwork.UI
             layout.childForceExpandHeight = false;
             content.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
-            Scrollbar scrollbar = CreateScrollbar(enrollableWindowRoot.transform);
+            Scrollbar scrollbar = CreateScrollbar(enrollableWindowRoot.transform, 58f, 10f);
 
             ScrollRect scrollRect = viewport.AddComponent<ScrollRect>();
             scrollRect.viewport = viewport.GetComponent<RectTransform>();
             scrollRect.content = enrollableWindowContent;
-            scrollRect.horizontal = false;
-            scrollRect.vertical = true;
-            scrollRect.movementType = ScrollRect.MovementType.Clamped;
-            scrollRect.scrollSensitivity = 24f;
+            ConfigureSmoothVerticalScroll(scrollRect, 26f);
             scrollRect.verticalScrollbar = scrollbar;
             scrollRect.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHideAndExpandViewport;
             scrollRect.verticalScrollbarSpacing = 2f;

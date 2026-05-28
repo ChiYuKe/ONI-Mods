@@ -1,16 +1,20 @@
 using System.Collections.Generic;
 using HarmonyLib;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace ModConfig
 {
     public sealed class ModsScreenOptionsButtonDefinition
     {
+        private const float CompactButtonWidth = 52f;
+
         public string ModTitlePrefix { get; set; }
         public string ButtonName { get; set; }
         public string ButtonText { get; set; } = "选项";
         public string Tooltip { get; set; }
         public Vector2 ButtonOffset { get; set; } = new Vector2(-72f, 0f);
+        public Vector2 ButtonSize { get; set; } = new Vector2(CompactButtonWidth, 0f);
         public System.Action OnClick { get; set; }
     }
 
@@ -108,14 +112,54 @@ namespace ModConfig
             RectTransform sourceRect = manageButton.GetComponent<RectTransform>();
             if (rect != null && sourceRect != null)
             {
+                Vector2 sourcePosition = sourceRect.anchoredPosition;
                 rect.anchorMin = sourceRect.anchorMin;
                 rect.anchorMax = sourceRect.anchorMax;
                 rect.pivot = sourceRect.pivot;
-                rect.sizeDelta = new Vector2(64f, sourceRect.sizeDelta.y);
-                rect.anchoredPosition = sourceRect.anchoredPosition + definition.ButtonOffset;
+                float width = definition.ButtonSize.x > 0f ? definition.ButtonSize.x : sourceRect.sizeDelta.x;
+                float height = definition.ButtonSize.y > 0f ? definition.ButtonSize.y : sourceRect.sizeDelta.y;
+                rect.sizeDelta = new Vector2(width, height);
+                rect.anchoredPosition = sourcePosition + definition.ButtonOffset;
+                ApplyCompactLayout(buttonObject, width, height);
             }
 
+            Component enabledToggle = references != null ? references.GetReference<Component>("EnabledToggle") : null;
+            Transform insertBefore = enabledToggle != null ? enabledToggle.transform : manageButton.transform;
+            buttonObject.transform.SetSiblingIndex(insertBefore.GetSiblingIndex());
             buttonObject.SetActive(true);
+        }
+
+        private static void ApplyCompactLayout(GameObject buttonObject, float width, float height)
+        {
+            LayoutElement layout = buttonObject.GetComponent<LayoutElement>();
+            if (layout != null)
+            {
+                layout.minWidth = width;
+                layout.preferredWidth = width;
+                layout.flexibleWidth = 0f;
+                layout.minHeight = height;
+                layout.preferredHeight = height;
+                layout.flexibleHeight = 0f;
+            }
+
+            RectTransform textRect = null;
+            LocText label = buttonObject.GetComponentInChildren<LocText>();
+            if (label != null)
+            {
+                textRect = label.rectTransform();
+                label.alignment = TMPro.TextAlignmentOptions.Center;
+                label.enableAutoSizing = true;
+                label.fontSizeMin = 9f;
+                label.fontSizeMax = 14f;
+            }
+
+            if (textRect != null)
+            {
+                textRect.anchorMin = Vector2.zero;
+                textRect.anchorMax = Vector2.one;
+                textRect.offsetMin = Vector2.zero;
+                textRect.offsetMax = Vector2.zero;
+            }
         }
     }
 }

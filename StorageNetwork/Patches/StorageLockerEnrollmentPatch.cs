@@ -21,10 +21,25 @@ namespace StorageNetwork.Patches
         {
             public static void Postfix(UnityEngine.GameObject go)
             {
-                go.AddOrGet<StorageNetworkEnrollment>();
-                go.AddOrGet<StorageNetworkStorageConnector>();
-                KPrefabID prefabId = go.GetComponent<KPrefabID>();
-                prefabId?.AddTag(StorageNetworkTags.ShowSettingsButton);
+                AddPlainStorageEnrollment(go);
+            }
+        }
+
+        [HarmonyPatch(typeof(LiquidReservoirConfig), nameof(LiquidReservoirConfig.ConfigureBuildingTemplate))]
+        public static class LiquidReservoirConfigConfigureBuildingTemplatePatch
+        {
+            public static void Postfix(UnityEngine.GameObject go)
+            {
+                AddPlainStorageEnrollment(go);
+            }
+        }
+
+        [HarmonyPatch(typeof(GasReservoirConfig), nameof(GasReservoirConfig.ConfigureBuildingTemplate))]
+        public static class GasReservoirConfigConfigureBuildingTemplatePatch
+        {
+            public static void Postfix(UnityEngine.GameObject go)
+            {
+                AddPlainStorageEnrollment(go);
             }
         }
 
@@ -41,12 +56,31 @@ namespace StorageNetwork.Patches
                     }
 
                     GameObject go = refrigerator.gameObject;
-                    go.AddOrGet<StorageNetworkEnrollment>();
-                    go.AddOrGet<StorageNetworkStorageConnector>();
-                    KPrefabID prefabId = go.GetComponent<KPrefabID>();
-                    prefabId?.AddTag(StorageNetworkTags.ShowSettingsButton);
+                    AddPlainStorageEnrollment(go);
+                }
+
+                foreach (Reservoir reservoir in Object.FindObjectsByType<Reservoir>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+                {
+                    if (reservoir == null)
+                    {
+                        continue;
+                    }
+
+                    AddPlainStorageEnrollment(reservoir.gameObject);
                 }
             }
+        }
+
+        private static void AddPlainStorageEnrollment(UnityEngine.GameObject go)
+        {
+            if (go == null)
+            {
+                return;
+            }
+
+            go.AddOrGet<StorageNetworkEnrollment>();
+            KPrefabID prefabId = go.GetComponent<KPrefabID>();
+            prefabId?.RemoveTag(StorageNetworkTags.ShowSettingsButton);
         }
 
     }

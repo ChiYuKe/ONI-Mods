@@ -152,6 +152,7 @@ namespace StorageNetwork.UI
                         group.Key,
                         GetStoredItemName(group.FirstOrDefault()),
                         GameUtil.GetFormattedMass(mass),
+                        FormatStoredItemTemperature(group),
                         group.FirstOrDefault());
                 }
             }
@@ -209,7 +210,7 @@ namespace StorageNetwork.UI
             Stretch(label.rectTransform(), 8f, 5f);
         }
 
-        private void CreateStoredItemRow(Storage storage, Transform parent, string itemKey, string itemName, string formattedMass, GameObject representative)
+        private void CreateStoredItemRow(Storage storage, Transform parent, string itemKey, string itemName, string formattedMass, string formattedTemperature, GameObject representative)
         {
             GameObject row = new GameObject("ItemRow");
             row.transform.SetParent(parent, false);
@@ -264,11 +265,25 @@ namespace StorageNetwork.UI
             TextMeshProUGUI itemText = CreateText(
                 "Text",
                 row.transform,
-                string.Format("{0}    {1}", itemName, formattedMass),
+                itemName,
                 12,
                 TextAlignmentOptions.MidlineLeft);
             itemText.color = new Color(0.18f, 0.19f, 0.19f, 1f);
-            itemText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+            itemText.textWrappingMode = TextWrappingModes.NoWrap;
+            itemText.overflowMode = TextOverflowModes.Ellipsis;
+            LayoutElement itemTextLayout = itemText.gameObject.AddComponent<LayoutElement>();
+            itemTextLayout.preferredWidth = 85f;
+            itemTextLayout.flexibleWidth = 0f;
+
+            TextMeshProUGUI massText = CreateText("Mass", row.transform, formattedMass, 12, TextAlignmentOptions.MidlineLeft);
+            massText.color = new Color(0.30f, 0.31f, 0.31f, 1f);
+            massText.textWrappingMode = TextWrappingModes.NoWrap;
+            massText.gameObject.AddComponent<LayoutElement>().preferredWidth = 80f;
+
+            TextMeshProUGUI temperatureText = CreateText("Temperature", row.transform, formattedTemperature, 12, TextAlignmentOptions.MidlineLeft);
+            temperatureText.color = new Color(0.36f, 0.38f, 0.38f, 1f);
+            temperatureText.textWrappingMode = TextWrappingModes.NoWrap;
+            temperatureText.gameObject.AddComponent<LayoutElement>().preferredWidth = 262f;
 
             if (selected)
             {
@@ -286,6 +301,46 @@ namespace StorageNetwork.UI
                 ToolTip tooltip = dropButton.AddComponent<ToolTip>();
                 tooltip.toolTip = Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.DROP_TOOLTIP);
             }
+        }
+
+        private static string FormatStoredItemTemperature(IEnumerable<GameObject> items)
+        {
+            float weightedTemperature = 0f;
+            float totalMass = 0f;
+            float simpleTemperature = 0f;
+            int temperatureCount = 0;
+
+            foreach (GameObject item in items)
+            {
+                PrimaryElement primaryElement = item != null ? item.GetComponent<PrimaryElement>() : null;
+                if (primaryElement == null)
+                {
+                    continue;
+                }
+
+                float mass = Mathf.Max(0f, primaryElement.Mass);
+                if (mass > 0f)
+                {
+                    weightedTemperature += primaryElement.Temperature * mass;
+                    totalMass += mass;
+                }
+
+                simpleTemperature += primaryElement.Temperature;
+                temperatureCount++;
+            }
+
+            if (temperatureCount == 0)
+            {
+                return string.Empty;
+            }
+
+            float temperature = totalMass > 0f ? weightedTemperature / totalMass : simpleTemperature / temperatureCount;
+            return GameUtil.GetFormattedTemperature(
+                temperature,
+                GameUtil.TimeSlice.None,
+                GameUtil.TemperatureInterpretation.Absolute,
+                true,
+                false);
         }
 
         private void CreateTargetSelectionRow(Transform parent, Storage source, Storage target, bool selected, System.Action onClick)
@@ -396,6 +451,45 @@ namespace StorageNetwork.UI
             TextMeshProUGUI text = CreateText("FallbackText", iconObject.transform, fallbackText, 10, TextAlignmentOptions.Center);
             text.color = new Color(0.92f, 0.94f, 0.96f, 1f);
             Stretch(text.rectTransform(), 0f, 0f);
+        }
+
+        private static void AddButtonIconLabel(Transform parent, string spriteName, string fallbackText, string labelText)
+        {
+            GameObject iconObject = new GameObject("Icon");
+            iconObject.transform.SetParent(parent, false);
+            RectTransform iconRect = iconObject.AddComponent<RectTransform>();
+            iconRect.anchorMin = new Vector2(0f, 0.5f);
+            iconRect.anchorMax = new Vector2(0f, 0.5f);
+            iconRect.pivot = new Vector2(0f, 0.5f);
+            iconRect.anchoredPosition = new Vector2(5f, 0f);
+            iconRect.sizeDelta = new Vector2(16f, 16f);
+
+            Sprite sprite = GetSpriteByName(spriteName);
+            if (sprite != null)
+            {
+                Image icon = iconObject.AddComponent<Image>();
+                icon.sprite = sprite;
+                icon.type = Image.Type.Simple;
+                icon.preserveAspect = true;
+                icon.raycastTarget = false;
+                icon.color = new Color(0.92f, 0.94f, 0.96f, 1f);
+            }
+            else
+            {
+                TextMeshProUGUI fallback = CreateText("FallbackText", iconObject.transform, fallbackText, 10, TextAlignmentOptions.Center);
+                fallback.color = new Color(0.92f, 0.94f, 0.96f, 1f);
+                Stretch(fallback.rectTransform(), 0f, 0f);
+            }
+
+            TextMeshProUGUI label = CreateText("Label", parent, labelText, 11, TextAlignmentOptions.MidlineLeft);
+            label.color = new Color(0.94f, 0.96f, 0.98f, 1f);
+            label.textWrappingMode = TextWrappingModes.NoWrap;
+            label.overflowMode = TextOverflowModes.Ellipsis;
+            RectTransform labelRect = label.rectTransform();
+            labelRect.anchorMin = Vector2.zero;
+            labelRect.anchorMax = Vector2.one;
+            labelRect.offsetMin = new Vector2(24f, 0f);
+            labelRect.offsetMax = new Vector2(-5f, 0f);
         }
     }
 }
