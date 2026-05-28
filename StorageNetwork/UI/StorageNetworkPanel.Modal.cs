@@ -43,9 +43,8 @@ namespace StorageNetwork.UI
                 return;
             }
 
-            List<Storage> targets = StorageSceneCollector.Collect().Storages
-                .Select(info => info.Storage)
-                .Where(storage => storage != null && storage != source && storage.RemainingCapacity() > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+            List<Storage> targets = StorageNetworkStorageRules.GetNetworkStorageTargets(source)
+                .Where(storage => storage.RemainingCapacity() > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
                 .OrderBy(storage => storage.GetProperName())
                 .ToList();
 
@@ -109,7 +108,7 @@ namespace StorageNetwork.UI
             }
 
             StorageNetworkEnrollment enrollment = storage.GetComponent<StorageNetworkEnrollment>();
-            if (enrollment != null && enrollment.IsComplexRecipeBuilding())
+            if (StorageNetworkStorageRules.IsProductionStorage(storage, enrollment) || StorageNetworkStorageRules.HasSettingsButtonTag(storage))
             {
                 CloseModal();
                 ShowProductionSettingsPanel(storage);

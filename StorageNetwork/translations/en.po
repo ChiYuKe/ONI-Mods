@@ -103,6 +103,14 @@ msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CATEGORY_RECIPE_BUILDING"
 msgid "生产建筑"
 msgstr "Production Buildings"
 
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CATEGORY_MOD_STORAGE"
+msgid "模组建筑"
+msgstr "Mod Storage"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SOURCE_MOD_NAME"
+msgid "来源：{0}"
+msgstr "Source: {0}"
+
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SUMMARY_BUTTON"
 msgid "汇总"
 msgstr "Summary"
@@ -230,6 +238,22 @@ msgstr "Produce"
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_STATUS_BLOCKED"
 msgid "缺料"
 msgstr "Blocked"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_ABNORMAL_NOTIFICATION"
+msgid "储存网络订单异常"
+msgstr "Storage Network order issue"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_ABNORMAL_NOTIFICATION_TOOLTIP"
+msgid "以下生产订单已被储存网络自动取消，请检查材料来源、生产建筑或队列状态。\n"
+msgstr "The following production orders were automatically cancelled by Storage Network. Check material sources, production buildings, or queue state.\n"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_ABNORMAL_NOTIFICATION_DETAIL"
+msgid "• #{0} {1}：目标 {2}，已完成 {3}\n  {4}"
+msgstr "• #{0} {1}: target {2}, completed {3}\n  {4}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_ABNORMAL_DEFAULT_REASON"
+msgid "订单长时间没有进度变动。"
+msgstr "The order made no progress for too long."
 
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_DISPATCH_TITLE"
 msgid "调度策略"
@@ -434,6 +458,58 @@ msgstr "Materials supplied by Storage Network"
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_STATUS_TOOLTIP"
 msgid "这个建筑会从储存网络中请求当前生产需要的材料。\n{0}"
 msgstr "This building requests materials needed for production from the Storage Network.\n{0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_AUTO_DESC"
+msgid "自动从已接入网络的箱子中寻找材料，优先使用库存最多的来源。"
+msgstr "Automatically finds materials in connected network storage, preferring sources with the most stock."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_TITLE"
+msgid "成品入网"
+msgstr "Finished Products to Network"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_ENABLED"
+msgid "加工完成后自动存入网络"
+msgstr "Store finished products in network automatically"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STORAGE_OUTPUT_STORE_TITLE"
+msgid "内容物入网"
+msgstr "Contents to Network"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STORAGE_OUTPUT_STORE_ENABLED"
+msgid "允许把内容物输入网络"
+msgstr "Allow contents to enter network"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STORAGE_OUTPUT_STORE_DESC"
+msgid "开启后，这个储存建筑会把当前内容物自动转移到储存网络中的匹配箱子。"
+msgstr "When enabled, this storage building automatically transfers its contents to matching storage in the network."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_MODE"
+msgid "存放方式：{0}"
+msgstr "Storage mode: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_MODE_AUTO"
+msgid "自动寻找匹配箱子"
+msgstr "Find matching storage automatically"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_MODE_SPECIFIC"
+msgid "指定网络中某个箱子存放"
+msgstr "Store in a specific network storage building"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_AUTO_DESC"
+msgid "自动寻找已接入网络的匹配箱子，优先堆到已有同类物品的箱子；容量不足时会按剩余空间分批存入。"
+msgstr "Automatically finds matching connected storage, preferring storage that already contains the same item; if capacity is limited, items are transferred in batches."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_STATUS"
+msgid "入网状态：{0}"
+msgstr "Network status: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_TARGET"
+msgid "目标箱子：{0}"
+msgstr "Target storage: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_TARGET_DETAILS"
+msgid "当前 {0} / {1}    剩余 {2}"
+msgstr "Current {0} / {1}    Free {2}"
 
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CLOSE"
 msgid "关闭"

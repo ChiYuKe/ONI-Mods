@@ -351,7 +351,7 @@ namespace StorageNetwork.UI
 
         private void AddOrderEditorAndPlan(Transform parent, ProductDisplayGroup product, RecipeDisplayInfo route, ProductionOrderDraft draft)
         {
-            GameObject row = CreateSection(parent, "OrderEditorAndPlan", 390f, new Color(0.72f, 0.73f, 0.67f, 1f));
+            GameObject row = CreateSection(parent, "OrderEditorAndPlan", 450f, new Color(0.72f, 0.73f, 0.67f, 1f));
             HorizontalLayoutGroup layout = row.AddComponent<HorizontalLayoutGroup>();
             layout.padding = new RectOffset(0, 0, 0, 0);
             layout.spacing = 8f;
@@ -362,6 +362,7 @@ namespace StorageNetwork.UI
 
             GameObject editor = CreateSubPanel(row.transform, "DraftEditor", "下单参数", 278f, 260f, 0f);
             AddAmountEditor(editor.transform, product);
+            AddKeepRuleEditor(editor.transform, product, route);
             AddRouteEditor(editor.transform, product);
             AddRecipeEditor(editor.transform, product, route);
             AddValidationPanel(editor.transform, product, draft);
@@ -384,9 +385,10 @@ namespace StorageNetwork.UI
             layout.childControlWidth = true;
             layout.childControlHeight = true;
             layout.childForceExpandWidth = false;
-            layout.childForceExpandHeight = true;
+            layout.childForceExpandHeight = false;
 
             orderAmountInput = CreateAmountInput(row.transform);
+            orderAmountInput.gameObject.GetComponent<LayoutElement>().preferredWidth = 88f;
             orderAmountInput.text = FormatAmount(requestedProductAmount);
             orderAmountInput.onEndEdit.AddListener(value =>
             {
@@ -401,6 +403,54 @@ namespace StorageNetwork.UI
             AddQuickAmountButton(row.transform, 100f, "100kg");
             AddQuickAmountButton(row.transform, 500f, "500kg");
             AddQuickAmountButton(row.transform, 1000f, "1t");
+        }
+
+        private void AddKeepRuleEditor(Transform parent, ProductDisplayGroup product, RecipeDisplayInfo route)
+        {
+            ProductionKeepRule rule = productionOrderService.GetKeepRule(product.ProductTag);
+            AddSmallTitle(parent, "货物保持");
+            GameObject row = CreatePlainImage("KeepRuleRow", parent, new Color(0.78f, 0.78f, 0.72f, 1f));
+            row.AddComponent<LayoutElement>().preferredHeight = 34f;
+            HorizontalLayoutGroup layout = row.AddComponent<HorizontalLayoutGroup>();
+            layout.padding = new RectOffset(7, 7, 5, 5);
+            layout.spacing = 6f;
+            layout.childAlignment = TextAnchor.MiddleLeft;
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.childForceExpandWidth = false;
+            layout.childForceExpandHeight = false;
+
+            string label = rule != null
+                ? string.Format("保持 {0}", GameUtil.GetFormattedMass(rule.TargetAmount))
+                : "未开启";
+            TextMeshProUGUI status = CreateText("KeepRuleStatus", row.transform, label, 9, TextAlignmentOptions.MidlineLeft);
+            status.color = rule != null ? PositiveColor() : MutedTextColor();
+            status.fontStyle = FontStyles.Bold;
+            status.textWrappingMode = TextWrappingModes.NoWrap;
+            status.overflowMode = TextOverflowModes.Ellipsis;
+            status.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+
+            GameObject enableButton = CreateStyledButton("EnableKeepRule", row.transform, "保持", () =>
+            {
+                productionOrderService.SetKeepRule(product, route, requestedProductAmount);
+                lastOrderStatus = string.Format("货物保持：{0} 低于 {1} 时自动下单。", product.ProductName, GameUtil.GetFormattedMass(requestedProductAmount));
+                productionOrderService.Refresh();
+                RebuildOrderDetails();
+            }, KleiBlueStyle());
+            LayoutElement enableLayout = enableButton.AddComponent<LayoutElement>();
+            enableLayout.preferredWidth = 50f;
+            enableLayout.preferredHeight = 24f;
+
+            GameObject clearButton = CreateStyledButton("ClearKeepRule", row.transform, "关闭", () =>
+            {
+                productionOrderService.ClearKeepRule(product.ProductTag);
+                lastOrderStatus = string.Format("货物保持：已关闭 {0}。", product.ProductName);
+                RebuildOrderDetails();
+            }, rule != null ? KleiPinkStyle() : KleiBlueStyle());
+            LayoutElement clearLayout = clearButton.AddComponent<LayoutElement>();
+            clearLayout.preferredWidth = 50f;
+            clearLayout.preferredHeight = 24f;
+            clearButton.GetComponent<KButton>().isInteractable = rule != null;
         }
 
         private void AddRouteEditor(Transform parent, ProductDisplayGroup product)
@@ -519,9 +569,10 @@ namespace StorageNetwork.UI
             bool produced = !covered && requirement.Child != null;
             Color color = covered ? PositiveColor() : produced ? WarningColor() : DangerColor();
             string name = new string(' ', depth * 2) + ProductionOrderFormatting.GetTagDisplayName(requirement.Material);
+            string available = GameUtil.GetFormattedMass(requirement.AvailableAmount);
             string status = covered
-                ? GameUtil.GetFormattedMass(Mathf.Min(requirement.AvailableAmount, requirement.RequiredAmount))
-                : string.Format("{0} / 缺 {1}", GameUtil.GetFormattedMass(Mathf.Min(requirement.AvailableAmount, requirement.RequiredAmount)), GameUtil.GetFormattedMass(missing));
+                ? string.Format("{0} / {1}", available, GameUtil.GetFormattedMass(0f))
+                : string.Format("{0} / 缺 {1}", available, GameUtil.GetFormattedMass(missing));
             AddTableRow(parent, name, GameUtil.GetFormattedMass(requirement.RequiredAmount), status, color);
             if (requirement.Child != null && depth < 2)
             {
@@ -607,20 +658,79 @@ namespace StorageNetwork.UI
         private void AddTrackingCard(Transform parent, ProductionOrderRecord record)
         {
             bool abnormal = record.State == ProductionOrderState.Abnormal;
-            GameObject card = CreatePlainImage("TrackingCard", parent, abnormal ? new Color(0.79f, 0.66f, 0.63f, 1f) : new Color(0.76f, 0.76f, 0.70f, 1f));
-            card.AddComponent<LayoutElement>().preferredHeight = abnormal ? 78f : 58f;
-            AddVerticalContainer(card, 2f, 8, 8, 5, 5);
-            AddPlanLine(card.transform, string.Format("#{0} {1}    {2}", record.DisplayId, record.ProductName, GetOrderStateLabel(record.State)), 10, FontStyles.Bold, GetOrderStateColor(record.State), 22f);
-            AddPlanLine(card.transform, string.Format("进度 {0}/{1}    批次 {2}    创建周期 {3}", GameUtil.GetFormattedMass(record.ProducedAtSubmit), GameUtil.GetFormattedMass(record.RequestedAmount), record.OrderCount, ProductionOrderFormatting.FormatCycle(record.CreatedCycle)), 9, FontStyles.Normal, NeutralTextColor(), 20f);
+            bool active = IsTrackingActive(record);
+            Color cardColor = GetTrackingCardColor(record);
+            GameObject card = CreatePlainImage("TrackingCard", parent, cardColor);
+            card.AddComponent<LayoutElement>().preferredHeight = active || abnormal || record.MergeCount > 0 ? 78f : 58f;
+
+            HorizontalLayoutGroup cardLayout = card.AddComponent<HorizontalLayoutGroup>();
+            cardLayout.padding = new RectOffset(8, 8, 5, 5);
+            cardLayout.spacing = 8f;
+            cardLayout.childAlignment = TextAnchor.MiddleLeft;
+            cardLayout.childControlWidth = true;
+            cardLayout.childControlHeight = true;
+            cardLayout.childForceExpandWidth = false;
+            cardLayout.childForceExpandHeight = false;
+
+            GameObject textColumn = new GameObject("TrackingText");
+            textColumn.transform.SetParent(card.transform, false);
+            textColumn.AddComponent<RectTransform>();
+            textColumn.AddComponent<LayoutElement>().flexibleWidth = 1f;
+            AddVerticalContainer(textColumn, 2f, 0, 0, 0, 0);
+
+            AddPlanLine(textColumn.transform, string.Format("#{0} {1}    {2}    {3}", record.DisplayId, record.ProductName, GetOrderSourceLabel(record), GetOrderStateLabel(record.State)), 10, FontStyles.Bold, GetOrderStateColor(record.State), 22f);
+            AddPlanLine(textColumn.transform, string.Format("进度 {0}/{1}    批次 {2}    创建周期 {3}", GameUtil.GetFormattedMass(record.ProducedAtSubmit), GameUtil.GetFormattedMass(record.RequestedAmount), record.OrderCount, ProductionOrderFormatting.FormatCycle(record.CreatedCycle)), 9, FontStyles.Normal, NeutralTextColor(), 20f);
             if (record.MergeCount > 0)
             {
-                AddPlanLine(card.transform, string.Format("已合并 {0} 次    最后活动周期 {1}", record.MergeCount, ProductionOrderFormatting.FormatCycle(record.LastActivityCycle)), 8, FontStyles.Italic, MutedTextColor(), 18f);
+                AddPlanLine(textColumn.transform, string.Format("已合并 {0} 次    最后活动周期 {1}", record.MergeCount, ProductionOrderFormatting.FormatCycle(record.LastActivityCycle)), 8, FontStyles.Italic, MutedTextColor(), 18f);
             }
 
             if (abnormal && !string.IsNullOrEmpty(record.AbnormalReason))
             {
-                AddPlanLine(card.transform, record.AbnormalReason, 8, FontStyles.Bold, DangerColor(), 18f);
+                AddPlanLine(textColumn.transform, record.AbnormalReason, 8, FontStyles.Bold, DangerColor(), 18f);
             }
+
+            if (active)
+            {
+                GameObject cancelButton = CreateIconOnlyButton("CancelOrderButton", card.transform, GetCancelActionSprite(), () => CancelTrackedOrder(record.Key));
+                LayoutElement cancelLayout = cancelButton.AddComponent<LayoutElement>();
+                cancelLayout.preferredWidth = 28f;
+                cancelLayout.preferredHeight = 28f;
+            }
+        }
+
+        private static Color GetTrackingCardColor(ProductionOrderRecord record)
+        {
+            if (record.State == ProductionOrderState.Completed)
+            {
+                return new Color(0.64f, 0.74f, 0.61f, 1f);
+            }
+
+            if (record.State == ProductionOrderState.Abnormal)
+            {
+                return new Color(0.79f, 0.66f, 0.63f, 1f);
+            }
+
+            return new Color(0.76f, 0.76f, 0.70f, 1f);
+        }
+
+        private static Sprite GetCancelActionSprite()
+        {
+            return GetSpriteByName("action_cancel") ??
+                   GetSpriteByName("icon_action_cancel") ??
+                   GetSpriteByName("action_cancel.png");
+        }
+
+        private static string GetOrderSourceLabel(ProductionOrderRecord record)
+        {
+            return record.IsAutomatic ? "货物保持" : "手动";
+        }
+
+        private void CancelTrackedOrder(string orderKey)
+        {
+            lastOrderStatus = productionOrderService.CancelOrder(orderKey, GetCurrentCycleTime());
+            productionOrderService.Refresh();
+            RebuildOrderDetails();
         }
 
         private GameObject CreateSection(Transform parent, string name, float height, Color color)
@@ -729,7 +839,7 @@ namespace StorageNetwork.UI
                 RebuildOrderDetails();
             });
             LayoutElement layout = button.AddComponent<LayoutElement>();
-            layout.preferredWidth = 54f;
+            layout.preferredWidth = 44f;
             layout.preferredHeight = 24f;
         }
 

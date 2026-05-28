@@ -3,11 +3,15 @@ using System.Linq;
 using System;
 using KSerialization;
 using StorageNetwork.Core;
+using StorageNetwork.Services;
 using UnityEngine;
 using Loc = StorageNetwork.STRINGS;
 
 namespace StorageNetwork.Components
 {
+    /// <summary>
+    /// 生产建筑材料请求与成品入网组件。挂在 ComplexFabricator 上，按队列从储存网络调拨材料。
+    /// </summary>
     public sealed class StorageNetworkMaterialRequester : KMonoBehaviour, ISim1000ms
     {
         public enum RequestMode
@@ -35,7 +39,7 @@ namespace StorageNetwork.Components
         public bool LimitEnabled;
 
         [Serialize]
-        public float LimitKg = 1000f;
+        public float LimitKg = Config.Instance.DefaultMaterialRequestLimitKg;
 
         [Serialize]
         public float RequestedKg;
@@ -61,12 +65,18 @@ namespace StorageNetwork.Components
         public string LastStatus => lastStatus;
         public string LastOutputStatus => lastOutputStatus;
 
+        /// <summary>
+        /// 当前材料请求模式，封装序列化 int，避免 UI 直接处理魔法数字。
+        /// </summary>
         public RequestMode CurrentMode
         {
             get => (RequestMode)Mathf.Clamp(Mode, 0, 1);
             set => Mode = (int)value;
         }
 
+        /// <summary>
+        /// 当前成品入网模式，封装序列化 int，避免 UI 直接处理魔法数字。
+        /// </summary>
         public OutputStoreMode CurrentOutputStoreMode
         {
             get => (OutputStoreMode)Mathf.Clamp(OutputStoreModeValue, 0, 1);
@@ -103,7 +113,7 @@ namespace StorageNetwork.Components
             if (recipe == null || recipe.ingredients == null)
             {
                 lastStatus = "没有可请求材料的排队配方";
-                requestCooldown = 5f;
+                requestCooldown = Config.Instance.MaterialRequestRetryCooldownSeconds;
                 return;
             }
 
@@ -111,7 +121,7 @@ namespace StorageNetwork.Components
             if (remainingLimit <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
             {
                 lastStatus = "已达到请求限额";
-                requestCooldown = 2f;
+                requestCooldown = Config.Instance.MaterialRequestSuccessCooldownSeconds;
                 return;
             }
 
@@ -137,7 +147,7 @@ namespace StorageNetwork.Components
                 if (moved <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
                 {
                     lastStatus = string.Format("缺少 {0}，网络中没有可用来源", GetTagDisplayName(ingredient.material));
-                    requestCooldown = 5f;
+                    requestCooldown = Config.Instance.MaterialRequestRetryCooldownSeconds;
                     break;
                 }
 
@@ -150,14 +160,17 @@ namespace StorageNetwork.Components
             if (!requestedAny)
             {
                 lastStatus = "当前配方材料已满足";
-                requestCooldown = 2f;
+                requestCooldown = Config.Instance.MaterialRequestSuccessCooldownSeconds;
             }
             else if (!movedAny && requestCooldown <= 0f)
             {
-                requestCooldown = 5f;
+                requestCooldown = Config.Instance.MaterialRequestRetryCooldownSeconds;
             }
         }
 
+        /// <summary>
+        /// 解析当前指定的材料来源箱子。
+        /// </summary>
         public Storage ResolveSourceStorage()
         {
             if (SourceStorageInstanceId == KPrefabID.InvalidInstanceID)
@@ -170,6 +183,9 @@ namespace StorageNetwork.Components
                 .FirstOrDefault(storage => GetStorageInstanceId(storage) == SourceStorageInstanceId);
         }
 
+        /// <summary>
+        /// 解析当前指定的成品入网目标箱子。
+        /// </summary>
         public Storage ResolveOutputStorage()
         {
             if (OutputStorageInstanceId == KPrefabID.InvalidInstanceID)
@@ -182,21 +198,53 @@ namespace StorageNetwork.Components
                 .FirstOrDefault(storage => GetStorageInstanceId(storage) == OutputStorageInstanceId);
         }
 
+        /// <summary>
+        /// 设置固定材料来源箱子。
+        /// </summary>
         public void SetSourceStorage(Storage storage)
         {
             SourceStorageInstanceId = GetStorageInstanceId(storage);
+            CurrentMode = RequestMode.SpecificStorage;
         }
 
+        /// <summary>
+        /// 设置固定成品入网目标箱子。
+        /// </summary>
         public void SetOutputStorage(Storage storage)
         {
             OutputStorageInstanceId = GetStorageInstanceId(storage);
+            CurrentOutputStoreMode = OutputStoreMode.SpecificStorage;
         }
 
+        /// <summary>
+        /// 切换为自动寻找材料来源。
+        /// </summary>
+        public void UseAutomaticMaterialSource()
+        {
+            CurrentMode = RequestMode.SearchNetwork;
+            SourceStorageInstanceId = KPrefabID.InvalidInstanceID;
+        }
+
+        /// <summary>
+        /// 切换为自动寻找成品入网目标。
+        /// </summary>
+        public void UseAutomaticOutputStorage()
+        {
+            CurrentOutputStoreMode = OutputStoreMode.AutoNetwork;
+            OutputStorageInstanceId = KPrefabID.InvalidInstanceID;
+        }
+
+        /// <summary>
+        /// 获取当前已请求材料量，供 UI 展示。
+        /// </summary>
         public float GetRequestedAmountForDisplay()
         {
             return RequestedKg;
         }
 
+        /// <summary>
+        /// 重置已请求材料计数。
+        /// </summary>
         public void ResetRequestedAmount()
         {
             RequestedKg = 0f;
@@ -229,24 +277,28 @@ namespace StorageNetwork.Components
             {
                 foreach (GameObject output in producedOutputs.Where(output => output != null).ToList())
                 {
-                    if (TryStoreLooseOutput(output, out float moved, out string blockedItem))
+                    StorageTransferResult result = NetworkStorageTransferService.TransferLooseItemToNetwork(
+                        output,
+                        GetFabricatorStorages(),
+                        GetSpecificOutputTarget());
+                    totalMoved += result.MovedKg;
+                    if (!string.IsNullOrEmpty(result.BlockedItem))
                     {
-                        totalMoved += moved;
-                    }
-                    else if (!string.IsNullOrEmpty(blockedItem))
-                    {
-                        lastBlockedItem = blockedItem;
+                        lastBlockedItem = result.BlockedItem;
                     }
                 }
             }
 
-            totalMoved += StoreOutputsFromOutputStorage(out string outputStorageBlockedItem);
-            if (!string.IsNullOrEmpty(outputStorageBlockedItem))
+            StorageTransferResult outputStorageResult = StoreOutputsFromOutputStorage();
+            totalMoved += outputStorageResult.MovedKg;
+            if (!string.IsNullOrEmpty(outputStorageResult.BlockedItem))
             {
-                lastBlockedItem = outputStorageBlockedItem;
+                lastBlockedItem = outputStorageResult.BlockedItem;
             }
 
-            UpdateOutputStatus(totalMoved, lastBlockedItem, "等待下一批成品");
+            lastOutputStatus = NetworkStorageTransferService.FormatOutputStatus(
+                new StorageTransferResult(totalMoved, lastBlockedItem),
+                "等待下一批成品");
         }
 
         private void RefreshMaterialRequestStatus()
@@ -353,7 +405,7 @@ namespace StorageNetwork.Components
                 count = fabricator.GetRecipeQueueCount(recipe);
                 if (count == ComplexFabricator.QUEUE_INFINITE)
                 {
-                    count = 2;
+                    count = Config.Instance.InfiniteQueueRequestBatchCount;
                 }
             }
 
@@ -362,7 +414,7 @@ namespace StorageNetwork.Components
                 count = Mathf.Max(count, 1);
             }
 
-            return Mathf.Clamp(count, 1, 99);
+            return Mathf.Clamp(count, 1, Config.Instance.MaxRequestBatchCount);
         }
 
         private float RequestIngredient(Tag tag, float amount)
@@ -411,205 +463,23 @@ namespace StorageNetwork.Components
                 return;
             }
 
-            float totalMoved = StoreOutputsFromOutputStorage(out string lastBlockedItem);
-            UpdateOutputStatus(totalMoved, lastBlockedItem, "等待成品进入输出栏");
+            StorageTransferResult result = StoreOutputsFromOutputStorage();
+            lastOutputStatus = NetworkStorageTransferService.FormatOutputStatus(result, "等待成品进入输出栏");
         }
 
-        private float StoreOutputsFromOutputStorage(out string lastBlockedItem)
+        private StorageTransferResult StoreOutputsFromOutputStorage()
         {
-            lastBlockedItem = null;
             EnsureFabricator();
             if (fabricator.outStorage == null || fabricator.outStorage.items == null)
             {
                 lastOutputStatus = "建筑没有可读取的输出栏";
-                return 0f;
+                return StorageTransferResult.Idle;
             }
 
-            List<GameObject> outputs = fabricator.outStorage.items
-                .Where(item => item != null)
-                .ToList();
-            if (outputs.Count == 0)
-            {
-                return 0f;
-            }
-
-            float totalMoved = 0f;
-            foreach (GameObject output in outputs)
-            {
-                PrimaryElement primaryElement = output.GetComponent<PrimaryElement>();
-                if (primaryElement == null || primaryElement.Mass <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
-                {
-                    continue;
-                }
-
-                Tag tag = GetStorageTransferTag(output);
-                float remaining = primaryElement.Mass;
-                Storage target = FindOutputTarget(output);
-                if (target == null)
-                {
-                    lastBlockedItem = GetTagDisplayName(tag);
-                    continue;
-                }
-
-                while (target != null && remaining > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
-                {
-                    float transferAmount = Mathf.Min(remaining, Mathf.Max(0f, target.RemainingCapacity()));
-                    if (transferAmount <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
-                    {
-                        break;
-                    }
-
-                    float moved = fabricator.outStorage.Transfer(target, tag, transferAmount, block_events: false, hide_popups: true);
-                    if (moved <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
-                    {
-                        break;
-                    }
-
-                    totalMoved += moved;
-                    remaining -= moved;
-                    target = FindOutputTarget(output);
-                }
-
-                if (remaining > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
-                {
-                    lastBlockedItem = GetTagDisplayName(tag);
-                }
-            }
-
-            return totalMoved;
-        }
-
-        private bool TryStoreLooseOutput(GameObject output, out float moved, out string blockedItem)
-        {
-            moved = 0f;
-            blockedItem = null;
-            if (output == null)
-            {
-                return false;
-            }
-
-            PrimaryElement primaryElement = output.GetComponent<PrimaryElement>();
-            if (primaryElement == null || primaryElement.Mass <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
-            {
-                return false;
-            }
-
-            Tag tag = GetStorageTransferTag(output);
-            Storage target = FindOutputTarget(output);
-            if (target == null)
-            {
-                blockedItem = GetTagDisplayName(tag);
-                return false;
-            }
-
-            Pickupable pickupable = output.GetComponent<Pickupable>();
-            if (pickupable == null)
-            {
-                blockedItem = GetTagDisplayName(tag);
-                return false;
-            }
-
-            while (target != null && output != null && primaryElement.Mass > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
-            {
-                float transferAmount = Mathf.Min(primaryElement.Mass, Mathf.Max(0f, target.RemainingCapacity()));
-                if (transferAmount <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
-                {
-                    break;
-                }
-
-                Pickupable taken = pickupable.Take(transferAmount);
-                if (taken == null)
-                {
-                    break;
-                }
-
-                float takenMass = GetMass(taken.gameObject);
-                if (takenMass <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
-                {
-                    break;
-                }
-
-                target.Store(taken.gameObject, hide_popups: true, block_events: false, do_disease_transfer: true, is_deserializing: false);
-                moved += takenMass;
-                if (taken.gameObject == output)
-                {
-                    break;
-                }
-
-                target = FindOutputTarget(output);
-            }
-
-            if (moved <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
-            {
-                blockedItem = GetTagDisplayName(tag);
-            }
-
-            return moved > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT;
-        }
-
-        private void UpdateOutputStatus(float totalMoved, string lastBlockedItem, string idleText)
-        {
-            if (totalMoved > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
-            {
-                lastOutputStatus = string.Format("已入网 {0}", GameUtil.GetFormattedMass(totalMoved));
-            }
-            else if (!string.IsNullOrEmpty(lastBlockedItem))
-            {
-                lastOutputStatus = string.Format("无法存入 {0}：没有匹配箱子或容量不足", lastBlockedItem);
-            }
-            else
-            {
-                lastOutputStatus = idleText;
-            }
-        }
-
-        private Storage FindOutputTarget(GameObject output)
-        {
-            Tag tag = GetStorageTransferTag(output);
-            if (CurrentOutputStoreMode == OutputStoreMode.SpecificStorage)
-            {
-                Storage target = ResolveOutputStorage();
-                return IsUsableOutputTarget(target, output) ? target : null;
-            }
-
-            return StorageSceneCollector.Collect().Storages
-                .Select(info => info.Storage)
-                .Where(storage => IsUsableOutputTarget(storage, output))
-                .Where(storage => IsAutoOutputMatch(storage, output))
-                .OrderByDescending(storage => storage.GetAmountAvailable(tag))
-                .ThenByDescending(storage => IsFilterAccepting(storage, tag))
-                .ThenByDescending(storage => storage.RemainingCapacity())
-                .FirstOrDefault();
-        }
-
-        private bool IsUsableOutputTarget(Storage storage, GameObject output)
-        {
-            return storage != null &&
-                   storage != fabricator.inStorage &&
-                   storage != fabricator.buildStorage &&
-                   storage != fabricator.outStorage &&
-                   storage.GetComponent<ComplexFabricator>() == null &&
-                   storage.RemainingCapacity() > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT;
-        }
-
-        private static bool IsAutoOutputMatch(Storage storage, GameObject output)
-        {
-            Tag tag = GetStorageTransferTag(output);
-            return storage.GetAmountAvailable(tag) > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ||
-                   IsFilterAccepting(storage, tag) ||
-                   HasNoExplicitStorageFilter(storage);
-        }
-
-        private static bool IsFilterAccepting(Storage storage, Tag tag)
-        {
-            TreeFilterable filterable = storage != null ? storage.GetComponent<TreeFilterable>() : null;
-            return filterable != null && filterable.ContainsTag(tag);
-        }
-
-        private static bool HasNoExplicitStorageFilter(Storage storage)
-        {
-            TreeFilterable filterable = storage != null ? storage.GetComponent<TreeFilterable>() : null;
-            return filterable == null || filterable.GetTags() == null || filterable.GetTags().Count == 0;
+            return NetworkStorageTransferService.TransferStoredItemsToNetwork(
+                fabricator.outStorage,
+                GetFabricatorStorages(),
+                GetSpecificOutputTarget());
         }
 
         private IEnumerable<Storage> GetSourceStorages(Tag tag)
@@ -663,60 +533,43 @@ namespace StorageNetwork.Components
             }
         }
 
-        public static Tag GetStorageTransferTag(GameObject item)
+        internal static Tag GetStorageTransferTag(GameObject item)
         {
-            PrimaryElement primaryElement = item != null ? item.GetComponent<PrimaryElement>() : null;
-            if (primaryElement != null)
+            return StorageItemUtility.GetStorageTransferTag(item);
+        }
+
+        internal static bool MatchesStorageTag(GameObject item, Tag tag)
+        {
+            return StorageItemUtility.MatchesStorageTag(item, tag);
+        }
+
+        private IEnumerable<Storage> GetFabricatorStorages()
+        {
+            if (fabricator == null)
             {
-                Tag elementTag = primaryElement.ElementID.CreateTag();
-                if (elementTag != Tag.Invalid && item.HasTag(elementTag))
-                {
-                    return elementTag;
-                }
+                yield break;
             }
 
-            KPrefabID prefabID = item != null ? item.GetComponent<KPrefabID>() : null;
-            return prefabID != null ? prefabID.PrefabTag : Tag.Invalid;
+            yield return fabricator.inStorage;
+            yield return fabricator.buildStorage;
+            yield return fabricator.outStorage;
         }
 
-        public static bool MatchesStorageTag(GameObject item, Tag tag)
+        private Storage GetSpecificOutputTarget()
         {
-            return item != null && tag != Tag.Invalid && item.HasTag(tag);
+            return CurrentOutputStoreMode == OutputStoreMode.SpecificStorage
+                ? ResolveOutputStorage()
+                : null;
         }
 
-        private static float GetMass(GameObject item)
+        internal static int GetStorageInstanceId(Storage storage)
         {
-            PrimaryElement primaryElement = item != null ? item.GetComponent<PrimaryElement>() : null;
-            return primaryElement != null ? primaryElement.Mass : 0f;
-        }
-
-        public static int GetStorageInstanceId(Storage storage)
-        {
-            KPrefabID prefabId = storage != null ? storage.GetComponent<KPrefabID>() : null;
-            return prefabId != null ? prefabId.InstanceID : KPrefabID.InvalidInstanceID;
+            return StorageItemUtility.GetStorageInstanceId(storage);
         }
 
         private static string GetTagDisplayName(Tag tag)
         {
-            Element element = ElementLoader.FindElementByHash((SimHashes)tag.GetHash());
-            if (element != null && !string.IsNullOrEmpty(element.name))
-            {
-                return element.name;
-            }
-
-            GameObject prefab = Assets.GetPrefab(tag);
-            if (prefab != null)
-            {
-                return prefab.GetProperName();
-            }
-
-            string key = "STRINGS.MISC.TAGS." + tag.Name.ToUpperInvariant();
-            if (Strings.TryGet(key, out StringEntry entry) && entry != null && !string.IsNullOrEmpty(entry.String))
-            {
-                return entry.String;
-            }
-
-            return tag.Name;
+            return StorageItemUtility.GetTagDisplayName(tag);
         }
     }
 }

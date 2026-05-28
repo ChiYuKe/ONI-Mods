@@ -8,12 +8,18 @@ namespace StorageNetwork.Core
         private const string SceneStorageKey = "scene_storage";
         private const string VanillaStorageKey = "vanilla_storage";
         private const string RecipeBuildingKey = "recipe_building";
+        private const string ModStorageKey = "mod_storage";
 
         public static string GetKey(Storage storage)
         {
             if (storage == null)
             {
                 return SceneStorageKey;
+            }
+
+            if (HasModStorageTag(storage))
+            {
+                return ModStorageKey;
             }
 
             StorageNetworkEnrollment enrollment = storage.GetComponent<StorageNetworkEnrollment>();
@@ -32,6 +38,11 @@ namespace StorageNetwork.Core
                 return Loc.Get(Loc.UI.STORAGE_NETWORK.CATEGORY_RECIPE_BUILDING);
             }
 
+            if (key == ModStorageKey)
+            {
+                return Loc.Get(Loc.UI.STORAGE_NETWORK.CATEGORY_MOD_STORAGE);
+            }
+
             return key == VanillaStorageKey
                 ? Loc.Get(Loc.UI.STORAGE_NETWORK.CATEGORY_VANILLA_STORAGE)
                 : Loc.Get(Loc.UI.STORAGE_NETWORK.CATEGORY_SCENE_STORAGE);
@@ -41,10 +52,25 @@ namespace StorageNetwork.Core
         {
             if (key == RecipeBuildingKey)
             {
+                return 3;
+            }
+
+            if (key == ModStorageKey)
+            {
                 return 2;
             }
 
             return key == VanillaStorageKey ? 1 : 0;
+        }
+
+        public static bool HasModStorageTag(Storage storage)
+        {
+            return StorageNetworkStorageRules.HasModStorageTag(storage);
+        }
+
+        public static bool HasShowSettingsButtonTag(Storage storage)
+        {
+            return StorageNetworkStorageRules.HasSettingsButtonTag(storage);
         }
     }
 }

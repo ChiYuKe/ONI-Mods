@@ -84,7 +84,13 @@ namespace StorageNetwork.UI
             bool selected = selectedItemStorage == storage && string.IsNullOrEmpty(selectedItemKey);
             float percent = storageInfo.CapacityKg > 0f ? storageInfo.StoredKg / storageInfo.CapacityKg : 0f;
             StorageNetworkEnrollment enrollment = storage.GetComponent<StorageNetworkEnrollment>();
-            bool showSettingsButton = (enrollment != null && enrollment.IsComplexRecipeBuilding()) || ShowDeprecatedStorageSettingsButton;
+            bool showSettingsButton = StorageNetworkStorageRules.IsProductionStorage(storage, enrollment) ||
+                                      StorageNetworkStorageRules.HasSettingsButtonTag(storage) ||
+                                      ShowDeprecatedStorageSettingsButton;
+            string sourceModName = StorageNetworkStorageRules.HasModStorageTag(storage) ||
+                                   StorageNetworkStorageRules.HasSettingsButtonTag(storage)
+                ? StorageNetworkModInfoResolver.GetSourceModName(storage)
+                : null;
 
             GameObject row = CreateBox(
                 "StorageRow",
@@ -108,6 +114,7 @@ namespace StorageNetwork.UI
                     expandedStorages[storage] = !expanded;
                     Refresh(true);
                 },
+                string.IsNullOrEmpty(sourceModName) ? null : string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SOURCE_MOD_NAME), sourceModName),
                 showSettingsButton ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STORAGE_SETTINGS) : null,
                 showSettingsButton ? () => ShowStorageSettingsDialog(storage) : null);
 

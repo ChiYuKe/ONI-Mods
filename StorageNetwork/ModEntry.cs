@@ -11,6 +11,9 @@ namespace StorageNetwork
             base.OnLoad(harmony);
             StorageNetworkSprites.SetModPath(mod.ContentPath);
             StorageNetworkLocalization.SetModPath(mod.ContentPath);
+            Config.SetModPath(mod.ContentPath);
+            Config.Load();
+            StorageNetworkOptions.Register();
         }
     }
 }

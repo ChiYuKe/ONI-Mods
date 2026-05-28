@@ -1,7 +1,15 @@
+using StorageNetwork.API;
+
 namespace StorageNetwork.Core
 {
     public static class StorageSceneTags
     {
-        public static readonly Tag SceneStorageBox = new Tag("StorageNetwork_SceneStorageBox");
+        public const string SceneStorageBoxTagName = StorageNetworkTags.SceneStorageBoxTagName;
+        public const string ModStorageTagName = StorageNetworkTags.ModStorageTagName;
+        public const string ShowSettingsButtonTagName = StorageNetworkTags.ShowSettingsButtonTagName;
+
+        public static readonly Tag SceneStorageBox = StorageNetworkTags.SceneStorageBox;
+        public static readonly Tag ModStorage = StorageNetworkTags.ModStorage;
+        public static readonly Tag ShowSettingsButton = StorageNetworkTags.ShowSettingsButton;
     }
 }

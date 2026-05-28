@@ -9,7 +9,6 @@ namespace StorageNetwork.Buildings
     {
         public const string ID = "StorageNetworkSceneStorageBox";
         private const string AnimFile = "storagelocker_kanim";
-        private const float CapacityKg = 500000f;
 
         public override BuildingDef CreateBuildingDef()
         {
@@ -44,7 +43,7 @@ namespace StorageNetwork.Buildings
             prefabId?.AddTag(StorageSceneTags.SceneStorageBox);
 
             Storage storage = go.AddOrGet<Storage>();
-            storage.capacityKg = CapacityKg;
+            storage.capacityKg = Config.Instance.SceneStorageBoxCapacityKg;
             storage.showInUI = true;
             storage.allowItemRemoval = true;
             storage.showDescriptor = true;

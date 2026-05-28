@@ -155,10 +155,15 @@ namespace StorageNetwork.UI
             SetProductionSettingsTitle(storage);
             KeepProductionSettingsPanelOnScreen();
             StorageNetworkMaterialRequester requester = storage.GetComponent<StorageNetworkMaterialRequester>();
-            AddProductionOverviewCard(storage, fabricator, requester);
+            StorageNetworkStorageConnector connector = GetStorageConnector(storage);
+            AddProductionOverviewCard(storage, fabricator, requester, connector);
             if (requester != null)
             {
                 AddAutomationCards(storage, requester);
+            }
+            else if (connector != null)
+            {
+                AddStorageOutputCard(storage, connector);
             }
             AddInventoryCard(storage, fabricator);
 
@@ -176,6 +181,7 @@ namespace StorageNetwork.UI
         private static string BuildProductionSettingsSignature(Storage storage, ComplexFabricator fabricator)
         {
             StorageNetworkMaterialRequester requester = storage != null ? storage.GetComponent<StorageNetworkMaterialRequester>() : null;
+            StorageNetworkStorageConnector connector = storage != null ? storage.GetComponent<StorageNetworkStorageConnector>() : null;
             string itemSignature = string.Join("|", GetProductionStorages(storage, fabricator)
                 .SelectMany(itemStorage => itemStorage.items.Where(item => item != null))
                 .GroupBy(GetStoredItemKey)
@@ -204,6 +210,8 @@ namespace StorageNetwork.UI
                 requester != null ? requester.OutputStorageInstanceId.ToString() : "0",
                 requester != null ? requester.LastStatus : string.Empty,
                 requester != null ? requester.LastOutputStatus : string.Empty,
+                connector != null && connector.OutputStoreEnabled ? "conn1" : "conn0",
+                connector != null ? connector.LastOutputStatus : string.Empty,
                 itemSignature);
         }
 
@@ -221,7 +229,7 @@ namespace StorageNetwork.UI
             }
         }
 
-        private void AddProductionOverviewCard(Storage storage, ComplexFabricator fabricator, StorageNetworkMaterialRequester requester)
+        private void AddProductionOverviewCard(Storage storage, ComplexFabricator fabricator, StorageNetworkMaterialRequester requester, StorageNetworkStorageConnector connector)
         {
             GameObject card = CreateProductionCard("OverviewCard", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_STATUS_TITLE), 116f);
             TextMeshProUGUI title = CreateText("BuildingName", card.transform, storage.GetProperName(), 16, TextAlignmentOptions.MidlineLeft);
@@ -246,7 +254,7 @@ namespace StorageNetwork.UI
             CreateMetricTile(metrics.transform, "储存", string.Format("{0} / {1}", GameUtil.GetFormattedMass(storage.MassStored()), GameUtil.GetFormattedMass(storage.Capacity())), new Color(0.35f, 0.40f, 0.43f, 1f));
             CreateMetricTile(metrics.transform, "运行", GetProductionStateText(fabricator), GetProductionStateColor(fabricator));
             CreateMetricTile(metrics.transform, "配方", GetCurrentRecipeText(fabricator), new Color(0.39f, 0.42f, 0.45f, 1f));
-            CreateMetricTile(metrics.transform, "网络", GetRequesterStateText(requester), requester != null && requester.RequestEnabled ? new Color(0.28f, 0.48f, 0.34f, 1f) : new Color(0.50f, 0.42f, 0.34f, 1f));
+            CreateMetricTile(metrics.transform, "网络", GetNetworkStateText(requester, connector), requester != null && requester.RequestEnabled || connector != null && connector.OutputStoreEnabled ? new Color(0.28f, 0.48f, 0.34f, 1f) : new Color(0.50f, 0.42f, 0.34f, 1f));
         }
 
         private void AddAutomationCards(Storage storage, StorageNetworkMaterialRequester requester)
@@ -328,6 +336,22 @@ namespace StorageNetwork.UI
             if (requester.OutputStoreEnabled && !string.IsNullOrEmpty(requester.LastOutputStatus))
             {
                 CreateFinePrint(card.transform, string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_STATUS), requester.LastOutputStatus));
+            }
+        }
+
+        private void AddStorageOutputCard(Storage ownerStorage, StorageNetworkStorageConnector connector)
+        {
+            GameObject card = CreateProductionCard("StorageOutputCard", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STORAGE_OUTPUT_STORE_TITLE), 132f);
+            CreateStatusStrip(card.transform, connector.OutputStoreEnabled ? "自动入网" : "手动取出", connector.OutputStoreEnabled ? new Color(0.28f, 0.48f, 0.34f, 1f) : new Color(0.48f, 0.45f, 0.36f, 1f));
+            CreateProductionActionRow(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STORAGE_OUTPUT_STORE_ENABLED), connector.OutputStoreEnabled ? "关闭" : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ON), () =>
+            {
+                connector.OutputStoreEnabled = !connector.OutputStoreEnabled;
+                UpdateProductionSettingsPanel(true);
+            }, connector.OutputStoreEnabled ? KleiPinkStyle() : KleiBlueStyle());
+            CreateFinePrint(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STORAGE_OUTPUT_STORE_DESC));
+            if (connector.OutputStoreEnabled && !string.IsNullOrEmpty(connector.LastOutputStatus))
+            {
+                CreateFinePrint(card.transform, string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_STATUS), connector.LastOutputStatus));
             }
         }
 
@@ -505,14 +529,19 @@ namespace StorageNetwork.UI
                 : "无";
         }
 
-        private static string GetRequesterStateText(StorageNetworkMaterialRequester requester)
+        private static string GetNetworkStateText(StorageNetworkMaterialRequester requester, StorageNetworkStorageConnector connector)
         {
-            if (requester == null)
+            if (requester != null)
             {
-                return "无组件";
+                return requester.RequestEnabled ? "请求开" : "请求关";
             }
 
-            return requester.RequestEnabled ? "请求开" : "请求关";
+            if (connector != null)
+            {
+                return connector.OutputStoreEnabled ? "入网开" : "入网关";
+            }
+
+            return "无组件";
         }
 
         private void AddProductionSettingsInfo(Storage storage, ComplexFabricator fabricator)
@@ -771,9 +800,9 @@ namespace StorageNetwork.UI
                 requester.CurrentMode == StorageNetworkMaterialRequester.RequestMode.SearchNetwork,
                 () =>
                 {
-                    requester.CurrentMode = StorageNetworkMaterialRequester.RequestMode.SearchNetwork;
+                    requester.UseAutomaticMaterialSource();
                     CloseProductionPicker();
-                    UpdateProductionSettingsPanel();
+                    UpdateProductionSettingsPanel(true);
                 })
             };
 
@@ -786,10 +815,9 @@ namespace StorageNetwork.UI
                     requester.CurrentMode == StorageNetworkMaterialRequester.RequestMode.SpecificStorage && requester.ResolveSourceStorage() == captured,
                     () =>
                     {
-                        requester.CurrentMode = StorageNetworkMaterialRequester.RequestMode.SpecificStorage;
                         requester.SetSourceStorage(captured);
                         CloseProductionPicker();
-                        UpdateProductionSettingsPanel();
+                        UpdateProductionSettingsPanel(true);
                     }));
             }
 
@@ -806,9 +834,9 @@ namespace StorageNetwork.UI
                 requester.CurrentOutputStoreMode == StorageNetworkMaterialRequester.OutputStoreMode.AutoNetwork,
                 () =>
                 {
-                    requester.CurrentOutputStoreMode = StorageNetworkMaterialRequester.OutputStoreMode.AutoNetwork;
+                    requester.UseAutomaticOutputStorage();
                     CloseProductionPicker();
-                    UpdateProductionSettingsPanel();
+                    UpdateProductionSettingsPanel(true);
                 })
             };
 
@@ -821,10 +849,9 @@ namespace StorageNetwork.UI
                     requester.CurrentOutputStoreMode == StorageNetworkMaterialRequester.OutputStoreMode.SpecificStorage && requester.ResolveOutputStorage() == captured,
                     () =>
                     {
-                        requester.CurrentOutputStoreMode = StorageNetworkMaterialRequester.OutputStoreMode.SpecificStorage;
                         requester.SetOutputStorage(captured);
                         CloseProductionPicker();
-                        UpdateProductionSettingsPanel();
+                        UpdateProductionSettingsPanel(true);
                     }));
             }
 
@@ -972,11 +999,17 @@ namespace StorageNetwork.UI
 
         private static List<Storage> GetNetworkStorageTargets(Storage ownerStorage)
         {
-            return StorageSceneCollector.Collect().Storages
-                .Select(info => info.Storage)
-                .Where(storage => storage != null && storage != ownerStorage && storage.GetComponent<ComplexFabricator>() == null)
-                .OrderBy(storage => storage.GetProperName())
-                .ToList();
+            return StorageNetworkStorageRules.GetNetworkStorageTargets(ownerStorage);
+        }
+
+        private static StorageNetworkStorageConnector GetStorageConnector(Storage storage)
+        {
+            if (storage == null || !StorageNetworkStorageRules.HasSettingsButtonTag(storage))
+            {
+                return null;
+            }
+
+            return storage.GetComponent<StorageNetworkStorageConnector>() ?? storage.gameObject.AddOrGet<StorageNetworkStorageConnector>();
         }
 
         private static string FormatStorageOptionDetails(Storage storage)
@@ -990,11 +1023,7 @@ namespace StorageNetwork.UI
 
         private void ShowMaterialRequestSourceSelection(Storage ownerStorage, StorageNetworkMaterialRequester requester)
         {
-            List<Storage> targets = StorageSceneCollector.Collect().Storages
-                .Select(info => info.Storage)
-                .Where(storage => storage != null && storage != ownerStorage && storage.GetComponent<ComplexFabricator>() == null)
-                .OrderBy(storage => storage.GetProperName())
-                .ToList();
+            List<Storage> targets = StorageNetworkStorageRules.GetNetworkStorageTargets(ownerStorage);
 
             if (targets.Count == 0)
             {
@@ -1021,7 +1050,7 @@ namespace StorageNetwork.UI
                     Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_LIMIT),
                     GameUtil.GetFormattedMass(Mathf.Max(0f, requester.GetRequestedAmountForDisplay())),
                     GameUtil.GetFormattedMass(Mathf.Max(0f, requester.LimitKg))),
-                Mathf.Max(1f, requester.LimitKg <= 0f ? 1000f : requester.LimitKg * 10f),
+                Mathf.Max(1f, requester.LimitKg <= 0f ? Config.Instance.DefaultMaterialRequestLimitKg : requester.LimitKg * 10f),
                 amount =>
                 {
                     requester.LimitKg = amount;

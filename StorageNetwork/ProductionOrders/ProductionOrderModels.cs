@@ -186,9 +186,11 @@ namespace StorageNetwork.ProductionOrders
             float requestedAmount,
             int orderCount,
             float stockAtSubmit,
+            float allocationOffsetAtSubmit,
             Dictionary<Tag, float> reservedMaterials,
             List<ProductionOrderQueueAssignment> queueAssignments,
-            float createdCycle)
+            float createdCycle,
+            bool isAutomatic = false)
         {
             Key = key;
             DisplayId = displayId;
@@ -199,11 +201,61 @@ namespace StorageNetwork.ProductionOrders
             LastSubmittedAmount = requestedAmount;
             OrderCount = orderCount;
             StockAtSubmit = stockAtSubmit;
+            AllocationOffsetAtSubmit = allocationOffsetAtSubmit;
             ReservedMaterials = reservedMaterials ?? new Dictionary<Tag, float>();
             QueueAssignments = queueAssignments ?? new List<ProductionOrderQueueAssignment>();
             CreatedCycle = createdCycle;
             LastActivityCycle = createdCycle;
+            IsAutomatic = isAutomatic;
             State = ProductionOrderState.Submitted;
+        }
+
+        public ProductionOrderRecord(
+            string key,
+            int displayId,
+            Tag productTag,
+            string productName,
+            string recipeKey,
+            float requestedAmount,
+            float lastSubmittedAmount,
+            int orderCount,
+            float stockAtSubmit,
+            float allocationOffsetAtSubmit,
+            float producedAtSubmit,
+            Dictionary<Tag, float> reservedMaterials,
+            List<ProductionOrderQueueAssignment> queueAssignments,
+            float createdCycle,
+            float completedCycle,
+            float lastActivityCycle,
+            float lastObservedProducedAmount,
+            float lastObservedQueueLoad,
+            string abnormalReason,
+            int mergeCount,
+            ProductionOrderState state,
+            bool isAutomatic = false)
+        {
+            Key = key;
+            DisplayId = displayId;
+            ProductTag = productTag;
+            ProductName = productName;
+            RecipeKey = recipeKey;
+            RequestedAmount = requestedAmount;
+            LastSubmittedAmount = lastSubmittedAmount;
+            OrderCount = orderCount;
+            StockAtSubmit = stockAtSubmit;
+            AllocationOffsetAtSubmit = allocationOffsetAtSubmit;
+            ProducedAtSubmit = producedAtSubmit;
+            ReservedMaterials = reservedMaterials ?? new Dictionary<Tag, float>();
+            QueueAssignments = queueAssignments ?? new List<ProductionOrderQueueAssignment>();
+            CreatedCycle = createdCycle;
+            CompletedCycle = completedCycle;
+            LastActivityCycle = lastActivityCycle;
+            LastObservedProducedAmount = lastObservedProducedAmount;
+            LastObservedQueueLoad = lastObservedQueueLoad;
+            AbnormalReason = abnormalReason;
+            MergeCount = mergeCount;
+            IsAutomatic = isAutomatic;
+            State = state;
         }
 
         public string Key { get; }
@@ -223,6 +275,8 @@ namespace StorageNetwork.ProductionOrders
         public int OrderCount { get; private set; }
 
         public float StockAtSubmit { get; private set; }
+
+        public float AllocationOffsetAtSubmit { get; private set; }
 
         public float ProducedAtSubmit { get; set; }
 
@@ -244,14 +298,17 @@ namespace StorageNetwork.ProductionOrders
 
         public int MergeCount { get; private set; }
 
+        public bool IsAutomatic { get; private set; }
+
         public ProductionOrderState State { get; set; }
 
-        public void Merge(float requestedAmount, int orderCount, Dictionary<Tag, float> reservedMaterials, List<ProductionOrderQueueAssignment> queueAssignments, float currentCycle)
+        public void Merge(float requestedAmount, int orderCount, Dictionary<Tag, float> reservedMaterials, List<ProductionOrderQueueAssignment> queueAssignments, float currentCycle, bool isAutomatic = false)
         {
             RequestedAmount += requestedAmount;
             LastSubmittedAmount = requestedAmount;
             OrderCount += orderCount;
             MergeCount++;
+            IsAutomatic = IsAutomatic && isAutomatic;
             State = ProductionOrderState.Submitted;
             LastActivityCycle = currentCycle;
             foreach (KeyValuePair<Tag, float> pair in reservedMaterials)
@@ -296,6 +353,25 @@ namespace StorageNetwork.ProductionOrders
         public ComplexRecipe Recipe { get; }
 
         public int OrderCount { get; }
+    }
+
+    internal sealed class ProductionKeepRule
+    {
+        public ProductionKeepRule(Tag productTag, string productName, string recipeKey, float targetAmount)
+        {
+            ProductTag = productTag;
+            ProductName = productName;
+            RecipeKey = recipeKey;
+            TargetAmount = targetAmount;
+        }
+
+        public Tag ProductTag { get; }
+
+        public string ProductName { get; }
+
+        public string RecipeKey { get; }
+
+        public float TargetAmount { get; }
     }
 
     internal sealed class ProductionOrderDraft

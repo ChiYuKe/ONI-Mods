@@ -22,6 +22,7 @@ namespace StorageNetwork.Patches
 
                 try
                 {
+                    StorageNetworkWorldTextPanel.EnsureInstalled(__instance.gameObject);
                     StorageNetworkManagementButton.Add(__instance);
                 }
                 catch (System.Exception exception)

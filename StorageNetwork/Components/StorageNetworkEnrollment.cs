@@ -5,13 +5,16 @@ using Loc = StorageNetwork.STRINGS;
 
 namespace StorageNetwork.Components
 {
+    /// <summary>
+    /// 可接入储存网络的建筑标记组件。负责保存接入状态、用户菜单按钮和状态条提示。
+    /// </summary>
     public sealed class StorageNetworkEnrollment : KMonoBehaviour
     {
         [Serialize]
         public bool IncludedInSceneNetwork;
 
         [MyCmpGet]
-        private Storage storage;
+        private Storage storage = null;
 
         private Guid connectedStatusHandle = Guid.Empty;
 
@@ -64,6 +67,9 @@ namespace StorageNetwork.Components
             SetIncludedInSceneNetwork(!IncludedInSceneNetwork);
         }
 
+        /// <summary>
+        /// 设置建筑是否接入当前场景储存网络，并刷新状态与主面板。
+        /// </summary>
         public void SetIncludedInSceneNetwork(bool included)
         {
             if (IncludedInSceneNetwork == included)
@@ -81,6 +87,9 @@ namespace StorageNetwork.Components
             }
         }
 
+        /// <summary>
+        /// 判断这个建筑是否应该出现在“可接入建筑”列表。
+        /// </summary>
         public bool CanShowInEnrollableList()
         {
             return CanShowEnrollmentButton();
@@ -91,11 +100,17 @@ namespace StorageNetwork.Components
             return storage != null && (IsStorageLocker() || IsComplexRecipeBuilding());
         }
 
+        /// <summary>
+        /// 判断建筑是否是原版储物箱。
+        /// </summary>
         public bool IsStorageLocker()
         {
             return GetComponent<StorageLocker>() != null;
         }
 
+        /// <summary>
+        /// 判断建筑是否是复杂配方生产建筑。
+        /// </summary>
         public bool IsComplexRecipeBuilding()
         {
             return GetComponent<ComplexFabricator>() != null;

@@ -48,6 +48,8 @@ namespace StorageNetwork
                 public static LocString CATEGORY_SCENE_STORAGE = "储存箱";
                 public static LocString CATEGORY_VANILLA_STORAGE = "原版储存";
                 public static LocString CATEGORY_RECIPE_BUILDING = "生产建筑";
+                public static LocString CATEGORY_MOD_STORAGE = "模组建筑";
+                public static LocString SOURCE_MOD_NAME = "来源：{0}";
 
                 public static LocString SUMMARY_BUTTON = "汇总";
                 public static LocString SUMMARY_TOOLTIP = "汇总当前分类中所有箱子的物品";
@@ -81,6 +83,10 @@ namespace StorageNetwork
                 public static LocString ORDER_STATUS_READY = "库存充足";
                 public static LocString ORDER_STATUS_PRODUCE = "补产";
                 public static LocString ORDER_STATUS_BLOCKED = "缺料";
+                public static LocString ORDER_ABNORMAL_NOTIFICATION = "储存网络订单异常";
+                public static LocString ORDER_ABNORMAL_NOTIFICATION_TOOLTIP = "以下生产订单已被储存网络自动取消，请检查材料来源、生产建筑或队列状态。\n";
+                public static LocString ORDER_ABNORMAL_NOTIFICATION_DETAIL = "• #{0} {1}：目标 {2}，已完成 {3}\n  {4}";
+                public static LocString ORDER_ABNORMAL_DEFAULT_REASON = "订单长时间没有进度变动。";
                 public static LocString ORDER_DISPATCH_TITLE = "调度策略";
                 public static LocString ORDER_DISPATCH_SUMMARY = "优先调拨网络库存；缺口由已接入生产建筑补产；提交后自动开启材料请求。";
                 public static LocString ENROLLABLE_BUTTON_TOOLTIP = "显示当前场景中所有可接入储存网络的建筑。";
@@ -136,6 +142,9 @@ namespace StorageNetwork
                 public static LocString MATERIAL_REQUEST_AUTO_DESC = "自动从已接入网络的箱子中寻找材料，优先使用库存最多的来源。";
                 public static LocString OUTPUT_STORE_TITLE = "成品入网";
                 public static LocString OUTPUT_STORE_ENABLED = "加工完成后自动存入网络";
+                public static LocString STORAGE_OUTPUT_STORE_TITLE = "内容物入网";
+                public static LocString STORAGE_OUTPUT_STORE_ENABLED = "允许把内容物输入网络";
+                public static LocString STORAGE_OUTPUT_STORE_DESC = "开启后，这个储存建筑会把当前内容物自动转移到储存网络中的匹配箱子。";
                 public static LocString OUTPUT_STORE_MODE = "存放方式：{0}";
                 public static LocString OUTPUT_STORE_MODE_AUTO = "自动寻找匹配箱子";
                 public static LocString OUTPUT_STORE_MODE_SPECIFIC = "指定网络中某个箱子存放";

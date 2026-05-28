@@ -13,6 +13,9 @@ namespace StorageNetwork.Core
             modPath = path;
         }
 
+        /// <summary>
+        /// 注册并加载本地化。源代码中的 LocString 默认为中文，缺少中文 po 时不再写警告日志。
+        /// </summary>
         public static void Translate(Type root, bool generateTemplate = false)
         {
             Localization.RegisterForTranslation(root);
@@ -37,9 +40,17 @@ namespace StorageNetwork.Core
 
                 string translationsPath = Path.Combine(GetModPath(), "translations");
                 string poPath = Path.Combine(translationsPath, localeCode + ".po");
-                if (!File.Exists(poPath) && localeCode.StartsWith("en", StringComparison.OrdinalIgnoreCase))
+                if (!File.Exists(poPath))
                 {
-                    poPath = Path.Combine(translationsPath, "en.po");
+                    if (localeCode.StartsWith("en", StringComparison.OrdinalIgnoreCase))
+                    {
+                        poPath = Path.Combine(translationsPath, "en.po");
+                    }
+                    else
+                    {
+                        Debug.Log("[StorageNetwork] Localization file not found for locale " + localeCode + "; using built-in strings.");
+                        return;
+                    }
                 }
 
                 if (!File.Exists(poPath))

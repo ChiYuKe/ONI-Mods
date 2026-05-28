@@ -2,16 +2,17 @@ using System.Collections.Generic;
 using System.Linq;
 using StorageNetwork.Components;
 using StorageNetwork.Core;
+using StorageNetwork.Services;
 using UnityEngine;
 
 namespace StorageNetwork.ProductionOrders
 {
     internal sealed class ProductionOrderService
     {
-        private const int MaxPlanDepth = 4;
-        private const float AbnormalTimeoutCycles = 0.5f;
         private static readonly Dictionary<string, ProductionOrderRecord> ActiveOrders = new Dictionary<string, ProductionOrderRecord>();
         private static readonly Dictionary<int, OrderAutomationLease> AutomationLeases = new Dictionary<int, OrderAutomationLease>();
+        private static readonly Dictionary<Tag, ProductionKeepRule> KeepRules = new Dictionary<Tag, ProductionKeepRule>();
+        private static string loadedStorePath;
 
         private List<RecipeDisplayInfo> craftableRecipes = new List<RecipeDisplayInfo>();
         private Dictionary<Tag, float> networkAmountCache = new Dictionary<Tag, float>();
@@ -21,11 +22,19 @@ namespace StorageNetwork.ProductionOrders
 
         public List<Storage> NetworkSourceStorages => networkSourceStorageCache;
 
+        public void LoadOrdersForDisplay()
+        {
+            EnsureOrdersLoaded();
+        }
+
         public void Refresh()
         {
+            EnsureOrdersLoaded();
             RefreshNetworkStorageCache();
             craftableRecipes = ProductionRecipeCatalog.GetCraftableRecipeDisplayInfos();
             UpdateProductionOrderStates();
+            PurgeExpiredFinishedOrders();
+            RunKeepRules();
         }
 
         public List<RecipeDisplayInfo> GetCraftableRecipes()
@@ -72,11 +81,60 @@ namespace StorageNetwork.ProductionOrders
         public IReadOnlyList<ProductionOrderRecord> GetRecentOrdersForProduct(Tag productTag, int limit)
         {
             return ActiveOrders.Values
-                .Where(order => order.ProductTag == productTag && order.State != ProductionOrderState.Cancelled)
+                .Where(order => order.ProductTag == productTag)
                 .OrderByDescending(order => order.State == ProductionOrderState.Completed ? order.CompletedCycle : float.MaxValue)
                 .ThenByDescending(order => order.CreatedCycle)
                 .Take(limit)
                 .ToList();
+        }
+
+        public ProductionKeepRule GetKeepRule(Tag productTag)
+        {
+            return KeepRules.TryGetValue(productTag, out ProductionKeepRule rule) ? rule : null;
+        }
+
+        public void SetKeepRule(ProductDisplayGroup product, RecipeDisplayInfo route, float targetAmount)
+        {
+            if (product == null || route.Recipe == null || targetAmount <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+            {
+                return;
+            }
+
+            KeepRules[product.ProductTag] = new ProductionKeepRule(
+                product.ProductTag,
+                product.ProductName,
+                ProductionRecipeCatalog.GetRecipeKey(route.Recipe),
+                targetAmount);
+            SaveOrders();
+        }
+
+        public void ClearKeepRule(Tag productTag)
+        {
+            if (KeepRules.Remove(productTag))
+            {
+                SaveOrders();
+            }
+        }
+
+        public string CancelOrder(string orderKey, float currentCycle)
+        {
+            if (string.IsNullOrEmpty(orderKey) || !ActiveOrders.TryGetValue(orderKey, out ProductionOrderRecord order))
+            {
+                return "订单取消失败：找不到目标订单。";
+            }
+
+            if (!IsOrderActive(order))
+            {
+                return string.Format("订单 #{0} 已经结束，无需取消。", order.DisplayId);
+            }
+
+            CancelOrderQueues(order);
+            ReleaseOrderAutomation(order.Key);
+            order.State = ProductionOrderState.Cancelled;
+            order.CompletedCycle = currentCycle;
+            order.AbnormalReason = "用户手动取消。";
+            SaveOrders();
+            return string.Format("订单追踪：已手动取消订单 #{0}，并释放剩余排队批次。", order.DisplayId);
         }
 
         public ProductionPlanNode BuildProductionPlan(ComplexRecipe recipe, List<ComplexFabricator> fabricators, Tag productTag, float requestedAmount)
@@ -151,7 +209,7 @@ namespace StorageNetwork.ProductionOrders
             return draft;
         }
 
-        public ProductionOrderSubmitResult SubmitOrder(ProductDisplayGroup product, RecipeDisplayInfo route, float requestedAmount, float currentCycle)
+        public ProductionOrderSubmitResult SubmitOrder(ProductDisplayGroup product, RecipeDisplayInfo route, float requestedAmount, float currentCycle, bool isAutomatic = false)
         {
             ProductionOrderDraft draft = BuildDraft(product, route, requestedAmount);
             ProductionPlanNode plan = draft.Plan;
@@ -171,12 +229,15 @@ namespace StorageNetwork.ProductionOrders
             if (duplicate != null)
             {
                 ApplyProductionPlan(plan, duplicate.Key);
-                duplicate.Merge(requestedAmount, plan.OrderCount, reservedMaterials, queueAssignments, currentCycle);
+                duplicate.Merge(requestedAmount, plan.OrderCount, reservedMaterials, queueAssignments, currentCycle, isAutomatic);
                 duplicate.ObserveActivity(currentCycle, duplicate.ProducedAtSubmit, CalculateOrderQueueLoad(duplicate));
+                SaveOrders();
                 return ProductionOrderSubmitResult.MergeSuccess(duplicate, plan, string.Format("订单追踪：已合并到活动订单 #{0}，新增批次 {1}", duplicate.DisplayId, plan.OrderCount));
             }
 
             string orderKey = BuildOrderKey(product.ProductTag, route.Recipe, requestedAmount, currentCycle);
+            float stockAtSubmit = GetProducedAmountForOrder(product.ProductTag);
+            float allocationOffsetAtSubmit = GetPendingProducedAmountAhead(product.ProductTag);
             ApplyProductionPlan(plan, orderKey);
             ProductionOrderRecord record = new ProductionOrderRecord(
                 orderKey,
@@ -186,12 +247,15 @@ namespace StorageNetwork.ProductionOrders
                 ProductionRecipeCatalog.GetRecipeKey(route.Recipe),
                 requestedAmount,
                 plan.OrderCount,
-                GetProducedAmountForOrder(product.ProductTag),
+                stockAtSubmit,
+                allocationOffsetAtSubmit,
                 reservedMaterials,
                 queueAssignments,
-                currentCycle);
+                currentCycle,
+                isAutomatic);
             ActiveOrders[orderKey] = record;
             record.ObserveActivity(currentCycle, record.ProducedAtSubmit, CalculateOrderQueueLoad(record));
+            SaveOrders();
             return ProductionOrderSubmitResult.Created(record, plan, string.Format("订单追踪：已创建活动订单 #{0}，批次 {1}", record.DisplayId, plan.OrderCount));
         }
 
@@ -234,7 +298,7 @@ namespace StorageNetwork.ProductionOrders
                     "{0}{1}: {2}/{3}{4}",
                     indent,
                     ProductionOrderFormatting.GetTagDisplayName(requirement.Material),
-                    GameUtil.GetFormattedMass(Mathf.Min(requirement.AvailableAmount, requirement.RequiredAmount)),
+                    GameUtil.GetFormattedMass(requirement.AvailableAmount),
                     GameUtil.GetFormattedMass(requirement.RequiredAmount),
                     missing > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ? string.Format("  缺 {0}", GameUtil.GetFormattedMass(missing)) : string.Empty));
 
@@ -265,12 +329,7 @@ namespace StorageNetwork.ProductionOrders
                     continue;
                 }
 
-                AddNetworkAmount(primaryElement.ElementID.CreateTag(), primaryElement.Mass);
-                KPrefabID prefabID = item.GetComponent<KPrefabID>();
-                if (prefabID != null)
-                {
-                    AddNetworkAmount(prefabID.PrefabTag, primaryElement.Mass);
-                }
+                AddNetworkAmount(StorageItemUtility.GetStorageTransferTag(item), primaryElement.Mass);
             }
         }
 
@@ -290,7 +349,7 @@ namespace StorageNetwork.ProductionOrders
             float outputAmount = result != null ? Mathf.Max(result.amount, PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT) : 1f;
             int orderCount = Mathf.Max(1, Mathf.CeilToInt(requestedAmount / outputAmount));
             ProductionPlanNode node = new ProductionPlanNode(recipe, fabricators, productTag, outputAmount, orderCount);
-            if (recipe.ingredients == null || depth >= MaxPlanDepth)
+            if (recipe.ingredients == null || depth >= Config.Instance.ProductionPlanMaxDepth)
             {
                 return node;
             }
@@ -390,7 +449,9 @@ namespace StorageNetwork.ProductionOrders
                 return;
             }
 
+            EnsureActiveOrderAutomationLeases();
             float currentCycle = GameClock.Instance != null ? GameClock.Instance.GetCycle() : 0f;
+            bool changed = false;
             foreach (ProductionOrderRecord order in ActiveOrders.Values)
             {
                 if (!IsOrderActive(order))
@@ -398,9 +459,12 @@ namespace StorageNetwork.ProductionOrders
                     continue;
                 }
 
+                ProductionOrderState oldState = order.State;
+                float oldCompletedCycle = order.CompletedCycle;
+                float oldProduced = order.ProducedAtSubmit;
                 float currentStock = GetProducedAmountForOrder(order.ProductTag);
-                float gained = Mathf.Max(0f, currentStock - order.StockAtSubmit);
-                order.ProducedAtSubmit = Mathf.Min(order.RequestedAmount, gained);
+                float gained = Mathf.Max(0f, currentStock - order.StockAtSubmit - order.AllocationOffsetAtSubmit);
+                order.ProducedAtSubmit = Mathf.Min(order.RequestedAmount, Mathf.Max(order.ProducedAtSubmit, gained));
                 order.ObserveActivity(currentCycle, order.ProducedAtSubmit, CalculateOrderQueueLoad(order));
                 if (gained + PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT >= order.RequestedAmount)
                 {
@@ -408,7 +472,7 @@ namespace StorageNetwork.ProductionOrders
                     order.CompletedCycle = currentCycle;
                     ReleaseOrderAutomation(order.Key);
                 }
-                else if (currentCycle - order.LastActivityCycle >= AbnormalTimeoutCycles)
+                else if (currentCycle - order.LastActivityCycle >= Config.Instance.AbnormalOrderTimeoutCycles)
                 {
                     CancelAbnormalOrder(order, currentCycle);
                 }
@@ -420,6 +484,15 @@ namespace StorageNetwork.ProductionOrders
                 {
                     order.State = ProductionOrderState.Producing;
                 }
+
+                changed |= oldState != order.State ||
+                           Mathf.Abs(oldCompletedCycle - order.CompletedCycle) > 0.001f ||
+                           Mathf.Abs(oldProduced - order.ProducedAtSubmit) > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT;
+            }
+
+            if (changed)
+            {
+                SaveOrders();
             }
         }
 
@@ -429,6 +502,33 @@ namespace StorageNetwork.ProductionOrders
                    order.State != ProductionOrderState.Completed &&
                    order.State != ProductionOrderState.Abnormal &&
                    order.State != ProductionOrderState.Cancelled;
+        }
+
+        private static void PurgeExpiredFinishedOrders()
+        {
+            if (ActiveOrders.Count == 0)
+            {
+                return;
+            }
+
+            float currentCycle = GameClock.Instance != null ? GameClock.Instance.GetCycle() : 0f;
+            List<string> expiredKeys = ActiveOrders.Values
+                .Where(order => !IsOrderActive(order) &&
+                                order.CompletedCycle > 0f &&
+                                currentCycle - order.CompletedCycle > Config.Instance.FinishedOrderRecordLifetimeCycles)
+                .Select(order => order.Key)
+                .ToList();
+            if (expiredKeys.Count == 0)
+            {
+                return;
+            }
+
+            foreach (string key in expiredKeys)
+            {
+                ActiveOrders.Remove(key);
+            }
+
+            SaveOrders();
         }
 
         private static float CalculateOrderQueueLoad(ProductionOrderRecord order)
@@ -480,9 +580,10 @@ namespace StorageNetwork.ProductionOrders
         {
             order.State = ProductionOrderState.Abnormal;
             order.CompletedCycle = currentCycle;
-            order.AbnormalReason = string.Format("半周期内无进度变动，已自动取消建筑排产。最后变动周期 {0}", ProductionOrderFormatting.FormatCycle(order.LastActivityCycle));
+            order.AbnormalReason = string.Format("{0:0.##} 周期内无进度变动，已自动取消建筑排产。最后变动周期 {1}", Config.Instance.AbnormalOrderTimeoutCycles, ProductionOrderFormatting.FormatCycle(order.LastActivityCycle));
             CancelOrderQueues(order);
             ReleaseOrderAutomation(order.Key);
+            StorageNetworkNotifications.ShowAbnormalOrder(order);
         }
 
         private static void CancelOrderQueues(ProductionOrderRecord order)
@@ -500,8 +601,108 @@ namespace StorageNetwork.ProductionOrders
                     queued = ComplexFabricator.MAX_QUEUE_SIZE;
                 }
 
-                assignment.Fabricator.SetRecipeQueueCount(assignment.Recipe, Mathf.Max(0, queued - assignment.OrderCount));
+                int protectedQueued = GetProtectedQueueCount(order, assignment);
+                int removableQueued = Mathf.Max(0, queued - protectedQueued);
+                int cancelCount = Mathf.Min(removableQueued, GetRemainingQueueCount(order, assignment));
+                if (cancelCount <= 0)
+                {
+                    continue;
+                }
+
+                bool cancelCurrentWorkingOrder = ShouldCancelCurrentWorkingOrder(order, assignment);
+                int finalQueued = Mathf.Max(protectedQueued, queued - cancelCount);
+                if (cancelCurrentWorkingOrder)
+                {
+                    assignment.Fabricator.SetRecipeQueueCount(assignment.Recipe, 0);
+                }
+
+                assignment.Fabricator.SetRecipeQueueCount(assignment.Recipe, finalQueued);
             }
+        }
+
+        private static bool ShouldCancelCurrentWorkingOrder(ProductionOrderRecord cancelledOrder, ProductionOrderQueueAssignment cancelledAssignment)
+        {
+            if (cancelledAssignment.Fabricator == null ||
+                cancelledAssignment.Recipe == null ||
+                cancelledAssignment.Fabricator.CurrentWorkingOrder != cancelledAssignment.Recipe)
+            {
+                return false;
+            }
+
+            return !ActiveOrders.Values.Any(order =>
+                IsOrderActive(order) &&
+                order.Key != cancelledOrder.Key &&
+                IsOrderAheadOf(order, cancelledOrder) &&
+                order.QueueAssignments.Any(assignment => IsSameQueue(assignment, cancelledAssignment) && GetRemainingQueueCount(order, assignment) > 0));
+        }
+
+        private static bool IsOrderAheadOf(ProductionOrderRecord candidate, ProductionOrderRecord order)
+        {
+            if (candidate.CreatedCycle < order.CreatedCycle - 0.001f)
+            {
+                return true;
+            }
+
+            return Mathf.Abs(candidate.CreatedCycle - order.CreatedCycle) <= 0.001f &&
+                   candidate.DisplayId < order.DisplayId;
+        }
+
+        private static int GetProtectedQueueCount(ProductionOrderRecord cancelledOrder, ProductionOrderQueueAssignment cancelledAssignment)
+        {
+            int protectedCount = 0;
+            foreach (ProductionOrderRecord order in ActiveOrders.Values)
+            {
+                if (!IsOrderActive(order) || order.Key == cancelledOrder.Key)
+                {
+                    continue;
+                }
+
+                foreach (ProductionOrderQueueAssignment assignment in order.QueueAssignments)
+                {
+                    if (IsSameQueue(assignment, cancelledAssignment))
+                    {
+                        protectedCount += GetRemainingQueueCount(order, assignment);
+                    }
+                }
+            }
+
+            return Mathf.Max(0, protectedCount);
+        }
+
+        private static int GetRemainingQueueCount(ProductionOrderRecord order, ProductionOrderQueueAssignment assignment)
+        {
+            float outputAmount = GetRecipeOutputAmount(assignment.Recipe, order.ProductTag);
+            if (outputAmount <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+            {
+                return assignment.OrderCount;
+            }
+
+            int totalAssigned = order.QueueAssignments
+                .Where(candidate => candidate.Recipe == assignment.Recipe && GetRecipeOutputAmount(candidate.Recipe, order.ProductTag) > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+                .Sum(candidate => candidate.OrderCount);
+            if (totalAssigned <= 0)
+            {
+                return assignment.OrderCount;
+            }
+
+            float remainingAmount = Mathf.Max(0f, order.RequestedAmount - order.ProducedAtSubmit);
+            int totalRemaining = Mathf.CeilToInt(remainingAmount / outputAmount);
+            int remainingForAssignment = Mathf.CeilToInt(totalRemaining * assignment.OrderCount / (float)totalAssigned);
+            return Mathf.Clamp(remainingForAssignment, 0, assignment.OrderCount);
+        }
+
+        private static float GetRecipeOutputAmount(ComplexRecipe recipe, Tag productTag)
+        {
+            ComplexRecipe.RecipeElement result = ProductionRecipeCatalog.GetRecipeResultForProduct(recipe, productTag);
+            return result != null ? Mathf.Max(0f, result.amount) : 0f;
+        }
+
+        private static bool IsSameQueue(ProductionOrderQueueAssignment left, ProductionOrderQueueAssignment right)
+        {
+            return left != null &&
+                   right != null &&
+                   left.Fabricator == right.Fabricator &&
+                   left.Recipe == right.Recipe;
         }
 
         private float GetProducedAmountForOrder(Tag productTag)
@@ -606,6 +807,25 @@ namespace StorageNetwork.ProductionOrders
             }
         }
 
+        private static void EnsureActiveOrderAutomationLeases()
+        {
+            foreach (ProductionOrderRecord order in ActiveOrders.Values)
+            {
+                if (!IsOrderActive(order))
+                {
+                    continue;
+                }
+
+                foreach (ProductionOrderQueueAssignment assignment in order.QueueAssignments)
+                {
+                    if (assignment.Fabricator != null)
+                    {
+                        EnsureOrderAutomationEnabled(assignment.Fabricator, order.Key);
+                    }
+                }
+            }
+        }
+
         private static void ReleaseOrderAutomation(string orderKey)
         {
             List<int> emptyLeases = new List<int>();
@@ -677,6 +897,52 @@ namespace StorageNetwork.ProductionOrders
                 .Sum(order => order.GetReservedAmount(tag));
         }
 
+        private static float GetPendingProducedAmountAhead(Tag productTag)
+        {
+            return ActiveOrders.Values
+                .Where(order => IsOrderActive(order) && order.ProductTag == productTag)
+                .Sum(order => Mathf.Max(0f, order.RequestedAmount - order.ProducedAtSubmit));
+        }
+
+        private void RunKeepRules()
+        {
+            if (KeepRules.Count == 0 || craftableRecipes.Count == 0)
+            {
+                return;
+            }
+
+            float currentCycle = GameClock.Instance != null ? GameClock.Instance.GetCycle() : 0f;
+            Dictionary<Tag, ProductDisplayGroup> products = GetProductGroups().ToDictionary(product => product.ProductTag);
+            foreach (ProductionKeepRule rule in KeepRules.Values.ToList())
+            {
+                if (rule.TargetAmount <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ||
+                    !products.TryGetValue(rule.ProductTag, out ProductDisplayGroup product))
+                {
+                    continue;
+                }
+
+                RecipeDisplayInfo route = product.Routes.FirstOrDefault(candidate => ProductionRecipeCatalog.GetRecipeKey(candidate.Recipe) == rule.RecipeKey);
+                if (route.Recipe == null)
+                {
+                    route = product.Routes.FirstOrDefault();
+                }
+
+                if (route.Recipe == null)
+                {
+                    continue;
+                }
+
+                float committedAmount = GetProducedAmountForOrder(rule.ProductTag) + GetPendingProducedAmountAhead(rule.ProductTag);
+                float missingAmount = rule.TargetAmount - committedAmount;
+                if (missingAmount <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+                {
+                    continue;
+                }
+
+                SubmitOrder(product, route, missingAmount, currentCycle, true);
+            }
+        }
+
         private static float EstimateQueuedSeconds(ProductionPlanNode node, out bool hasInfiniteQueue)
         {
             hasInfiniteQueue = false;
@@ -707,6 +973,34 @@ namespace StorageNetwork.ProductionOrders
             int amountBucket = Mathf.RoundToInt(requestedAmount * 1000f);
             int cycleBucket = Mathf.RoundToInt(createdCycle * 100f);
             return string.Format("{0}|{1}|{2}|{3}", productTag, recipeKey, amountBucket, cycleBucket);
+        }
+
+        private static void EnsureOrdersLoaded()
+        {
+            string storePath = ProductionOrderPersistence.GetStorePath();
+            if (loadedStorePath == storePath)
+            {
+                return;
+            }
+
+            ActiveOrders.Clear();
+            AutomationLeases.Clear();
+            KeepRules.Clear();
+            loadedStorePath = storePath;
+            foreach (ProductionOrderRecord order in ProductionOrderPersistence.Load())
+            {
+                ActiveOrders[order.Key] = order;
+            }
+
+            foreach (ProductionKeepRule rule in ProductionOrderPersistence.LoadKeepRules())
+            {
+                KeepRules[rule.ProductTag] = rule;
+            }
+        }
+
+        public static void SaveOrders()
+        {
+            ProductionOrderPersistence.Save(ActiveOrders.Values.ToList(), KeepRules.Values.ToList());
         }
     }
 
