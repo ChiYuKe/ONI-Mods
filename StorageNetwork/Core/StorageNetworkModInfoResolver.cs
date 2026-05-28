@@ -8,8 +8,12 @@ namespace StorageNetwork.Core
 {
     internal static class StorageNetworkModInfoResolver
     {
+        private static readonly Assembly StorageNetworkAssembly = typeof(StorageNetworkModInfoResolver).Assembly;
         private static Dictionary<Assembly, string> modNamesByAssembly;
 
+        /// <summary>
+        /// 从建筑组件所属程序集推断来源模组名。会跳过 StorageNetwork 自己，避免适配组件污染来源显示。
+        /// </summary>
         public static string GetSourceModName(Storage storage)
         {
             if (storage == null)
@@ -31,6 +35,11 @@ namespace StorageNetwork.Core
                 }
 
                 Assembly assembly = component.GetType().Assembly;
+                if (assembly == StorageNetworkAssembly)
+                {
+                    continue;
+                }
+
                 if (assembly != null && modNames.TryGetValue(assembly, out string modName))
                 {
                     return modName;

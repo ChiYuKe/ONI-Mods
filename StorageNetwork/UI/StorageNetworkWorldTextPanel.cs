@@ -107,7 +107,7 @@ namespace StorageNetwork.UI
 
             view.UpdatePosition(target);
             view.SetVisible(true);
-            LogDiagnostic();
+            // LogDiagnostic();
         }
 
         private void ToggleForTarget(GameObject selectedObject)

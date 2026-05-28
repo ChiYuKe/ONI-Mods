@@ -87,8 +87,7 @@ namespace StorageNetwork.UI
             bool showSettingsButton = StorageNetworkStorageRules.IsProductionStorage(storage, enrollment) ||
                                       StorageNetworkStorageRules.HasSettingsButtonTag(storage) ||
                                       ShowDeprecatedStorageSettingsButton;
-            string sourceModName = StorageNetworkStorageRules.HasModStorageTag(storage) ||
-                                   StorageNetworkStorageRules.HasSettingsButtonTag(storage)
+            string sourceModName = StorageNetworkStorageRules.HasModStorageTag(storage)
                 ? StorageNetworkModInfoResolver.GetSourceModName(storage)
                 : null;
 

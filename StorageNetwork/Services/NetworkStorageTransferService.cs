@@ -80,8 +80,6 @@ namespace StorageNetwork.Services
                 {
                     break;
                 }
-
-                target = FindOutputTarget(item, excluded, specificTarget);
             }
 
             return moved > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT
@@ -141,7 +139,6 @@ namespace StorageNetwork.Services
 
                 moved += transferred;
                 remaining -= transferred;
-                target = FindOutputTarget(item, excludedStorages, specificTarget);
             }
 
             return remaining > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT
@@ -152,12 +149,13 @@ namespace StorageNetwork.Services
         private static Storage FindOutputTarget(GameObject item, HashSet<Storage> excludedStorages, Storage specificTarget)
         {
             Tag tag = StorageItemUtility.GetStorageTransferTag(item);
+            StorageSceneSnapshot snapshot = StorageSceneCollector.Collect();
             if (specificTarget != null)
             {
                 return IsUsableOutputTarget(specificTarget, item, excludedStorages) ? specificTarget : null;
             }
 
-            return StorageSceneCollector.Collect().Storages
+            return snapshot.Storages
                 .Select(info => info.Storage)
                 .Where(target => IsUsableOutputTarget(target, item, excludedStorages))
                 .Where(target => IsAutoOutputMatch(target, tag))

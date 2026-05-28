@@ -97,7 +97,7 @@ namespace StorageNetwork.Components
 
         private bool CanShowEnrollmentButton()
         {
-            return storage != null && (IsStorageLocker() || IsComplexRecipeBuilding());
+            return storage != null && (IsStorageLocker() || IsRefrigerator() || IsComplexRecipeBuilding());
         }
 
         /// <summary>
@@ -106,6 +106,14 @@ namespace StorageNetwork.Components
         public bool IsStorageLocker()
         {
             return GetComponent<StorageLocker>() != null;
+        }
+
+        /// <summary>
+        /// 判断建筑是否是冰箱。
+        /// </summary>
+        public bool IsRefrigerator()
+        {
+            return GetComponent<Refrigerator>() != null;
         }
 
         /// <summary>
