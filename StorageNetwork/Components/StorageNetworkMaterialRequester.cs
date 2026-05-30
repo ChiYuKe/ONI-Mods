@@ -3,6 +3,7 @@ using System.Linq;
 using System;
 using KSerialization;
 using StorageNetwork.Core;
+using StorageNetwork.ProductionOrders;
 using StorageNetwork.Services;
 using UnityEngine;
 using Loc = StorageNetwork.STRINGS;
@@ -112,7 +113,7 @@ namespace StorageNetwork.Components
             ComplexRecipe recipe = GetRecipeToRequest();
             if (recipe == null || recipe.ingredients == null)
             {
-                lastStatus = "没有可请求材料的排队配方";
+                lastStatus = Loc.Get(Loc.UI.STORAGE_NETWORK.MATERIAL_STATUS_NO_QUEUE);
                 requestCooldown = Config.Instance.MaterialRequestRetryCooldownSeconds;
                 return;
             }
@@ -120,7 +121,7 @@ namespace StorageNetwork.Components
             float remainingLimit = LimitEnabled ? Mathf.Max(0f, LimitKg - RequestedKg) : float.MaxValue;
             if (remainingLimit <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
             {
-                lastStatus = "已达到请求限额";
+                lastStatus = Loc.Get(Loc.UI.STORAGE_NETWORK.MATERIAL_STATUS_LIMIT_REACHED);
                 requestCooldown = Config.Instance.MaterialRequestSuccessCooldownSeconds;
                 return;
             }
@@ -143,23 +144,23 @@ namespace StorageNetwork.Components
                 }
 
                 requestedAny = true;
-                float moved = RequestIngredient(ingredient.material, Mathf.Min(missing, remainingLimit));
+                float moved = RequestIngredient(recipe, ingredient.material, Mathf.Min(missing, remainingLimit));
                 if (moved <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
                 {
-                    lastStatus = string.Format("缺少 {0}，网络中没有可用来源", GetTagDisplayName(ingredient.material));
+                    lastStatus = string.Format(Loc.Get(Loc.UI.STORAGE_NETWORK.MATERIAL_STATUS_MISSING_SOURCE), GetTagDisplayName(ingredient.material));
                     requestCooldown = Config.Instance.MaterialRequestRetryCooldownSeconds;
                     break;
                 }
 
                 movedAny = true;
                 RequestedKg += moved;
-                lastStatus = string.Format("已请求 {0} {1}", GameUtil.GetFormattedMass(moved), GetTagDisplayName(ingredient.material));
+                lastStatus = string.Format(Loc.Get(Loc.UI.STORAGE_NETWORK.MATERIAL_STATUS_REQUESTED), GameUtil.GetFormattedMass(moved), GetTagDisplayName(ingredient.material));
                 remainingLimit -= moved;
             }
 
             if (!requestedAny)
             {
-                lastStatus = "当前配方材料已满足";
+                lastStatus = Loc.Get(Loc.UI.STORAGE_NETWORK.MATERIAL_STATUS_SATISFIED);
                 requestCooldown = Config.Instance.MaterialRequestSuccessCooldownSeconds;
             }
             else if (!movedAny && requestCooldown <= 0f)
@@ -298,7 +299,7 @@ namespace StorageNetwork.Components
 
             lastOutputStatus = NetworkStorageTransferService.FormatOutputStatus(
                 new StorageTransferResult(totalMoved, lastBlockedItem),
-                "等待下一批成品");
+                Loc.Get(Loc.UI.STORAGE_NETWORK.MATERIAL_STATUS_WAITING_OUTPUT));
         }
 
         private void RefreshMaterialRequestStatus()
@@ -417,9 +418,14 @@ namespace StorageNetwork.Components
             return Mathf.Clamp(count, 1, Config.Instance.MaxRequestBatchCount);
         }
 
-        private float RequestIngredient(Tag tag, float amount)
+        private float RequestIngredient(ComplexRecipe recipe, Tag tag, float amount)
         {
             float moved = 0f;
+            if (CurrentMode == RequestMode.SearchNetwork)
+            {
+                moved += ProductionOrderService.RequestLeasedMaterial(fabricator, recipe, tag, amount, fabricator.inStorage);
+            }
+
             foreach (Storage source in GetSourceStorages(tag))
             {
                 if (amount - moved <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
@@ -464,7 +470,7 @@ namespace StorageNetwork.Components
             }
 
             StorageTransferResult result = StoreOutputsFromOutputStorage();
-            lastOutputStatus = NetworkStorageTransferService.FormatOutputStatus(result, "等待成品进入输出栏");
+            lastOutputStatus = NetworkStorageTransferService.FormatOutputStatus(result, Loc.Get(Loc.UI.STORAGE_NETWORK.MATERIAL_STATUS_WAITING_PRODUCTS));
         }
 
         private StorageTransferResult StoreOutputsFromOutputStorage()
@@ -472,7 +478,7 @@ namespace StorageNetwork.Components
             EnsureFabricator();
             if (fabricator.outStorage == null || fabricator.outStorage.items == null)
             {
-                lastOutputStatus = "建筑没有可读取的输出栏";
+                lastOutputStatus = Loc.Get(Loc.UI.STORAGE_NETWORK.MATERIAL_STATUS_NO_OUTPUT_STORAGE);
                 return StorageTransferResult.Idle;
             }
 

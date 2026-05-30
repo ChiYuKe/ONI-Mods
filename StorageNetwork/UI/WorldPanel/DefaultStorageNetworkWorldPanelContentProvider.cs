@@ -6,6 +6,7 @@ using StorageNetwork.Core;
 using StorageNetwork.ProductionOrders;
 using StorageNetwork.Services;
 using UnityEngine;
+using static StorageNetwork.STRINGS;
 
 namespace StorageNetwork.UI.WorldPanel
 {
@@ -41,62 +42,46 @@ namespace StorageNetwork.UI.WorldPanel
         private StorageNetworkWorldPanelContent BuildFabricatorContent(GameObject target, ComplexFabricator fabricator)
         {
             StorageNetworkMaterialRequester requester = target.GetComponent<StorageNetworkMaterialRequester>();
-            List<ProductionOrderRecord> relatedOrders = GetRelatedOrders(fabricator);
+            List<string> orderUsages = GetRelatedOrderUsages(fabricator);
 
-            string lineOne = requester != null && requester.RequestEnabled ? "材料请求：开启" : "材料请求：关闭";
-            string lineTwo = "状态：" + (requester != null && !string.IsNullOrEmpty(requester.LastStatus)
+            string lineOne = requester != null && requester.RequestEnabled
+                ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.WORLD_MATERIAL_REQUEST_ON)
+                : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.WORLD_MATERIAL_REQUEST_OFF);
+            string lineTwo = string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.WORLD_STATUS), requester != null && !string.IsNullOrEmpty(requester.LastStatus)
                 ? requester.LastStatus
-                : "等待生产队列");
-            string lineThree = relatedOrders.Count == 0
-                ? "订单：当前建筑没有活动订单"
-                : "订单：" + string.Join(" / ", relatedOrders.Select(FormatOrder).ToArray());
+                : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.WORLD_WAITING_QUEUE));
+            string lineThree = orderUsages.Count == 0
+                ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.WORLD_ORDER_EMPTY)
+                : string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.WORLD_ORDER_LIST), string.Join(" / ", orderUsages.ToArray()));
 
-            return new StorageNetworkWorldPanelContent("Storage Network 生产接入", lineOne, lineTwo, lineThree);
+            return new StorageNetworkWorldPanelContent(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.WORLD_PRODUCTION_TITLE), lineOne, lineTwo, lineThree);
         }
 
         private StorageNetworkWorldPanelContent BuildStorageContent(GameObject target, Storage storage)
         {
             StorageSceneSnapshot snapshot = StorageSceneCollector.Collect();
             string lineOne = string.Format(
-                "网络容量：{0} / {1}",
+                Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.WORLD_NETWORK_CAPACITY),
                 GameUtil.GetFormattedMass(snapshot.TotalStoredKg),
                 GameUtil.GetFormattedMass(snapshot.TotalCapacityKg));
             string lineTwo = storage != null
                 ? string.Format(
-                    "本建筑：{0} / {1}",
+                    Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.WORLD_BUILDING_STORAGE),
                     GameUtil.GetFormattedMass(StorageItemUtility.GetStoredMass(storage)),
                     GameUtil.GetFormattedMass(storage.capacityKg))
-                : "本建筑：未检测到 Storage";
+                : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.WORLD_BUILDING_NO_STORAGE);
 
             StorageNetworkStorageConnector connector = target.GetComponent<StorageNetworkStorageConnector>();
             string lineThree = connector != null && !string.IsNullOrEmpty(connector.LastOutputStatus)
-                ? "输出：" + connector.LastOutputStatus
-                : string.Format("接入建筑：{0}", snapshot.Storages.Count);
+                ? string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.WORLD_OUTPUT_STATUS), connector.LastOutputStatus)
+                : string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.WORLD_CONNECTED_BUILDINGS), snapshot.Storages.Count);
 
-            return new StorageNetworkWorldPanelContent("Storage Network 储存接入", lineOne, lineTwo, lineThree);
+            return new StorageNetworkWorldPanelContent(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.WORLD_STORAGE_TITLE), lineOne, lineTwo, lineThree);
         }
 
-        private List<ProductionOrderRecord> GetRelatedOrders(ComplexFabricator fabricator)
+        private List<string> GetRelatedOrderUsages(ComplexFabricator fabricator)
         {
-            orderService.LoadOrdersForDisplay();
-            return orderService.Orders
-                .Where(order => IsActiveOrder(order) && order.QueueAssignments.Any(assignment => assignment.Fabricator == fabricator))
-                .OrderBy(order => order.DisplayId)
-                .Take(3)
-                .ToList();
-        }
-
-        private static bool IsActiveOrder(ProductionOrderRecord order)
-        {
-            return order != null &&
-                   order.State != ProductionOrderState.Completed &&
-                   order.State != ProductionOrderState.Cancelled &&
-                   order.State != ProductionOrderState.Abnormal;
-        }
-
-        private static string FormatOrder(ProductionOrderRecord order)
-        {
-            return string.Format("#{0} {1} {2}", order.DisplayId, order.ProductName, GameUtil.GetFormattedMass(order.RequestedAmount));
+            return orderService.GetActiveOrderUsagesForFabricator(fabricator, 3).ToList();
         }
     }
 }

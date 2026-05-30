@@ -10,7 +10,7 @@ using UnityEngine.UI;
 
 namespace StorageNetwork.UI
 {
-    public sealed partial class StorageNetworkPanel : MonoBehaviour, IInputHandler
+    public sealed partial class StorageNetworkPanel : KScreen, IInputHandler
     {
 
 
@@ -88,21 +88,36 @@ namespace StorageNetwork.UI
         private static ColorStyleSetting KleiBlueStyle()
         {
             ColorStyleSetting style = ScriptableObject.CreateInstance<ColorStyleSetting>();
-            style.activeColor = new Color(0.34f, 0.37f, 0.47f, 1f);
-            style.inactiveColor = new Color(0.20f, 0.23f, 0.30f, 1f);
-            style.hoverColor = new Color(0.28f, 0.31f, 0.40f, 1f);
+            style.activeColor = new Color(0.11f, 0.12f, 0.16f, 1f);
+            style.inactiveColor = new Color(0.17f, 0.19f, 0.25f, 1f);
+            style.hoverColor = new Color(0.25f, 0.28f, 0.35f, 1f);
             style.disabledColor = new Color(0.4156863f, 0.4117647f, 0.4f);
             style.disabledActiveColor = new Color(0.625f, 0.6158088f, 0.5882353f);
             style.disabledhoverColor = new Color(0.5f, 0.4898898f, 0.4595588f);
             return style;
         }
 
+        private static Color OniPinkInactive()
+        {
+            return new Color(0.5294118f, 0.2724914f, 0.4009516f, 1f);
+        }
+
+        private static Color OniPinkHover()
+        {
+            return new Color(0.6176471f, 0.3315311f, 0.4745891f, 1f);
+        }
+
+        private static Color OniPinkActive()
+        {
+            return new Color(0.7941176f, 0.4496107f, 0.6242238f, 1f);
+        }
+
         private static ColorStyleSetting KleiPinkStyle()
         {
             ColorStyleSetting style = ScriptableObject.CreateInstance<ColorStyleSetting>();
-            style.activeColor = new Color(0.7941176f, 0.4496107f, 0.6242238f);
-            style.inactiveColor = new Color(0.5294118f, 0.2724914f, 0.4009516f);
-            style.hoverColor = new Color(0.6176471f, 0.3315311f, 0.4745891f);
+            style.activeColor = OniPinkActive();
+            style.inactiveColor = OniPinkInactive();
+            style.hoverColor = OniPinkHover();
             style.disabledColor = new Color(0.4156863f, 0.4117647f, 0.4f);
             style.disabledActiveColor = Color.clear;
             style.disabledhoverColor = new Color(0.5f, 0.5f, 0.5f);

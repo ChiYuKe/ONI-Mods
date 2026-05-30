@@ -10,7 +10,7 @@ using UnityEngine.UI;
 
 namespace StorageNetwork.UI
 {
-    public sealed partial class StorageNetworkPanel : MonoBehaviour, IInputHandler
+    public sealed partial class StorageNetworkPanel : KScreen, IInputHandler
     {
 
 
@@ -30,7 +30,7 @@ namespace StorageNetwork.UI
                 selectedItemStorage = null;
                 selectedItemKey = null;
                 LogDebug("DropSelectedItem abort: missing storage or items");
-                Refresh(true);
+                RefreshStoragePanel(StoragePanelRefreshMode.Structure);
                 return;
             }
 
@@ -89,7 +89,7 @@ namespace StorageNetwork.UI
             selectedItemStorage = null;
             selectedItemKey = null;
             lastListSignature = null;
-            Refresh(true);
+            RefreshStoragePanel(StoragePanelRefreshMode.Structure);
             LogDebug("DropSelectedItem end");
         }
 
@@ -98,7 +98,7 @@ namespace StorageNetwork.UI
             List<GameObject> items = FindStoredItems(source, itemKey);
             if (source == null || destination == null || items.Count == 0)
             {
-                Refresh(true);
+                RefreshStoragePanel(StoragePanelRefreshMode.Structure);
                 return;
             }
 
@@ -144,7 +144,7 @@ namespace StorageNetwork.UI
             selectedItemStorage = null;
             selectedItemKey = null;
             lastListSignature = null;
-            Refresh(true);
+            RefreshStoragePanel(StoragePanelRefreshMode.Structure);
         }
 
         private static float GetStoredItemsMass(IEnumerable<GameObject> items)

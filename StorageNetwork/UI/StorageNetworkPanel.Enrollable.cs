@@ -8,7 +8,7 @@ using static StorageNetwork.STRINGS;
 
 namespace StorageNetwork.UI
 {
-    public sealed partial class StorageNetworkPanel : MonoBehaviour, IInputHandler
+    public sealed partial class StorageNetworkPanel : KScreen, IInputHandler
     {
         private static readonly string[] PlanCategoryIds =
         {
@@ -32,12 +32,26 @@ namespace StorageNetwork.UI
         private void ShowEnrollableBuildingsDialog()
         {
             EnsureEnrollableWindow();
-            ClearEnrollableWindowContent();
             List<StorageNetworkEnrollment> enrollments = Object
                 .FindObjectsByType<StorageNetworkEnrollment>(FindObjectsInactive.Exclude, FindObjectsSortMode.None)
                 .Where(enrollment => enrollment != null && enrollment.CanShowInEnrollableList())
                 .ToList();
 
+            string signature = BuildEnrollableWindowSignature(enrollments);
+            if (signature != enrollableWindowSignature)
+            {
+                enrollableWindowSignature = signature;
+                ClearEnrollableWindowContent();
+                BuildEnrollableWindowContent(enrollments);
+            }
+
+            enrollableWindowRoot.SetActive(true);
+            Canvas.ForceUpdateCanvases();
+            LayoutRebuilder.ForceRebuildLayoutImmediate(enrollableWindowContent);
+        }
+
+        private void BuildEnrollableWindowContent(List<StorageNetworkEnrollment> enrollments)
+        {
             TextMeshProUGUI header = CreateText("Header", enrollableWindowContent, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENROLLABLE_HEADER), 14, TextAlignmentOptions.MidlineLeft);
             header.color = new Color(0.34f, 0.39f, 0.38f, 1f);
             header.fontStyle = FontStyles.Normal;
@@ -67,10 +81,22 @@ namespace StorageNetwork.UI
                     }
                 }
             }
+        }
 
-            enrollableWindowRoot.SetActive(true);
-            Canvas.ForceUpdateCanvases();
-            LayoutRebuilder.ForceRebuildLayoutImmediate(enrollableWindowContent);
+        private static string BuildEnrollableWindowSignature(List<StorageNetworkEnrollment> enrollments)
+        {
+            return string.Join("|", enrollments
+                .OrderBy(enrollment => enrollment != null ? enrollment.GetInstanceID() : 0)
+                .Select(enrollment =>
+                {
+                    Storage storage = enrollment != null ? enrollment.GetComponent<Storage>() : null;
+                    return string.Format("{0}:{1}:{2}:{3:0.###}:{4:0.###}",
+                        enrollment != null ? enrollment.GetInstanceID() : 0,
+                        enrollment != null ? enrollment.IncludedInSceneNetwork : false,
+                        enrollment != null ? enrollment.gameObject.GetProperName() : string.Empty,
+                        storage != null ? storage.MassStored() : 0f,
+                        storage != null ? storage.Capacity() : 0f);
+                }));
         }
 
         private RectTransform enrollableWindowContent;
@@ -95,7 +121,7 @@ namespace StorageNetwork.UI
             Stretch(title.rectTransform(), 12f, 0f);
             title.rectTransform().offsetMax = new Vector2(-42f, 0f);
 
-            GameObject closeButton = CreateGameButton("CloseButton", header.transform, "X", CloseEnrollableWindow);
+            GameObject closeButton = CreateCloseIconButton("CloseButton", header.transform, CloseEnrollableWindow);
             RectTransform closeRect = closeButton.GetComponent<RectTransform>();
             closeRect.anchorMin = new Vector2(1f, 0.5f);
             closeRect.anchorMax = new Vector2(1f, 0.5f);
@@ -153,6 +179,8 @@ namespace StorageNetwork.UI
             {
                 enrollableWindowRoot.SetActive(false);
             }
+
+            enrollableWindowSignature = null;
         }
 
         private void CreateEnrollableBuildingRow(Transform parent, StorageNetworkEnrollment enrollment)
@@ -223,7 +251,8 @@ namespace StorageNetwork.UI
                 () =>
                 {
                     enrollment.SetIncludedInSceneNetwork(!enrollment.IncludedInSceneNetwork);
-                    Refresh(true);
+                    enrollableWindowSignature = null;
+                    RefreshStoragePanel(StoragePanelRefreshMode.Structure);
                     UpdateEnrollableBuildingRow(row, enrollment);
                 },
                 included ? KleiPinkStyle() : KleiBlueStyle());

@@ -9,7 +9,7 @@ using static StorageNetwork.STRINGS;
 
 namespace StorageNetwork.UI
 {
-    public sealed partial class StorageNetworkPanel : MonoBehaviour, IInputHandler
+    public sealed partial class StorageNetworkPanel : KScreen, IInputHandler
     {
         private void ShowProductionSettingsPanel(Storage storage)
         {
@@ -55,7 +55,7 @@ namespace StorageNetwork.UI
             title.lineSpacing = 2f;
             Stretch(title.rectTransform(), 10f, 7f);
 
-            GameObject closeButton = CreateGameButton("CloseButton", header.transform, "X", CloseProductionSettingsPanel);
+            GameObject closeButton = CreateCloseIconButton("CloseButton", header.transform, CloseProductionSettingsPanel);
             RectTransform closeRect = closeButton.GetComponent<RectTransform>();
             closeRect.anchorMin = new Vector2(1f, 1f);
             closeRect.anchorMax = new Vector2(1f, 1f);
@@ -141,9 +141,10 @@ namespace StorageNetwork.UI
             }
 
             ComplexFabricator fabricator = storage.GetComponent<ComplexFabricator>();
-            string signature = BuildProductionSettingsSignature(storage, fabricator);
+            string signature = BuildProductionSettingsStructureSignature(storage, fabricator);
             if (!force && signature == productionSettingsSignature)
             {
+                UpdateProductionSettingsLive(storage, fabricator);
                 return;
             }
 
@@ -163,6 +164,7 @@ namespace StorageNetwork.UI
                 AddStorageOutputCard(storage, connector);
             }
             AddInventoryCard(storage, fabricator);
+            UpdateProductionSettingsLive(storage, fabricator);
 
             LayoutRebuilder.MarkLayoutForRebuild(productionSettingsContent);
         }
@@ -173,9 +175,13 @@ namespace StorageNetwork.UI
             {
                 Destroy(productionSettingsContent.GetChild(i).gameObject);
             }
+
+            productionOverviewView = null;
+            productionInventoryView = null;
+            productionAutomationView = null;
         }
 
-        private static string BuildProductionSettingsSignature(Storage storage, ComplexFabricator fabricator)
+        private static string BuildProductionSettingsStructureSignature(Storage storage, ComplexFabricator fabricator)
         {
             StorageNetworkMaterialRequester requester = storage != null ? storage.GetComponent<StorageNetworkMaterialRequester>() : null;
             StorageNetworkStorageConnector connector = storage != null ? storage.GetComponent<StorageNetworkStorageConnector>() : null;
@@ -183,33 +189,38 @@ namespace StorageNetwork.UI
                 .SelectMany(itemStorage => itemStorage.items.Where(item => item != null))
                 .GroupBy(GetStoredItemKey)
                 .OrderBy(group => group.Key)
-                .Select(group => string.Format(
-                    "{0}:{1:0.###}",
-                    group.Key,
-                    group.Sum(GetStoredItemMass))));
+                .Select(group => group.Key));
 
             return string.Join(
                 "~",
                 storage != null ? storage.GetInstanceID().ToString() : "null",
-                storage != null ? storage.MassStored().ToString("0.###") : "0",
-                storage != null ? storage.Capacity().ToString("0.###") : "0",
-                fabricator != null && fabricator.CurrentWorkingOrder != null ? fabricator.CurrentWorkingOrder.id : "none",
-                fabricator != null ? Mathf.RoundToInt(Mathf.Clamp01(fabricator.OrderProgress) * 100f).ToString() : "0",
-                fabricator != null && fabricator.WaitingForWorker ? "worker" : "run",
                 requester != null && requester.RequestEnabled ? "req1" : "req0",
                 requester != null ? requester.Mode.ToString() : "0",
                 requester != null ? requester.SourceStorageInstanceId.ToString() : "0",
                 requester != null && requester.LimitEnabled ? "lim1" : "lim0",
-                requester != null ? requester.LimitKg.ToString("0.###") : "0",
-                requester != null ? requester.RequestedKg.ToString("0.###") : "0",
                 requester != null && requester.OutputStoreEnabled ? "out1" : "out0",
                 requester != null ? requester.OutputStoreModeValue.ToString() : "0",
                 requester != null ? requester.OutputStorageInstanceId.ToString() : "0",
-                requester != null ? requester.LastStatus : string.Empty,
-                requester != null ? requester.LastOutputStatus : string.Empty,
                 connector != null && connector.OutputStoreEnabled ? "conn1" : "conn0",
-                connector != null ? connector.LastOutputStatus : string.Empty,
+                requester != null && !string.IsNullOrEmpty(requester.LastStatus) ? "matStatus1" : "matStatus0",
+                requester != null && !string.IsNullOrEmpty(requester.LastOutputStatus) ? "reqOutStatus1" : "reqOutStatus0",
+                connector != null && !string.IsNullOrEmpty(connector.LastOutputStatus) ? "connOutStatus1" : "connOutStatus0",
                 itemSignature);
+        }
+
+        private void UpdateProductionSettingsLive(Storage storage, ComplexFabricator fabricator)
+        {
+            if (storage == null)
+            {
+                return;
+            }
+
+            SetProductionSettingsTitle(storage);
+            StorageNetworkMaterialRequester requester = storage.GetComponent<StorageNetworkMaterialRequester>();
+            StorageNetworkStorageConnector connector = GetStorageConnector(storage);
+            UpdateProductionOverviewCard(storage, fabricator, requester, connector);
+            UpdateProductionAutomationCards(requester, connector);
+            UpdateProductionInventoryCard(storage, fabricator);
         }
 
         private void SetProductionSettingsTitle(Storage storage)
@@ -248,10 +259,32 @@ namespace StorageNetwork.UI
             layout.childForceExpandWidth = true;
             layout.childForceExpandHeight = true;
 
-            CreateMetricTile(metrics.transform, "储存", string.Format("{0} / {1}", GameUtil.GetFormattedMass(storage.MassStored()), GameUtil.GetFormattedMass(storage.Capacity())), new Color(0.35f, 0.40f, 0.43f, 1f));
-            CreateMetricTile(metrics.transform, "运行", GetProductionStateText(fabricator), GetProductionStateColor(fabricator));
-            CreateMetricTile(metrics.transform, "配方", GetCurrentRecipeText(fabricator), new Color(0.39f, 0.42f, 0.45f, 1f));
-            CreateMetricTile(metrics.transform, "网络", GetNetworkStateText(requester, connector), requester != null && requester.RequestEnabled || connector != null && connector.OutputStoreEnabled ? new Color(0.28f, 0.48f, 0.34f, 1f) : new Color(0.50f, 0.42f, 0.34f, 1f));
+            productionOverviewView = new ProductionOverviewCardView
+            {
+                BuildingName = title,
+                StorageValue = CreateMetricTile(metrics.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_METRIC_STORAGE), string.Empty, new Color(0.35f, 0.40f, 0.43f, 1f)),
+                StateValue = CreateMetricTile(metrics.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_METRIC_RUNNING), string.Empty, GetProductionStateColor(fabricator)),
+                RecipeValue = CreateMetricTile(metrics.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_METRIC_RECIPE), string.Empty, new Color(0.39f, 0.42f, 0.45f, 1f)),
+                NetworkValue = CreateMetricTile(metrics.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_METRIC_NETWORK), string.Empty, requester != null && requester.RequestEnabled || connector != null && connector.OutputStoreEnabled ? new Color(0.28f, 0.48f, 0.34f, 1f) : new Color(0.50f, 0.42f, 0.34f, 1f))
+            };
+        }
+
+        private void UpdateProductionOverviewCard(Storage storage, ComplexFabricator fabricator, StorageNetworkMaterialRequester requester, StorageNetworkStorageConnector connector)
+        {
+            if (productionOverviewView == null)
+            {
+                return;
+            }
+
+            SetTextIfChanged(productionOverviewView.BuildingName, storage.GetProperName());
+            SetTextIfChanged(productionOverviewView.StorageValue, string.Format("{0} / {1}", GameUtil.GetFormattedMass(storage.MassStored()), GameUtil.GetFormattedMass(storage.Capacity())));
+            SetTextIfChanged(productionOverviewView.StateValue, GetProductionStateText(fabricator));
+            productionOverviewView.StateValue.color = GetProductionStateColor(fabricator);
+            SetTextIfChanged(productionOverviewView.RecipeValue, GetCurrentRecipeText(fabricator));
+            SetTextIfChanged(productionOverviewView.NetworkValue, GetNetworkStateText(requester, connector));
+            productionOverviewView.NetworkValue.color = requester != null && requester.RequestEnabled || connector != null && connector.OutputStoreEnabled
+                ? new Color(0.28f, 0.48f, 0.34f, 1f)
+                : new Color(0.50f, 0.42f, 0.34f, 1f);
         }
 
         private void AddAutomationCards(Storage storage, StorageNetworkMaterialRequester requester)
@@ -293,14 +326,14 @@ namespace StorageNetwork.UI
         {
             GameObject card = CreateProductionCard(parent, "MaterialCard", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_TITLE), 0f);
             ApplyEqualAutomationCardLayout(card);
-            CreateStatusStrip(card.transform, requester.RequestEnabled ? "已开启" : "已关闭", requester.RequestEnabled ? new Color(0.28f, 0.48f, 0.34f, 1f) : new Color(0.52f, 0.38f, 0.30f, 1f));
-            CreateProductionActionRow(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_ENABLED), requester.RequestEnabled ? "关闭" : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ON), () =>
+            CreateStatusStrip(card.transform, requester.RequestEnabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STATUS_ENABLED) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STATUS_DISABLED), requester.RequestEnabled ? new Color(0.28f, 0.48f, 0.34f, 1f) : new Color(0.52f, 0.38f, 0.30f, 1f));
+            CreateProductionActionRow(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_ENABLED), requester.RequestEnabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ACTION_CLOSE) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ON), () =>
             {
                 requester.RequestEnabled = !requester.RequestEnabled;
                 UpdateProductionSettingsPanel(true);
             }, requester.RequestEnabled ? KleiPinkStyle() : KleiBlueStyle());
-            CreateProductionActionRow(card.transform, "来源策略", GetMaterialRequestModeName(requester), () => ShowMaterialSourcePicker(ownerStorage, requester));
-            CreateProductionActionRow(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_LIMIT_ENABLED), requester.LimitEnabled ? string.Format("{0} / {1}", GameUtil.GetFormattedMass(Mathf.Max(0f, requester.GetRequestedAmountForDisplay())), GameUtil.GetFormattedMass(Mathf.Max(0f, requester.LimitKg))) : "不限额", () =>
+            CreateProductionActionRow(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SOURCE_POLICY), GetMaterialRequestModeName(requester), () => ShowMaterialSourcePicker(ownerStorage, requester));
+            CreateProductionActionRow(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_LIMIT_ENABLED), requester.LimitEnabled ? string.Format("{0} / {1}", GameUtil.GetFormattedMass(Mathf.Max(0f, requester.GetRequestedAmountForDisplay())), GameUtil.GetFormattedMass(Mathf.Max(0f, requester.LimitKg))) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.NO_LIMIT), () =>
             {
                 if (requester.LimitEnabled)
                 {
@@ -314,7 +347,8 @@ namespace StorageNetwork.UI
             });
             if (!string.IsNullOrEmpty(requester.LastStatus))
             {
-                CreateFinePrint(card.transform, string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_STATUS), requester.LastStatus));
+                productionAutomationView ??= new ProductionAutomationCardsView();
+                productionAutomationView.MaterialStatus = CreateFinePrint(card.transform, string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_STATUS), requester.LastStatus));
             }
         }
 
@@ -322,33 +356,69 @@ namespace StorageNetwork.UI
         {
             GameObject card = CreateProductionCard(parent, "OutputCard", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_TITLE), 0f);
             ApplyEqualAutomationCardLayout(card);
-            CreateStatusStrip(card.transform, requester.OutputStoreEnabled ? "自动入网" : "手动取出", requester.OutputStoreEnabled ? new Color(0.28f, 0.48f, 0.34f, 1f) : new Color(0.48f, 0.45f, 0.36f, 1f));
-            CreateProductionActionRow(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_ENABLED), requester.OutputStoreEnabled ? "关闭" : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ON), () =>
+            CreateStatusStrip(card.transform, requester.OutputStoreEnabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_AUTO_STATUS) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_MANUAL_STATUS), requester.OutputStoreEnabled ? new Color(0.28f, 0.48f, 0.34f, 1f) : new Color(0.48f, 0.45f, 0.36f, 1f));
+            CreateProductionActionRow(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_ENABLED), requester.OutputStoreEnabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ACTION_CLOSE) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ON), () =>
             {
                 requester.OutputStoreEnabled = !requester.OutputStoreEnabled;
                 UpdateProductionSettingsPanel(true);
             }, requester.OutputStoreEnabled ? KleiPinkStyle() : KleiBlueStyle());
-            CreateProductionActionRow(card.transform, "存放策略", GetOutputStoreModeName(requester), () => ShowOutputStorePicker(ownerStorage, requester));
-            CreateFinePrint(card.transform, requester.OutputStoreEnabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_AUTO_DESC) : "成品保留在建筑输出栏，不自动转移。");
+            CreateProductionActionRow(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_POLICY), GetOutputStoreModeName(requester), () => ShowOutputStorePicker(ownerStorage, requester));
+            productionAutomationView ??= new ProductionAutomationCardsView();
+            productionAutomationView.OutputDescription = CreateFinePrint(card.transform, requester.OutputStoreEnabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_AUTO_DESC) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_MANUAL_DESC));
             if (requester.OutputStoreEnabled && !string.IsNullOrEmpty(requester.LastOutputStatus))
             {
-                CreateFinePrint(card.transform, string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_STATUS), requester.LastOutputStatus));
+                productionAutomationView.OutputStatus = CreateFinePrint(card.transform, string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_STATUS), requester.LastOutputStatus));
             }
         }
 
         private void AddStorageOutputCard(Storage ownerStorage, StorageNetworkStorageConnector connector)
         {
             GameObject card = CreateProductionCard("StorageOutputCard", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STORAGE_OUTPUT_STORE_TITLE), 132f);
-            CreateStatusStrip(card.transform, connector.OutputStoreEnabled ? "自动入网" : "手动取出", connector.OutputStoreEnabled ? new Color(0.28f, 0.48f, 0.34f, 1f) : new Color(0.48f, 0.45f, 0.36f, 1f));
-            CreateProductionActionRow(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STORAGE_OUTPUT_STORE_ENABLED), connector.OutputStoreEnabled ? "关闭" : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ON), () =>
+            CreateStatusStrip(card.transform, connector.OutputStoreEnabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_AUTO_STATUS) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_MANUAL_STATUS), connector.OutputStoreEnabled ? new Color(0.28f, 0.48f, 0.34f, 1f) : new Color(0.48f, 0.45f, 0.36f, 1f));
+            CreateProductionActionRow(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STORAGE_OUTPUT_STORE_ENABLED), connector.OutputStoreEnabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ACTION_CLOSE) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ON), () =>
             {
                 connector.OutputStoreEnabled = !connector.OutputStoreEnabled;
                 UpdateProductionSettingsPanel(true);
             }, connector.OutputStoreEnabled ? KleiPinkStyle() : KleiBlueStyle());
-            CreateFinePrint(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STORAGE_OUTPUT_STORE_DESC));
+            productionAutomationView ??= new ProductionAutomationCardsView();
+            productionAutomationView.OutputDescription = CreateFinePrint(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STORAGE_OUTPUT_STORE_DESC));
             if (connector.OutputStoreEnabled && !string.IsNullOrEmpty(connector.LastOutputStatus))
             {
-                CreateFinePrint(card.transform, string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_STATUS), connector.LastOutputStatus));
+                productionAutomationView.OutputStatus = CreateFinePrint(card.transform, string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_STATUS), connector.LastOutputStatus));
+            }
+        }
+
+        private void UpdateProductionAutomationCards(StorageNetworkMaterialRequester requester, StorageNetworkStorageConnector connector)
+        {
+            if (productionAutomationView == null)
+            {
+                return;
+            }
+
+            if (productionAutomationView.MaterialStatus != null && requester != null)
+            {
+                SetTextIfChanged(
+                    productionAutomationView.MaterialStatus,
+                    string.IsNullOrEmpty(requester.LastStatus)
+                        ? string.Empty
+                        : string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_STATUS), requester.LastStatus));
+            }
+
+            if (productionAutomationView.OutputDescription != null && requester != null)
+            {
+                SetTextIfChanged(
+                    productionAutomationView.OutputDescription,
+                    requester.OutputStoreEnabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_AUTO_DESC) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_MANUAL_DESC));
+            }
+
+            if (productionAutomationView.OutputStatus != null)
+            {
+                string status = requester != null ? requester.LastOutputStatus : connector != null ? connector.LastOutputStatus : string.Empty;
+                SetTextIfChanged(
+                    productionAutomationView.OutputStatus,
+                    string.IsNullOrEmpty(status)
+                        ? string.Empty
+                        : string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_STATUS), status));
             }
         }
 
@@ -382,17 +452,20 @@ namespace StorageNetwork.UI
             if (items.Count == 0)
             {
                 CreateFinePrint(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.NO_STORAGE_CONTENT));
+                productionInventoryView = null;
                 return;
             }
 
+            productionInventoryView = new ProductionInventoryCardView();
             foreach (IGrouping<string, GameObject> group in items.GroupBy(GetStoredItemKey).OrderBy(group => GetStoredItemName(group.FirstOrDefault())))
             {
                 float mass = group.Sum(GetStoredItemMass);
-                CreateProductionSettingsItemRow(
+                ProductionInventoryRowView row = CreateProductionSettingsItemRow(
                     card.transform,
                     GetStoredItemName(group.FirstOrDefault()),
                     GameUtil.GetFormattedMass(mass),
                     group.FirstOrDefault());
+                productionInventoryView.Rows[GetStoredItemKey(group.FirstOrDefault())] = row;
             }
         }
 
@@ -426,7 +499,7 @@ namespace StorageNetwork.UI
             return card;
         }
 
-        private void CreateMetricTile(Transform parent, string label, string value, Color accent)
+        private TextMeshProUGUI CreateMetricTile(Transform parent, string label, string value, Color accent)
         {
             GameObject tile = CreatePlainImage("MetricTile", parent, new Color(0.72f, 0.72f, 0.66f, 1f));
             tile.AddComponent<LayoutElement>().flexibleWidth = 1f;
@@ -448,6 +521,7 @@ namespace StorageNetwork.UI
             valueText.textWrappingMode = TextWrappingModes.NoWrap;
             valueText.overflowMode = TextOverflowModes.Ellipsis;
             valueText.gameObject.AddComponent<LayoutElement>().preferredHeight = 22f;
+            return valueText;
         }
 
         private void CreateStatusStrip(Transform parent, string text, Color color)
@@ -487,7 +561,7 @@ namespace StorageNetwork.UI
             buttonLayout.preferredHeight = 24f;
         }
 
-        private void CreateFinePrint(Transform parent, string text)
+        private TextMeshProUGUI CreateFinePrint(Transform parent, string text)
         {
             TextMeshProUGUI label = CreateText("FinePrint", parent, text, 10, TextAlignmentOptions.TopLeft);
             label.color = new Color(0.34f, 0.35f, 0.33f, 1f);
@@ -497,16 +571,17 @@ namespace StorageNetwork.UI
             layout.minHeight = 18f;
             layout.preferredHeight = -1f;
             label.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            return label;
         }
 
         private static string GetProductionStateText(ComplexFabricator fabricator)
         {
             if (fabricator == null || fabricator.CurrentWorkingOrder == null)
             {
-                return "待机";
+                return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_SHORT_IDLE);
             }
 
-            return fabricator.WaitingForWorker ? "等人" : "制作中";
+            return fabricator.WaitingForWorker ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_SHORT_WAITING_WORKER) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_SHORT_CRAFTING);
         }
 
         private static Color GetProductionStateColor(ComplexFabricator fabricator)
@@ -523,22 +598,22 @@ namespace StorageNetwork.UI
         {
             return fabricator != null && fabricator.CurrentWorkingOrder != null
                 ? GetRecipeDisplayName(fabricator.CurrentWorkingOrder)
-                : "无";
+                : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.NONE);
         }
 
         private static string GetNetworkStateText(StorageNetworkMaterialRequester requester, StorageNetworkStorageConnector connector)
         {
             if (requester != null)
             {
-                return requester.RequestEnabled ? "请求开" : "请求关";
+                return requester.RequestEnabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.REQUEST_ON_SHORT) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.REQUEST_OFF_SHORT);
             }
 
             if (connector != null)
             {
-                return connector.OutputStoreEnabled ? "入网开" : "入网关";
+                return connector.OutputStoreEnabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_ON_SHORT) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_OFF_SHORT);
             }
 
-            return "无组件";
+            return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.NO_COMPONENT);
         }
 
         private void AddProductionSettingsInfo(Storage storage, ComplexFabricator fabricator)
@@ -663,6 +738,12 @@ namespace StorageNetwork.UI
                 12,
                 FontStyles.Normal,
                 22f);
+
+            IReadOnlyList<string> orderUsages = productionOrderService.GetActiveOrderUsagesForFabricator(fabricator, 2);
+            foreach (string usage in orderUsages)
+            {
+                AddProductionSettingsText(ColorText(string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_USAGE_PREFIX), usage), "#7a4a66"), 10, FontStyles.Normal, 20f);
+            }
         }
 
         private void AddProductionSettingsItems(Storage storage, ComplexFabricator fabricator)
@@ -887,7 +968,7 @@ namespace StorageNetwork.UI
             headerText.overflowMode = TextOverflowModes.Ellipsis;
             headerText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
 
-            GameObject closeButton = CreateGameButton("PickerClose", header.transform, "X", CloseProductionPicker);
+            GameObject closeButton = CreateCloseIconButton("PickerClose", header.transform, CloseProductionPicker);
             LayoutElement closeLayout = closeButton.AddComponent<LayoutElement>();
             closeLayout.preferredWidth = 24f;
             closeLayout.preferredHeight = 22f;
@@ -936,9 +1017,20 @@ namespace StorageNetwork.UI
 
         private void CreateStorageOptionRow(Transform parent, string title, string details, bool selected, System.Action onClick)
         {
-            GameObject row = CreatePlainImage("StorageOptionRow", parent, selected ? new Color(0.56f, 0.31f, 0.45f, 1f) : new Color(0.76f, 0.76f, 0.70f, 1f));
+            GameObject row = new GameObject("StorageOptionRow");
+            row.transform.SetParent(parent, false);
+            row.AddComponent<RectTransform>();
+            KImage background = row.AddComponent<KImage>();
+            background.type = Image.Type.Sliced;
+            ApplyThinButtonSprite(background);
+            background.colorStyleSetting = selected
+                ? KleiPinkStyle()
+                : KleiBlueStyle();
+            background.ColorState = KImage.ColorSelector.Inactive;
             row.AddComponent<LayoutElement>().preferredHeight = 42f;
             KButton button = row.AddComponent<KButton>();
+            button.bgImage = background;
+            button.additionalKImages = new KImage[0];
             button.soundPlayer = new ButtonSoundPlayer();
             button.onClick += () => onClick?.Invoke();
 
@@ -952,14 +1044,14 @@ namespace StorageNetwork.UI
             layout.childForceExpandHeight = true;
 
             TextMeshProUGUI titleText = CreateText("Title", row.transform, title, 11, TextAlignmentOptions.MidlineLeft);
-            titleText.color = selected ? new Color(0.98f, 0.96f, 0.90f, 1f) : new Color(0.16f, 0.17f, 0.16f, 1f);
+            titleText.color = selected ? new Color(0.98f, 0.96f, 0.90f, 1f) : new Color(0.90f, 0.92f, 0.95f, 1f);
             titleText.fontStyle = selected ? FontStyles.Bold : FontStyles.Normal;
             titleText.textWrappingMode = TextWrappingModes.NoWrap;
             titleText.overflowMode = TextOverflowModes.Ellipsis;
             titleText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
 
             TextMeshProUGUI detailText = CreateText("Details", row.transform, details, 9, TextAlignmentOptions.MidlineLeft);
-            detailText.color = selected ? new Color(0.88f, 0.84f, 0.78f, 1f) : new Color(0.34f, 0.35f, 0.33f, 1f);
+            detailText.color = selected ? new Color(0.88f, 0.84f, 0.78f, 1f) : new Color(0.70f, 0.73f, 0.78f, 1f);
             detailText.textWrappingMode = TextWrappingModes.NoWrap;
             detailText.overflowMode = TextOverflowModes.Ellipsis;
             detailText.gameObject.AddComponent<LayoutElement>().preferredWidth = 170f;
@@ -1052,12 +1144,12 @@ namespace StorageNetwork.UI
                 });
         }
 
-        private void CreateProductionSettingsItemRow(string itemName, string formattedMass, GameObject representative)
+        private ProductionInventoryRowView CreateProductionSettingsItemRow(string itemName, string formattedMass, GameObject representative)
         {
-            CreateProductionSettingsItemRow(productionSettingsContent, itemName, formattedMass, representative);
+            return CreateProductionSettingsItemRow(productionSettingsContent, itemName, formattedMass, representative);
         }
 
-        private void CreateProductionSettingsItemRow(Transform parent, string itemName, string formattedMass, GameObject representative)
+        private ProductionInventoryRowView CreateProductionSettingsItemRow(Transform parent, string itemName, string formattedMass, GameObject representative)
         {
             GameObject row = CreatePlainImage("ProductionSettingsItemRow", parent, new Color(0.76f, 0.76f, 0.70f, 1f));
             row.AddComponent<LayoutElement>().preferredHeight = 24f;
@@ -1090,6 +1182,36 @@ namespace StorageNetwork.UI
             mass.color = new Color(0.28f, 0.29f, 0.29f, 1f);
             mass.textWrappingMode = TextWrappingModes.NoWrap;
             mass.gameObject.AddComponent<LayoutElement>().preferredWidth = 92f;
+            return new ProductionInventoryRowView
+            {
+                Name = name,
+                Mass = mass,
+                Icon = icon
+            };
+        }
+
+        private void UpdateProductionInventoryCard(Storage storage, ComplexFabricator fabricator)
+        {
+            if (productionInventoryView == null)
+            {
+                return;
+            }
+
+            foreach (IGrouping<string, GameObject> group in GetProductionStorages(storage, fabricator)
+                .SelectMany(itemStorage => itemStorage.items.Where(item => item != null))
+                .GroupBy(GetStoredItemKey))
+            {
+                string key = group.Key;
+                if (!productionInventoryView.Rows.TryGetValue(key, out ProductionInventoryRowView row))
+                {
+                    continue;
+                }
+
+                GameObject representative = group.FirstOrDefault();
+                SetTextIfChanged(row.Name, GetStoredItemName(representative));
+                SetTextIfChanged(row.Mass, GameUtil.GetFormattedMass(group.Sum(GetStoredItemMass)));
+                SetStoredItemIcon(row.Icon, representative);
+            }
         }
 
         private static IEnumerable<Storage> GetProductionStorages(Storage storage, ComplexFabricator fabricator)
@@ -1122,6 +1244,50 @@ namespace StorageNetwork.UI
             }
 
             return recipe.GetUIName(false);
+        }
+
+        private static void SetTextIfChanged(TextMeshProUGUI text, string value)
+        {
+            if (text != null && text.text != value)
+            {
+                text.text = value;
+            }
+        }
+
+        private sealed class ProductionOverviewCardView
+        {
+            public TextMeshProUGUI BuildingName { get; set; }
+
+            public TextMeshProUGUI StorageValue { get; set; }
+
+            public TextMeshProUGUI StateValue { get; set; }
+
+            public TextMeshProUGUI RecipeValue { get; set; }
+
+            public TextMeshProUGUI NetworkValue { get; set; }
+        }
+
+        private sealed class ProductionInventoryCardView
+        {
+            public Dictionary<string, ProductionInventoryRowView> Rows { get; } = new Dictionary<string, ProductionInventoryRowView>();
+        }
+
+        private sealed class ProductionAutomationCardsView
+        {
+            public TextMeshProUGUI MaterialStatus { get; set; }
+
+            public TextMeshProUGUI OutputDescription { get; set; }
+
+            public TextMeshProUGUI OutputStatus { get; set; }
+        }
+
+        private sealed class ProductionInventoryRowView
+        {
+            public TextMeshProUGUI Name { get; set; }
+
+            public TextMeshProUGUI Mass { get; set; }
+
+            public Image Icon { get; set; }
         }
 
         private sealed class ProductionPickerOption

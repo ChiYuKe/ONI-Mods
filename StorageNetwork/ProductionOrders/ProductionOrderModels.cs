@@ -89,7 +89,7 @@ namespace StorageNetwork.ProductionOrders
             ProductTag = productTag;
             OutputAmount = outputAmount;
             OrderCount = orderCount;
-            Assignments = BuildAssignments(Recipe, Fabricators, outputAmount, orderCount);
+            Assignments = new List<ProductionPlanAssignment>();
         }
 
         public ComplexRecipe Recipe { get; }
@@ -108,37 +108,6 @@ namespace StorageNetwork.ProductionOrders
 
         public List<ProductionPlanRequirement> Requirements { get; } = new List<ProductionPlanRequirement>();
 
-        private static List<ProductionPlanAssignment> BuildAssignments(ComplexRecipe recipe, List<ComplexFabricator> fabricators, float outputAmount, int orderCount)
-        {
-            List<ProductionPlanAssignment> assignments = new List<ProductionPlanAssignment>();
-            if (fabricators == null || fabricators.Count == 0 || orderCount <= 0)
-            {
-                return assignments;
-            }
-
-            List<ComplexFabricator> orderedFabricators = fabricators
-                .OrderBy(fabricator => GetFiniteQueueCount(fabricator, recipe))
-                .ThenBy(fabricator => fabricator.gameObject.GetProperName())
-                .ToList();
-            int baseCount = orderCount / orderedFabricators.Count;
-            int remainder = orderCount % orderedFabricators.Count;
-            for (int i = 0; i < orderedFabricators.Count; i++)
-            {
-                int count = baseCount + (i < remainder ? 1 : 0);
-                if (count > 0)
-                {
-                    assignments.Add(new ProductionPlanAssignment(orderedFabricators[i], count, outputAmount * count));
-                }
-            }
-
-            return assignments;
-        }
-
-        private static int GetFiniteQueueCount(ComplexFabricator fabricator, ComplexRecipe recipe)
-        {
-            int queued = fabricator != null && recipe != null ? fabricator.GetRecipeQueueCount(recipe) : 0;
-            return queued == ComplexFabricator.QUEUE_INFINITE ? int.MaxValue : Mathf.Max(0, queued);
-        }
     }
 
     internal sealed class ProductionPlanAssignment
@@ -189,6 +158,8 @@ namespace StorageNetwork.ProductionOrders
             float allocationOffsetAtSubmit,
             Dictionary<Tag, float> reservedMaterials,
             List<ProductionOrderQueueAssignment> queueAssignments,
+            List<ProductionOrderMaterialLease> materialLeases,
+            List<ProductionOrderOutputLease> outputLeases,
             float createdCycle,
             bool isAutomatic = false)
         {
@@ -204,6 +175,8 @@ namespace StorageNetwork.ProductionOrders
             AllocationOffsetAtSubmit = allocationOffsetAtSubmit;
             ReservedMaterials = reservedMaterials ?? new Dictionary<Tag, float>();
             QueueAssignments = queueAssignments ?? new List<ProductionOrderQueueAssignment>();
+            MaterialLeases = materialLeases ?? new List<ProductionOrderMaterialLease>();
+            OutputLeases = outputLeases ?? new List<ProductionOrderOutputLease>();
             CreatedCycle = createdCycle;
             LastActivityCycle = createdCycle;
             IsAutomatic = isAutomatic;
@@ -224,6 +197,8 @@ namespace StorageNetwork.ProductionOrders
             float producedAtSubmit,
             Dictionary<Tag, float> reservedMaterials,
             List<ProductionOrderQueueAssignment> queueAssignments,
+            List<ProductionOrderMaterialLease> materialLeases,
+            List<ProductionOrderOutputLease> outputLeases,
             float createdCycle,
             float completedCycle,
             float lastActivityCycle,
@@ -247,6 +222,8 @@ namespace StorageNetwork.ProductionOrders
             ProducedAtSubmit = producedAtSubmit;
             ReservedMaterials = reservedMaterials ?? new Dictionary<Tag, float>();
             QueueAssignments = queueAssignments ?? new List<ProductionOrderQueueAssignment>();
+            MaterialLeases = materialLeases ?? new List<ProductionOrderMaterialLease>();
+            OutputLeases = outputLeases ?? new List<ProductionOrderOutputLease>();
             CreatedCycle = createdCycle;
             CompletedCycle = completedCycle;
             LastActivityCycle = lastActivityCycle;
@@ -284,6 +261,10 @@ namespace StorageNetwork.ProductionOrders
 
         public List<ProductionOrderQueueAssignment> QueueAssignments { get; }
 
+        public List<ProductionOrderMaterialLease> MaterialLeases { get; }
+
+        public List<ProductionOrderOutputLease> OutputLeases { get; }
+
         public float CreatedCycle { get; }
 
         public float CompletedCycle { get; set; }
@@ -302,7 +283,15 @@ namespace StorageNetwork.ProductionOrders
 
         public ProductionOrderState State { get; set; }
 
-        public void Merge(float requestedAmount, int orderCount, Dictionary<Tag, float> reservedMaterials, List<ProductionOrderQueueAssignment> queueAssignments, float currentCycle, bool isAutomatic = false)
+        public void Merge(
+            float requestedAmount,
+            int orderCount,
+            Dictionary<Tag, float> reservedMaterials,
+            List<ProductionOrderQueueAssignment> queueAssignments,
+            List<ProductionOrderMaterialLease> materialLeases,
+            List<ProductionOrderOutputLease> outputLeases,
+            float currentCycle,
+            bool isAutomatic = false)
         {
             RequestedAmount += requestedAmount;
             LastSubmittedAmount = requestedAmount;
@@ -320,6 +309,56 @@ namespace StorageNetwork.ProductionOrders
             {
                 QueueAssignments.AddRange(queueAssignments);
             }
+
+            if (materialLeases != null)
+            {
+                MaterialLeases.AddRange(materialLeases);
+            }
+
+            if (outputLeases != null)
+            {
+                OutputLeases.AddRange(outputLeases);
+            }
+        }
+
+        public bool RefreshPlan(
+            int orderCount,
+            Dictionary<Tag, float> reservedMaterials,
+            List<ProductionOrderQueueAssignment> queueAssignments,
+            List<ProductionOrderMaterialLease> materialLeases,
+            List<ProductionOrderOutputLease> outputLeases)
+        {
+            bool changed = OrderCount != orderCount ||
+                           !AreReservedMaterialsEqual(ReservedMaterials, reservedMaterials) ||
+                           !AreQueueAssignmentsEqual(QueueAssignments, queueAssignments) ||
+                           !AreMaterialLeasesEqual(MaterialLeases, materialLeases) ||
+                           !AreOutputLeasesEqual(OutputLeases, outputLeases);
+            OrderCount = orderCount;
+            ReservedMaterials.Clear();
+            foreach (KeyValuePair<Tag, float> pair in reservedMaterials ?? new Dictionary<Tag, float>())
+            {
+                ReservedMaterials[pair.Key] = pair.Value;
+            }
+
+            QueueAssignments.Clear();
+            if (queueAssignments != null)
+            {
+                QueueAssignments.AddRange(queueAssignments);
+            }
+
+            MaterialLeases.Clear();
+            if (materialLeases != null)
+            {
+                MaterialLeases.AddRange(materialLeases);
+            }
+
+            OutputLeases.Clear();
+            if (outputLeases != null)
+            {
+                OutputLeases.AddRange(outputLeases);
+            }
+
+            return changed;
         }
 
         public float GetReservedAmount(Tag tag)
@@ -327,9 +366,23 @@ namespace StorageNetwork.ProductionOrders
             return ReservedMaterials.TryGetValue(tag, out float amount) ? amount : 0f;
         }
 
-        public void ObserveActivity(float currentCycle, float producedAmount, float queueLoad)
+        public bool SetProducedAmount(float amount)
         {
-            if (Mathf.Abs(producedAmount - LastObservedProducedAmount) > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ||
+            amount = Mathf.Clamp(amount, 0f, RequestedAmount);
+            if (amount + PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT < ProducedAtSubmit ||
+                Mathf.Abs(amount - ProducedAtSubmit) <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+            {
+                return false;
+            }
+
+            ProducedAtSubmit = amount;
+            return true;
+        }
+
+        public void ObserveActivity(float currentCycle, float producedAmount, float queueLoad, bool forceActive = false)
+        {
+            if (forceActive ||
+                Mathf.Abs(producedAmount - LastObservedProducedAmount) > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ||
                 Mathf.Abs(queueLoad - LastObservedQueueLoad) > 0.001f)
             {
                 LastActivityCycle = currentCycle;
@@ -337,15 +390,102 @@ namespace StorageNetwork.ProductionOrders
                 LastObservedQueueLoad = queueLoad;
             }
         }
+
+        private static bool AreReservedMaterialsEqual(Dictionary<Tag, float> left, Dictionary<Tag, float> right)
+        {
+            if ((left?.Count ?? 0) != (right?.Count ?? 0))
+            {
+                return false;
+            }
+
+            foreach (KeyValuePair<Tag, float> pair in left)
+            {
+                if (right == null || !right.TryGetValue(pair.Key, out float value) || Mathf.Abs(value - pair.Value) > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private static bool AreQueueAssignmentsEqual(List<ProductionOrderQueueAssignment> left, List<ProductionOrderQueueAssignment> right)
+        {
+            if ((left?.Count ?? 0) != (right?.Count ?? 0))
+            {
+                return false;
+            }
+
+            Dictionary<string, int> leftCounts = BuildQueueAssignmentCounts(left);
+            Dictionary<string, int> rightCounts = BuildQueueAssignmentCounts(right);
+            if (leftCounts.Count != rightCounts.Count)
+            {
+                return false;
+            }
+
+            foreach (KeyValuePair<string, int> pair in leftCounts)
+            {
+                if (!rightCounts.TryGetValue(pair.Key, out int value) || value != pair.Value)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private static Dictionary<string, int> BuildQueueAssignmentCounts(List<ProductionOrderQueueAssignment> assignments)
+        {
+            return (assignments ?? new List<ProductionOrderQueueAssignment>())
+                .Where(assignment => assignment?.Fabricator != null && assignment.Recipe != null)
+                .GroupBy(assignment => string.Format("{0}|{1}", assignment.Fabricator.GetInstanceID(), ProductionRecipeCatalog.GetRecipeKey(assignment.Recipe)))
+                .ToDictionary(group => group.Key, group => group.Sum(assignment => assignment.OrderCount));
+        }
+
+        private static bool AreMaterialLeasesEqual(List<ProductionOrderMaterialLease> left, List<ProductionOrderMaterialLease> right)
+        {
+            return AreLeaseKeysEqual(
+                (left ?? new List<ProductionOrderMaterialLease>())
+                    .Select(lease => string.Format("{0}|{1}|{2:0.###}", lease.Material.Name, lease.SourceStorageInstanceId, lease.Amount)),
+                (right ?? new List<ProductionOrderMaterialLease>())
+                    .Select(lease => string.Format("{0}|{1}|{2:0.###}", lease.Material.Name, lease.SourceStorageInstanceId, lease.Amount)));
+        }
+
+        private static bool AreOutputLeasesEqual(List<ProductionOrderOutputLease> left, List<ProductionOrderOutputLease> right)
+        {
+            return AreLeaseKeysEqual(
+                (left ?? new List<ProductionOrderOutputLease>())
+                    .Select(lease => string.Format("{0}|{1}|{2:0.###}", lease.ProductTag.Name, lease.FabricatorInstanceId, lease.Amount)),
+                (right ?? new List<ProductionOrderOutputLease>())
+                    .Select(lease => string.Format("{0}|{1}|{2:0.###}", lease.ProductTag.Name, lease.FabricatorInstanceId, lease.Amount)));
+        }
+
+        private static bool AreLeaseKeysEqual(IEnumerable<string> left, IEnumerable<string> right)
+        {
+            List<string> leftList = left.OrderBy(value => value).ToList();
+            List<string> rightList = right.OrderBy(value => value).ToList();
+            return leftList.Count == rightList.Count && !leftList.Where((value, index) => value != rightList[index]).Any();
+        }
     }
 
     internal sealed class ProductionOrderQueueAssignment
     {
-        public ProductionOrderQueueAssignment(ComplexFabricator fabricator, ComplexRecipe recipe, int orderCount)
+        public ProductionOrderQueueAssignment(
+            ComplexFabricator fabricator,
+            ComplexRecipe recipe,
+            int orderCount,
+            Tag outputTag = default,
+            string outputName = null,
+            string consumerName = null,
+            bool primary = false)
         {
             Fabricator = fabricator;
             Recipe = recipe;
             OrderCount = orderCount;
+            OutputTag = outputTag == default ? Tag.Invalid : outputTag;
+            OutputName = outputName ?? string.Empty;
+            ConsumerName = consumerName ?? string.Empty;
+            Primary = primary;
         }
 
         public ComplexFabricator Fabricator { get; }
@@ -353,6 +493,52 @@ namespace StorageNetwork.ProductionOrders
         public ComplexRecipe Recipe { get; }
 
         public int OrderCount { get; }
+
+        public Tag OutputTag { get; }
+
+        public string OutputName { get; }
+
+        public string ConsumerName { get; }
+
+        public bool Primary { get; }
+    }
+
+    internal sealed class ProductionOrderMaterialLease
+    {
+        public ProductionOrderMaterialLease(Tag material, float amount, int sourceStorageInstanceId, string consumerName = null)
+        {
+            Material = material;
+            Amount = Mathf.Max(0f, amount);
+            SourceStorageInstanceId = sourceStorageInstanceId;
+            ConsumerName = consumerName ?? string.Empty;
+        }
+
+        public Tag Material { get; }
+
+        public float Amount { get; }
+
+        public int SourceStorageInstanceId { get; }
+
+        public string ConsumerName { get; }
+    }
+
+    internal sealed class ProductionOrderOutputLease
+    {
+        public ProductionOrderOutputLease(Tag productTag, float amount, int fabricatorInstanceId, string producerName = null)
+        {
+            ProductTag = productTag;
+            Amount = Mathf.Max(0f, amount);
+            FabricatorInstanceId = fabricatorInstanceId;
+            ProducerName = producerName ?? string.Empty;
+        }
+
+        public Tag ProductTag { get; }
+
+        public float Amount { get; }
+
+        public int FabricatorInstanceId { get; }
+
+        public string ProducerName { get; }
     }
 
     internal sealed class ProductionKeepRule
@@ -400,14 +586,35 @@ namespace StorageNetwork.ProductionOrders
 
         public bool CanSubmit => Plan != null && Plan.Assignments.Count > 0 && RiskLevel != ProductionOrderRiskLevel.Blocked;
 
-        public int TotalRequirementCount => Plan?.Requirements.Count ?? 0;
+        public int TotalRequirementCount => CountRequirements(Plan, _ => true);
 
-        public int BlockedRequirementCount => Plan?.Requirements.Count(requirement =>
+        public int BlockedRequirementCount => CountRequirements(Plan, requirement =>
             requirement.AvailableAmount + PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT < requirement.RequiredAmount &&
-            requirement.Child == null) ?? 0;
+            requirement.Child == null);
 
-        public int ProducedRequirementCount => Plan?.Requirements.Count(requirement =>
+        public int ProducedRequirementCount => CountRequirements(Plan, requirement =>
             requirement.AvailableAmount + PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT < requirement.RequiredAmount &&
-            requirement.Child != null) ?? 0;
+            requirement.Child != null);
+
+        private static int CountRequirements(ProductionPlanNode node, System.Func<ProductionPlanRequirement, bool> predicate)
+        {
+            if (node == null || predicate == null)
+            {
+                return 0;
+            }
+
+            int count = 0;
+            foreach (ProductionPlanRequirement requirement in node.Requirements)
+            {
+                if (predicate(requirement))
+                {
+                    count++;
+                }
+
+                count += CountRequirements(requirement.Child, predicate);
+            }
+
+            return count;
+        }
     }
 }

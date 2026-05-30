@@ -9,7 +9,7 @@ namespace StorageNetwork.ProductionOrders
 {
     internal static class ProductionOrderPersistence
     {
-        private const int Version = 1;
+        private const int Version = 2;
         private const string Extension = ".StorageNetworkOrders.json";
 
         public static string GetStorePath()
@@ -135,7 +135,29 @@ namespace StorageNetwork.ProductionOrders
                     {
                         fabricatorInstanceId = GetInstanceId(assignment.Fabricator),
                         recipeId = assignment.Recipe.id,
-                        orderCount = assignment.OrderCount
+                        orderCount = assignment.OrderCount,
+                        outputTag = assignment.OutputTag == Tag.Invalid ? string.Empty : assignment.OutputTag.Name,
+                        outputName = assignment.OutputName,
+                        consumerName = assignment.ConsumerName,
+                        primary = assignment.Primary
+                    })
+                    .ToList(),
+                materialLeases = order.MaterialLeases
+                    .Select(lease => new ProductionOrderMaterialLeaseSaveRecord
+                    {
+                        tag = lease.Material.Name,
+                        amount = lease.Amount,
+                        sourceStorageInstanceId = lease.SourceStorageInstanceId,
+                        consumerName = lease.ConsumerName
+                    })
+                    .ToList(),
+                outputLeases = order.OutputLeases
+                    .Select(lease => new ProductionOrderOutputLeaseSaveRecord
+                    {
+                        productTag = lease.ProductTag.Name,
+                        amount = lease.Amount,
+                        fabricatorInstanceId = lease.FabricatorInstanceId,
+                        producerName = lease.ProducerName
                     })
                     .ToList(),
                 createdCycle = order.CreatedCycle,
@@ -176,6 +198,14 @@ namespace StorageNetwork.ProductionOrders
                 .Select(FromQueueRecord)
                 .Where(assignment => assignment != null)
                 .ToList();
+            List<ProductionOrderMaterialLease> materialLeases = (saved.materialLeases ?? new List<ProductionOrderMaterialLeaseSaveRecord>())
+                .Where(lease => lease != null && !string.IsNullOrEmpty(lease.tag) && lease.amount > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+                .Select(lease => new ProductionOrderMaterialLease(lease.tag.ToTag(), lease.amount, lease.sourceStorageInstanceId, lease.consumerName))
+                .ToList();
+            List<ProductionOrderOutputLease> outputLeases = (saved.outputLeases ?? new List<ProductionOrderOutputLeaseSaveRecord>())
+                .Where(lease => lease != null && !string.IsNullOrEmpty(lease.productTag) && lease.amount > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+                .Select(lease => new ProductionOrderOutputLease(lease.productTag.ToTag(), lease.amount, lease.fabricatorInstanceId, lease.producerName))
+                .ToList();
 
             return new ProductionOrderRecord(
                 saved.key,
@@ -191,6 +221,8 @@ namespace StorageNetwork.ProductionOrders
                 saved.producedAtSubmit,
                 reservedMaterials,
                 assignments,
+                materialLeases,
+                outputLeases,
                 saved.createdCycle,
                 saved.completedCycle,
                 saved.lastActivityCycle,
@@ -222,7 +254,14 @@ namespace StorageNetwork.ProductionOrders
             ComplexFabricator fabricator = FindFabricator(saved.fabricatorInstanceId);
             ComplexRecipe recipe = ComplexRecipeManager.Get().GetRecipe(saved.recipeId);
             return fabricator != null && recipe != null
-                ? new ProductionOrderQueueAssignment(fabricator, recipe, saved.orderCount)
+                ? new ProductionOrderQueueAssignment(
+                    fabricator,
+                    recipe,
+                    saved.orderCount,
+                    string.IsNullOrEmpty(saved.outputTag) ? Tag.Invalid : saved.outputTag.ToTag(),
+                    saved.outputName,
+                    saved.consumerName,
+                    saved.primary)
                 : null;
         }
 
@@ -267,6 +306,8 @@ namespace StorageNetwork.ProductionOrders
             public float producedAtSubmit;
             public List<ProductionOrderMaterialSaveRecord> reservedMaterials = new List<ProductionOrderMaterialSaveRecord>();
             public List<ProductionOrderQueueSaveRecord> queueAssignments = new List<ProductionOrderQueueSaveRecord>();
+            public List<ProductionOrderMaterialLeaseSaveRecord> materialLeases = new List<ProductionOrderMaterialLeaseSaveRecord>();
+            public List<ProductionOrderOutputLeaseSaveRecord> outputLeases = new List<ProductionOrderOutputLeaseSaveRecord>();
             public float createdCycle;
             public float completedCycle;
             public float lastActivityCycle;
@@ -300,6 +341,28 @@ namespace StorageNetwork.ProductionOrders
             public int fabricatorInstanceId;
             public string recipeId;
             public int orderCount;
+            public string outputTag;
+            public string outputName;
+            public string consumerName;
+            public bool primary;
+        }
+
+        [Serializable]
+        private sealed class ProductionOrderMaterialLeaseSaveRecord
+        {
+            public string tag;
+            public float amount;
+            public int sourceStorageInstanceId;
+            public string consumerName;
+        }
+
+        [Serializable]
+        private sealed class ProductionOrderOutputLeaseSaveRecord
+        {
+            public string productTag;
+            public float amount;
+            public int fabricatorInstanceId;
+            public string producerName;
         }
     }
 }

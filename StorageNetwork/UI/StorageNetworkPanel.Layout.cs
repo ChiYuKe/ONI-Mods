@@ -10,7 +10,7 @@ using UnityEngine.UI;
 
 namespace StorageNetwork.UI
 {
-    public sealed partial class StorageNetworkPanel : MonoBehaviour, IInputHandler
+    public sealed partial class StorageNetworkPanel : KScreen, IInputHandler
     {
 
 

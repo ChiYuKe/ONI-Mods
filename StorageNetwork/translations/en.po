@@ -562,3 +562,767 @@ msgstr "Remove this building from the Storage Network panel."
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STARMAP_NAME_HINT"
 msgid "星图"
 msgstr "Starmap"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OFF"
+msgid "关"
+msgstr "Off"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.RESET_DEFAULTS"
+msgid "默认值"
+msgstr "Defaults"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.INFO"
+msgid "信息"
+msgstr "Info"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.RESTART"
+msgid "重启"
+msgstr "Restart"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONTINUE"
+msgid "继续"
+msgstr "Continue"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OPTIONS_BUTTON"
+msgid "选项"
+msgstr "Options"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CENTER_TITLE"
+msgid "生产订单中心"
+msgstr "Production Order Center"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CENTER_SUBTITLE"
+msgid "库存承诺 / 补产链路 / 多设备调度 / 异常追踪"
+msgstr "Stock commitment / supply chains / multi-machine scheduling / issue tracking"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_WORKSPACE_TITLE"
+msgid "订单工作台"
+msgstr "Order Workbench"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_TRACKING_TITLE"
+msgid "订单追踪"
+msgstr "Order Tracking"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_EDITOR_TITLE"
+msgid "下单参数"
+msgstr "Order Parameters"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_PREVIEW_TITLE"
+msgid "执行预览"
+msgstr "Execution Preview"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_AMOUNT_KEEP_TITLE"
+msgid "数量 / 保持"
+msgstr "Amount / Keep Stock"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_ROUTE_RECIPE_TITLE"
+msgid "设备 / 配方"
+msgstr "Equipment / Recipe"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_VALIDATION_TITLE"
+msgid "校验"
+msgstr "Validation"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_MATERIAL_SCHEDULE_TITLE"
+msgid "材料调度"
+msgstr "Material Dispatch"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_EQUIPMENT_RECIPE_TITLE"
+msgid "设备 / 配方"
+msgstr "Equipment / Recipe"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_DRAFT_EDITOR_TITLE"
+msgid "下单参数"
+msgstr "Order Parameters"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_PLAN_PANEL_TITLE"
+msgid "订单执行预览"
+msgstr "Order Execution Preview"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_PRODUCT_BRIEF"
+msgid "{0} x{1} | 耗时 {2}周期"
+msgstr "{0} x{1} | {2} cycles"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_PRODUCT_BRIEF_UNKNOWN"
+msgid "{0} x{1} | 耗时 未知"
+msgstr "{0} x{1} | time unknown"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_ROUTE_RECIPE_LINE"
+msgid "路线 {0}    配方 {1}"
+msgstr "Route {0}    Recipe {1}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_METRIC_TARGET"
+msgid "目标"
+msgstr "Target"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_METRIC_AVAILABLE"
+msgid "可用"
+msgstr "Available"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_METRIC_BATCHES"
+msgid "批次"
+msgstr "Batches"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_METRIC_STATUS"
+msgid "状态"
+msgstr "Status"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_KEEP_TITLE"
+msgid "货物保持"
+msgstr "Keep Stock"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_KEEP_STATUS"
+msgid "保持 {0}"
+msgstr "Keep {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_KEEP_DISABLED"
+msgid "未开启"
+msgstr "Disabled"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_KEEP_BUTTON"
+msgid "保持"
+msgstr "Keep"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_KEEP_ENABLED_STATUS"
+msgid "货物保持：{0} 低于 {1} 时自动下单。"
+msgstr "Keep Stock: automatically order {0} when below {1}."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_KEEP_CLEARED_STATUS"
+msgid "货物保持：已关闭 {0}。"
+msgstr "Keep Stock: disabled for {0}."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_ROUTE_SECTION"
+msgid "生产设备 ({0})"
+msgstr "Production Equipment ({0})"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_ROUTE_DEVICE_MULTI"
+msgid "{0}台 / {1}个配方"
+msgstr "{0} machines / {1} recipes"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_ROUTE_DEVICE_SINGLE"
+msgid "{0}台"
+msgstr "{0} machines"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_RECIPE_SECTION"
+msgid "配方方案 ({0})"
+msgstr "Recipe Plan ({0})"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_DRAFT_VALIDATION_TITLE"
+msgid "草案校验"
+msgstr "Draft Validation"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_VALIDATION_READY_BODY"
+msgid "库存、设备、材料均可执行。"
+msgstr "Stock, equipment, and materials are ready."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_VALIDATION_OUTPUT"
+msgid "预计可产出：{0}"
+msgstr "Estimated output: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_VALIDATION_ACTIVE_ORDERS"
+msgid "{0} 活动订单：{1}"
+msgstr "{0} active orders: {1}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_FOOTER_READY"
+msgid "草案已通过，可提交调度。"
+msgstr "Draft is ready and can be submitted."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_FOOTER_BLOCKED"
+msgid "草案存在阻塞，请检查材料或设备。"
+msgstr "Draft is blocked. Check materials or equipment."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CONFIRM_MERGE"
+msgid "合并订单"
+msgstr "Merge Order"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_DUPLICATE_FOUND"
+msgid "检测到活动订单 #{0}，提交将合并数量并追加调度。"
+msgstr "Active order #{0} found. Submitting will merge the amount and append scheduling."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_ACTIVE_ORDERS_FOUND"
+msgid "当前成品还有 {0} 个活动订单；本次会创建新的追踪项。"
+msgstr "This product has {0} active orders; this submission creates a new tracked order."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_NO_ACTIVE_ORDERS"
+msgid "当前没有活动订单；提交后创建新的追踪项。"
+msgstr "No active orders. Submitting creates a new tracked order."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_RISK_BLOCKED"
+msgid "阻塞"
+msgstr "Blocked"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_RISK_WARNING"
+msgid "需调度"
+msgstr "Needs Scheduling"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_RISK_READY"
+msgid "可提交"
+msgstr "Ready"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_AUTOMATION_BLOCKED"
+msgid "存在不可满足材料或设备阻塞，提交前需要处理。"
+msgstr "Some materials or equipment are blocked. Resolve them before submitting."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_AUTOMATION_PRODUCE"
+msgid "{0} 项材料会自动补产；提交后接管材料请求和成品回存。"
+msgstr "{0} materials will be produced automatically; material requests and product storage will be managed after submission."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_AUTOMATION_READY"
+msgid "库存可覆盖材料需求；提交后会按设备负载分配批次。"
+msgstr "Network stock covers the material requirements; batches will be assigned by machine load."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_METRIC_CURRENT_CYCLE"
+msgid "当前周期"
+msgstr "Current Cycle"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_METRIC_FINISH"
+msgid "预计完成"
+msgstr "Estimated Finish"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_METRIC_EQUIPMENT"
+msgid "生产设备"
+msgstr "Equipment"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_METRIC_AUTO_PRODUCE"
+msgid "自动补产"
+msgstr "Auto Produce"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_METRIC_BLOCKED"
+msgid "阻塞项"
+msgstr "Blocked Items"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_UNKNOWN"
+msgid "未知"
+msgstr "Unknown"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_ASSIGNMENT_PANEL"
+msgid "设备排产"
+msgstr "Equipment Schedule"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_MATERIAL_STOCK_PANEL"
+msgid "材料与库存"
+msgstr "Materials & Stock"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_NO_EQUIPMENT"
+msgid "没有可用生产建筑。"
+msgstr "No production buildings are available."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_NO_MATERIALS"
+msgid "该配方没有材料输入，提交后直接排产。"
+msgstr "This recipe has no material inputs and will be scheduled directly."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_RESEARCH_BATCH_SUMMARY"
+msgid "{0}批  {1}"
+msgstr "{0} batches  {1}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_RESEARCH_MISSING_STOCK"
+msgid "缺 {0}  库存 {1}"
+msgstr "Missing {0}  Stock {1}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_DISPATCH_DIRECT"
+msgid "直接调拨"
+msgstr "Direct Transfer"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_DISPATCH_AUTO"
+msgid "自动补产"
+msgstr "Auto Produce"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_DISPATCH_NO_ROUTE"
+msgid "缺少补产路线"
+msgstr "No production route"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_OUTPUT_AMOUNT"
+msgid "产出 {0}"
+msgstr "Output {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_ASSIGNMENT_META"
+msgid "按当前设备负载分配"
+msgstr "Assigned by current machine load"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_TABLE_MATERIAL"
+msgid "材料"
+msgstr "Material"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_TABLE_REQUIRED"
+msgid "需求"
+msgstr "Required"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_TABLE_STOCK_MISSING"
+msgid "库存 / 缺口"
+msgstr "Stock / Missing"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_TABLE_ACTION"
+msgid "处理方式"
+msgstr "Action"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_REQUIREMENT_STOCK"
+msgid "需求 {0} / 库存 {1}"
+msgstr "Need {0} / Stock {1}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_REQUIREMENT_MISSING"
+msgid "需求 {0} / 缺口 {1}"
+msgstr "Need {0} / Missing {1}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_ACTION_DIRECT"
+msgid "处理方式：从网络库存送入成品设备"
+msgstr "Action: transfer from network stock to the product machine"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_ACTION_AUTO"
+msgid "处理方式：自动补产，{0}"
+msgstr "Action: auto produce via {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_ACTION_BLOCKED"
+msgid "处理方式：缺料，没有可用补产路线"
+msgstr "Action: blocked; no production route is available"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CHILD_ROUTE"
+msgid "补产路线：{0} x{1}"
+msgstr "Production route: {0} x{1}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_DEVICE_LINE"
+msgid "设备：{0}"
+msgstr "Equipment: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_MISSING_PREFIX"
+msgid "缺 {0}"
+msgstr "Missing {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_PREVIEW_PANEL"
+msgid "调度预览"
+msgstr "Dispatch Preview"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_NO_CHAIN"
+msgid "没有可显示的产线。"
+msgstr "No production chain to display."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_DISPATCH_TITLE_LINE"
+msgid "{0}：先排成品，缺料再补产"
+msgstr "{0}: schedule product first, produce shortages next"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_DISPATCH_DESC"
+msgid "成品设备会等待材料；缺口材料由其它可用设备补齐。"
+msgstr "Product machines wait for materials; shortages are produced by other available machines."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_BATCH_COUNT"
+msgid "{0} 批"
+msgstr "{0} batches"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_MACHINE_COUNT"
+msgid "{0} 台"
+msgstr "{0} machines"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_PRODUCT_DISPATCH"
+msgid "成品排产"
+msgstr "Product Schedule"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_NEEDS_PRODUCTION"
+msgid "需要补产"
+msgstr "Needs Production"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_SEND_FROM_NETWORK"
+msgid "从网络库存送入成品设备"
+msgstr "Send from network stock to product machine"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_FLOW_DESC"
+msgid "每一行表示一种原料：库存足够就直接调拨，不足则显示补产来源。"
+msgstr "Each row is an input material: transfer directly when stock is enough, otherwise show its production source."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_FLOW_RECIPE"
+msgid "排产配方"
+msgstr "Scheduled Recipe"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_FLOW_MATERIAL"
+msgid "本批材料需求"
+msgstr "Batch Materials"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_FLOW_STATUS"
+msgid "补产设备 / 状态"
+msgstr "Production Equipment / Status"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_BATCH_LABEL"
+msgid "批次 {0}"
+msgstr "Batches {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_EQUIPMENT_LABEL"
+msgid "设备 {0}"
+msgstr "Equipment {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_OUTPUT_LABEL"
+msgid "产出 {0}"
+msgstr "Output {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_STILL_MISSING"
+msgid "仍缺料"
+msgstr "Still Missing"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_NO_PRODUCT"
+msgid "选择成品后显示活动订单。"
+msgstr "Select a product to show active orders."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_EMPTY"
+msgid "暂无活动订单。提交后会显示状态、数量、批次和合并记录。"
+msgstr "No active orders. Submitted orders will show status, amounts, batches, and merge history here."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_ACTIVE_TITLE"
+msgid "活动订单追踪"
+msgstr "Active Order Tracking"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_CREATED_CYCLE"
+msgid "创建周期"
+msgstr "Created Cycle"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_CYCLE_VALUE"
+msgid "{0} 周期"
+msgstr "Cycle {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_MERGED_ACTIVITY"
+msgid "已合并 {0} 次 · 活动周期 {1}"
+msgstr "Merged {0} times · active cycle {1}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_SUMMARY"
+msgid "{0}：{1} 个活动订单 / {2} 条最近记录"
+msgstr "{0}: {1} active orders / {2} recent records"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_ORDER_SOURCE_BATCH"
+msgid "{0}订单 · 批次 x{1}"
+msgstr "{0} order · batch x{1}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_WAITING_MATERIALS"
+msgid "成品设备 {0} 台等待材料，{1} 台设备补产缺口。"
+msgstr "{0} product machines are waiting for materials; {1} machines are producing shortages."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_MACHINES_RUNNING"
+msgid "{0} 台设备正在处理该订单。"
+msgstr "{0} machines are processing this order."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_STATE_CREATED"
+msgid "{0}，创建于 {1} 周期。"
+msgstr "{0}, created on cycle {1}."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_SOURCE_KEEP"
+msgid "货物保持"
+msgstr "Keep Stock"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_SOURCE_MANUAL"
+msgid "手动"
+msgstr "Manual"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_STATE_SUBMITTED"
+msgid "已提交"
+msgstr "Submitted"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_STATE_WAITING"
+msgid "待材料"
+msgstr "Waiting Materials"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_STATE_PRODUCING"
+msgid "生产中"
+msgstr "Producing"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_STATE_COMPLETED"
+msgid "完成"
+msgstr "Complete"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_STATE_ABNORMAL"
+msgid "异常取消"
+msgstr "Abnormal Cancel"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_STATE_CANCELLED"
+msgid "已取消"
+msgstr "Cancelled"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_STATE_TRACKING"
+msgid "追踪中"
+msgstr "Tracking"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_METRIC_STORAGE"
+msgid "储存"
+msgstr "Storage"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_METRIC_RUNNING"
+msgid "运行"
+msgstr "Running"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_METRIC_RECIPE"
+msgid "配方"
+msgstr "Recipe"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_METRIC_NETWORK"
+msgid "网络"
+msgstr "Network"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STATUS_ENABLED"
+msgid "已开启"
+msgstr "Enabled"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STATUS_DISABLED"
+msgid "已关闭"
+msgstr "Disabled"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ACTION_CLOSE"
+msgid "关闭"
+msgstr "Close"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SOURCE_POLICY"
+msgid "来源策略"
+msgstr "Source Policy"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_POLICY"
+msgid "存放策略"
+msgstr "Storage Policy"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.NO_LIMIT"
+msgid "不限额"
+msgstr "No limit"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_MANUAL_DESC"
+msgid "成品保留在建筑输出栏，不自动转移。"
+msgstr "Finished products stay in the building output storage and are not moved automatically."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_AUTO_STATUS"
+msgid "自动入网"
+msgstr "Auto Network"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_MANUAL_STATUS"
+msgid "手动取出"
+msgstr "Manual Pickup"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_SHORT_IDLE"
+msgid "待机"
+msgstr "Idle"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_SHORT_WAITING_WORKER"
+msgid "等人"
+msgstr "Waiting"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_SHORT_CRAFTING"
+msgid "制作中"
+msgstr "Crafting"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.NONE"
+msgid "无"
+msgstr "None"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.REQUEST_ON_SHORT"
+msgid "请求开"
+msgstr "Req On"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.REQUEST_OFF_SHORT"
+msgid "请求关"
+msgstr "Req Off"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_ON_SHORT"
+msgid "入网开"
+msgstr "Out On"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_OFF_SHORT"
+msgid "入网关"
+msgstr "Out Off"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.NO_COMPONENT"
+msgid "无组件"
+msgstr "No Component"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_USAGE_PREFIX"
+msgid "订单用途：{0}"
+msgstr "Order usage: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.WORLD_MATERIAL_REQUEST_ON"
+msgid "材料请求：开启"
+msgstr "Material request: On"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.WORLD_MATERIAL_REQUEST_OFF"
+msgid "材料请求：关闭"
+msgstr "Material request: Off"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.WORLD_STATUS"
+msgid "状态：{0}"
+msgstr "Status: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.WORLD_WAITING_QUEUE"
+msgid "等待生产队列"
+msgstr "Waiting for production queue"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.WORLD_ORDER_EMPTY"
+msgid "订单：当前建筑没有活动订单"
+msgstr "Order: this building has no active orders"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.WORLD_ORDER_LIST"
+msgid "订单：{0}"
+msgstr "Order: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.WORLD_PRODUCTION_TITLE"
+msgid "Storage Network 生产接入"
+msgstr "Storage Network Production"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.WORLD_STORAGE_TITLE"
+msgid "Storage Network 储存接入"
+msgstr "Storage Network Storage"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.WORLD_NETWORK_CAPACITY"
+msgid "网络容量：{0} / {1}"
+msgstr "Network capacity: {0} / {1}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.WORLD_BUILDING_STORAGE"
+msgid "本建筑：{0} / {1}"
+msgstr "This building: {0} / {1}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.WORLD_BUILDING_NO_STORAGE"
+msgid "本建筑：未检测到 Storage"
+msgstr "This building: no Storage found"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.WORLD_OUTPUT_STATUS"
+msgid "输出：{0}"
+msgstr "Output: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.WORLD_CONNECTED_BUILDINGS"
+msgid "接入建筑：{0}"
+msgstr "Connected buildings: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_STATUS_NO_QUEUE"
+msgid "没有可请求材料的排队配方"
+msgstr "No queued recipe has requestable materials"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_STATUS_LIMIT_REACHED"
+msgid "已达到请求限额"
+msgstr "Request limit reached"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_STATUS_MISSING_SOURCE"
+msgid "缺少 {0}，网络中没有可用来源"
+msgstr "Missing {0}; no available network source"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_STATUS_REQUESTED"
+msgid "已请求 {0} {1}"
+msgstr "Requested {0} {1}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_STATUS_SATISFIED"
+msgid "当前配方材料已满足"
+msgstr "Current recipe materials are satisfied"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_STATUS_WAITING_OUTPUT"
+msgid "等待下一批成品"
+msgstr "Waiting for the next finished product"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_STATUS_WAITING_CONTENTS"
+msgid "等待内容物进入储存栏"
+msgstr "Waiting for contents to enter storage"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_STATUS_WAITING_PRODUCTS"
+msgid "等待成品进入输出栏"
+msgstr "Waiting for finished products to enter output storage"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_STATUS_NO_OUTPUT_STORAGE"
+msgid "建筑没有可读取的输出栏"
+msgstr "Building has no readable output storage"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRANSFER_STATUS_MOVED"
+msgid "已入网 {0}"
+msgstr "Moved {0} to network"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRANSFER_STATUS_BLOCKED"
+msgid "无法存入 {0}：没有匹配箱子或容量不足"
+msgstr "Cannot store {0}: no matching storage or not enough capacity"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENROLLABLE_SHORT"
+msgid "可接入"
+msgstr "Enrollable"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.RECIPE_SHORT"
+msgid "配方"
+msgstr "Recipes"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_TITLE"
+msgid "StorageNetwork 选项"
+msgstr "StorageNetwork Options"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_TOOLTIP"
+msgid "调整 StorageNetwork 模组数值"
+msgstr "Adjust StorageNetwork mod values"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_HINT"
+msgid "保存后会写入 StorageNetworkConfig.json。建筑容量等部分数值需要重进存档或重建建筑才会完全体现。"
+msgstr "Saving writes to StorageNetworkConfig.json. Some values, such as building capacity, require reloading the save or rebuilding buildings to fully apply."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_RESTART_REQUIRED"
+msgid "要使这些选项生效，必须重新启动游戏。"
+msgstr "The game must be restarted for these options to take effect."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_SCENE_STORAGE_CAPACITY"
+msgid "场景储存箱容量 kg"
+msgstr "Scene Storage Box Capacity kg"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_SCENE_STORAGE_CAPACITY_DESC"
+msgid "专用场景储存箱的容量。新建建筑生效。"
+msgstr "Capacity of dedicated scene storage boxes. Applies to newly built buildings."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_SCENE_SCAN_CACHE"
+msgid "场景扫描缓存秒数"
+msgstr "Scene Scan Cache Seconds"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_SCENE_SCAN_CACHE_DESC"
+msgid "数值越小刷新越快，但遍历储存建筑更频繁。"
+msgstr "Lower values refresh faster but scan storage buildings more often."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_DEFAULT_MATERIAL_LIMIT"
+msgid "材料请求默认限额 kg"
+msgstr "Default Material Request Limit kg"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_DEFAULT_MATERIAL_LIMIT_DESC"
+msgid "新接入生产建筑的默认请求限额。"
+msgstr "Default request limit for newly connected production buildings."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_REQUEST_SUCCESS_COOLDOWN"
+msgid "请求成功冷却秒数"
+msgstr "Request Success Cooldown Seconds"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_REQUEST_SUCCESS_COOLDOWN_DESC"
+msgid "材料已满足或达到限额后的检查间隔。"
+msgstr "Check interval after materials are satisfied or the limit is reached."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_REQUEST_RETRY_COOLDOWN"
+msgid "请求失败重试秒数"
+msgstr "Request Failure Retry Seconds"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_REQUEST_RETRY_COOLDOWN_DESC"
+msgid "缺料或没有可请求配方后的重试间隔。"
+msgstr "Retry interval after missing materials or no requestable recipe."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_INFINITE_QUEUE_BATCHES"
+msgid "无限队列请求批次数"
+msgstr "Infinite Queue Request Batches"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_INFINITE_QUEUE_BATCHES_DESC"
+msgid "生产队列为无限时，一次按多少批材料请求。"
+msgstr "How many batches of materials to request at once for infinite production queues."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_MAX_REQUEST_BATCHES"
+msgid "最大请求批次数"
+msgstr "Max Request Batches"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_MAX_REQUEST_BATCHES_DESC"
+msgid "单次材料请求最多按多少批计算。"
+msgstr "Maximum batches used for a single material request calculation."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_PLAN_RECURSION_DEPTH"
+msgid "生产计划递归深度"
+msgstr "Production Plan Recursion Depth"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_PLAN_RECURSION_DEPTH_DESC"
+msgid "补产链路向下追踪的最大层数。"
+msgstr "Maximum depth for tracing automatic production chains."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_ABNORMAL_TIMEOUT"
+msgid "异常订单超时周期"
+msgstr "Abnormal Order Timeout Cycles"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_ABNORMAL_TIMEOUT_DESC"
+msgid "订单多长时间无进度后自动取消排产。"
+msgstr "How long an order can make no progress before its schedule is automatically cancelled."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_COMPLETED_RETENTION"
+msgid "完成订单保留周期"
+msgstr "Completed Order Retention Cycles"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_COMPLETED_RETENTION_DESC"
+msgid "完成/取消/异常订单在列表中保留多久。"
+msgstr "How long completed/cancelled/abnormal orders remain in the list."

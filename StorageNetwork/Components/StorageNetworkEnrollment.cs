@@ -1,4 +1,5 @@
 using KSerialization;
+using StorageNetwork.Services;
 using System;
 using UnityEngine;
 using Loc = StorageNetwork.STRINGS;
@@ -22,6 +23,7 @@ namespace StorageNetwork.Components
         {
             base.OnSpawn();
             Subscribe((int)GameHashes.RefreshUserMenu, OnRefreshUserMenuDelegate);
+            StorageNetworkFilterBypass.Apply(storage);
             RefreshConnectedStatus();
         }
 
@@ -78,6 +80,7 @@ namespace StorageNetwork.Components
             }
 
             IncludedInSceneNetwork = included;
+            StorageNetworkFilterBypass.Apply(storage);
             RefreshConnectedStatus();
             KMonoBehaviour.PlaySound(GlobalAssets.GetSound("HUD_Click", false));
 

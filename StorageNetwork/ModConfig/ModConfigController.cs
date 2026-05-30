@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
+using static StorageNetwork.STRINGS;
 
 namespace ModConfig
 {
@@ -45,15 +46,14 @@ namespace ModConfig
             JsonConfigStore.Save(configPath, Instance, normalize, logPrefix);
         }
 
-        public void RegisterOptionsButton(string modTitlePrefix, string buttonName, string tooltip, string dialogTitle, string hint = null, float buttonOffsetX = -72f)
+        public void RegisterOptionsButton(string modTitlePrefix, string buttonName, string tooltip, string dialogTitle, string hint = null)
         {
             ModsScreenOptionsButton.Register(new ModsScreenOptionsButtonDefinition
             {
                 ModTitlePrefix = modTitlePrefix,
                 ButtonName = buttonName,
-                ButtonText = "选项",
+                ButtonText = Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OPTIONS_BUTTON),
                 Tooltip = tooltip,
-                ButtonOffset = new Vector2(buttonOffsetX, 0f),
                 OnClick = () => ShowDialog(dialogTitle, hint)
             });
         }
@@ -74,8 +74,8 @@ namespace ModConfig
             {
                 dialog.Fields.Add(new ModConfigField
                 {
-                    Label = binding.Option.Label,
-                    Description = binding.Option.Description,
+                    Label = TranslateOptionText(binding.Option.Label),
+                    Description = TranslateOptionText(binding.Option.Description),
                     Value = binding.GetValue(config),
                     Min = binding.Option.Min,
                     Max = binding.Option.Max,
@@ -95,6 +95,36 @@ namespace ModConfig
             };
 
             ModConfigDialog.Show(dialog);
+        }
+
+        private static string TranslateOptionText(string text)
+        {
+            if (string.IsNullOrEmpty(text))
+            {
+                return text;
+            }
+
+            if (text == "场景储存箱容量 kg") return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_SCENE_STORAGE_CAPACITY);
+            if (text == "专用场景储存箱的容量。新建建筑生效。") return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_SCENE_STORAGE_CAPACITY_DESC);
+            if (text == "场景扫描缓存秒数") return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_SCENE_SCAN_CACHE);
+            if (text == "数值越小刷新越快，但遍历储存建筑更频繁。") return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_SCENE_SCAN_CACHE_DESC);
+            if (text == "材料请求默认限额 kg") return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_DEFAULT_MATERIAL_LIMIT);
+            if (text == "新接入生产建筑的默认请求限额。") return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_DEFAULT_MATERIAL_LIMIT_DESC);
+            if (text == "请求成功冷却秒数") return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_REQUEST_SUCCESS_COOLDOWN);
+            if (text == "材料已满足或达到限额后的检查间隔。") return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_REQUEST_SUCCESS_COOLDOWN_DESC);
+            if (text == "请求失败重试秒数") return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_REQUEST_RETRY_COOLDOWN);
+            if (text == "缺料或没有可请求配方后的重试间隔。") return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_REQUEST_RETRY_COOLDOWN_DESC);
+            if (text == "无限队列请求批次数") return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_INFINITE_QUEUE_BATCHES);
+            if (text == "生产队列为无限时，一次按多少批材料请求。") return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_INFINITE_QUEUE_BATCHES_DESC);
+            if (text == "最大请求批次数") return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_MAX_REQUEST_BATCHES);
+            if (text == "单次材料请求最多按多少批计算。") return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_MAX_REQUEST_BATCHES_DESC);
+            if (text == "生产计划递归深度") return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_PLAN_RECURSION_DEPTH);
+            if (text == "补产链路向下追踪的最大层数。") return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_PLAN_RECURSION_DEPTH_DESC);
+            if (text == "异常订单超时周期") return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_ABNORMAL_TIMEOUT);
+            if (text == "订单多长时间无进度后自动取消排产。") return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_ABNORMAL_TIMEOUT_DESC);
+            if (text == "完成订单保留周期") return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_COMPLETED_RETENTION);
+            if (text == "完成/取消/异常订单在列表中保留多久。") return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_COMPLETED_RETENTION_DESC);
+            return text;
         }
 
         private static List<OptionBinding> BuildBindings(T config)

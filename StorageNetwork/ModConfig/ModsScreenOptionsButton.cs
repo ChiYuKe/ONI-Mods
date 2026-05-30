@@ -8,14 +8,16 @@ namespace ModConfig
     public sealed class ModsScreenOptionsButtonDefinition
     {
         private const float CompactButtonWidth = 52f;
+        private const int PLibOptionsButtonIndex = 4;
 
         public string ModTitlePrefix { get; set; }
         public string ButtonName { get; set; }
-        public string ButtonText { get; set; } = "选项";
+        public string ButtonText { get; set; } = StorageNetwork.STRINGS.Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OPTIONS_BUTTON);
         public string Tooltip { get; set; }
-        public Vector2 ButtonOffset { get; set; } = new Vector2(-72f, 0f);
         public Vector2 ButtonSize { get; set; } = new Vector2(CompactButtonWidth, 0f);
         public System.Action OnClick { get; set; }
+
+        public int SiblingIndex { get; set; } = PLibOptionsButtonIndex;
     }
 
     public static class ModsScreenOptionsButton
@@ -112,20 +114,17 @@ namespace ModConfig
             RectTransform sourceRect = manageButton.GetComponent<RectTransform>();
             if (rect != null && sourceRect != null)
             {
-                Vector2 sourcePosition = sourceRect.anchoredPosition;
                 rect.anchorMin = sourceRect.anchorMin;
                 rect.anchorMax = sourceRect.anchorMax;
                 rect.pivot = sourceRect.pivot;
                 float width = definition.ButtonSize.x > 0f ? definition.ButtonSize.x : sourceRect.sizeDelta.x;
                 float height = definition.ButtonSize.y > 0f ? definition.ButtonSize.y : sourceRect.sizeDelta.y;
                 rect.sizeDelta = new Vector2(width, height);
-                rect.anchoredPosition = sourcePosition + definition.ButtonOffset;
+                rect.anchoredPosition = sourceRect.anchoredPosition;
                 ApplyCompactLayout(buttonObject, width, height);
             }
 
-            Component enabledToggle = references != null ? references.GetReference<Component>("EnabledToggle") : null;
-            Transform insertBefore = enabledToggle != null ? enabledToggle.transform : manageButton.transform;
-            buttonObject.transform.SetSiblingIndex(insertBefore.GetSiblingIndex());
+            buttonObject.transform.SetSiblingIndex(Mathf.Clamp(definition.SiblingIndex, 0, buttonObject.transform.parent.childCount - 1));
             buttonObject.SetActive(true);
         }
 

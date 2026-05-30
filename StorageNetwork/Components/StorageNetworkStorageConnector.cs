@@ -1,5 +1,6 @@
 using KSerialization;
 using StorageNetwork.Services;
+using static StorageNetwork.STRINGS;
 
 namespace StorageNetwork.Components
 {
@@ -35,7 +36,7 @@ namespace StorageNetwork.Components
             StorageTransferResult result = NetworkStorageTransferService.TransferStoredItemsToNetwork(
                 storage,
                 new[] { storage });
-            lastOutputStatus = NetworkStorageTransferService.FormatOutputStatus(result, "等待内容物进入储存栏");
+            lastOutputStatus = NetworkStorageTransferService.FormatOutputStatus(result, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_STATUS_WAITING_CONTENTS));
         }
 
         /// <summary>

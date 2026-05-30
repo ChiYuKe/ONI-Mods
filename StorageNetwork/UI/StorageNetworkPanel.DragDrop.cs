@@ -170,7 +170,7 @@ namespace StorageNetwork.UI
             selectedItemStorage = null;
             selectedItemKey = null;
             lastListSignature = null;
-            Refresh(true);
+            RefreshStoragePanel(StoragePanelRefreshMode.Structure);
 
             if (dragPreviewRoot != null)
             {

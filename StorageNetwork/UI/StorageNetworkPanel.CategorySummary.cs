@@ -8,7 +8,7 @@ using static StorageNetwork.STRINGS;
 
 namespace StorageNetwork.UI
 {
-    public sealed partial class StorageNetworkPanel : MonoBehaviour, IInputHandler
+    public sealed partial class StorageNetworkPanel : KScreen, IInputHandler
     {
         private readonly Dictionary<string, Queue<MassSample>> categorySummarySamples = new Dictionary<string, Queue<MassSample>>();
 
@@ -40,6 +40,7 @@ namespace StorageNetwork.UI
         private void ShowCategorySummaryPanel()
         {
             EnsureCategorySummaryPanel();
+            categorySummarySignature = null;
             categorySummaryRoot.SetActive(true);
             UpdateCategorySummaryPanel();
         }
@@ -50,6 +51,8 @@ namespace StorageNetwork.UI
             {
                 categorySummaryRoot.SetActive(false);
             }
+
+            categorySummarySignature = null;
         }
 
         private void EnsureCategorySummaryPanel()
@@ -76,7 +79,7 @@ namespace StorageNetwork.UI
             title.lineSpacing = 2f;
             Stretch(title.rectTransform(), 10f, 7f);
 
-            GameObject closeButton = CreateGameButton("CloseButton", header.transform, "X", CloseCategorySummaryPanel);
+            GameObject closeButton = CreateCloseIconButton("CloseButton", header.transform, CloseCategorySummaryPanel);
             RectTransform closeRect = closeButton.GetComponent<RectTransform>();
             closeRect.anchorMin = new Vector2(1f, 1f);
             closeRect.anchorMax = new Vector2(1f, 1f);
@@ -85,12 +88,13 @@ namespace StorageNetwork.UI
             closeRect.sizeDelta = new Vector2(22f, 20f);
 
             GameObject viewport = CreateBox("Viewport", categorySummaryRoot.transform, new Color(0.80f, 0.79f, 0.74f, 1f));
-            SetStretch(viewport.GetComponent<RectTransform>(), 10f, 10f, 10f, 70f);
+            SetStretch(viewport.GetComponent<RectTransform>(), 10f, 24f, 10f, 70f);
             viewport.AddComponent<RectMask2D>();
 
             GameObject content = new GameObject("Content");
             content.transform.SetParent(viewport.transform, false);
             categorySummaryContent = content.AddComponent<RectTransform>();
+            categorySummaryRows = new StorageNetworkKeyedRowCache(categorySummaryContent);
             categorySummaryContent.anchorMin = new Vector2(0f, 1f);
             categorySummaryContent.anchorMax = new Vector2(1f, 1f);
             categorySummaryContent.pivot = new Vector2(0.5f, 1f);
@@ -106,7 +110,7 @@ namespace StorageNetwork.UI
             layout.childForceExpandHeight = false;
             content.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
-            Scrollbar scrollbar = CreateScrollbar(categorySummaryRoot.transform);
+            Scrollbar scrollbar = CreateScrollbar(categorySummaryRoot.transform, 70f, 10f);
 
             ScrollRect scrollRect = viewport.AddComponent<ScrollRect>();
             scrollRect.viewport = viewport.GetComponent<RectTransform>();
@@ -126,8 +130,6 @@ namespace StorageNetwork.UI
             {
                 return;
             }
-
-            ClearCategorySummaryContent();
 
             List<Storage> storages = currentSnapshot?.Storages
                 .Where(info => info.Storage != null && StorageCategories.GetKey(info.Storage) == selectedCategoryKey)
@@ -151,28 +153,52 @@ namespace StorageNetwork.UI
                 .ToList();
 
             UpdateCategorySummarySamples(selectedCategoryKey, totals);
+            string signature = BuildCategorySummarySignature(selectedCategoryKey, storages, totals);
+            if (signature == categorySummarySignature)
+            {
+                return;
+            }
+
+            categorySummarySignature = signature;
+            categorySummaryRows ??= new StorageNetworkKeyedRowCache(categorySummaryContent);
+            categorySummaryRows.Begin();
 
             if (totals.Count == 0)
             {
-                AddSummaryText(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SUMMARY_EMPTY), 12, FontStyles.Normal, 26f);
+                UpdateSummaryText("empty", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SUMMARY_EMPTY), 12, FontStyles.Normal, 26f);
+                categorySummaryRows.Commit();
+                ForceCategorySummaryLayout();
                 return;
             }
 
             foreach (ItemTotal total in totals)
             {
-                CreateCategorySummaryItemRow(total, GetMassTrendPerCycle(selectedCategoryKey, total.Key));
+                UpdateCategorySummaryItemRow(total, GetMassTrendPerCycle(selectedCategoryKey, total.Key));
             }
 
-            Canvas.ForceUpdateCanvases();
-            LayoutRebuilder.ForceRebuildLayoutImmediate(categorySummaryContent);
+            categorySummaryRows.Commit();
+            ForceCategorySummaryLayout();
+        }
+
+        private static string BuildCategorySummarySignature(string categoryKey, List<Storage> storages, List<ItemTotal> totals)
+        {
+            string storageSignature = string.Join(",", storages
+                .OrderBy(storage => storage != null ? storage.GetInstanceID() : 0)
+                .Select(storage => string.Format("{0}:{1:0.###}",
+                    storage != null ? storage.GetInstanceID() : 0,
+                    storage != null ? storage.MassStored() : 0f)));
+
+            string totalSignature = string.Join(",", totals
+                .OrderBy(total => total.Key)
+                .Select(total => string.Format("{0}:{1:0.###}", total.Key, total.MassKg)));
+
+            return string.Format("{0}|{1}|{2}", categoryKey ?? string.Empty, storageSignature, totalSignature);
         }
 
         private void ClearCategorySummaryContent()
         {
-            for (int i = categorySummaryContent.childCount - 1; i >= 0; i--)
-            {
-                Destroy(categorySummaryContent.GetChild(i).gameObject);
-            }
+            categorySummaryRows?.ClearDestroy();
+            categorySummaryRows = categorySummaryContent != null ? new StorageNetworkKeyedRowCache(categorySummaryContent) : null;
         }
 
         private void SetCategorySummaryTitle(string categoryName, int storageCount, float storedKg)
@@ -198,7 +224,49 @@ namespace StorageNetwork.UI
             label.gameObject.AddComponent<LayoutElement>().preferredHeight = height;
         }
 
-        private void CreateCategorySummaryItemRow(ItemTotal total, float? trendKgPerCycle)
+        private void UpdateSummaryText(string key, string text, int size, FontStyles style, float height)
+        {
+            GameObject row = categorySummaryRows.Use("summary:" + key, () =>
+            {
+                TextMeshProUGUI created = CreateText("SummaryText", categorySummaryContent, text, size, TextAlignmentOptions.MidlineLeft);
+                created.color = new Color(0.18f, 0.19f, 0.19f, 1f);
+                created.richText = true;
+                created.gameObject.AddComponent<LayoutElement>();
+                return created.gameObject;
+            });
+
+            TextMeshProUGUI label = row.GetComponent<TextMeshProUGUI>();
+            if (label != null)
+            {
+                label.text = text;
+                label.fontSize = size;
+                label.fontStyle = style;
+            }
+
+            LayoutElement layout = row.GetComponent<LayoutElement>();
+            if (layout != null)
+            {
+                layout.preferredHeight = height;
+            }
+        }
+
+        private void UpdateCategorySummaryItemRow(ItemTotal total, float? trendKgPerCycle)
+        {
+            GameObject row = categorySummaryRows.Use("item:" + total.Key, () => CreateCategorySummaryItemRow());
+            CategorySummaryRowView view = row.GetComponent<CategorySummaryRowView>();
+            if (view == null)
+            {
+                return;
+            }
+
+            SetStoredItemIcon(view.Icon, total.Representative);
+            view.Name.text = total.Name;
+            view.Mass.text = GameUtil.GetFormattedMass(total.MassKg);
+            view.Trend.text = FormatTrend(trendKgPerCycle);
+            view.Trend.color = GetTrendColor(trendKgPerCycle);
+        }
+
+        private GameObject CreateCategorySummaryItemRow()
         {
             GameObject row = CreatePlainImage("SummaryItemRow", categorySummaryContent, new Color(0.86f, 0.85f, 0.80f, 1f));
             row.AddComponent<LayoutElement>().preferredHeight = 24f;
@@ -219,23 +287,30 @@ namespace StorageNetwork.UI
             Image icon = iconObject.AddComponent<Image>();
             icon.raycastTarget = false;
             icon.preserveAspect = true;
-            SetStoredItemIcon(icon, total.Representative);
 
-            TextMeshProUGUI name = CreateText("Name", row.transform, total.Name, 11, TextAlignmentOptions.MidlineLeft);
+            TextMeshProUGUI name = CreateText("Name", row.transform, string.Empty, 11, TextAlignmentOptions.MidlineLeft);
             name.color = new Color(0.18f, 0.19f, 0.19f, 1f);
             name.textWrappingMode = TextWrappingModes.NoWrap;
             name.overflowMode = TextOverflowModes.Ellipsis;
             name.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
 
-            TextMeshProUGUI mass = CreateText("Mass", row.transform, GameUtil.GetFormattedMass(total.MassKg), 11, TextAlignmentOptions.MidlineRight);
+            TextMeshProUGUI mass = CreateText("Mass", row.transform, string.Empty, 11, TextAlignmentOptions.MidlineRight);
             mass.color = new Color(0.28f, 0.29f, 0.29f, 1f);
             mass.textWrappingMode = TextWrappingModes.NoWrap;
             mass.gameObject.AddComponent<LayoutElement>().preferredWidth = 84f;
 
-            TextMeshProUGUI trend = CreateText("Trend", row.transform, FormatTrend(trendKgPerCycle), 10, TextAlignmentOptions.MidlineRight);
-            trend.color = GetTrendColor(trendKgPerCycle);
+            TextMeshProUGUI trend = CreateText("Trend", row.transform, string.Empty, 10, TextAlignmentOptions.MidlineRight);
             trend.textWrappingMode = TextWrappingModes.NoWrap;
             trend.gameObject.AddComponent<LayoutElement>().preferredWidth = 86f;
+
+            row.AddComponent<CategorySummaryRowView>().Configure(icon, name, mass, trend);
+            return row;
+        }
+
+        private void ForceCategorySummaryLayout()
+        {
+            Canvas.ForceUpdateCanvases();
+            LayoutRebuilder.ForceRebuildLayoutImmediate(categorySummaryContent);
         }
 
         private void UpdateCategorySummarySamples(string categoryKey, IEnumerable<ItemTotal> totals)
@@ -346,6 +421,25 @@ namespace StorageNetwork.UI
             public float CycleTime { get; }
 
             public float MassKg { get; }
+        }
+
+        private sealed class CategorySummaryRowView : MonoBehaviour
+        {
+            public Image Icon { get; private set; }
+
+            public TextMeshProUGUI Name { get; private set; }
+
+            public TextMeshProUGUI Mass { get; private set; }
+
+            public TextMeshProUGUI Trend { get; private set; }
+
+            public void Configure(Image icon, TextMeshProUGUI name, TextMeshProUGUI mass, TextMeshProUGUI trend)
+            {
+                Icon = icon;
+                Name = name;
+                Mass = mass;
+                Trend = trend;
+            }
         }
     }
 }

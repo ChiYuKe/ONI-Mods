@@ -11,7 +11,7 @@ using static StorageNetwork.STRINGS;
 
 namespace StorageNetwork.UI
 {
-    public sealed partial class StorageNetworkPanel : MonoBehaviour, IInputHandler
+    public sealed partial class StorageNetworkPanel : KScreen, IInputHandler
     {
         // Deprecated: plain storage settings currently do not provide useful controls.
         // Keep this switch so the old entry point can be restored deliberately if needed.
@@ -49,7 +49,7 @@ namespace StorageNetwork.UI
                 () =>
                 {
                     expandedStorageTypes[typeKey] = !expanded;
-                    Refresh(true);
+                    RefreshStoragePanel(StoragePanelRefreshMode.Structure);
                 });
 
             header.GetComponent<HorizontalLayoutGroup>().padding = new RectOffset(10, 10, 0, 0);
@@ -111,7 +111,7 @@ namespace StorageNetwork.UI
                 () =>
                 {
                     expandedStorages[storage] = !expanded;
-                    Refresh(true);
+                    RefreshStoragePanel(StoragePanelRefreshMode.Structure);
                 },
                 string.IsNullOrEmpty(sourceModName) ? null : string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SOURCE_MOD_NAME), sourceModName),
                 showSettingsButton ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STORAGE_SETTINGS) : null,
@@ -189,7 +189,7 @@ namespace StorageNetwork.UI
                     selectedCategoryKey = group.Key;
                     selectedItemStorage = null;
                     selectedItemKey = null;
-                    Refresh(true);
+                    RefreshStoragePanel(StoragePanelRefreshMode.Structure);
                     UpdateCategorySummaryPanel();
                 },
                 selected ? KleiPinkStyle() : KleiBlueStyle());
@@ -247,7 +247,7 @@ namespace StorageNetwork.UI
                     itemKey,
                     itemName,
                     formattedMass));
-                Refresh(true);
+                RefreshStoragePanel(StoragePanelRefreshMode.Structure);
             };
 
             RegisterItemDragSource(row, storage, itemKey, itemName, representative);

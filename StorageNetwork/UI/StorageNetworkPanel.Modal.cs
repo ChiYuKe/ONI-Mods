@@ -11,7 +11,7 @@ using static StorageNetwork.STRINGS;
 
 namespace StorageNetwork.UI
 {
-    public sealed partial class StorageNetworkPanel : MonoBehaviour, IInputHandler
+    public sealed partial class StorageNetworkPanel : KScreen, IInputHandler
     {
 
 
@@ -20,7 +20,7 @@ namespace StorageNetwork.UI
             List<GameObject> items = FindStoredItems(storage, itemKey);
             if (storage == null || items.Count == 0)
             {
-                Refresh(true);
+                RefreshStoragePanel(StoragePanelRefreshMode.Structure);
                 return;
             }
 
@@ -39,7 +39,7 @@ namespace StorageNetwork.UI
             List<GameObject> items = FindStoredItems(source, itemKey);
             if (source == null || items.Count == 0)
             {
-                Refresh(true);
+                RefreshStoragePanel(StoragePanelRefreshMode.Structure);
                 return;
             }
 
@@ -161,6 +161,8 @@ namespace StorageNetwork.UI
             TextMeshProUGUI valueLabel = AddModalText(body.transform, string.Empty, 13, FontStyles.Bold);
             KSlider slider = CreateAmountSlider(body.transform, maxAmount);
             KInputTextField input = CreateAmountInputRow(body.transform);
+            StorageNetworkNumberInputField numberInput = input.GetComponent<StorageNetworkNumberInputField>();
+            numberInput?.Configure(input, 0f, maxAmount, false);
 
             System.Action<float> setAmount = value =>
             {
@@ -170,7 +172,15 @@ namespace StorageNetwork.UI
                 {
                     updating = true;
                     slider.value = currentAmount;
-                    input.text = FormatAmount(currentAmount);
+                    if (numberInput != null)
+                    {
+                        numberInput.SetAmount(currentAmount);
+                    }
+                    else
+                    {
+                        input.text = FormatAmount(currentAmount);
+                    }
+
                     updating = false;
                 }
             };
@@ -183,17 +193,13 @@ namespace StorageNetwork.UI
                 }
             });
 
-            input.onEndEdit.AddListener(value =>
+            if (numberInput != null)
             {
-                if (TryParseAmount(value, out float parsed))
+                numberInput.onEndEdit += () =>
                 {
-                    setAmount(parsed);
-                }
-                else
-                {
-                    setAmount(currentAmount);
-                }
-            });
+                    setAmount(numberInput.currentValue);
+                };
+            }
 
             setAmount(currentAmount);
 
@@ -249,7 +255,7 @@ namespace StorageNetwork.UI
             titleText.fontStyle = FontStyles.Bold;
             Stretch(titleText.rectTransform(), 12f, 0f);
 
-            GameObject closeButton = CreateGameButton("CloseButton", header.transform, "X", CloseModal);
+            GameObject closeButton = CreateCloseIconButton("CloseButton", header.transform, CloseModal);
             RectTransform closeRect = closeButton.GetComponent<RectTransform>();
             closeRect.anchorMin = new Vector2(1f, 0.5f);
             closeRect.anchorMax = new Vector2(1f, 0.5f);
@@ -429,7 +435,7 @@ namespace StorageNetwork.UI
             fillAreaRect.anchorMin = new Vector2(0f, 0.25f);
             fillAreaRect.anchorMax = new Vector2(1f, 0.75f);
             fillAreaRect.anchoredPosition = Vector2.zero;
-            fillAreaRect.sizeDelta = new Vector2(-20f, 0f);
+            fillAreaRect.sizeDelta = Vector2.zero;
 
             GameObject fillStart = CreatePlainImage("Fill Start", fillArea.transform, Color.white);
             RectTransform fillStartRect = fillStart.GetComponent<RectTransform>();
@@ -486,34 +492,19 @@ namespace StorageNetwork.UI
 
         private static KInputTextField CreateAmountInput(Transform parent)
         {
-            GameObject inputObject = CreatePlainImage("AmountInput", parent, Color.white);
-            LayoutElement inputLayout = inputObject.AddComponent<LayoutElement>();
-            inputLayout.preferredWidth = 150f;
-            inputLayout.preferredHeight = 24f;
-            ApplyOniInputSlotStyle(inputObject.GetComponent<Image>());
-
-            TextMeshProUGUI text = CreateText("Text", inputObject.transform, string.Empty, 13, TextAlignmentOptions.MidlineLeft);
-            text.color = new Color(0.08f, 0.09f, 0.10f, 1f);
-            Stretch(text.rectTransform(), 12f, 3f);
-
-            GameObject indicator = CreatePlainImage("InputIndicator", inputObject.transform, new Color(0.10f, 0.12f, 0.14f, 0.88f));
-            RectTransform indicatorRect = indicator.GetComponent<RectTransform>();
-            indicatorRect.anchorMin = new Vector2(0f, 0.5f);
-            indicatorRect.anchorMax = new Vector2(0f, 0.5f);
-            indicatorRect.pivot = new Vector2(0f, 0.5f);
-            indicatorRect.anchoredPosition = new Vector2(5f, 0f);
-            indicatorRect.sizeDelta = new Vector2(2f, 14f);
-            indicator.GetComponent<Image>().raycastTarget = false;
-
-            KInputTextField input = inputObject.AddComponent<KInputTextField>();
-            input.textComponent = text;
-            input.contentType = TMP_InputField.ContentType.DecimalNumber;
-            input.lineType = TMP_InputField.LineType.SingleLine;
-            input.customCaretColor = true;
-            input.caretColor = new Color(0.19607843f, 0.19607843f, 0.19607843f, 1f);
-            input.caretWidth = 2;
-            input.selectionColor = new Color(0.65882355f, 0.80784315f, 1f, 0.7529412f);
-            inputObject.AddComponent<StorageNetworkTextInputGuard>().Configure(input);
+            KInputTextField input = StorageNetworkInputBuilder.CreateKNumberInput(
+                parent,
+                "AmountInput",
+                string.Empty,
+                150f,
+                24f,
+                13,
+                TextAlignmentOptions.MidlineLeft,
+                Color.white,
+                new Color(0.08f, 0.09f, 0.10f, 1f),
+                new Vector2(8f, 2f),
+                true);
+            input.gameObject.AddComponent<StorageNetworkNumberInputField>().Configure(input, 0f, float.MaxValue, false);
             return input;
         }
 

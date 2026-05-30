@@ -1,4 +1,5 @@
 using System.Linq;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace StorageNetwork.Services
@@ -35,7 +36,46 @@ namespace StorageNetwork.Services
 
         public static bool MatchesStorageTag(GameObject item, Tag tag)
         {
-            return item != null && tag != Tag.Invalid && item.HasTag(tag);
+            if (item == null || tag == Tag.Invalid)
+            {
+                return false;
+            }
+
+            if (item.HasTag(tag) || GetStorageTransferTag(item) == tag)
+            {
+                return true;
+            }
+
+            PrimaryElement primaryElement = item.GetComponent<PrimaryElement>();
+            return primaryElement != null && primaryElement.ElementID.CreateTag() == tag;
+        }
+
+        public static HashSet<Tag> GetStorageMatchTags(GameObject item)
+        {
+            HashSet<Tag> tags = new HashSet<Tag>();
+            KPrefabID prefabID = item != null ? item.GetComponent<KPrefabID>() : null;
+            if (prefabID != null)
+            {
+                AddTag(tags, prefabID.PrefabID());
+                AddTag(tags, prefabID.PrefabTag);
+            }
+
+            PrimaryElement primaryElement = item != null ? item.GetComponent<PrimaryElement>() : null;
+            if (primaryElement != null)
+            {
+                AddTag(tags, primaryElement.ElementID.CreateTag());
+            }
+
+            AddTag(tags, GetStorageTransferTag(item));
+            return tags;
+        }
+
+        private static void AddTag(HashSet<Tag> tags, Tag tag)
+        {
+            if (tag != Tag.Invalid)
+            {
+                tags.Add(tag);
+            }
         }
 
         /// <summary>

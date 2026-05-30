@@ -11,7 +11,7 @@ using static StorageNetwork.STRINGS;
 
 namespace StorageNetwork.UI
 {
-    public sealed partial class StorageNetworkPanel : MonoBehaviour, IInputHandler
+    public sealed partial class StorageNetworkPanel : KScreen, IInputHandler
     {
 
         private static StorageNetworkPanel instance;
@@ -25,15 +25,19 @@ namespace StorageNetwork.UI
         private GameObject modalRoot;
         private GameObject categorySummaryRoot;
         private RectTransform categorySummaryContent;
+        private StorageNetworkKeyedRowCache categorySummaryRows;
         private GameObject enrollableWindowRoot;
+        private string enrollableWindowSignature;
         private GameObject headerWindowRoot;
         private GameObject productionSettingsRoot;
         private RectTransform productionSettingsContent;
         private Storage productionSettingsStorage;
         private GameObject productionPickerRoot;
         private string productionSettingsSignature;
-        private KInputController registeredController;
-        private const int InputPriority = int.MaxValue - 100;
+        private ProductionOverviewCardView productionOverviewView;
+        private ProductionInventoryCardView productionInventoryView;
+        private ProductionAutomationCardsView productionAutomationView;
+        private string categorySummarySignature;
         private bool rightClickCloseCandidate;
         private Vector3 rightClickStartPosition;
         private const float RightClickDragThresholdPixels = 8f;
@@ -45,9 +49,12 @@ namespace StorageNetwork.UI
         private float refreshElapsed;
         private string lastListSignature;
         private const bool DebugLogging = true;
-        public string handlerName => gameObject.name;
 
-        public KInputHandler inputHandler { get; set; }
+        private enum StoragePanelRefreshMode
+        {
+            Live,
+            Structure
+        }
 
         public static void Show(Storage focusStorage = null)
         {
@@ -57,7 +64,15 @@ namespace StorageNetwork.UI
             }
 
             instance.SetSnapshot(focusStorage);
-            instance.gameObject.SetActive(true);
+            if (!instance.gameObject.activeSelf)
+            {
+                instance.gameObject.SetActive(true);
+            }
+
+            if (!instance.IsActive())
+            {
+                instance.Activate();
+            }
         }
 
         public static bool IsOpen()
@@ -67,7 +82,7 @@ namespace StorageNetwork.UI
 
         public static bool IsTextInputFocused()
         {
-            return IsOpen() && StorageNetworkTextInputGuard.IsAnyFocused;
+            return IsOpen() && (StorageNetworkNumberInputField.IsAnyEditing || StorageNetworkTextInputGuard.IsAnyFocused);
         }
 
         public static bool CloseFromRightClick()
@@ -155,6 +170,8 @@ namespace StorageNetwork.UI
             blocker.color = new Color(0f, 0f, 0f, 0.08f);
 
             StorageNetworkPanel panel = root.AddComponent<StorageNetworkPanel>();
+            panel.activateOnSpawn = false;
+            panel.ConsumeMouseScroll = true;
             panel.BuildWindow(root.transform);
             root.SetActive(false);
             return panel;
@@ -165,17 +182,7 @@ namespace StorageNetwork.UI
             currentSnapshot = null;
             lastListSignature = null;
             FocusStorageRow(focusStorage);
-            Refresh(true);
-        }
-
-        private void OnEnable()
-        {
-            RegisterInputHandler();
-        }
-
-        private void OnDisable()
-        {
-            UnregisterInputHandler();
+            RefreshStoragePanel(StoragePanelRefreshMode.Structure);
         }
 
         private void Update()
@@ -192,7 +199,7 @@ namespace StorageNetwork.UI
             if (refreshElapsed >= 1f)
             {
                 refreshElapsed = 0f;
-                Refresh();
+                RefreshStoragePanel(StoragePanelRefreshMode.Live);
                 UpdateProductionSettingsPanel();
                 UpdateOrderPanelAutoRefresh(1f);
             }
@@ -263,7 +270,7 @@ namespace StorageNetwork.UI
             enrollableRect.pivot = new Vector2(0f, 0.5f);
             enrollableRect.anchoredPosition = new Vector2(92f, 0f);
             enrollableRect.sizeDelta = new Vector2(72f, 22f);
-            AddButtonIconLabel(enrollableButton.transform, "storage_network_overlay", "+", "可接入");
+            AddButtonIconLabel(enrollableButton.transform, "storage_network_overlay", "+", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENROLLABLE_SHORT));
             ToolTip enrollableTooltip = enrollableButton.AddComponent<ToolTip>();
             enrollableTooltip.toolTip = Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENROLLABLE_BUTTON_TOOLTIP);
 
@@ -274,11 +281,11 @@ namespace StorageNetwork.UI
             headerWindowRect.pivot = new Vector2(0f, 0.5f);
             headerWindowRect.anchoredPosition = new Vector2(170f, 0f);
             headerWindowRect.sizeDelta = new Vector2(58f, 22f);
-            AddButtonIconLabel(headerWindowButton.transform, "icon_action_building_disabled", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.HEADER_WINDOW_BUTTON), "配方");
+            AddButtonIconLabel(headerWindowButton.transform, "action_select_research", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.HEADER_WINDOW_BUTTON), Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.RECIPE_SHORT));
             ToolTip headerWindowTooltip = headerWindowButton.AddComponent<ToolTip>();
             headerWindowTooltip.toolTip = Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.HEADER_WINDOW_TOOLTIP);
 
-            GameObject closeButton = CreateGameButton("CloseButton", header.transform, "X", Close);
+            GameObject closeButton = CreateCloseIconButton("CloseButton", header.transform, Close);
             RectTransform closeRect = closeButton.GetComponent<RectTransform>();
             closeRect.anchorMin = new Vector2(1f, 0.5f);
             closeRect.anchorMax = new Vector2(1f, 0.5f);
@@ -385,54 +392,83 @@ namespace StorageNetwork.UI
             expandedStorages[storage] = true;
         }
 
-        private void Refresh(bool forceRebuild = false)
+        private void RefreshStoragePanel(StoragePanelRefreshMode mode = StoragePanelRefreshMode.Live)
         {
             if (summaryText == null || listContent == null)
             {
                 return;
             }
 
+            bool forceRebuild = mode == StoragePanelRefreshMode.Structure;
             currentSnapshot = StorageSceneCollector.Collect(forceRebuild);
+            UpdateStorageSummaryText();
+
+            if (currentSnapshot.Storages.Count == 0)
+            {
+                RefreshEmptyStorageList(forceRebuild);
+                return;
+            }
+
+            if (ShouldRebuildStorageList(forceRebuild))
+            {
+                RebuildStorageListPreservingScroll();
+            }
+
+            LiveUpdateStoragePanels();
+        }
+
+        private void UpdateStorageSummaryText()
+        {
             summaryText.text =
                 Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SUMMARY_TITLE) + "\n" +
                 string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SUMMARY_LINE),
                     currentSnapshot.Storages.Count,
                     GameUtil.GetFormattedMass(currentSnapshot.TotalStoredKg),
                     GameUtil.GetFormattedMass(currentSnapshot.TotalCapacityKg));
+        }
 
-            if (currentSnapshot.Storages.Count == 0)
+        private void RefreshEmptyStorageList(bool forceRebuild)
+        {
+            if (forceRebuild || string.IsNullOrEmpty(lastListSignature))
             {
-                if (forceRebuild || lastListSignature != "empty")
-                {
-                    lastListSignature = "empty";
-                    ClearCategories();
-                    ClearList();
-                    CreateInfoRow(
-                        Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.EMPTY_TITLE),
-                        Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.EMPTY_DETAILS));
-                    UpdateCategorySummaryPanel();
-                }
+                lastListSignature = "empty";
+                ClearCategories();
+                ClearList();
+                CreateInfoRow(
+                    Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.EMPTY_TITLE),
+                    Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.EMPTY_DETAILS));
+                LiveUpdateStoragePanels();
+            }
+        }
 
-                return;
+        private bool ShouldRebuildStorageList(bool forceRebuild)
+        {
+            if (forceRebuild || string.IsNullOrEmpty(lastListSignature) || lastListSignature == "empty")
+            {
+                return true;
             }
 
-            string listSignature = BuildListSignature(currentSnapshot.Storages);
-            if (forceRebuild || listSignature != lastListSignature)
-            {
-                float scrollOffset = GetListScrollOffset();
-                lastListSignature = listSignature;
-                RebuildStorageRows(currentSnapshot.Storages);
-                RestoreListScrollOffset(scrollOffset);
-            }
+            return BuildListSignature(currentSnapshot.Storages) != lastListSignature;
+        }
 
+        private void RebuildStorageListPreservingScroll()
+        {
+            float scrollOffset = GetListScrollOffset();
+            lastListSignature = BuildListSignature(currentSnapshot.Storages);
+            RebuildStorageRows(currentSnapshot.Storages);
+            RestoreListScrollOffset(scrollOffset);
+        }
+
+        private void LiveUpdateStoragePanels()
+        {
             UpdateCategorySummaryPanel();
         }
 
         private void RebuildStorageRows(IEnumerable<StorageInfo> storages)
         {
             ClearStorageDropAreas();
-            ClearList();
             ClearCategories();
+            ClearList();
 
             List<StorageNetworkCategoryGroup> groups = BuildCategoryGroups(storages).ToList();
             EnsureSelectedCategory(groups);
@@ -476,16 +512,11 @@ namespace StorageNetwork.UI
                     string items = string.Join(",", storedItems
                         .GroupBy(GetStoredItemKey)
                         .OrderBy(group => group.Key)
-                        .Select(group => string.Format("{0}:{1}:{2:0.###}",
-                            group.Key,
-                            group.Count(),
-                            group.Sum(GetStoredItemMass))));
+                        .Select(group => group.Key));
 
-                    return string.Format("{0}:{1}:{2:0.###}:{3:0.###}:{4}",
+                    return string.Format("{0}:{1}:{2}",
                         GetStorageTypeKey(storage),
                         storage.Storage != null ? storage.Storage.GetInstanceID() : 0,
-                        storage.StoredKg,
-                        storage.CapacityKg,
                         items);
                 }));
         }
@@ -569,10 +600,15 @@ namespace StorageNetwork.UI
             CloseProductionSettingsPanel();
             CloseEnrollableWindow();
             CloseHeaderWindow();
+            if (IsActive())
+            {
+                Deactivate();
+            }
+
             gameObject.SetActive(false);
         }
 
-        public void OnKeyDown(KButtonEvent e)
+        public override void OnKeyDown(KButtonEvent e)
         {
             if (e.Consumed)
             {
@@ -624,28 +660,6 @@ namespace StorageNetwork.UI
             {
                 e.TryConsume(global::Action.ZoomOut);
             }
-        }
-
-        private void RegisterInputHandler()
-        {
-            if (registeredController != null || KInputManager.currentController == null)
-            {
-                return;
-            }
-
-            registeredController = KInputManager.currentController;
-            KInputHandler.Add(registeredController, this, InputPriority);
-        }
-
-        private void UnregisterInputHandler()
-        {
-            if (registeredController == null)
-            {
-                return;
-            }
-
-            KInputHandler.Remove(registeredController, this);
-            registeredController = null;
         }
 
         private static void LogDebug(string message)

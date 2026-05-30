@@ -7,10 +7,11 @@ using StorageNetwork.Core;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using System;
 
 namespace StorageNetwork.UI
 {
-    public sealed partial class StorageNetworkPanel : MonoBehaviour, IInputHandler
+    public sealed partial class StorageNetworkPanel : KScreen, IInputHandler
     {
 
 
@@ -124,12 +125,12 @@ namespace StorageNetwork.UI
             image.sprite = null;
             image.type = Image.Type.Simple;
             image.preserveAspect = false;
-            image.color = new Color(0.65882355f, 0.2901961f, 0.47450984f, 1f);
+            image.color = OniPinkInactive();
         }
 
         private static void ApplyOniSliderFillCap(Image image)
         {
-            ApplyOniSprite(image, "build_menu_scrollbar_inner_horizontal", new Color(0.65882355f, 0.2901961f, 0.47450984f, 1f), Image.Type.Simple, preserveAspect: false);
+            ApplyOniSprite(image, "build_menu_scrollbar_inner_horizontal", OniPinkInactive(), Image.Type.Simple, preserveAspect: false);
         }
 
         private static void ApplyOniSliderHandle(Image image)
@@ -183,19 +184,19 @@ namespace StorageNetwork.UI
             return textComponent;
         }
 
-        private static GameObject CreateGameButton(string name, Transform parent, string text, System.Action onClick)
+        private static GameObject CreateGameButton(string name, Transform parent, string text, System.Action onClick, Image.Type type = Image.Type.Sliced)
         {
-            return CreateStyledButton(name, parent, text, onClick, KleiBlueStyle());
+            return CreateStyledButton(name, parent, text, onClick, KleiBlueStyle(), type);
         }
 
-        private static GameObject CreateStyledButton(string name, Transform parent, string text, System.Action onClick, ColorStyleSetting style)
+        private static GameObject CreateStyledButton(string name, Transform parent, string text, System.Action onClick, ColorStyleSetting style, Image.Type type = Image.Type.Sliced)
         {
             GameObject buttonObject = new GameObject(name);
             buttonObject.transform.SetParent(parent, false);
             buttonObject.AddComponent<RectTransform>();
 
             KImage image = buttonObject.AddComponent<KImage>();
-            image.type = Image.Type.Sliced;
+            image.type = type;
             ApplyThinButtonSprite(image);
             image.colorStyleSetting = style;
             image.ColorState = KImage.ColorSelector.Inactive;
@@ -226,8 +227,12 @@ namespace StorageNetwork.UI
             buttonObject.AddComponent<RectTransform>();
 
             KImage background = buttonObject.AddComponent<KImage>();
-            background.color = Color.clear;
-            background.colorStyleSetting = CreateColorStyle(Color.clear, new Color(1f, 1f, 1f, 0.12f), new Color(1f, 1f, 1f, 0.22f));
+            background.type = Image.Type.Sliced;
+            ApplyThinButtonSprite(background);
+            background.colorStyleSetting = CreateColorStyle(
+                new Color(0.17f, 0.19f, 0.25f, 1f),
+                new Color(0.25f, 0.28f, 0.35f, 1f),
+                new Color(0.11f, 0.12f, 0.16f, 1f));
             background.ColorState = KImage.ColorSelector.Inactive;
 
             KButton button = buttonObject.AddComponent<KButton>();
@@ -243,6 +248,38 @@ namespace StorageNetwork.UI
             iconImage.preserveAspect = true;
             iconImage.raycastTarget = false;
             Stretch(iconImage.rectTransform(), 4f, 4f);
+            return buttonObject;
+        }
+
+        private static GameObject CreateCloseIconButton(string name, Transform parent, System.Action onClick)
+        {
+            GameObject buttonObject = new GameObject(name);
+            buttonObject.transform.SetParent(parent, false);
+            buttonObject.AddComponent<RectTransform>();
+
+            KImage background = buttonObject.AddComponent<KImage>();
+            background.type = Image.Type.Sliced;
+            ApplyThinButtonSprite(background);
+            background.colorStyleSetting = CreateColorStyle(
+                new Color(0.17f, 0.19f, 0.25f, 1f),
+                new Color(0.25f, 0.28f, 0.35f, 1f),
+                new Color(0.11f, 0.12f, 0.16f, 1f));
+            background.ColorState = KImage.ColorSelector.Inactive;
+
+            KButton button = buttonObject.AddComponent<KButton>();
+            button.bgImage = background;
+            button.additionalKImages = new KImage[0];
+            button.soundPlayer = new ButtonSoundPlayer();
+            button.onClick += () => onClick?.Invoke();
+
+            Image iconImage = new GameObject("Icon").AddComponent<Image>();
+            iconImage.transform.SetParent(buttonObject.transform, false);
+            iconImage.sprite = GetSpriteByName("cancel");
+            iconImage.color = Color.white;
+            iconImage.type = Image.Type.Simple;
+            iconImage.preserveAspect = true;
+            iconImage.raycastTarget = false;
+            Stretch(iconImage.rectTransform(), 5f, 4f);
             return buttonObject;
         }
 

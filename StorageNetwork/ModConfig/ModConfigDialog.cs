@@ -1,5 +1,7 @@
+using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
+using StorageNetwork.UI;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -23,19 +25,23 @@ namespace ModConfig
         public string Title { get; set; }
         public string Hint { get; set; }
         public List<ModConfigField> Fields { get; } = new List<ModConfigField>();
-        public System.Action<List<KInputTextField>> Reset { get; set; }
+        public System.Action<List<TMP_InputField>> Reset { get; set; }
         public System.Action Save { get; set; }
+        public bool RestartRequired { get; set; } = true;
     }
 
     public static class ModConfigDialog
     {
         private static readonly Color DialogBackgroundColor = new Color(0.18f, 0.20f, 0.25f, 0.98f);
-        private static readonly Color HeaderColor = new Color(0.56f, 0.27f, 0.44f, 1f);
+        private static readonly Color HeaderColor = new Color(0.5294118f, 0.2724914f, 0.4009516f, 1f);
         private static readonly Color ContentColor = new Color(0.24f, 0.27f, 0.33f, 1f);
         private static readonly Color RowColor = new Color(0.30f, 0.33f, 0.41f, 1f);
         private static readonly Color InputColor = Color.white;
         private static readonly Color InputTextColor = new Color(0.08f, 0.09f, 0.10f, 1f);
-        private static readonly Color SliderFillColor = new Color(0.65882355f, 0.2901961f, 0.47450984f, 1f);
+        private static readonly Color SliderFillColor = HeaderColor;
+        private static readonly Vector2 BaseDialogSize = new Vector2(760f, 600f);
+        private static readonly Vector2 MinDialogSize = new Vector2(620f, 440f);
+        private const float ScreenMargin = 80f;
         private static GameObject currentDialog;
 
         public static void Show(ModConfigDialogDefinition definition)
@@ -46,11 +52,12 @@ namespace ModConfig
             }
 
             Close();
-            List<KInputTextField> inputs = new List<KInputTextField>();
+            List<TMP_InputField> inputs = new List<TMP_InputField>();
+            Transform canvas = Global.Instance.globalCanvas.transform;
 
             GameObject overlay = new GameObject(definition.OverlayName);
             currentDialog = overlay;
-            overlay.transform.SetParent(Global.Instance.globalCanvas.transform, false);
+            overlay.transform.SetParent(canvas, false);
             RectTransform overlayRect = overlay.AddComponent<RectTransform>();
             Stretch(overlayRect, 0f, 0f);
             Image overlayImage = overlay.AddComponent<Image>();
@@ -62,7 +69,7 @@ namespace ModConfig
             dialogRect.anchorMax = new Vector2(0.5f, 0.5f);
             dialogRect.pivot = new Vector2(0.5f, 0.5f);
             dialogRect.anchoredPosition = Vector2.zero;
-            dialogRect.sizeDelta = new Vector2(760f, 600f);
+            dialogRect.sizeDelta = GetDialogSize(canvas);
 
             VerticalLayoutGroup layout = dialog.AddComponent<VerticalLayoutGroup>();
             layout.padding = new RectOffset(10, 10, 10, 10);
@@ -104,9 +111,9 @@ namespace ModConfig
             footerLayout.childForceExpandHeight = false;
 
             AddSpacer(footer.transform);
-            CreateButton("ResetButton", footer.transform, "默认值", () => definition.Reset?.Invoke(inputs), false);
-            CreateButton("CancelButton", footer.transform, "取消", Close, false);
-            CreateButton("SaveButton", footer.transform, "确定", () =>
+            CreateButton("ResetButton", footer.transform, StorageNetwork.STRINGS.Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.RESET_DEFAULTS), () => definition.Reset?.Invoke(inputs), false);
+            CreateButton("CancelButton", footer.transform, StorageNetwork.STRINGS.Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CANCEL), Close, false);
+            CreateButton("SaveButton", footer.transform, StorageNetwork.STRINGS.Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIRM), () =>
             {
                 for (int i = 0; i < definition.Fields.Count && i < inputs.Count; i++)
                 {
@@ -115,10 +122,14 @@ namespace ModConfig
 
                 definition.Save?.Invoke();
                 Close();
+                if (definition.RestartRequired)
+                {
+                    ShowRestartRequiredDialog();
+                }
             }, true);
         }
 
-        public static void SetInput(KInputTextField input, float value)
+        public static void SetInput(TMP_InputField input, float value)
         {
             if (input != null)
             {
@@ -142,7 +153,7 @@ namespace ModConfig
             }
         }
 
-        private static KInputTextField AddField(Transform parent, ModConfigField field)
+        private static TMP_InputField AddField(Transform parent, ModConfigField field)
         {
             GameObject row = CreatePanel("FieldRow", parent, RowColor);
             row.AddComponent<LayoutElement>().preferredHeight = 74f;
@@ -177,7 +188,7 @@ namespace ModConfig
             return CreateInputWithSlider(row.transform, field);
         }
 
-        private static void ApplyInput(ModConfigField field, KInputTextField input)
+        private static void ApplyInput(ModConfigField field, TMP_InputField input)
         {
             if (field == null || input == null)
             {
@@ -193,7 +204,7 @@ namespace ModConfig
             field.Apply?.Invoke(ClampFieldValue(field, value));
         }
 
-        private static KInputTextField CreateInputWithSlider(Transform parent, ModConfigField field)
+        private static TMP_InputField CreateInputWithSlider(Transform parent, ModConfigField field)
         {
             GameObject controlColumn = new GameObject("ControlColumn");
             controlColumn.transform.SetParent(parent, false);
@@ -208,40 +219,49 @@ namespace ModConfig
             layout.childForceExpandWidth = true;
             layout.childForceExpandHeight = false;
 
-            KInputTextField input = CreateInput(controlColumn.transform, Format(field.Value));
-            Slider slider = CreateSlider(controlColumn.transform, field);
+            GameObject inputRow = new GameObject("InputRow");
+            inputRow.transform.SetParent(controlColumn.transform, false);
+            inputRow.AddComponent<RectTransform>();
+            inputRow.AddComponent<LayoutElement>().preferredHeight = 24f;
+            HorizontalLayoutGroup inputRowLayout = inputRow.AddComponent<HorizontalLayoutGroup>();
+            inputRowLayout.spacing = 6f;
+            inputRowLayout.childAlignment = TextAnchor.MiddleRight;
+            inputRowLayout.childControlWidth = true;
+            inputRowLayout.childControlHeight = true;
+            inputRowLayout.childForceExpandWidth = false;
+            inputRowLayout.childForceExpandHeight = false;
+
+            AddSpacer(inputRow.transform);
+            TMP_InputField input = CreateInput(inputRow.transform, Format(field.Value));
+            KSlider slider = CreateSlider(controlColumn.transform, field);
             ModConfigInputBinding binding = input.gameObject.AddComponent<ModConfigInputBinding>();
             binding.Configure(input, slider, field.Min, field.Max, field.Integer);
             binding.SetValue(field.Value);
             return input;
         }
 
-        private static KInputTextField CreateInput(Transform parent, string value)
+        private static TMP_InputField CreateInput(Transform parent, string value)
         {
-            GameObject inputObject = CreatePanel("Input", parent, InputColor);
-            ApplyKleiSprite(inputObject.GetComponent<KImage>(), "web_box", InputColor, Image.Type.Sliced, false);
-            LayoutElement layout = inputObject.AddComponent<LayoutElement>();
-            layout.preferredWidth = 130f;
-            layout.preferredHeight = 32f;
-            layout.flexibleWidth = 0f;
-
-            TextMeshProUGUI text = CreateText("Text", inputObject.transform, value, 13, TextAlignmentOptions.MidlineLeft);
-            text.color = InputTextColor;
-            Stretch(text.rectTransform(), 8f, 3f);
-
-            KInputTextField input = inputObject.AddComponent<KInputTextField>();
-            input.textComponent = text;
-            input.contentType = TMP_InputField.ContentType.DecimalNumber;
-            input.lineType = TMP_InputField.LineType.SingleLine;
-            input.caretColor = new Color(0.19607843f, 0.19607843f, 0.19607843f, 1f);
-            input.selectionColor = new Color(0.65882355f, 0.80784315f, 1f, 0.7529412f);
-            input.text = value;
+            TMP_InputField input = StorageNetworkInputBuilder.CreateTmpNumberInput(
+                parent,
+                "Input",
+                value,
+                78f,
+                24f,
+                14,
+                TextAlignmentOptions.Center,
+                InputTextColor,
+                InputColor,
+                InputTextColor,
+                Vector2.one);
+            input.gameObject.AddComponent<StorageNetworkInputFieldEvents>().Configure(input);
             return input;
         }
 
-        private static Slider CreateSlider(Transform parent, ModConfigField field)
+        private static KSlider CreateSlider(Transform parent, ModConfigField field)
         {
             GameObject sliderObject = new GameObject("Slider");
+            sliderObject.SetActive(false);
             sliderObject.transform.SetParent(parent, false);
             sliderObject.AddComponent<RectTransform>();
             LayoutElement sliderLayout = sliderObject.AddComponent<LayoutElement>();
@@ -262,7 +282,7 @@ namespace ModConfig
             fillAreaRect.anchorMin = new Vector2(0f, 0.25f);
             fillAreaRect.anchorMax = new Vector2(1f, 0.75f);
             fillAreaRect.anchoredPosition = Vector2.zero;
-            fillAreaRect.sizeDelta = new Vector2(-20f, 0f);
+            fillAreaRect.sizeDelta = Vector2.zero;
 
             GameObject fillStart = CreatePanel("Fill Start", fillArea.transform, SliderFillColor);
             RectTransform fillStartRect = fillStart.GetComponent<RectTransform>();
@@ -299,7 +319,7 @@ namespace ModConfig
             handleRect.sizeDelta = new Vector2(22.7f, -5.8f);
             ApplyKleiSprite(handle.GetComponent<KImage>(), "game_speed_selected_med", Color.white, Image.Type.Simple, true);
 
-            Slider slider = sliderObject.AddComponent<Slider>();
+            KSlider slider = sliderObject.AddComponent<KSlider>();
             slider.minValue = field.Min;
             slider.maxValue = field.Max;
             slider.wholeNumbers = field.Integer;
@@ -307,7 +327,32 @@ namespace ModConfig
             slider.fillRect = fillRect;
             slider.handleRect = handleRect;
             slider.targetGraphic = null;
+            sliderObject.SetActive(true);
             return slider;
+        }
+
+        private static void ShowRestartRequiredDialog()
+        {
+            GameObject parent = Global.Instance != null && Global.Instance.globalCanvas != null
+                ? Global.Instance.globalCanvas.gameObject
+                : null;
+            GameObject dialogObject = Util.KInstantiateUI(ScreenPrefabs.Instance.ConfirmDialogScreen.gameObject, parent, false);
+            ConfirmDialogScreen dialog = dialogObject != null ? dialogObject.GetComponent<ConfirmDialogScreen>() : null;
+            if (dialog == null)
+            {
+                return;
+            }
+
+            dialog.PopupConfirmDialog(
+                StorageNetwork.STRINGS.Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_RESTART_REQUIRED),
+                () => App.instance.Restart(),
+                () => { },
+                null,
+                null,
+                StorageNetwork.STRINGS.Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.INFO),
+                StorageNetwork.STRINGS.Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.RESTART),
+                StorageNetwork.STRINGS.Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONTINUE));
+            dialogObject.SetActive(true);
         }
 
         private static GameObject CreateButton(string name, Transform parent, string label, System.Action onClick, bool primary)
@@ -324,8 +369,8 @@ namespace ModConfig
             button.onClick += () => onClick?.Invoke();
             button.bgImage.colorStyleSetting = CreateColorStyle(
                 primary ? HeaderColor : new Color(0.24f, 0.27f, 0.35f, 1f),
-                primary ? new Color(0.66f, 0.36f, 0.54f, 1f) : new Color(0.31f, 0.35f, 0.45f, 1f),
-                primary ? new Color(0.48f, 0.20f, 0.37f, 1f) : new Color(0.18f, 0.21f, 0.28f, 1f));
+                primary ? new Color(0.6176471f, 0.3315311f, 0.4745891f, 1f) : new Color(0.31f, 0.35f, 0.45f, 1f),
+                primary ? new Color(0.7941176f, 0.4496107f, 0.6242238f, 1f) : new Color(0.18f, 0.21f, 0.28f, 1f));
 
             TextMeshProUGUI text = CreateText("Label", buttonObject.transform, label, 12, TextAlignmentOptions.Center);
             Stretch(text.rectTransform(), 4f, 0f);
@@ -543,6 +588,44 @@ namespace ModConfig
             return textComponent;
         }
 
+        private static Vector2 GetDialogSize(Transform canvas)
+        {
+            float userScale = GetUserInterfaceScale(canvas);
+            float canvasScale = Mathf.Max(0.01f, GetCanvasScale(canvas));
+            Vector2 desired = BaseDialogSize * Mathf.Clamp(userScale, 0.85f, 1.25f);
+            Vector2 max = new Vector2(
+                Mathf.Max(MinDialogSize.x, (Screen.width - ScreenMargin) / canvasScale),
+                Mathf.Max(MinDialogSize.y, (Screen.height - ScreenMargin) / canvasScale));
+            return new Vector2(
+                Mathf.Clamp(desired.x, MinDialogSize.x, max.x),
+                Mathf.Clamp(desired.y, MinDialogSize.y, max.y));
+        }
+
+        private static float GetUserInterfaceScale(Transform canvas)
+        {
+            KCanvasScaler scaler = canvas != null ? canvas.GetComponentInParent<KCanvasScaler>() : null;
+            if (scaler != null)
+            {
+                return scaler.GetUserScale();
+            }
+
+            return KPlayerPrefs.HasKey(KCanvasScaler.UIScalePrefKey)
+                ? Mathf.Clamp(KPlayerPrefs.GetFloat(KCanvasScaler.UIScalePrefKey) / 100f, 0.75f, 2f)
+                : 1f;
+        }
+
+        private static float GetCanvasScale(Transform canvas)
+        {
+            Canvas rootCanvas = canvas != null ? canvas.GetComponentInParent<Canvas>() : null;
+            if (rootCanvas != null && rootCanvas.scaleFactor > 0f)
+            {
+                return rootCanvas.scaleFactor;
+            }
+
+            CanvasScaler scaler = canvas != null ? canvas.GetComponentInParent<CanvasScaler>() : null;
+            return scaler != null && scaler.scaleFactor > 0f ? scaler.scaleFactor : 1f;
+        }
+
         private static void Stretch(RectTransform rect, float horizontal, float vertical)
         {
             rect.anchorMin = Vector2.zero;
@@ -569,14 +652,14 @@ namespace ModConfig
 
         private sealed class ModConfigInputBinding : MonoBehaviour
         {
-            private KInputTextField input;
+            private TMP_InputField input;
             private Slider slider;
             private float min;
             private float max;
             private bool integer;
             private bool updating;
 
-            public void Configure(KInputTextField inputField, Slider valueSlider, float minValue, float maxValue, bool integerValue)
+            public void Configure(TMP_InputField inputField, Slider valueSlider, float minValue, float maxValue, bool integerValue)
             {
                 input = inputField;
                 slider = valueSlider;
@@ -594,7 +677,7 @@ namespace ModConfig
 
                 if (input != null)
                 {
-                    input.OnValueChangesPaused += OnInputChanged;
+                    input.onEndEdit.AddListener(OnInputEndEdit);
                 }
             }
 
@@ -623,17 +706,17 @@ namespace ModConfig
                 }
             }
 
-            private void OnInputChanged()
+            private void OnInputEndEdit(string text)
             {
                 if (updating || input == null)
                 {
                     return;
                 }
 
-                if (!float.TryParse(input.text, NumberStyles.Float, CultureInfo.CurrentCulture, out float value) &&
-                    !float.TryParse(input.text, NumberStyles.Float, CultureInfo.InvariantCulture, out value))
+                if (!float.TryParse(text, NumberStyles.Float, CultureInfo.CurrentCulture, out float value) &&
+                    !float.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out value))
                 {
-                    return;
+                    value = min;
                 }
 
                 SetValue(value);
@@ -650,5 +733,6 @@ namespace ModConfig
                 return integer ? Mathf.Round(value) : value;
             }
         }
+
     }
 }

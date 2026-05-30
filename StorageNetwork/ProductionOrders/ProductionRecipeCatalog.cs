@@ -26,7 +26,7 @@ namespace StorageNetwork.ProductionOrders
 
                 foreach (ComplexRecipe recipe in fabricator.GetRecipes())
                 {
-                    if (recipe == null || !recipe.IsRequiredTechUnlocked())
+                    if (recipe == null || !IsRecipeVisible(fabricator, recipe))
                     {
                         continue;
                     }
@@ -80,6 +80,15 @@ namespace StorageNetwork.ProductionOrders
                 .FirstOrDefault(info => info.Recipe != null && info.Recipe.results != null && info.Recipe.results.Any(result => result != null && result.material == tag));
         }
 
+        public static List<RecipeDisplayInfo> FindConnectedRecipesProducing(IEnumerable<RecipeDisplayInfo> recipes, Tag tag)
+        {
+            return recipes == null
+                ? new List<RecipeDisplayInfo>()
+                : recipes
+                    .Where(info => info.Recipe != null && info.Recipe.results != null && info.Recipe.results.Any(result => result != null && result.material == tag))
+                    .ToList();
+        }
+
         public static ComplexRecipe.RecipeElement GetPrimaryResult(ComplexRecipe recipe)
         {
             return recipe?.results?.FirstOrDefault();
@@ -103,6 +112,59 @@ namespace StorageNetwork.ProductionOrders
         private static Tag GetRecipeResultTag(ComplexRecipe.RecipeElement result)
         {
             return result != null && result.material != Tag.Invalid ? result.material : Tag.Invalid;
+        }
+
+        private static bool IsRecipeVisible(ComplexFabricator fabricator, ComplexRecipe recipe)
+        {
+            if (DebugHandler.InstantBuildMode)
+            {
+                return true;
+            }
+
+            if (!recipe.IsRequiredTechUnlocked())
+            {
+                return false;
+            }
+
+            return recipe.RequiresAllIngredientsDiscovered
+                ? AreAllIngredientsDiscovered(recipe)
+                : IsAnyIngredientDiscovered(recipe);
+        }
+
+        private static bool IsAnyIngredientDiscovered(ComplexRecipe recipe)
+        {
+            if (recipe?.ingredients == null || recipe.ingredients.Length == 0)
+            {
+                return true;
+            }
+
+            return recipe.ingredients.Any(IsIngredientDiscovered);
+        }
+
+        private static bool AreAllIngredientsDiscovered(ComplexRecipe recipe)
+        {
+            if (recipe?.ingredients == null || recipe.ingredients.Length == 0)
+            {
+                return true;
+            }
+
+            return recipe.ingredients.All(IsIngredientDiscovered);
+        }
+
+        private static bool IsIngredientDiscovered(ComplexRecipe.RecipeElement ingredient)
+        {
+            if (ingredient == null)
+            {
+                return false;
+            }
+
+            if (ingredient.material != Tag.Invalid && DiscoveredResources.Instance.IsDiscovered(ingredient.material))
+            {
+                return true;
+            }
+
+            return ingredient.possibleMaterials != null &&
+                   ingredient.possibleMaterials.Any(tag => tag != Tag.Invalid && DiscoveredResources.Instance.IsDiscovered(tag));
         }
 
         private static string GetProductKey(ComplexRecipe recipe)
