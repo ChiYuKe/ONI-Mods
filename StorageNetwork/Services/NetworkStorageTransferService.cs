@@ -21,10 +21,19 @@ namespace StorageNetwork.Services
             HashSet<Storage> excluded = BuildExclusionSet(excludedStorages);
             float totalMoved = 0f;
             string blockedItem = null;
-
-            foreach (GameObject item in source.items.Where(item => item != null).ToList())
+            StorageSceneSnapshot snapshot = specificTarget == null ? StorageSceneCollector.Collect() : null;
+            List<GameObject> items = new List<GameObject>(source.items.Count);
+            foreach (GameObject item in source.items)
             {
-                StorageTransferResult result = TransferStoredItem(source, item, excluded, specificTarget);
+                if (item != null)
+                {
+                    items.Add(item);
+                }
+            }
+
+            foreach (GameObject item in items)
+            {
+                StorageTransferResult result = TransferStoredItem(source, item, excluded, specificTarget, snapshot);
                 totalMoved += result.MovedKg;
                 if (!string.IsNullOrEmpty(result.BlockedItem))
                 {
@@ -46,9 +55,10 @@ namespace StorageNetwork.Services
             }
 
             Tag tag = StorageItemUtility.GetStorageTransferTag(item);
+            HashSet<Tag> matchTags = StorageItemUtility.GetStorageMatchTags(item);
             HashSet<Storage> excluded = BuildExclusionSet(excludedStorages);
             Pickupable pickupable = item.GetComponent<Pickupable>();
-            Storage target = FindOutputTarget(item, excluded, specificTarget);
+            Storage target = FindOutputTarget(item, matchTags, excluded, specificTarget);
             if (pickupable == null || target == null)
             {
                 return StorageTransferResult.Blocked(StorageItemUtility.GetItemDisplayName(item, tag));
@@ -103,11 +113,58 @@ namespace StorageNetwork.Services
             return idleText;
         }
 
+        public static Storage FindElementOutputTarget(
+            SimHashes elementHash,
+            HashSet<Storage> excludedStorages = null,
+            Storage specificTarget = null,
+            StorageSceneSnapshot snapshot = null)
+        {
+            List<Storage> targets = FindElementOutputTargets(elementHash, excludedStorages, specificTarget, snapshot);
+            return targets.Count > 0 ? targets[0] : null;
+        }
+
+        public static List<Storage> FindElementOutputTargets(
+            SimHashes elementHash,
+            HashSet<Storage> excludedStorages = null,
+            Storage specificTarget = null,
+            StorageSceneSnapshot snapshot = null)
+        {
+            Element element = ElementLoader.FindElementByHash(elementHash);
+            if (element == null)
+            {
+                return new List<Storage>();
+            }
+
+            Tag tag = elementHash.CreateTag();
+            HashSet<Storage> excluded = excludedStorages ?? new HashSet<Storage>();
+            if (specificTarget != null)
+            {
+                return IsUsableElementOutputTarget(specificTarget, tag, excluded)
+                    ? new List<Storage> { specificTarget }
+                    : new List<Storage>();
+            }
+
+            snapshot = snapshot ?? StorageSceneCollector.Collect();
+            List<Storage> targets = new List<Storage>();
+            foreach (StorageInfo info in snapshot.Storages)
+            {
+                Storage target = info?.Storage;
+                if (IsUsableElementOutputTarget(target, tag, excluded))
+                {
+                    targets.Add(target);
+                }
+            }
+
+            targets.Sort((left, right) => CompareElementTargets(right, left, tag));
+            return targets;
+        }
+
         private static StorageTransferResult TransferStoredItem(
             Storage source,
             GameObject item,
             HashSet<Storage> excludedStorages,
-            Storage specificTarget)
+            Storage specificTarget,
+            StorageSceneSnapshot snapshot)
         {
             float mass = StorageItemUtility.GetMass(item);
             if (mass <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
@@ -116,9 +173,10 @@ namespace StorageNetwork.Services
             }
 
             Tag tag = StorageItemUtility.GetStorageTransferTag(item);
+            HashSet<Tag> matchTags = StorageItemUtility.GetStorageMatchTags(item);
             float remaining = mass;
             float moved = 0f;
-            Storage target = FindOutputTarget(item, excludedStorages, specificTarget);
+            Storage target = FindOutputTarget(item, matchTags, excludedStorages, specificTarget, snapshot);
             if (target == null)
             {
                 return StorageTransferResult.Blocked(StorageItemUtility.GetItemDisplayName(item, tag));
@@ -189,64 +247,146 @@ namespace StorageNetwork.Services
             return moved;
         }
 
-        private static Storage FindOutputTarget(GameObject item, HashSet<Storage> excludedStorages, Storage specificTarget)
+        private static Storage FindOutputTarget(
+            GameObject item,
+            HashSet<Tag> matchTags,
+            HashSet<Storage> excludedStorages,
+            Storage specificTarget,
+            StorageSceneSnapshot snapshot = null)
         {
-            StorageSceneSnapshot snapshot = StorageSceneCollector.Collect();
             if (specificTarget != null)
             {
-                return IsUsableOutputTarget(specificTarget, item, excludedStorages) ? specificTarget : null;
+                return IsUsableOutputTarget(specificTarget, item, matchTags, excludedStorages) ? specificTarget : null;
             }
 
-            return snapshot.Storages
-                .Select(info => info.Storage)
-                .Where(target => IsUsableOutputTarget(target, item, excludedStorages))
-                .Where(target => IsAutoOutputMatch(target, item))
-                .OrderByDescending(target => GetAmountAvailableByAnyMatchTag(target, item))
-                .ThenByDescending(target => IsFilterAccepting(target, item))
-                .ThenByDescending(target => target.RemainingCapacity())
-                .FirstOrDefault();
+            snapshot = snapshot ?? StorageSceneCollector.Collect();
+            Storage best = null;
+            float bestAvailable = 0f;
+            bool bestFilterAccepting = false;
+            float bestRemaining = 0f;
+            foreach (StorageInfo info in snapshot.Storages)
+            {
+                Storage target = info?.Storage;
+                if (!IsUsableOutputTarget(target, item, matchTags, excludedStorages) || !IsAutoOutputMatch(target, matchTags))
+                {
+                    continue;
+                }
+
+                float available = GetAmountAvailableByAnyMatchTag(target, matchTags);
+                bool filterAccepting = IsFilterAccepting(target, matchTags);
+                float remaining = target.RemainingCapacity();
+                if (best == null ||
+                    available > bestAvailable ||
+                    (Mathf.Approximately(available, bestAvailable) && filterAccepting && !bestFilterAccepting) ||
+                    (Mathf.Approximately(available, bestAvailable) && filterAccepting == bestFilterAccepting && remaining > bestRemaining))
+                {
+                    best = target;
+                    bestAvailable = available;
+                    bestFilterAccepting = filterAccepting;
+                    bestRemaining = remaining;
+                }
+            }
+
+            return best;
         }
 
-        private static bool IsUsableOutputTarget(Storage target, GameObject item, HashSet<Storage> excludedStorages)
+        private static int CompareElementTargets(Storage left, Storage right, Tag tag)
+        {
+            float leftAvailable = left.GetAmountAvailable(tag);
+            float rightAvailable = right.GetAmountAvailable(tag);
+            int compare = leftAvailable.CompareTo(rightAvailable);
+            if (compare != 0)
+            {
+                return compare;
+            }
+
+            compare = IsFilterAccepting(left, tag).CompareTo(IsFilterAccepting(right, tag));
+            if (compare != 0)
+            {
+                return compare;
+            }
+
+            return left.RemainingCapacity().CompareTo(right.RemainingCapacity());
+        }
+
+        private static bool IsUsableOutputTarget(Storage target, GameObject item, HashSet<Tag> matchTags, HashSet<Storage> excludedStorages)
         {
             return target != null &&
                    !excludedStorages.Contains(target) &&
                    target.GetComponent<ComplexFabricator>() == null &&
                    target.RemainingCapacity() > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT &&
-                   IsStorageAccepting(target, item) &&
+                   IsStorageAccepting(target, matchTags) &&
                    (target.items == null || !target.items.Contains(item));
         }
 
-        private static bool IsAutoOutputMatch(Storage target, GameObject item)
+        private static bool IsUsableElementOutputTarget(Storage target, Tag tag, HashSet<Storage> excludedStorages)
         {
-            return GetAmountAvailableByAnyMatchTag(target, item) > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ||
-                   IsFilterAccepting(target, item) ||
+            return target != null &&
+                   tag != Tag.Invalid &&
+                   !excludedStorages.Contains(target) &&
+                   target.GetComponent<ComplexFabricator>() == null &&
+                   target.RemainingCapacity() > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT &&
+                   IsStorageAccepting(target, tag) &&
+                   (target.GetAmountAvailable(tag) > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ||
+                    IsFilterAccepting(target, tag) ||
+                    HasNoExplicitStorageFilter(target));
+        }
+
+        private static bool IsAutoOutputMatch(Storage target, HashSet<Tag> matchTags)
+        {
+            return GetAmountAvailableByAnyMatchTag(target, matchTags) > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ||
+                   IsFilterAccepting(target, matchTags) ||
                    HasNoExplicitStorageFilter(target);
         }
 
-        private static bool IsFilterAccepting(Storage target, GameObject item)
+        private static bool IsFilterAccepting(Storage target, HashSet<Tag> matchTags)
         {
             if (StorageNetworkFilterBypass.ShouldBypassUserFilter(target))
             {
-                return StorageItemUtility.GetStorageMatchTags(item).Any(tag => IsStorageFilterAcceptingTag(target.storageFilters, tag));
+                return AnyTagAcceptedByStorageFilter(target.storageFilters, matchTags);
             }
 
             TreeFilterable filterable = target != null ? target.GetComponent<TreeFilterable>() : null;
-            return filterable != null && StorageItemUtility.GetStorageMatchTags(item).Any(tag => IsFilterAcceptingTag(filterable, tag, target.storageFilters));
+            return filterable != null && AnyTagAcceptedByTreeFilter(filterable, target.storageFilters, matchTags);
         }
 
-        private static bool IsStorageAccepting(Storage target, GameObject item)
+        private static bool IsFilterAccepting(Storage target, Tag tag)
         {
             if (StorageNetworkFilterBypass.ShouldBypassUserFilter(target))
             {
-                return StorageItemUtility.GetStorageMatchTags(item).Any(tag => IsStorageFilterAcceptingTag(target.storageFilters, tag));
+                return IsStorageFilterAcceptingTag(target.storageFilters, tag);
+            }
+
+            TreeFilterable filterable = target != null ? target.GetComponent<TreeFilterable>() : null;
+            return filterable != null && IsFilterAcceptingTag(filterable, tag, target.storageFilters);
+        }
+
+        private static bool IsStorageAccepting(Storage target, HashSet<Tag> matchTags)
+        {
+            if (StorageNetworkFilterBypass.ShouldBypassUserFilter(target))
+            {
+                return AnyTagAcceptedByStorageFilter(target.storageFilters, matchTags);
             }
 
             return target != null &&
-                   (IsFilterAccepting(target, item) ||
+                   (IsFilterAccepting(target, matchTags) ||
                     target.storageFilters == null ||
                     target.storageFilters.Count == 0 ||
-                    StorageItemUtility.GetStorageMatchTags(item).Any(tag => IsStorageFilterAcceptingTag(target.storageFilters, tag)));
+                   AnyTagAcceptedByStorageFilter(target.storageFilters, matchTags));
+        }
+
+        private static bool IsStorageAccepting(Storage target, Tag tag)
+        {
+            if (StorageNetworkFilterBypass.ShouldBypassUserFilter(target))
+            {
+                return IsStorageFilterAcceptingTag(target.storageFilters, tag);
+            }
+
+            return target != null &&
+                   (IsFilterAccepting(target, tag) ||
+                    target.storageFilters == null ||
+                    target.storageFilters.Count == 0 ||
+                    IsStorageFilterAcceptingTag(target.storageFilters, tag));
         }
 
         private static bool IsFilterAcceptingTag(TreeFilterable filterable, Tag tag, List<Tag> storageFilters)
@@ -272,11 +412,56 @@ namespace StorageNetwork.Services
                    DiscoveredResources.Instance.GetDiscoveredResourcesFromTag(categoryTag).Contains(itemTag);
         }
 
-        private static float GetAmountAvailableByAnyMatchTag(Storage target, GameObject item)
+        private static bool AnyTagAcceptedByTreeFilter(TreeFilterable filterable, List<Tag> storageFilters, IEnumerable<Tag> tags)
         {
-            return target == null
-                ? 0f
-                : StorageItemUtility.GetStorageMatchTags(item).Max(tag => target.GetAmountAvailable(tag));
+            if (tags == null)
+            {
+                return false;
+            }
+
+            foreach (Tag tag in tags)
+            {
+                if (IsFilterAcceptingTag(filterable, tag, storageFilters))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool AnyTagAcceptedByStorageFilter(List<Tag> storageFilters, IEnumerable<Tag> tags)
+        {
+            if (tags == null)
+            {
+                return false;
+            }
+
+            foreach (Tag tag in tags)
+            {
+                if (IsStorageFilterAcceptingTag(storageFilters, tag))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static float GetAmountAvailableByAnyMatchTag(Storage target, IEnumerable<Tag> matchTags)
+        {
+            if (target == null || matchTags == null)
+            {
+                return 0f;
+            }
+
+            float available = 0f;
+            foreach (Tag tag in matchTags)
+            {
+                available = Mathf.Max(available, target.GetAmountAvailable(tag));
+            }
+
+            return available;
         }
 
         private static bool HasNoExplicitStorageFilter(Storage target)
@@ -288,7 +473,21 @@ namespace StorageNetwork.Services
 
         private static HashSet<Storage> BuildExclusionSet(IEnumerable<Storage> excludedStorages)
         {
-            return new HashSet<Storage>((excludedStorages ?? Enumerable.Empty<Storage>()).Where(storage => storage != null));
+            HashSet<Storage> excluded = new HashSet<Storage>();
+            if (excludedStorages == null)
+            {
+                return excluded;
+            }
+
+            foreach (Storage storage in excludedStorages)
+            {
+                if (storage != null)
+                {
+                    excluded.Add(storage);
+                }
+            }
+
+            return excluded;
         }
     }
 

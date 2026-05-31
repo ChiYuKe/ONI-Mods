@@ -132,6 +132,11 @@ namespace StorageNetwork.UI
             AddModalButton(footer.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CLOSE), 90f, CloseModal);
         }
 
+        private void ShowGeyserSettingsDialog(Geyser geyser)
+        {
+            ShowGeyserSettingsPanel(geyser);
+        }
+
         private void ShowAmountDialog(
             string title,
             string itemName,

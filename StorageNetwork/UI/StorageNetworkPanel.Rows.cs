@@ -28,6 +28,7 @@ namespace StorageNetwork.UI
             string typeKey = GetStorageTypeKey(storages[0]);
             string typeName = GetStorageTypeName(storages[0]);
             bool expanded = expandedStorageTypes.TryGetValue(typeKey, out bool isExpanded) && isExpanded;
+            bool isGeyserGroup = storages[0].Geyser != null;
             float storedKg = storages.Sum(storage => storage.StoredKg);
             float capacityKg = storages.Sum(storage => storage.CapacityKg);
             float percent = capacityKg > 0f ? storedKg / capacityKg : 0f;
@@ -39,7 +40,9 @@ namespace StorageNetwork.UI
                 row.transform,
                 expanded,
                 string.Format("{0}  x{1}", typeName, storages.Count),
-                string.Format("{0} / {1}  {2}%",
+                isGeyserGroup
+                    ? string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_COUNT), storages.Count)
+                    : string.Format("{0} / {1}  {2}%",
                     GameUtil.GetFormattedMass(storedKg),
                     GameUtil.GetFormattedMass(capacityKg),
                     Mathf.RoundToInt(percent * 100f)),
@@ -74,6 +77,12 @@ namespace StorageNetwork.UI
 
         private void CreateStorageRow(StorageInfo storageInfo, Transform parent)
         {
+            if (storageInfo != null && storageInfo.Geyser != null)
+            {
+                CreateGeyserRow(storageInfo, parent);
+                return;
+            }
+
             Storage storage = storageInfo.Storage;
             if (storage == null)
             {
@@ -160,6 +169,94 @@ namespace StorageNetwork.UI
             ContentSizeFitter fitter = details.AddComponent<ContentSizeFitter>();
             fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
             row.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        }
+
+        private void CreateGeyserRow(StorageInfo storageInfo, Transform parent)
+        {
+            Geyser geyser = storageInfo.Geyser;
+            if (geyser == null)
+            {
+                return;
+            }
+
+            bool expanded = expandedGeysers.TryGetValue(geyser, out bool isExpanded) && isExpanded;
+            GameObject row = CreateBox("GeyserRow", parent, new Color(0.88f, 0.87f, 0.82f, 1f));
+            AddVerticalContainer(row, 0f, 0, 0, 0, 0);
+
+            string details = GetGeyserDetails(geyser);
+            bool erupting = IsGeyserErupting(geyser);
+            CreateFoldoutHeader(
+                row.transform,
+                expanded,
+                storageInfo.Name,
+                details,
+                new Color(0.72f, 0.72f, 0.68f, 1f),
+                13,
+                320f,
+                () =>
+                {
+                    expandedGeysers[geyser] = !expanded;
+                    RefreshStoragePanel(StoragePanelRefreshMode.Structure);
+                },
+                erupting
+                    ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_ERUPTING)
+                    : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_NOT_ERUPTING),
+                Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STORAGE_SETTINGS),
+                () => ShowGeyserSettingsDialog(geyser),
+                erupting ? new Color(0.28f, 0.48f, 0.34f, 1f) : new Color(0.62f, 0.24f, 0.24f, 1f));
+
+            if (!expanded)
+            {
+                row.AddComponent<LayoutElement>().preferredHeight = 34f;
+                return;
+            }
+
+            AddGeyserDescriptorDetails(row.transform, geyser);
+            row.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        }
+
+        private static bool IsGeyserErupting(Geyser geyser)
+        {
+            ElementEmitter emitter = geyser != null ? geyser.GetComponent<ElementEmitter>() : null;
+            return emitter != null && emitter.IsSimActive;
+        }
+
+        private void AddGeyserDescriptorDetails(Transform parent, Geyser geyser)
+        {
+            GameObject details = CreateBox("GeyserDetails", parent, new Color(0.82f, 0.82f, 0.77f, 1f));
+            VerticalLayoutGroup layout = details.AddComponent<VerticalLayoutGroup>();
+            layout.padding = new RectOffset(12, 12, 8, 8);
+            layout.spacing = 2f;
+            layout.childControlHeight = true;
+            layout.childControlWidth = true;
+            layout.childForceExpandHeight = false;
+            layout.childForceExpandWidth = true;
+
+            foreach (Descriptor descriptor in geyser.GetDescriptors(geyser.gameObject).Where(descriptor => descriptor.type == Descriptor.DescriptorType.Effect))
+            {
+                TextMeshProUGUI text = CreateText("GeyserDescriptor", details.transform, StripKleiLinkFormatting(descriptor.text), 11, TextAlignmentOptions.MidlineLeft);
+                text.color = new Color(0.22f, 0.23f, 0.22f, 1f);
+                text.textWrappingMode = TextWrappingModes.Normal;
+                text.overflowMode = TextOverflowModes.Overflow;
+                text.gameObject.AddComponent<LayoutElement>().preferredHeight = 20f;
+            }
+
+            details.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        }
+
+        private static string GetGeyserDetails(Geyser geyser)
+        {
+            if (geyser == null || geyser.configuration == null)
+            {
+                return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_ANALYZED);
+            }
+
+            Element element = ElementLoader.FindElementByHash(geyser.configuration.GetElement());
+            string elementName = element != null ? element.name : geyser.configuration.GetElement().CreateTag().ProperName();
+            return string.Format(
+                Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_OUTPUT),
+                StripKleiLinkFormatting(elementName),
+                GameUtil.GetFormattedMass(geyser.configuration.GetAverageEmission(), GameUtil.TimeSlice.PerSecond, GameUtil.MetricMassFormat.UseThreshold, true, "{0:0.#}"));
         }
 
         private void CreateInfoRow(string title, string details)

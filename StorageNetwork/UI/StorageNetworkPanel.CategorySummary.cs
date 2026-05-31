@@ -78,6 +78,7 @@ namespace StorageNetwork.UI
             title.fontStyle = FontStyles.Bold;
             title.lineSpacing = 2f;
             Stretch(title.rectTransform(), 10f, 7f);
+            categorySummaryTitle = title;
 
             GameObject closeButton = CreateCloseIconButton("CloseButton", header.transform, CloseCategorySummaryPanel);
             RectTransform closeRect = closeButton.GetComponent<RectTransform>();
@@ -131,26 +132,69 @@ namespace StorageNetwork.UI
                 return;
             }
 
-            List<Storage> storages = currentSnapshot?.Storages
-                .Where(info => info.Storage != null && StorageCategories.GetKey(info.Storage) == selectedCategoryKey)
-                .Select(info => info.Storage)
-                .ToList() ?? new List<Storage>();
+            List<Storage> storages = new List<Storage>();
+            if (currentSnapshot?.Storages != null)
+            {
+                foreach (StorageInfo info in currentSnapshot.Storages)
+                {
+                    Storage storage = info?.Storage;
+                    if (storage != null && StorageCategories.GetKey(storage) == selectedCategoryKey)
+                    {
+                        storages.Add(storage);
+                    }
+                }
+            }
 
             string categoryName = StorageCategories.GetName(selectedCategoryKey);
-            float storedKg = storages.Sum(storage => storage.MassStored());
+            float storedKg = 0f;
+            Dictionary<string, ItemTotalAccumulator> totalsByKey = new Dictionary<string, ItemTotalAccumulator>();
+            foreach (Storage storage in storages)
+            {
+                if (storage == null)
+                {
+                    continue;
+                }
+
+                storedKg += storage.MassStored();
+                if (storage.items == null)
+                {
+                    continue;
+                }
+
+                foreach (GameObject item in storage.items)
+                {
+                    if (item == null)
+                    {
+                        continue;
+                    }
+
+                    string key = GetStoredItemKey(item);
+                    float mass = GetStoredItemMass(item);
+                    if (totalsByKey.TryGetValue(key, out ItemTotalAccumulator accumulator))
+                    {
+                        accumulator.MassKg += mass;
+                        totalsByKey[key] = accumulator;
+                    }
+                    else
+                    {
+                        totalsByKey.Add(key, new ItemTotalAccumulator(key, GetStoredItemName(item), mass, item));
+                    }
+                }
+            }
+
             SetCategorySummaryTitle(categoryName, storages.Count, storedKg);
 
-            List<ItemTotal> totals = storages
-                .SelectMany(storage => storage.items.Where(item => item != null))
-                .GroupBy(GetStoredItemKey)
-                .Select(group => new ItemTotal(
-                    group.Key,
-                    GetStoredItemName(group.FirstOrDefault()),
-                    group.Sum(GetStoredItemMass),
-                    group.FirstOrDefault()))
-                .OrderByDescending(total => total.MassKg)
-                .ThenBy(total => total.Name)
-                .ToList();
+            List<ItemTotal> totals = new List<ItemTotal>(totalsByKey.Count);
+            foreach (ItemTotalAccumulator total in totalsByKey.Values)
+            {
+                totals.Add(new ItemTotal(total.Key, total.Name, total.MassKg, total.Representative));
+            }
+
+            totals.Sort((left, right) =>
+            {
+                int compare = right.MassKg.CompareTo(left.MassKg);
+                return compare != 0 ? compare : string.Compare(left.Name, right.Name, System.StringComparison.CurrentCulture);
+            });
 
             UpdateCategorySummarySamples(selectedCategoryKey, totals);
             string signature = BuildCategorySummarySignature(selectedCategoryKey, storages, totals);
@@ -203,11 +247,9 @@ namespace StorageNetwork.UI
 
         private void SetCategorySummaryTitle(string categoryName, int storageCount, float storedKg)
         {
-            TextMeshProUGUI title = categorySummaryRoot.GetComponentsInChildren<TextMeshProUGUI>(true)
-                .FirstOrDefault(text => text.name == "CategorySummaryTitle");
-            if (title != null)
+            if (categorySummaryTitle != null)
             {
-                title.text = string.Format(
+                categorySummaryTitle.text = string.Format(
                     Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SUMMARY_TITLE_LINE),
                     categoryName,
                     storageCount,
@@ -421,6 +463,25 @@ namespace StorageNetwork.UI
             public float CycleTime { get; }
 
             public float MassKg { get; }
+        }
+
+        private struct ItemTotalAccumulator
+        {
+            public ItemTotalAccumulator(string key, string name, float massKg, GameObject representative)
+            {
+                Key = key;
+                Name = name;
+                MassKg = massKg;
+                Representative = representative;
+            }
+
+            public string Key { get; }
+
+            public string Name { get; }
+
+            public float MassKg { get; set; }
+
+            public GameObject Representative { get; }
         }
 
         private sealed class CategorySummaryRowView : MonoBehaviour

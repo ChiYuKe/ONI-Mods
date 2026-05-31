@@ -79,6 +79,11 @@ namespace StorageNetwork.Patches
             }
 
             go.AddOrGet<StorageNetworkEnrollment>();
+            if (go.GetComponent<Reservoir>() != null)
+            {
+                go.AddOrGet<UserNameable>();
+            }
+
             KPrefabID prefabId = go.GetComponent<KPrefabID>();
             prefabId?.RemoveTag(StorageNetworkTags.ShowSettingsButton);
         }

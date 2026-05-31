@@ -26,12 +26,17 @@ namespace StorageNetwork.UI
         private GameObject categorySummaryRoot;
         private RectTransform categorySummaryContent;
         private StorageNetworkKeyedRowCache categorySummaryRows;
+        private TextMeshProUGUI categorySummaryTitle;
         private GameObject enrollableWindowRoot;
         private string enrollableWindowSignature;
         private GameObject headerWindowRoot;
         private GameObject productionSettingsRoot;
         private RectTransform productionSettingsContent;
         private Storage productionSettingsStorage;
+        private GameObject geyserSettingsRoot;
+        private RectTransform geyserSettingsContent;
+        private Geyser geyserSettingsGeyser;
+        private string geyserSettingsSignature;
         private GameObject productionPickerRoot;
         private string productionSettingsSignature;
         private ProductionOverviewCardView productionOverviewView;
@@ -46,13 +51,18 @@ namespace StorageNetwork.UI
         private Storage selectedItemStorage;
         private readonly Dictionary<string, bool> expandedStorageTypes = new Dictionary<string, bool>();
         private readonly Dictionary<Storage, bool> expandedStorages = new Dictionary<Storage, bool>();
+        private readonly Dictionary<Geyser, bool> expandedGeysers = new Dictionary<Geyser, bool>();
         private float refreshElapsed;
+        private float structureRefreshElapsed;
         private string lastListSignature;
-        private const bool DebugLogging = true;
+        private const float LiveRefreshSeconds = 1f;
+        private const float StructureRefreshSeconds = 5f;
+        private static readonly bool DebugLogging = false;
 
         private enum StoragePanelRefreshMode
         {
             Live,
+            StructureCheck,
             Structure
         }
 
@@ -103,6 +113,10 @@ namespace StorageNetwork.UI
             else if (instance.productionSettingsRoot != null && instance.productionSettingsRoot.activeSelf)
             {
                 instance.CloseProductionSettingsPanel();
+            }
+            else if (instance.geyserSettingsRoot != null && instance.geyserSettingsRoot.activeSelf)
+            {
+                instance.CloseGeyserSettingsPanel();
             }
             else if (instance.enrollableWindowRoot != null && instance.enrollableWindowRoot.activeSelf)
             {
@@ -181,6 +195,8 @@ namespace StorageNetwork.UI
         {
             currentSnapshot = null;
             lastListSignature = null;
+            refreshElapsed = 0f;
+            structureRefreshElapsed = 0f;
             FocusStorageRow(focusStorage);
             RefreshStoragePanel(StoragePanelRefreshMode.Structure);
         }
@@ -196,12 +212,20 @@ namespace StorageNetwork.UI
             UpdatePanelDrag();
 
             refreshElapsed += Time.unscaledDeltaTime;
-            if (refreshElapsed >= 1f)
+            structureRefreshElapsed += Time.unscaledDeltaTime;
+            if (refreshElapsed >= LiveRefreshSeconds)
             {
                 refreshElapsed = 0f;
-                RefreshStoragePanel(StoragePanelRefreshMode.Live);
+                bool refreshStructure = structureRefreshElapsed >= StructureRefreshSeconds;
+                if (refreshStructure)
+                {
+                    structureRefreshElapsed = 0f;
+                }
+
+                RefreshStoragePanel(refreshStructure ? StoragePanelRefreshMode.StructureCheck : StoragePanelRefreshMode.Live);
                 UpdateProductionSettingsPanel();
-                UpdateOrderPanelAutoRefresh(1f);
+                UpdateGeyserSettingsPanel();
+                UpdateOrderPanelAutoRefresh(LiveRefreshSeconds);
             }
         }
 
@@ -400,7 +424,8 @@ namespace StorageNetwork.UI
             }
 
             bool forceRebuild = mode == StoragePanelRefreshMode.Structure;
-            currentSnapshot = StorageSceneCollector.Collect(forceRebuild);
+            bool checkStructure = forceRebuild || mode == StoragePanelRefreshMode.StructureCheck;
+            currentSnapshot = StorageSceneCollector.Collect(checkStructure);
             UpdateStorageSummaryText();
 
             if (currentSnapshot.Storages.Count == 0)
@@ -409,7 +434,7 @@ namespace StorageNetwork.UI
                 return;
             }
 
-            if (ShouldRebuildStorageList(forceRebuild))
+            if (ShouldRebuildStorageList(forceRebuild, checkStructure))
             {
                 RebuildStorageListPreservingScroll();
             }
@@ -441,11 +466,16 @@ namespace StorageNetwork.UI
             }
         }
 
-        private bool ShouldRebuildStorageList(bool forceRebuild)
+        private bool ShouldRebuildStorageList(bool forceRebuild, bool checkStructure)
         {
             if (forceRebuild || string.IsNullOrEmpty(lastListSignature) || lastListSignature == "empty")
             {
                 return true;
+            }
+
+            if (!checkStructure)
+            {
+                return false;
             }
 
             return BuildListSignature(currentSnapshot.Storages) != lastListSignature;
@@ -505,7 +535,7 @@ namespace StorageNetwork.UI
         {
             return string.Join("|", storages
                 .OrderBy(GetStorageTypeKey)
-                .ThenBy(storage => storage.Storage != null ? storage.Storage.GetInstanceID() : 0)
+                .ThenBy(storage => storage.GameObject != null ? storage.GameObject.GetInstanceID() : 0)
                 .Select(storage =>
                 {
                     IEnumerable<GameObject> storedItems = storage.StoredItems ?? Enumerable.Empty<GameObject>();
@@ -516,7 +546,7 @@ namespace StorageNetwork.UI
 
                     return string.Format("{0}:{1}:{2}",
                         GetStorageTypeKey(storage),
-                        storage.Storage != null ? storage.Storage.GetInstanceID() : 0,
+                        storage.GameObject != null ? storage.GameObject.GetInstanceID() : 0,
                         items);
                 }));
         }
@@ -598,6 +628,7 @@ namespace StorageNetwork.UI
             CloseModal();
             CloseCategorySummaryPanel();
             CloseProductionSettingsPanel();
+            CloseGeyserSettingsPanel();
             CloseEnrollableWindow();
             CloseHeaderWindow();
             if (IsActive())

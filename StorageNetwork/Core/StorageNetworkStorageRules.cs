@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
 using StorageNetwork.API;
 using StorageNetwork.Components;
 
@@ -53,11 +52,21 @@ namespace StorageNetwork.Core
         /// </summary>
         public static List<Storage> GetNetworkStorageTargets(Storage ownerStorage)
         {
-            return StorageSceneCollector.Collect().Storages
-                .Select(info => info.Storage)
-                .Where(storage => IsNetworkStorageTarget(storage, ownerStorage))
-                .OrderBy(storage => storage.GetProperName())
-                .ToList();
+            List<Storage> targets = new List<Storage>();
+            foreach (StorageInfo info in StorageSceneCollector.Collect().Storages)
+            {
+                Storage storage = info?.Storage;
+                if (IsNetworkStorageTarget(storage, ownerStorage))
+                {
+                    targets.Add(storage);
+                }
+            }
+
+            targets.Sort((left, right) => string.Compare(
+                left != null ? left.GetProperName() : string.Empty,
+                right != null ? right.GetProperName() : string.Empty,
+                System.StringComparison.CurrentCulture));
+            return targets;
         }
 
         /// <summary>

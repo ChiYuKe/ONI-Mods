@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using StorageNetwork.Components;
+using StorageNetwork.Core;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -12,6 +13,7 @@ namespace StorageNetwork.UI
     {
         private static readonly string[] PlanCategoryIds =
         {
+            "Geyser",
             "Base",
             "Oxygen",
             "Power",
@@ -32,8 +34,8 @@ namespace StorageNetwork.UI
         private void ShowEnrollableBuildingsDialog()
         {
             EnsureEnrollableWindow();
-            List<StorageNetworkEnrollment> enrollments = Object
-                .FindObjectsByType<StorageNetworkEnrollment>(FindObjectsInactive.Exclude, FindObjectsSortMode.None)
+            List<StorageNetworkEnrollment> enrollments = StorageSceneRegistry
+                .GetEnrollments()
                 .Where(enrollment => enrollment != null && enrollment.CanShowInEnrollableList())
                 .ToList();
 
@@ -90,12 +92,14 @@ namespace StorageNetwork.UI
                 .Select(enrollment =>
                 {
                     Storage storage = enrollment != null ? enrollment.GetComponent<Storage>() : null;
-                    return string.Format("{0}:{1}:{2}:{3:0.###}:{4:0.###}",
+                    Studyable studyable = enrollment != null ? enrollment.GetComponent<Studyable>() : null;
+                    return string.Format("{0}:{1}:{2}:{3:0.###}:{4:0.###}:{5}",
                         enrollment != null ? enrollment.GetInstanceID() : 0,
                         enrollment != null ? enrollment.IncludedInSceneNetwork : false,
                         enrollment != null ? enrollment.gameObject.GetProperName() : string.Empty,
                         storage != null ? storage.MassStored() : 0f,
-                        storage != null ? storage.Capacity() : 0f);
+                        storage != null ? storage.Capacity() : 0f,
+                        studyable != null && studyable.Studied);
                 }));
         }
 
@@ -226,14 +230,14 @@ namespace StorageNetwork.UI
                 row.transform,
                 storage != null
                     ? string.Format("{0} / {1}", GameUtil.GetFormattedMass(storage.MassStored()), GameUtil.GetFormattedMass(storage.Capacity()))
-                    : string.Empty,
+                    : GetGeyserEnrollmentDetails(enrollment),
                 11,
                 TextAlignmentOptions.MidlineRight);
             capacity.color = new Color(0.28f, 0.29f, 0.29f, 1f);
             capacity.textWrappingMode = TextWrappingModes.NoWrap;
-            capacity.gameObject.AddComponent<LayoutElement>().preferredWidth = 120f;
+            capacity.gameObject.AddComponent<LayoutElement>().preferredWidth = storage != null ? 120f : 150f;
 
-            GameObject locateButton = CreateGameButton("LocateButton", row.transform, string.Empty, () => FocusStorage(storage, 500f));
+            GameObject locateButton = CreateGameButton("LocateButton", row.transform, string.Empty, () => FocusObject(enrollment.gameObject, 500f));
             LayoutElement locateLayout = locateButton.AddComponent<LayoutElement>();
             locateLayout.preferredWidth = 28f;
             locateLayout.preferredHeight = 22f;
@@ -305,6 +309,11 @@ namespace StorageNetwork.UI
 
         private static string GetPlanCategoryKey(StorageNetworkEnrollment enrollment)
         {
+            if (enrollment != null && enrollment.IsGeyser())
+            {
+                return "Geyser";
+            }
+
             KPrefabID prefabId = enrollment != null ? enrollment.GetComponent<KPrefabID>() : null;
             string buildingId = prefabId != null ? prefabId.PrefabID().ToString() : null;
             if (string.IsNullOrEmpty(buildingId))
@@ -455,6 +464,11 @@ namespace StorageNetwork.UI
 
         private static string GetPlanCategoryName(string categoryKey)
         {
+            if (categoryKey == "Geyser")
+            {
+                return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENROLLABLE_CATEGORY_GEYSER);
+            }
+
             if (string.IsNullOrEmpty(categoryKey) || categoryKey == "Other")
             {
                 return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENROLLABLE_CATEGORY_OTHER);
@@ -467,6 +481,22 @@ namespace StorageNetwork.UI
             }
 
             return categoryKey;
+        }
+
+        private static string GetGeyserEnrollmentDetails(StorageNetworkEnrollment enrollment)
+        {
+            Geyser geyser = enrollment != null ? enrollment.GetComponent<Geyser>() : null;
+            if (geyser == null || geyser.configuration == null)
+            {
+                return string.Empty;
+            }
+
+            Element element = ElementLoader.FindElementByHash(geyser.configuration.GetElement());
+            string elementName = element != null ? element.name : geyser.configuration.GetElement().CreateTag().ProperName();
+            return string.Format(
+                Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENROLLABLE_GEYSER_OUTPUT),
+                StripKleiLinkFormatting(elementName),
+                GameUtil.GetFormattedMass(geyser.configuration.GetAverageEmission(), GameUtil.TimeSlice.PerSecond, GameUtil.MetricMassFormat.UseThreshold, true, "{0:0.#}"));
         }
 
         private static string StripKleiLinkFormatting(string text)

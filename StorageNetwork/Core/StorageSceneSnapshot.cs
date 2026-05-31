@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 
 namespace StorageNetwork.Core
@@ -31,16 +30,54 @@ namespace StorageNetwork.Core
         public StorageInfo(Storage storage)
         {
             Storage = storage;
-            Name = storage.GetProperName();
+            GameObject = storage.gameObject;
             ContentStorages = GetContentStorages(storage);
-            StoredItems = ContentStorages
-                .SelectMany(contentStorage => contentStorage.items.Where(item => item != null))
-                .ToList();
-            StoredKg = ContentStorages.Sum(contentStorage => contentStorage.MassStored());
+            List<GameObject> storedItems = new List<GameObject>();
+            float storedKg = 0f;
+            foreach (Storage contentStorage in ContentStorages)
+            {
+                if (contentStorage == null)
+                {
+                    continue;
+                }
+
+                storedKg += contentStorage.MassStored();
+                if (contentStorage.items == null)
+                {
+                    continue;
+                }
+
+                foreach (GameObject item in contentStorage.items)
+                {
+                    if (item != null)
+                    {
+                        storedItems.Add(item);
+                    }
+                }
+            }
+
+            StoredItems = storedItems;
+            StoredKg = storedKg;
             CapacityKg = storage.Capacity();
+            Name = GameObject.GetProperName();
+        }
+
+        public StorageInfo(Geyser geyser)
+        {
+            Geyser = geyser;
+            GameObject = geyser.gameObject;
+            Name = GameObject.GetProperName();
+            ContentStorages = new List<Storage>();
+            StoredItems = new List<GameObject>();
+            StoredKg = 0f;
+            CapacityKg = 0f;
         }
 
         public Storage Storage { get; }
+
+        public Geyser Geyser { get; }
+
+        public GameObject GameObject { get; }
 
         public string Name { get; }
 
@@ -65,7 +102,13 @@ namespace StorageNetwork.Core
                 AddStorage(storages, fabricator.outStorage);
             }
 
-            return storages.ToList();
+            List<Storage> result = new List<Storage>(storages.Count);
+            foreach (Storage contentStorage in storages)
+            {
+                result.Add(contentStorage);
+            }
+
+            return result;
         }
 
         private static void AddStorage(HashSet<Storage> storages, Storage storage)

@@ -229,7 +229,7 @@ namespace StorageNetwork.UI
             Dictionary<string, StorageNetworkCategoryGroup> groups = new Dictionary<string, StorageNetworkCategoryGroup>();
             foreach (StorageInfo storageInfo in storages)
             {
-                string key = GetStorageCategoryKey(storageInfo.Storage);
+                string key = GetStorageCategoryKey(storageInfo);
                 if (!groups.TryGetValue(key, out StorageNetworkCategoryGroup group))
                 {
                     group = new StorageNetworkCategoryGroup(key, GetStorageCategoryName(key));
@@ -261,6 +261,13 @@ namespace StorageNetwork.UI
             return StorageCategories.GetKey(storage);
         }
 
+        private static string GetStorageCategoryKey(StorageInfo storageInfo)
+        {
+            return storageInfo != null && storageInfo.Geyser != null
+                ? StorageCategories.GeyserKey
+                : GetStorageCategoryKey(storageInfo?.Storage);
+        }
+
         private static string GetStorageCategoryName(string key)
         {
             return StorageCategories.GetName(key);
@@ -290,7 +297,12 @@ namespace StorageNetwork.UI
 
         private static string GetStorageTypeKey(StorageInfo storageInfo)
         {
-            return GetStoragePrefabKey(storageInfo.Storage, GetStorageTypeName(storageInfo));
+            if (storageInfo?.Geyser != null)
+            {
+                return GetObjectPrefabKey(storageInfo.GameObject, GetStorageTypeName(storageInfo));
+            }
+
+            return GetStoragePrefabKey(storageInfo?.Storage, GetStorageTypeName(storageInfo));
         }
 
         private static string GetStoragePrefabKey(Storage storage, string fallback = null)
@@ -301,8 +313,14 @@ namespace StorageNetwork.UI
 
         private static string GetStorageTypeName(StorageInfo storageInfo)
         {
-            GameObject gameObject = storageInfo.Storage?.gameObject;
+            GameObject gameObject = storageInfo?.GameObject;
             return gameObject != null ? gameObject.GetProperName() : storageInfo.Name;
+        }
+
+        private static string GetObjectPrefabKey(GameObject gameObject, string fallback = null)
+        {
+            KPrefabID prefabId = gameObject != null ? gameObject.GetComponent<KPrefabID>() : null;
+            return prefabId != null ? prefabId.PrefabID().ToString() : (fallback ?? string.Empty);
         }
 
         private static string GetStoredItemName(GameObject item)
@@ -350,15 +368,20 @@ namespace StorageNetwork.UI
 
         private static void FocusStorage(Storage storage, float screenOffsetRightPixels)
         {
-            if (storage == null || SelectTool.Instance == null)
+            FocusObject(storage != null ? storage.gameObject : null, screenOffsetRightPixels);
+        }
+
+        private static void FocusObject(GameObject gameObject, float screenOffsetRightPixels)
+        {
+            if (gameObject == null || SelectTool.Instance == null)
             {
                 return;
             }
 
-            KSelectable selectable = storage.GetComponent<KSelectable>();
+            KSelectable selectable = gameObject.GetComponent<KSelectable>();
             if (selectable != null)
             {
-                SelectTool.Instance.SelectAndFocus(GetOffsetFocusPosition(storage.transform.position, screenOffsetRightPixels), selectable, Vector3.zero);
+                SelectTool.Instance.SelectAndFocus(GetOffsetFocusPosition(gameObject.transform.position, screenOffsetRightPixels), selectable, Vector3.zero);
             }
         }
 

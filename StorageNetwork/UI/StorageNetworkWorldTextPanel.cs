@@ -12,6 +12,7 @@ namespace StorageNetwork.UI
     {
         private const float RefreshSeconds = 0.5f;
         private const float DiagnosticSeconds = 2f;
+        private static readonly bool DebugLogging = false;
         private static readonly bool EnableDiagnosticLogging = false;
 
         private static readonly DefaultStorageNetworkWorldPanelContentProvider DefaultContentProvider =
@@ -37,7 +38,7 @@ namespace StorageNetwork.UI
 
             StorageNetworkWorldPanelRegistry.Register(DefaultContentProvider);
             owner.AddComponent<StorageNetworkWorldTextPanel>();
-            Debug.Log("[StorageNetworkWorldTextPanel] Installed on " + owner.name);
+            LogDebug("[StorageNetworkWorldTextPanel] Installed on " + owner.name);
         }
 
         /// <summary>
@@ -47,7 +48,7 @@ namespace StorageNetwork.UI
         {
             if (instance == null)
             {
-                Debug.Log("[StorageNetworkWorldTextPanel] shift-left-click ignored; manager is not installed.");
+                LogDebug("[StorageNetworkWorldTextPanel] shift-left-click ignored; manager is not installed.");
                 return;
             }
 
@@ -85,7 +86,7 @@ namespace StorageNetwork.UI
 
             if (!StorageNetworkMembership.IsNetworkMember(target, out string reason))
             {
-                Debug.Log(string.Format(
+                LogDebug(string.Format(
                     "[StorageNetworkWorldTextPanel] Hiding panel; target={0}, reason={1}",
                     target != null ? target.name : "<null>",
                     reason));
@@ -113,7 +114,7 @@ namespace StorageNetwork.UI
         private void ToggleForTarget(GameObject selectedObject)
         {
             bool eligible = StorageNetworkMembership.IsNetworkMember(selectedObject, out string reason);
-            Debug.Log(string.Format(
+            LogDebug(string.Format(
                 "[StorageNetworkWorldTextPanel] shift-left-click selected={0}, eligible={1}, reason={2}, worldCanvas={3}",
                 selectedObject != null ? selectedObject.name : "<null>",
                 eligible,
@@ -188,6 +189,14 @@ namespace StorageNetwork.UI
 
             diagnosticTimer = 0f;
             view.LogDiagnostic(target);
+        }
+
+        private static void LogDebug(string message)
+        {
+            if (DebugLogging)
+            {
+                Debug.Log(message);
+            }
         }
     }
 }

@@ -95,9 +95,9 @@ namespace StorageNetwork
             Controller.RegisterOptionsButton(
                 "StorageNetwork",
                 "StorageNetworkOptionsButton",
-                STRINGS.Get(STRINGS.UI.STORAGE_NETWORK.CONFIG_TOOLTIP),
-                STRINGS.Get(STRINGS.UI.STORAGE_NETWORK.CONFIG_TITLE),
-                STRINGS.Get(STRINGS.UI.STORAGE_NETWORK.CONFIG_HINT));
+                "调整 StorageNetwork 模组数值",
+                "StorageNetwork 选项",
+                "保存后会写入 StorageNetworkConfig.json。建筑容量等部分数值需要重进存档或重建建筑才会完全体现。");
         }
 
         private void Normalize()

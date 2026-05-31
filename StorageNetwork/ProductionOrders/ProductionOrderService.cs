@@ -19,6 +19,7 @@ namespace StorageNetwork.ProductionOrders
         private List<RecipeDisplayInfo> craftableRecipes = new List<RecipeDisplayInfo>();
         private Dictionary<Tag, float> networkAmountCache = new Dictionary<Tag, float>();
         private List<Storage> networkSourceStorageCache = new List<Storage>();
+        private readonly HashSet<Storage> networkSourceStorageSet = new HashSet<Storage>();
         private string ignoredReservationOrderKey;
 
         public IReadOnlyCollection<ProductionOrderRecord> Orders => ActiveOrders.Values;
@@ -73,25 +74,47 @@ namespace StorageNetwork.ProductionOrders
 
             EnsureOrdersLoaded();
             float moved = 0f;
-            foreach (ProductionOrderRecord order in ActiveOrders.Values
-                .Where(IsOrderActive)
-                .OrderBy(order => order.DisplayId))
+            List<ProductionOrderRecord> orders = new List<ProductionOrderRecord>();
+            foreach (ProductionOrderRecord order in ActiveOrders.Values)
+            {
+                if (IsOrderActive(order))
+                {
+                    orders.Add(order);
+                }
+            }
+
+            orders.Sort((left, right) => left.DisplayId.CompareTo(right.DisplayId));
+            foreach (ProductionOrderRecord order in orders)
             {
                 if (amount - moved <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
                 {
                     break;
                 }
 
-                if (!order.QueueAssignments.Any(assignment =>
-                        assignment.Fabricator == fabricator &&
+                bool hasMatchingQueue = false;
+                foreach (ProductionOrderQueueAssignment assignment in order.QueueAssignments)
+                {
+                    if (assignment.Fabricator == fabricator &&
                         assignment.Recipe == recipe &&
-                        GetRemainingQueueCount(order, assignment) > 0))
+                        GetRemainingQueueCount(order, assignment) > 0)
+                    {
+                        hasMatchingQueue = true;
+                        break;
+                    }
+                }
+
+                if (!hasMatchingQueue)
                 {
                     continue;
                 }
 
-                foreach (ProductionOrderMaterialLease lease in order.MaterialLeases.Where(lease => lease.Material == tag))
+                foreach (ProductionOrderMaterialLease lease in order.MaterialLeases)
                 {
+                    if (lease.Material != tag)
+                    {
+                        continue;
+                    }
+
                     if (amount - moved <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
                     {
                         break;
@@ -381,17 +404,39 @@ namespace StorageNetwork.ProductionOrders
 
         private void RefreshNetworkStorageCache()
         {
-            networkSourceStorageCache = StorageSceneCollector.Collect().Storages
-                .SelectMany(info => info.ContentStorages)
-                .Where(storage => storage != null)
-                .Distinct()
-                .ToList();
-            networkAmountCache = new Dictionary<Tag, float>();
-            foreach (GameObject item in networkSourceStorageCache
-                .Where(storage => storage.GetComponent<ComplexFabricator>() == null)
-                .SelectMany(storage => storage.items.Where(item => item != null)))
+            networkSourceStorageCache.Clear();
+            networkSourceStorageSet.Clear();
+            foreach (StorageInfo info in StorageSceneCollector.Collect().Storages)
             {
-                AddNetworkItemAmount(item);
+                if (info?.ContentStorages == null)
+                {
+                    continue;
+                }
+
+                foreach (Storage storage in info.ContentStorages)
+                {
+                    if (storage != null && networkSourceStorageSet.Add(storage))
+                    {
+                        networkSourceStorageCache.Add(storage);
+                    }
+                }
+            }
+
+            networkAmountCache.Clear();
+            foreach (Storage storage in networkSourceStorageCache)
+            {
+                if (storage == null || storage.GetComponent<ComplexFabricator>() != null || storage.items == null)
+                {
+                    continue;
+                }
+
+                foreach (GameObject item in storage.items)
+                {
+                    if (item != null)
+                    {
+                        AddNetworkItemAmount(item);
+                    }
+                }
             }
         }
 
@@ -732,12 +777,21 @@ namespace StorageNetwork.ProductionOrders
         {
             List<ProductionOrderMaterialLease> leases = new List<ProductionOrderMaterialLease>();
             Dictionary<Tag, float> reservations = BuildReservedMaterials(node);
+            List<Storage> sources = new List<Storage>();
             foreach (KeyValuePair<Tag, float> pair in reservations)
             {
                 float remaining = pair.Value;
-                foreach (Storage storage in networkSourceStorageCache
-                    .Where(storage => storage != null && storage.GetComponent<ComplexFabricator>() == null)
-                    .OrderByDescending(storage => storage.GetAmountAvailable(pair.Key)))
+                sources.Clear();
+                foreach (Storage storage in networkSourceStorageCache)
+                {
+                    if (storage != null && storage.GetComponent<ComplexFabricator>() == null)
+                    {
+                        sources.Add(storage);
+                    }
+                }
+
+                sources.Sort((left, right) => right.GetAmountAvailable(pair.Key).CompareTo(left.GetAmountAvailable(pair.Key)));
+                foreach (Storage storage in sources)
                 {
                     if (remaining <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
                     {
@@ -1475,15 +1529,28 @@ namespace StorageNetwork.ProductionOrders
                 return moved;
             }
 
-            IEnumerable<Storage> leasedSources = (materialLeases ?? new List<ProductionOrderMaterialLease>())
-                .Where(lease => lease.Material == tag && lease.Amount > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
-                .Select(lease => FindNetworkStorageByInstanceId(lease.SourceStorageInstanceId))
-                .Where(storage => storage != null);
-            foreach (Storage source in leasedSources
-                .Concat(networkSourceStorageCache)
-                .Distinct()
-                .Where(storage => storage != target && storage.GetComponent<ComplexFabricator>() == null && storage.GetAmountAvailable(tag) > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
-                .OrderByDescending(storage => storage.GetAmountAvailable(tag)))
+            List<Storage> sources = new List<Storage>();
+            HashSet<Storage> seen = new HashSet<Storage>();
+            if (materialLeases != null)
+            {
+                foreach (ProductionOrderMaterialLease lease in materialLeases)
+                {
+                    if (lease.Material != tag || lease.Amount <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+                    {
+                        continue;
+                    }
+
+                    AddTransferSource(sources, seen, FindNetworkStorageByInstanceId(lease.SourceStorageInstanceId), target, tag);
+                }
+            }
+
+            foreach (Storage storage in networkSourceStorageCache)
+            {
+                AddTransferSource(sources, seen, storage, target, tag);
+            }
+
+            sources.Sort((left, right) => right.GetAmountAvailable(tag).CompareTo(left.GetAmountAvailable(tag)));
+            foreach (Storage source in sources)
             {
                 float transferAmount = Mathf.Min(amount - moved, source.GetAmountAvailable(tag), Mathf.Max(0f, target.RemainingCapacity()));
                 if (transferAmount <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
@@ -1501,23 +1568,80 @@ namespace StorageNetwork.ProductionOrders
             return moved;
         }
 
+        private static void AddTransferSource(List<Storage> sources, HashSet<Storage> seen, Storage storage, Storage target, Tag tag)
+        {
+            if (storage == null ||
+                storage == target ||
+                seen.Contains(storage) ||
+                storage.GetComponent<ComplexFabricator>() != null ||
+                storage.GetAmountAvailable(tag) <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+            {
+                return;
+            }
+
+            seen.Add(storage);
+            sources.Add(storage);
+        }
+
         private static float GetReservedAmount(Tag tag, string ignoredOrderKey = null)
         {
-            return ActiveOrders.Values
-                .Where(order => IsOrderActive(order) && order.Key != ignoredOrderKey)
-                .Sum(order => order.MaterialLeases.Count > 0
-                    ? order.MaterialLeases.Where(lease => lease.Material == tag).Sum(lease => lease.Amount)
-                    : order.GetReservedAmount(tag));
+            float reserved = 0f;
+            foreach (ProductionOrderRecord order in ActiveOrders.Values)
+            {
+                if (!IsOrderActive(order) || order.Key == ignoredOrderKey)
+                {
+                    continue;
+                }
+
+                if (order.MaterialLeases.Count > 0)
+                {
+                    foreach (ProductionOrderMaterialLease lease in order.MaterialLeases)
+                    {
+                        if (lease.Material == tag)
+                        {
+                            reserved += lease.Amount;
+                        }
+                    }
+                }
+                else
+                {
+                    reserved += order.GetReservedAmount(tag);
+                }
+            }
+
+            return reserved;
         }
 
         private static float GetPendingProducedAmountAhead(Tag productTag)
         {
-            return ActiveOrders.Values
-                .Where(order => IsOrderActive(order) && order.ProductTag == productTag)
-                .Sum(order => Mathf.Max(
-                    0f,
-                    (order.OutputLeases.Count > 0 ? order.OutputLeases.Where(lease => lease.ProductTag == productTag).Sum(lease => lease.Amount) : order.RequestedAmount) -
-                    order.ProducedAtSubmit));
+            float pending = 0f;
+            foreach (ProductionOrderRecord order in ActiveOrders.Values)
+            {
+                if (!IsOrderActive(order) || order.ProductTag != productTag)
+                {
+                    continue;
+                }
+
+                float leased = 0f;
+                if (order.OutputLeases.Count > 0)
+                {
+                    foreach (ProductionOrderOutputLease lease in order.OutputLeases)
+                    {
+                        if (lease.ProductTag == productTag)
+                        {
+                            leased += lease.Amount;
+                        }
+                    }
+                }
+                else
+                {
+                    leased = order.RequestedAmount;
+                }
+
+                pending += Mathf.Max(0f, leased - order.ProducedAtSubmit);
+            }
+
+            return pending;
         }
 
         private void RunKeepRules()
@@ -1606,13 +1730,29 @@ namespace StorageNetwork.ProductionOrders
 
         private static Storage FindNetworkStorageByInstanceIdStatic(int instanceId)
         {
-            return instanceId == KPrefabID.InvalidInstanceID
-                ? null
-                : StorageSceneCollector.Collect().Storages
-                    .SelectMany(info => info.ContentStorages)
-                    .Where(storage => storage != null)
-                    .Distinct()
-                    .FirstOrDefault(storage => GetComponentInstanceId(storage) == instanceId);
+            if (instanceId == KPrefabID.InvalidInstanceID)
+            {
+                return null;
+            }
+
+            HashSet<Storage> visited = new HashSet<Storage>();
+            foreach (StorageInfo info in StorageSceneCollector.Collect().Storages)
+            {
+                if (info?.ContentStorages == null)
+                {
+                    continue;
+                }
+
+                foreach (Storage storage in info.ContentStorages)
+                {
+                    if (storage != null && visited.Add(storage) && GetComponentInstanceId(storage) == instanceId)
+                    {
+                        return storage;
+                    }
+                }
+            }
+
+            return null;
         }
 
         private static void EnsureOrdersLoaded()

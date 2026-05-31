@@ -10,11 +10,14 @@ namespace StorageNetwork.Components
     [SerializationConfig(MemberSerialization.OptIn)]
     public sealed class StorageNetworkStorageConnector : KMonoBehaviour, ISim1000ms
     {
+        private const float EmptyRetrySeconds = 5f;
+
         [Serialize]
         public bool OutputStoreEnabled;
 
         private Storage storage;
         private string lastOutputStatus;
+        private float outputRetryTimer;
 
         public string LastOutputStatus => lastOutputStatus;
 
@@ -30,6 +33,20 @@ namespace StorageNetwork.Components
             if (!OutputStoreEnabled || storage == null)
             {
                 lastOutputStatus = string.Empty;
+                outputRetryTimer = 0f;
+                return;
+            }
+
+            if (outputRetryTimer > 0f)
+            {
+                outputRetryTimer -= dt;
+                return;
+            }
+
+            if (storage.items == null || storage.items.Count == 0)
+            {
+                lastOutputStatus = Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_STATUS_WAITING_CONTENTS);
+                outputRetryTimer = EmptyRetrySeconds;
                 return;
             }
 
@@ -37,6 +54,7 @@ namespace StorageNetwork.Components
                 storage,
                 new[] { storage });
             lastOutputStatus = NetworkStorageTransferService.FormatOutputStatus(result, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_STATUS_WAITING_CONTENTS));
+            outputRetryTimer = result.MovedKg > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ? 0f : EmptyRetrySeconds;
         }
 
         /// <summary>

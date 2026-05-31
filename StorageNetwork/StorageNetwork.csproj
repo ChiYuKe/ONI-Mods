@@ -70,5 +70,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="translations\*.po" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="E:\Unity\NOI\Assets\NOIModsAssetBundles\storagenetwork_ui" Link="Assets\AssetBundles\storagenetwork_ui" CopyToOutputDirectory="PreserveNewest" Condition="Exists('E:\Unity\NOI\Assets\NOIModsAssetBundles\storagenetwork_ui')" />
+    <None Include="E:\Unity\NOI\Assets\NOIModsAssetBundles\storagenetwork_ui.manifest" Link="Assets\AssetBundles\storagenetwork_ui.manifest" CopyToOutputDirectory="PreserveNewest" Condition="Exists('E:\Unity\NOI\Assets\NOIModsAssetBundles\storagenetwork_ui.manifest')" />
   </ItemGroup>
 </Project>

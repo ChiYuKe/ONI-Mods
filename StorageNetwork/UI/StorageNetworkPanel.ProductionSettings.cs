@@ -939,12 +939,17 @@ namespace StorageNetwork.UI
         private void ShowProductionPicker(string title, List<ProductionPickerOption> options)
         {
             CloseProductionPicker();
-            if (productionSettingsRoot == null || options == null || options.Count == 0)
+            GameObject pickerParent = productionSettingsRoot != null && productionSettingsRoot.activeSelf
+                ? productionSettingsRoot
+                : geyserSettingsRoot != null && geyserSettingsRoot.activeSelf
+                    ? geyserSettingsRoot
+                    : null;
+            if (pickerParent == null || options == null || options.Count == 0)
             {
                 return;
             }
 
-            productionPickerRoot = CreatePlainImage("ProductionPicker", productionSettingsRoot.transform, new Color(0.17f, 0.19f, 0.22f, 0.98f));
+            productionPickerRoot = CreatePlainImage("ProductionPicker", pickerParent.transform, new Color(0.17f, 0.19f, 0.22f, 0.98f));
             productionPickerRoot.AddComponent<ScrollWheelBlocker>();
             RectTransform pickerRect = productionPickerRoot.GetComponent<RectTransform>();
             SetStretch(pickerRect, 14f, 14f, 76f, 74f);

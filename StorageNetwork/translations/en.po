@@ -107,6 +107,10 @@ msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CATEGORY_MOD_STORAGE"
 msgid "模组建筑"
 msgstr "Mod Storage"
 
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CATEGORY_GEYSER"
+msgid "泉"
+msgstr "Geysers"
+
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SOURCE_MOD_NAME"
 msgid "来源：{0}"
 msgstr "Source: {0}"
@@ -294,6 +298,14 @@ msgstr "{0}"
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENROLLABLE_CATEGORY_OTHER"
 msgid "其他建筑"
 msgstr "Other Buildings"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENROLLABLE_CATEGORY_GEYSER"
+msgid "泉"
+msgstr "Geysers"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENROLLABLE_GEYSER_OUTPUT"
+msgid "{0}  {1}"
+msgstr "{0}  {1}"
 
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SUMMARY_EMPTY"
 msgid "当前分类没有储存内容"
@@ -562,6 +574,18 @@ msgstr "Remove this building from the Storage Network panel."
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STARMAP_NAME_HINT"
 msgid "星图"
 msgstr "Starmap"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_ANALYZED"
+msgid "已分析"
+msgstr "Analyzed"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_OUTPUT"
+msgid "{0}  平均 {1}"
+msgstr "{0}  Average {1}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_COUNT"
+msgid "{0} 个泉"
+msgstr "{0} geysers"
 
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OFF"
 msgid "关"
@@ -1326,3 +1350,63 @@ msgstr "Completed Order Retention Cycles"
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_COMPLETED_RETENTION_DESC"
 msgid "完成/取消/异常订单在列表中保留多久。"
 msgstr "How long completed/cancelled/abnormal orders remain in the list."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_SETTINGS_TITLE"
+msgid "泉设置"
+msgstr "Geyser Settings"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_NETWORK_ENABLED"
+msgid "接入储存网络"
+msgstr "Join Storage Network"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_DIRECT_OUTPUT_ENABLED"
+msgid "喷发物直接入网"
+msgstr "Send eruptions directly to network"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_DIRECT_OUTPUT_DESC"
+msgid "开启后会拦截泉的 ElementEmitter 输出，优先存入网络中的匹配箱子；容量不足的部分仍会排放到世界。"
+msgstr "When enabled, geyser ElementEmitter output is intercepted and stored in matching network storage first; overflow still vents into the world."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_DIRECT_OUTPUT_ON_SHORT"
+msgid "直入开"
+msgstr "Direct On"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_DIRECT_OUTPUT_OFF_SHORT"
+msgid "直入关"
+msgstr "Direct Off"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_ERUPTING"
+msgid "喷发中"
+msgstr "Erupting"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_NOT_ERUPTING"
+msgid "停止喷发"
+msgstr "Not Erupting"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_OUTPUT_STORE_TITLE"
+msgid "喷发物入网"
+msgstr "Eruptions to Network"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_OUTPUT_CONTENT_TITLE"
+msgid "内容物"
+msgstr "Contents"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_OUTPUT_DIRECT_STATUS"
+msgid "直接入网"
+msgstr "Direct to Network"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_OUTPUT_WORLD_STATUS"
+msgid "排放到世界"
+msgstr "Vent to World"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_METRIC_OUTPUT"
+msgid "产物"
+msgstr "Output"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_METRIC_RATE"
+msgid "平均输出"
+msgstr "Average Output"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_METRIC_DIRECT_OUTPUT"
+msgid "直入"
+msgstr "Direct"

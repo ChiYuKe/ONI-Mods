@@ -1,6 +1,8 @@
 using KSerialization;
+using StorageNetwork.Core;
 using StorageNetwork.Services;
 using System;
+using System.Linq;
 using UnityEngine;
 using Loc = StorageNetwork.STRINGS;
 
@@ -14,6 +16,15 @@ namespace StorageNetwork.Components
         [Serialize]
         public bool IncludedInSceneNetwork;
 
+        [Serialize]
+        public bool DirectGeyserOutputToNetwork;
+
+        [Serialize]
+        public int GeyserOutputStoreModeValue;
+
+        [Serialize]
+        public int GeyserOutputStorageInstanceId = KPrefabID.InvalidInstanceID;
+
         [MyCmpGet]
         private Storage storage = null;
 
@@ -22,13 +33,19 @@ namespace StorageNetwork.Components
         protected override void OnSpawn()
         {
             base.OnSpawn();
+            StorageSceneRegistry.Register(gameObject);
             Subscribe((int)GameHashes.RefreshUserMenu, OnRefreshUserMenuDelegate);
-            StorageNetworkFilterBypass.Apply(storage);
+            if (storage != null)
+            {
+                StorageNetworkFilterBypass.Apply(storage);
+            }
+
             RefreshConnectedStatus();
         }
 
         protected override void OnCleanUp()
         {
+            StorageSceneRegistry.Unregister(gameObject);
             RemoveConnectedStatus();
             base.OnCleanUp();
         }
@@ -80,8 +97,35 @@ namespace StorageNetwork.Components
             }
 
             IncludedInSceneNetwork = included;
-            StorageNetworkFilterBypass.Apply(storage);
+            StorageSceneRegistry.Invalidate();
+            if (storage != null)
+            {
+                StorageNetworkFilterBypass.Apply(storage);
+            }
+
+            RefreshGeyserEmitterRegistration();
             RefreshConnectedStatus();
+            KMonoBehaviour.PlaySound(GlobalAssets.GetSound("HUD_Click", false));
+
+            if (StorageNetwork.UI.StorageNetworkPanel.IsOpen())
+            {
+                StorageNetwork.UI.StorageNetworkPanel.Show(storage);
+            }
+        }
+
+        /// <summary>
+        /// 设置泉喷发物是否绕过世界格子，直接存入储存网络。
+        /// </summary>
+        public void SetDirectGeyserOutputToNetwork(bool enabled)
+        {
+            if (DirectGeyserOutputToNetwork == enabled)
+            {
+                return;
+            }
+
+            DirectGeyserOutputToNetwork = enabled;
+            StorageSceneRegistry.Invalidate();
+            RefreshGeyserEmitterRegistration();
             KMonoBehaviour.PlaySound(GlobalAssets.GetSound("HUD_Click", false));
 
             if (StorageNetwork.UI.StorageNetworkPanel.IsOpen())
@@ -100,6 +144,11 @@ namespace StorageNetwork.Components
 
         private bool CanShowEnrollmentButton()
         {
+            if (IsAnalyzedGeyser())
+            {
+                return true;
+            }
+
             return storage != null && (IsStorageLocker() || IsRefrigerator() || IsReservoirStorage() || IsComplexRecipeBuilding());
         }
 
@@ -133,6 +182,78 @@ namespace StorageNetwork.Components
         public bool IsComplexRecipeBuilding()
         {
             return GetComponent<ComplexFabricator>() != null;
+        }
+
+        /// <summary>
+        /// 判断目标是否是间歇泉/喷孔。
+        /// </summary>
+        public bool IsGeyser()
+        {
+            return GetComponent<Geyser>() != null;
+        }
+
+        /// <summary>
+        /// 只允许已分析完成的泉显示接入控制，保持和原版地质调谐仪选择列表一致。
+        /// </summary>
+        public bool IsAnalyzedGeyser()
+        {
+            Studyable studyable = GetComponent<Studyable>();
+            return IsGeyser() && studyable != null && studyable.Studied;
+        }
+
+        public bool ShouldDirectGeyserOutputToNetwork()
+        {
+            return DirectGeyserOutputToNetwork && IncludedInSceneNetwork && IsAnalyzedGeyser();
+        }
+
+        public StorageNetworkMaterialRequester.OutputStoreMode CurrentGeyserOutputStoreMode
+        {
+            get => (StorageNetworkMaterialRequester.OutputStoreMode)Mathf.Clamp(GeyserOutputStoreModeValue, 0, 1);
+            set => GeyserOutputStoreModeValue = (int)value;
+        }
+
+        public Storage ResolveGeyserOutputStorage()
+        {
+            if (GeyserOutputStorageInstanceId == KPrefabID.InvalidInstanceID)
+            {
+                return null;
+            }
+
+            return StorageNetwork.Core.StorageSceneCollector.Collect().Storages
+                .Select(info => info.Storage)
+                .FirstOrDefault(target => GetStorageInstanceId(target) == GeyserOutputStorageInstanceId);
+        }
+
+        public void SetGeyserOutputStorage(Storage target)
+        {
+            GeyserOutputStorageInstanceId = GetStorageInstanceId(target);
+            CurrentGeyserOutputStoreMode = StorageNetworkMaterialRequester.OutputStoreMode.SpecificStorage;
+        }
+
+        public void UseAutomaticGeyserOutputStorage()
+        {
+            CurrentGeyserOutputStoreMode = StorageNetworkMaterialRequester.OutputStoreMode.AutoNetwork;
+            GeyserOutputStorageInstanceId = KPrefabID.InvalidInstanceID;
+        }
+
+        private static int GetStorageInstanceId(Storage target)
+        {
+            KPrefabID prefabId = target != null ? target.GetComponent<KPrefabID>() : null;
+            return prefabId != null ? prefabId.InstanceID : KPrefabID.InvalidInstanceID;
+        }
+
+        private void RefreshGeyserEmitterRegistration()
+        {
+            ElementEmitter emitter = GetComponent<ElementEmitter>();
+            if (emitter == null || !emitter.IsSimActive)
+            {
+                return;
+            }
+
+            emitter.SetEmitting(false);
+            emitter.Sim200ms(0f);
+            emitter.SetEmitting(true);
+            emitter.Sim200ms(0f);
         }
 
         private void RefreshConnectedStatus()

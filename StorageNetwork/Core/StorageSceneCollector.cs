@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 
 namespace StorageNetwork.Core
@@ -9,30 +8,70 @@ namespace StorageNetwork.Core
         private static StorageSceneSnapshot cachedSnapshot;
         private static float cachedAtUnscaledTime = -1f;
         private static int cachedFrame = -1;
+        private static int cachedRegistryVersion = -1;
 
         /// <summary>
         /// 扫描当前场景中的储存网络成员，并返回带缓存的快照。UI 高频刷新时优先使用这个入口。
         /// </summary>
         public static StorageSceneSnapshot Collect(bool force = false)
         {
-            if (!force && cachedSnapshot != null && (cachedFrame == Time.frameCount || Time.unscaledTime - cachedAtUnscaledTime <= Config.Instance.SceneScanCacheSeconds))
+            StorageSceneRegistry.EnsureSceneSeeded();
+            int registryVersion = StorageSceneRegistry.Version;
+            if (!force &&
+                cachedSnapshot != null &&
+                cachedRegistryVersion == registryVersion &&
+                (cachedFrame == Time.frameCount || Time.unscaledTime - cachedAtUnscaledTime <= Config.Instance.SceneScanCacheSeconds))
             {
                 return cachedSnapshot;
             }
 
-            Storage[] storages = Object.FindObjectsByType<Storage>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
-            List<StorageInfo> collected = storages
-                .Where(StorageNetworkMembership.IsCollectableStorage)
-                .Select(storage => new StorageInfo(storage))
-                .OrderBy(info => info.Name)
-                .ToList();
+            List<StorageInfo> collected = new List<StorageInfo>();
+            foreach (Storage storage in StorageSceneRegistry.GetStorages())
+            {
+                if (StorageNetworkMembership.IsCollectableStorage(storage))
+                {
+                    collected.Add(new StorageInfo(storage));
+                }
+            }
 
-            float totalStoredKg = collected.Sum(info => info.StoredKg);
-            float totalCapacityKg = collected.Sum(info => info.CapacityKg);
+            foreach (Geyser geyser in StorageSceneRegistry.GetGeysers())
+            {
+                StorageNetwork.Components.StorageNetworkEnrollment enrollment =
+                    geyser != null ? geyser.GetComponent<StorageNetwork.Components.StorageNetworkEnrollment>() : null;
+                if (enrollment != null && enrollment.IncludedInSceneNetwork && enrollment.IsAnalyzedGeyser())
+                {
+                    collected.Add(new StorageInfo(enrollment.GetComponent<Geyser>()));
+                }
+            }
+
+            collected.Sort((left, right) => string.Compare(left?.Name, right?.Name, System.StringComparison.CurrentCulture));
+
+            float totalStoredKg = 0f;
+            float totalCapacityKg = 0f;
+            foreach (StorageInfo info in collected)
+            {
+                if (info == null)
+                {
+                    continue;
+                }
+
+                totalStoredKg += info.StoredKg;
+                totalCapacityKg += info.CapacityKg;
+            }
+
             cachedSnapshot = new StorageSceneSnapshot(collected, totalStoredKg, totalCapacityKg);
             cachedAtUnscaledTime = Time.unscaledTime;
             cachedFrame = Time.frameCount;
+            cachedRegistryVersion = registryVersion;
             return cachedSnapshot;
+        }
+
+        public static void InvalidateCache()
+        {
+            cachedSnapshot = null;
+            cachedAtUnscaledTime = -1f;
+            cachedFrame = -1;
+            cachedRegistryVersion = -1;
         }
     }
 }

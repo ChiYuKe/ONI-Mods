@@ -222,7 +222,7 @@ namespace StorageNetwork.UI
 
             if (active)
             {
-                GameObject cancelButton = CreateIconOnlyButton("CancelOrderButton", card.transform, GetCancelActionSprite(), () => CancelTrackedOrder(record.Key));
+                GameObject cancelButton = CreateTransparentIconButton("CancelOrderButton", card.transform, GetCancelActionSprite(), () => CancelTrackedOrder(record.Key));
                 LayoutElement cancelLayout = cancelButton.AddComponent<LayoutElement>();
                 cancelLayout.preferredWidth = 24f;
                 cancelLayout.preferredHeight = 24f;

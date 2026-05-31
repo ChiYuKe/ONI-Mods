@@ -14,6 +14,7 @@ namespace StorageNetwork.UI.WorldPanel
         private const float Height = 96f;
         private const float WorldScale = 0.025f;
         private const float VerticalOffset = 0.35f;
+        private static readonly bool DebugLogging = false;
 
         private RectTransform rootRect;
         private TextMeshProUGUI titleText;
@@ -38,7 +39,7 @@ namespace StorageNetwork.UI.WorldPanel
             Transform parent = GameScreenManager.Instance?.worldSpaceCanvas?.transform;
             if (parent == null)
             {
-                Debug.Log("[StorageNetworkWorldTextPanel] worldSpaceCanvas is null; panel create deferred.");
+                LogDebug("[StorageNetworkWorldTextPanel] worldSpaceCanvas is null; panel create deferred.");
                 return false;
             }
 
@@ -67,7 +68,7 @@ namespace StorageNetwork.UI.WorldPanel
             lineThreeText = CreateText("LineThree", root.transform, 9, FontStyles.Normal, new Color(0.78f, 0.84f, 0.90f, 1f), 28f);
 
             SetVisible(false);
-            Debug.Log("[StorageNetworkWorldTextPanel] Panel created under worldSpaceCanvas.");
+            LogDebug("[StorageNetworkWorldTextPanel] Panel created under worldSpaceCanvas.");
             return true;
         }
 
@@ -134,6 +135,14 @@ namespace StorageNetwork.UI.WorldPanel
                 rootRect.transform.lossyScale,
                 rootRect.sizeDelta,
                 rootRect.transform.parent != null ? rootRect.transform.parent.name : "<null>"));
+        }
+
+        private static void LogDebug(string message)
+        {
+            if (DebugLogging)
+            {
+                Debug.Log(message);
+            }
         }
 
         private static TextMeshProUGUI CreateText(string name, Transform parent, int size, FontStyles style, Color color, float height)

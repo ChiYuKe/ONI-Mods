@@ -49,6 +49,7 @@ namespace StorageNetwork
                 public static LocString CATEGORY_VANILLA_STORAGE = "原版储存";
                 public static LocString CATEGORY_RECIPE_BUILDING = "生产建筑";
                 public static LocString CATEGORY_MOD_STORAGE = "模组建筑";
+                public static LocString CATEGORY_GEYSER = "泉";
                 public static LocString SOURCE_MOD_NAME = "来源：{0}";
 
                 public static LocString SUMMARY_BUTTON = "汇总";
@@ -97,6 +98,8 @@ namespace StorageNetwork
                 public static LocString ENROLLABLE_NOT_CONNECTED = "未接入";
                 public static LocString ENROLLABLE_CATEGORY_COUNT = "{0} 个";
                 public static LocString ENROLLABLE_CATEGORY_OTHER = "其他建筑";
+                public static LocString ENROLLABLE_CATEGORY_GEYSER = "泉";
+                public static LocString ENROLLABLE_GEYSER_OUTPUT = "{0}  {1}";
                 public static LocString SUMMARY_EMPTY = "当前分类没有储存内容";
                 public static LocString SUMMARY_TITLE_LINE = "<b>{0}</b>\n箱子：{1}    总量：{2}";
                 public static LocString TREND_NO_DATA = "--/周期";
@@ -363,6 +366,24 @@ namespace StorageNetwork
                 public static LocString ENROLL_ADD_TOOLTIP = "将这个建筑加入储存网络面板。";
                 public static LocString ENROLL_REMOVE_TOOLTIP = "将这个建筑从储存网络面板中移除。";
                 public static LocString STARMAP_NAME_HINT = "星图";
+                public static LocString GEYSER_ANALYZED = "已分析";
+                public static LocString GEYSER_OUTPUT = "{0}  平均 {1}";
+                public static LocString GEYSER_COUNT = "{0} 个泉";
+                public static LocString GEYSER_SETTINGS_TITLE = "泉设置";
+                public static LocString GEYSER_NETWORK_ENABLED = "接入储存网络";
+                public static LocString GEYSER_DIRECT_OUTPUT_ENABLED = "喷发物直接入网";
+                public static LocString GEYSER_DIRECT_OUTPUT_DESC = "开启后会拦截泉的 ElementEmitter 输出，优先存入网络中的匹配箱子；容量不足的部分仍会排放到世界。";
+                public static LocString GEYSER_DIRECT_OUTPUT_ON_SHORT = "直入开";
+                public static LocString GEYSER_DIRECT_OUTPUT_OFF_SHORT = "直入关";
+                public static LocString GEYSER_ERUPTING = "喷发中";
+                public static LocString GEYSER_NOT_ERUPTING = "停止喷发";
+                public static LocString GEYSER_OUTPUT_STORE_TITLE = "喷发物入网";
+                public static LocString GEYSER_OUTPUT_CONTENT_TITLE = "内容物";
+                public static LocString GEYSER_OUTPUT_DIRECT_STATUS = "直接入网";
+                public static LocString GEYSER_OUTPUT_WORLD_STATUS = "排放到世界";
+                public static LocString GEYSER_METRIC_OUTPUT = "产物";
+                public static LocString GEYSER_METRIC_RATE = "平均输出";
+                public static LocString GEYSER_METRIC_DIRECT_OUTPUT = "直入";
             }
         }
     }

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using StorageNetwork.Components;
+using StorageNetwork.Core;
 using UnityEngine;
 
 namespace StorageNetwork.ProductionOrders
@@ -11,15 +12,16 @@ namespace StorageNetwork.ProductionOrders
         {
             Dictionary<string, List<ComplexFabricator>> recipeFabricators = new Dictionary<string, List<ComplexFabricator>>();
             Dictionary<string, ComplexRecipe> recipeByKey = new Dictionary<string, ComplexRecipe>();
-            foreach (ComplexFabricator fabricator in Object.FindObjectsByType<ComplexFabricator>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+            StorageSceneRegistry.EnsureSceneSeeded();
+            foreach (StorageNetworkEnrollment enrollment in StorageSceneRegistry.GetEnrollments())
             {
-                if (fabricator == null)
+                if (enrollment == null || !enrollment.IncludedInSceneNetwork)
                 {
                     continue;
                 }
 
-                StorageNetworkEnrollment enrollment = fabricator.GetComponent<StorageNetworkEnrollment>();
-                if (enrollment == null || !enrollment.IncludedInSceneNetwork)
+                ComplexFabricator fabricator = enrollment.GetComponent<ComplexFabricator>();
+                if (fabricator == null)
                 {
                     continue;
                 }

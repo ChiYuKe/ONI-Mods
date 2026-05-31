@@ -26,7 +26,8 @@ namespace StorageNetwork.UI
             System.Action onClick,
             string infoText = null,
             string actionText = null,
-            System.Action actionClick = null)
+            System.Action actionClick = null,
+            Color? infoColor = null)
         {
             GameObject header = CreateBox("Header", parent, backgroundColor);
             header.AddComponent<LayoutElement>().preferredHeight = 34f;
@@ -62,7 +63,7 @@ namespace StorageNetwork.UI
             if (!string.IsNullOrEmpty(infoText))
             {
                 TextMeshProUGUI info = CreateText("Info", header.transform, infoText, Mathf.Max(9, fontSize - 2), TextAlignmentOptions.MidlineLeft);
-                info.color = new Color(0.34f, 0.36f, 0.34f, 1f);
+                info.color = infoColor ?? new Color(0.34f, 0.36f, 0.34f, 1f);
                 info.textWrappingMode = TextWrappingModes.NoWrap;
                 info.overflowMode = TextOverflowModes.Ellipsis;
                 info.gameObject.AddComponent<LayoutElement>().preferredWidth = 150f;
@@ -248,6 +249,36 @@ namespace StorageNetwork.UI
             iconImage.preserveAspect = true;
             iconImage.raycastTarget = false;
             Stretch(iconImage.rectTransform(), 4f, 4f);
+            return buttonObject;
+        }
+
+        private static GameObject CreateTransparentIconButton(string name, Transform parent, Sprite icon, System.Action onClick)
+        {
+            GameObject buttonObject = new GameObject(name);
+            buttonObject.transform.SetParent(parent, false);
+            buttonObject.AddComponent<RectTransform>();
+
+            KImage background = buttonObject.AddComponent<KImage>();
+            background.type = Image.Type.Simple;
+            background.colorStyleSetting = CreateColorStyle(
+                new Color(0f, 0f, 0f, 0f),
+                new Color(0.48f, 0.08f, 0.08f, 0.12f),
+                new Color(0.48f, 0.08f, 0.08f, 0.22f));
+            background.ColorState = KImage.ColorSelector.Inactive;
+
+            KButton button = buttonObject.AddComponent<KButton>();
+            button.bgImage = background;
+            button.additionalKImages = new KImage[0];
+            button.soundPlayer = new ButtonSoundPlayer();
+            button.onClick += () => onClick?.Invoke();
+
+            Image iconImage = new GameObject("Icon").AddComponent<Image>();
+            iconImage.transform.SetParent(buttonObject.transform, false);
+            iconImage.sprite = icon;
+            iconImage.color = new Color(0.55f, 0.04f, 0.04f, 1f);
+            iconImage.preserveAspect = true;
+            iconImage.raycastTarget = false;
+            Stretch(iconImage.rectTransform(), 3f, 3f);
             return buttonObject;
         }
 

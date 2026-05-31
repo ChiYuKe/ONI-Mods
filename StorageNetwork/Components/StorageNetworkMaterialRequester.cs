@@ -15,6 +15,9 @@ namespace StorageNetwork.Components
     /// </summary>
     public sealed class StorageNetworkMaterialRequester : KMonoBehaviour, ISim1000ms
     {
+        private static readonly bool DebugTransferLogging = false;
+        private const float EmptyOutputRetrySeconds = 5f;
+
         public enum RequestMode
         {
             SearchNetwork = 0,
@@ -60,6 +63,7 @@ namespace StorageNetwork.Components
         private static StatusItem materialRequestStatusItem;
         private Guid materialRequestStatusHandle = Guid.Empty;
         private float requestCooldown;
+        private float outputStoreCooldown;
         private string lastStatus;
         private string lastOutputStatus;
 
@@ -91,6 +95,7 @@ namespace StorageNetwork.Components
             {
                 lastStatus = string.Empty;
                 lastOutputStatus = string.Empty;
+                outputStoreCooldown = 0f;
                 RemoveMaterialRequestStatus();
                 return;
             }
@@ -179,9 +184,16 @@ namespace StorageNetwork.Components
                 return null;
             }
 
-            return StorageSceneCollector.Collect().Storages
-                .Select(info => info.Storage)
-                .FirstOrDefault(storage => GetStorageInstanceId(storage) == SourceStorageInstanceId);
+            foreach (StorageInfo info in StorageSceneCollector.Collect().Storages)
+            {
+                Storage storage = info?.Storage;
+                if (GetStorageInstanceId(storage) == SourceStorageInstanceId)
+                {
+                    return storage;
+                }
+            }
+
+            return null;
         }
 
         /// <summary>
@@ -194,9 +206,16 @@ namespace StorageNetwork.Components
                 return null;
             }
 
-            return StorageSceneCollector.Collect().Storages
-                .Select(info => info.Storage)
-                .FirstOrDefault(storage => GetStorageInstanceId(storage) == OutputStorageInstanceId);
+            foreach (StorageInfo info in StorageSceneCollector.Collect().Storages)
+            {
+                Storage storage = info?.Storage;
+                if (GetStorageInstanceId(storage) == OutputStorageInstanceId)
+                {
+                    return storage;
+                }
+            }
+
+            return null;
         }
 
         /// <summary>
@@ -276,7 +295,16 @@ namespace StorageNetwork.Components
             string lastBlockedItem = null;
             if (producedOutputs != null)
             {
-                foreach (GameObject output in producedOutputs.Where(output => output != null).ToList())
+                List<GameObject> outputs = new List<GameObject>();
+                foreach (GameObject output in producedOutputs)
+                {
+                    if (output != null)
+                    {
+                        outputs.Add(output);
+                    }
+                }
+
+                foreach (GameObject output in outputs)
                 {
                     StorageTransferResult result = NetworkStorageTransferService.TransferLooseItemToNetwork(
                         output,
@@ -375,17 +403,52 @@ namespace StorageNetwork.Components
                 return fabricator.NextOrder;
             }
 
-            return fabricator.GetRecipes()
-                .Where(recipe => recipe != null && fabricator.IsRecipeQueued(recipe))
-                .OrderByDescending(recipe => fabricator.GetRecipeQueueCount(recipe) == ComplexFabricator.QUEUE_INFINITE)
-                .ThenBy(recipe => recipe.GetUIName(false))
-                .FirstOrDefault(NeedsAnyIngredient);
+            List<ComplexRecipe> queuedRecipes = new List<ComplexRecipe>();
+            foreach (ComplexRecipe recipe in fabricator.GetRecipes())
+            {
+                if (recipe != null && fabricator.IsRecipeQueued(recipe))
+                {
+                    queuedRecipes.Add(recipe);
+                }
+            }
+
+            queuedRecipes.Sort((left, right) =>
+            {
+                bool leftInfinite = fabricator.GetRecipeQueueCount(left) == ComplexFabricator.QUEUE_INFINITE;
+                bool rightInfinite = fabricator.GetRecipeQueueCount(right) == ComplexFabricator.QUEUE_INFINITE;
+                int compare = rightInfinite.CompareTo(leftInfinite);
+                return compare != 0
+                    ? compare
+                    : string.Compare(left.GetUIName(false), right.GetUIName(false), StringComparison.CurrentCulture);
+            });
+
+            foreach (ComplexRecipe recipe in queuedRecipes)
+            {
+                if (NeedsAnyIngredient(recipe))
+                {
+                    return recipe;
+                }
+            }
+
+            return null;
         }
 
         private bool NeedsAnyIngredient(ComplexRecipe recipe)
         {
-            return recipe.ingredients != null &&
-                   recipe.ingredients.Any(ingredient => GetTargetIngredientAmount(recipe, ingredient) - GetAmountAvailableInFabricator(ingredient.material) > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT);
+            if (recipe.ingredients == null)
+            {
+                return false;
+            }
+
+            foreach (ComplexRecipe.RecipeElement ingredient in recipe.ingredients)
+            {
+                if (GetTargetIngredientAmount(recipe, ingredient) - GetAmountAvailableInFabricator(ingredient.material) > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private float GetTargetIngredientAmount(ComplexRecipe recipe, ComplexRecipe.RecipeElement ingredient)
@@ -449,12 +512,15 @@ namespace StorageNetwork.Components
                 moved += transferred;
                 if (transferred > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
                 {
-                    Debug.Log(string.Format(
-                        "[StorageNetworkMaterialRequester] Moved {0} of {1} from {2} to {3}.",
-                        GameUtil.GetFormattedMass(transferred),
-                        tag,
-                        source.GetProperName(),
-                        gameObject.GetProperName()));
+                    if (DebugTransferLogging)
+                    {
+                        Debug.Log(string.Format(
+                            "[StorageNetworkMaterialRequester] Moved {0} of {1} from {2} to {3}.",
+                            GameUtil.GetFormattedMass(transferred),
+                            tag,
+                            source.GetProperName(),
+                            gameObject.GetProperName()));
+                    }
                 }
             }
 
@@ -466,11 +532,19 @@ namespace StorageNetwork.Components
             if (!OutputStoreEnabled)
             {
                 lastOutputStatus = string.Empty;
+                outputStoreCooldown = 0f;
+                return;
+            }
+
+            if (outputStoreCooldown > 0f)
+            {
+                outputStoreCooldown -= 1f;
                 return;
             }
 
             StorageTransferResult result = StoreOutputsFromOutputStorage();
             lastOutputStatus = NetworkStorageTransferService.FormatOutputStatus(result, Loc.Get(Loc.UI.STORAGE_NETWORK.MATERIAL_STATUS_WAITING_PRODUCTS));
+            outputStoreCooldown = result.MovedKg > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ? 0f : EmptyOutputRetrySeconds;
         }
 
         private StorageTransferResult StoreOutputsFromOutputStorage()
@@ -501,10 +575,18 @@ namespace StorageNetwork.Components
                 yield break;
             }
 
-            foreach (Storage storage in StorageSceneCollector.Collect().Storages
-                .Select(info => info.Storage)
-                .Where(storage => IsUsableSource(storage, tag))
-                .OrderByDescending(storage => storage.GetAmountAvailable(tag)))
+            List<Storage> sources = new List<Storage>();
+            foreach (StorageInfo info in StorageSceneCollector.Collect().Storages)
+            {
+                Storage storage = info?.Storage;
+                if (IsUsableSource(storage, tag))
+                {
+                    sources.Add(storage);
+                }
+            }
+
+            sources.Sort((left, right) => right.GetAmountAvailable(tag).CompareTo(left.GetAmountAvailable(tag)));
+            foreach (Storage storage in sources)
             {
                 yield return storage;
             }

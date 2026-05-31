@@ -52,9 +52,11 @@ namespace ModConfig
             {
                 ModTitlePrefix = modTitlePrefix,
                 ButtonName = buttonName,
-                ButtonText = Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OPTIONS_BUTTON),
-                Tooltip = tooltip,
-                OnClick = () => ShowDialog(dialogTitle, hint)
+                ButtonText = StableText(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OPTIONS_BUTTON), "选项"),
+                Tooltip = StableText(tooltip, "调整 StorageNetwork 模组数值"),
+                OnClick = () => ShowDialog(
+                    StableText(dialogTitle, "StorageNetwork 选项"),
+                    StableText(hint, "保存后会写入 StorageNetworkConfig.json。建筑容量等部分数值需要重进存档或重建建筑才会完全体现。"))
             });
         }
 
@@ -125,6 +127,13 @@ namespace ModConfig
             if (text == "完成订单保留周期") return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_COMPLETED_RETENTION);
             if (text == "完成/取消/异常订单在列表中保留多久。") return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_COMPLETED_RETENTION_DESC);
             return text;
+        }
+
+        private static string StableText(string value, string fallback)
+        {
+            return string.IsNullOrEmpty(value) || value.StartsWith("MISSING", StringComparison.OrdinalIgnoreCase)
+                ? fallback
+                : value;
         }
 
         private static List<OptionBinding> BuildBindings(T config)

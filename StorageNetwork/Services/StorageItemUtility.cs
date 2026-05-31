@@ -1,4 +1,3 @@
-using System.Linq;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -92,9 +91,21 @@ namespace StorageNetwork.Services
         /// </summary>
         public static float GetStoredMass(Storage storage)
         {
-            return storage != null && storage.items != null
-                ? storage.items.Where(item => item != null).Sum(GetMass)
-                : 0f;
+            if (storage == null || storage.items == null)
+            {
+                return 0f;
+            }
+
+            float mass = 0f;
+            foreach (GameObject item in storage.items)
+            {
+                if (item != null)
+                {
+                    mass += GetMass(item);
+                }
+            }
+
+            return mass;
         }
 
         /// <summary>
