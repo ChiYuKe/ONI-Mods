@@ -24,6 +24,7 @@
 | [**EternalDecay**](./EternalDecay) | 复制人年龄 | 给复制添加年龄系统 | |
 | [**OxygenConsumingPlant**](./OxygenConsumingPlant) | 耗氧植物 | 引入消耗氧气的特殊植物增加挑战性。 |  |
 | [**MiniBox**](./MiniBox) | 游手的小工具箱 |  | [Steam 订阅](https://steamcommunity.com/sharedfiles/filedetails/?id=2890083659) |
+| [**StorageNetwork**](./StorageNetwork) | 储存网络 | 将场景储存、生产建筑、喷泉和订单调度整合到一个可视化管理窗口。 | [Steam 订阅](https://steamcommunity.com/sharedfiles/filedetails/?id=3732422991) |
 
 > **提示**：点击“源码目录”可直接查看代码，点击“获取 / 下载”跳转至 Steam 创意工坊或发布页。
 
@@ -38,12 +39,16 @@
 3. 检查项目引用，确保 `Assembly-CSharp.dll` 等游戏库文件路径正确。
 4. 编译项目并将生成的 `.dll` 文件放入游戏的 `mods/Dev` 文件夹中。
 
-
 ## 💻 技术细节
 
 - **开发语言:** C#
-- **依赖框架:** .NET Framework 4.7.2 / HarmonyLib
-- **适用版本:** 支持最新的 U-5X 及后续更新。
+- **项目格式:** SDK-style `.csproj`，主要目标框架为 `netstandard2.1`。
+- **补丁框架:** Harmony (`0Harmony`)。
+- **游戏依赖:** 引用《缺氧》`OxygenNotIncluded_Data/Managed` 下的 `Assembly-CSharp.dll`、`Assembly-CSharp-firstpass.dll`、Unity 模块和 TextMeshPro 等运行库。
+- **常用依赖:** 部分项目会使用 `Newtonsoft.Json`、PLib、FMODUnity、Unity UI / AssetBundle 等。
+- **构建方式:** 使用 Visual Studio 打开 `NOIMods.sln`，或对单个项目执行 `dotnet build <项目>.csproj`。
+- **输出位置:** 部分项目 Debug 配置会直接输出到 `Documents\Klei\OxygenNotIncluded\mods\Dev\<ModName>`。
+- **适用版本:** 以当前 Steam 版 ONI/U58+ 为主，实际兼容性取决于项目引用的游戏 Managed 程序集版本。
 
 ---
 
