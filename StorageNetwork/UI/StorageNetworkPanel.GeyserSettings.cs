@@ -20,43 +20,44 @@ namespace StorageNetwork.UI
             CloseProductionSettingsPanel();
             CloseModal();
             geyserSettingsGeyser = geyser;
-            EnsureGeyserSettingsPanel();
-            geyserSettingsRoot.SetActive(true);
-            KeepGeyserSettingsPanelOnScreen();
+            productionSettingsStorage = null;
+            productionSettingsMinion = null;
+            productionSettingsSignature = null;
+            EnsureProductionSettingsPanel();
+            productionSettingsRoot.SetActive(true);
+            KeepProductionSettingsPanelOnScreen();
             UpdateGeyserSettingsPanel(true);
         }
 
         private void CloseGeyserSettingsPanel()
         {
-            if (geyserSettingsRoot != null)
+            if (geyserSettingsGeyser != null)
             {
-                geyserSettingsRoot.SetActive(false);
+                CloseProductionSettingsPanel();
             }
         }
 
         private void EnsureGeyserSettingsPanel()
         {
-            if (geyserSettingsRoot != null)
-            {
-                return;
-            }
-
-            SettingsWindowParts window = CreateDraggableSettingsWindow(
-                "GeyserSettingsPanel",
-                "GeyserSettingsTitle",
-                CloseGeyserSettingsPanel);
-            geyserSettingsRoot = window.Root;
-            geyserSettingsContent = window.Content;
+            EnsureProductionSettingsPanel();
+            geyserSettingsRoot = productionSettingsRoot;
+            geyserSettingsContent = productionSettingsContent;
         }
 
         private void KeepGeyserSettingsPanelOnScreen()
         {
-            geyserSettingsPositionInitialized = KeepDraggableSettingsWindowOnScreen(geyserSettingsRoot, geyserSettingsPositionInitialized);
+            KeepProductionSettingsPanelOnScreen();
         }
 
         private void UpdateGeyserSettingsPanel(bool force = false)
         {
-            if (geyserSettingsRoot == null || !geyserSettingsRoot.activeSelf || geyserSettingsContent == null)
+            if (geyserSettingsGeyser == null)
+            {
+                return;
+            }
+
+            EnsureGeyserSettingsPanel();
+            if (productionSettingsRoot == null || !productionSettingsRoot.activeSelf || productionSettingsContent == null)
             {
                 return;
             }
@@ -65,7 +66,7 @@ namespace StorageNetwork.UI
             StorageNetworkEnrollment enrollment = geyser != null ? geyser.GetComponent<StorageNetworkEnrollment>() : null;
             if (geyser == null || enrollment == null)
             {
-                CloseGeyserSettingsPanel();
+                CloseProductionSettingsPanel();
                 return;
             }
 
@@ -89,21 +90,21 @@ namespace StorageNetwork.UI
             AddGeyserOverviewCard(geyser, enrollment);
             AddGeyserAutomationCards(geyser, enrollment);
             AddGeyserOutputCard(geyser);
-            LayoutRebuilder.MarkLayoutForRebuild(geyserSettingsContent);
+            LayoutRebuilder.MarkLayoutForRebuild(productionSettingsContent);
         }
 
         private void ClearGeyserSettingsContent()
         {
-            for (int i = geyserSettingsContent.childCount - 1; i >= 0; i--)
+            for (int i = productionSettingsContent.childCount - 1; i >= 0; i--)
             {
-                Destroy(geyserSettingsContent.GetChild(i).gameObject);
+                Destroy(productionSettingsContent.GetChild(i).gameObject);
             }
         }
 
         private void SetGeyserSettingsTitle(Geyser geyser)
         {
-            TextMeshProUGUI title = geyserSettingsRoot.GetComponentsInChildren<TextMeshProUGUI>(true)
-                .FirstOrDefault(text => text.name == "GeyserSettingsTitle");
+            TextMeshProUGUI title = productionSettingsRoot.GetComponentsInChildren<TextMeshProUGUI>(true)
+                .FirstOrDefault(text => text.name == "ProductionSettingsTitle");
             if (title != null)
             {
                 title.text = geyser.GetProperName() + "\n" + GetGeyserDetails(geyser);
@@ -112,7 +113,7 @@ namespace StorageNetwork.UI
 
         private void AddGeyserOverviewCard(Geyser geyser, StorageNetworkEnrollment enrollment)
         {
-            GameObject card = CreateProductionCard(geyserSettingsContent, "GeyserOverviewCard", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_STATUS_TITLE), 116f);
+            GameObject card = CreateProductionCard(productionSettingsContent, "GeyserOverviewCard", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_STATUS_TITLE), 116f);
             TextMeshProUGUI title = CreateText("BuildingName", card.transform, geyser.GetProperName(), 16, TextAlignmentOptions.MidlineLeft);
             title.color = new Color(0.14f, 0.15f, 0.14f, 1f);
             title.fontStyle = FontStyles.Bold;
@@ -141,9 +142,9 @@ namespace StorageNetwork.UI
         private void AddGeyserAutomationCards(Geyser geyser, StorageNetworkEnrollment enrollment)
         {
             GameObject grid = new GameObject("AutomationGrid");
-            grid.transform.SetParent(geyserSettingsContent, false);
+            grid.transform.SetParent(productionSettingsContent, false);
             grid.AddComponent<RectTransform>();
-            bool compact = geyserSettingsRoot != null && geyserSettingsRoot.GetComponent<RectTransform>().rect.width < 620f;
+            bool compact = productionSettingsRoot != null && productionSettingsRoot.GetComponent<RectTransform>().rect.width < 620f;
             LayoutElement gridLayout = grid.AddComponent<LayoutElement>();
             gridLayout.minHeight = compact ? 180f : 150f;
             grid.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
@@ -177,12 +178,12 @@ namespace StorageNetwork.UI
             GameObject card = CreateProductionCard(parent, "GeyserNetworkCard", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_OUTPUT_STORE_TITLE), 0f);
             ApplyEqualAutomationCardLayout(card);
             CreateStatusStrip(card.transform, enrollment.DirectGeyserOutputToNetwork ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_OUTPUT_DIRECT_STATUS) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_OUTPUT_WORLD_STATUS), enrollment.DirectGeyserOutputToNetwork ? new Color(0.28f, 0.48f, 0.34f, 1f) : new Color(0.48f, 0.45f, 0.36f, 1f));
-            CreateProductionActionRow(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_DIRECT_OUTPUT_ENABLED), enrollment.DirectGeyserOutputToNetwork ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ACTION_CLOSE) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ON), () =>
+            CreateToggleActionRow(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_DIRECT_OUTPUT_ENABLED), enrollment.DirectGeyserOutputToNetwork ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ACTION_CLOSE) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ON), () =>
             {
                 enrollment.SetDirectGeyserOutputToNetwork(!enrollment.DirectGeyserOutputToNetwork);
                 RefreshStoragePanel(StoragePanelRefreshMode.Structure);
                 UpdateGeyserSettingsPanel(true);
-            }, enrollment.DirectGeyserOutputToNetwork ? KleiPinkStyle() : KleiBlueStyle());
+            }, enrollment.DirectGeyserOutputToNetwork);
             CreateProductionActionRow(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_POLICY), GetGeyserOutputStoreModeName(enrollment), () => ShowGeyserOutputStorePicker(geyser, enrollment));
             CreateFinePrint(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_DIRECT_OUTPUT_DESC));
         }
@@ -223,7 +224,7 @@ namespace StorageNetwork.UI
 
         private void AddGeyserOutputCard(Geyser geyser)
         {
-            GameObject card = CreateProductionCard(geyserSettingsContent, "GeyserOutputCard", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_OUTPUT_CONTENT_TITLE), 82f);
+            GameObject card = CreateProductionCard(productionSettingsContent, "GeyserOutputCard", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_OUTPUT_CONTENT_TITLE), 82f);
             GameObject row = CreatePlainImage("GeyserOutputRow", card.transform, new Color(0.76f, 0.76f, 0.70f, 1f));
             row.AddComponent<LayoutElement>().preferredHeight = 30f;
 

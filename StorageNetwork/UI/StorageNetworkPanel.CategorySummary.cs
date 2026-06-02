@@ -42,6 +42,7 @@ namespace StorageNetwork.UI
             EnsureCategorySummaryPanel();
             categorySummarySignature = null;
             categorySummaryRoot.SetActive(true);
+            categorySummaryRoot.transform.SetAsLastSibling();
             UpdateCategorySummaryPanel();
         }
 
@@ -62,7 +63,7 @@ namespace StorageNetwork.UI
                 return;
             }
 
-            categorySummaryRoot = CreateBox("CategorySummaryPanel", transform, new Color(0.78f, 0.79f, 0.80f, 0.98f));
+            categorySummaryRoot = CreateBox("CategorySummaryPanel", windowRect, new Color(0.78f, 0.79f, 0.80f, 0.98f));
             ApplyThinBoxSprite(categorySummaryRoot.GetComponent<Image>());
             RectTransform panelRect = categorySummaryRoot.GetComponent<RectTransform>();
             panelRect.anchorMin = new Vector2(0.5f, 0.5f);

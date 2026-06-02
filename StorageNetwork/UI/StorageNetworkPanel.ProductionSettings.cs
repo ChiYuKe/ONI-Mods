@@ -16,6 +16,8 @@ namespace StorageNetwork.UI
             bool sameStorage = productionSettingsStorage == storage;
             productionSettingsStorage = storage;
             productionSettingsMinion = null;
+            geyserSettingsGeyser = null;
+            geyserSettingsSignature = null;
             EnsureProductionSettingsPanel();
             productionSettingsRoot.SetActive(true);
             KeepProductionSettingsPanelOnScreen();
@@ -32,6 +34,8 @@ namespace StorageNetwork.UI
             bool sameMinion = productionSettingsMinion == minion;
             productionSettingsMinion = minion;
             productionSettingsStorage = storage;
+            geyserSettingsGeyser = null;
+            geyserSettingsSignature = null;
             EnsureProductionSettingsPanel();
             productionSettingsRoot.SetActive(true);
             KeepProductionSettingsPanelOnScreen();
@@ -47,6 +51,8 @@ namespace StorageNetwork.UI
             }
 
             productionSettingsMinion = null;
+            geyserSettingsGeyser = null;
+            geyserSettingsSignature = null;
         }
 
         private void EnsureProductionSettingsPanel()
@@ -60,14 +66,15 @@ namespace StorageNetwork.UI
                 "ProductionSettingsPanel",
                 "ProductionSettingsTitle",
                 CloseProductionSettingsPanel,
-                withScrollbar: true);
+                withScrollbar: true,
+                layoutKey: "productionSettings");
             productionSettingsRoot = window.Root;
             productionSettingsContent = window.Content;
         }
 
         private void KeepProductionSettingsPanelOnScreen()
         {
-            productionSettingsPositionInitialized = KeepDraggableSettingsWindowOnScreen(productionSettingsRoot, productionSettingsPositionInitialized);
+            productionSettingsPositionInitialized = KeepDraggableSettingsWindowOnScreen(productionSettingsRoot, productionSettingsPositionInitialized, "productionSettings");
         }
 
         private void UpdateProductionSettingsPanel(bool force = false)
@@ -78,6 +85,11 @@ namespace StorageNetwork.UI
             }
 
             Storage storage = productionSettingsStorage;
+            if (geyserSettingsGeyser != null)
+            {
+                return;
+            }
+
             if (storage == null)
             {
                 CloseProductionSettingsPanel();
@@ -236,11 +248,8 @@ namespace StorageNetwork.UI
         {
             GameObject card = CreateProductionCard("MinionMaterialRequestCard", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_TITLE), 126f);
             bool enabled = Config.Instance.IsMinionAllowedRequestMaterialsFromNetwork(minion);
-            CreateStatusStrip(
-                card.transform,
-                enabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STATUS_ENABLED) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STATUS_DISABLED),
-                enabled ? new Color(0.28f, 0.48f, 0.34f, 1f) : new Color(0.52f, 0.38f, 0.30f, 1f));
-            CreateProductionActionRow(
+            CreateEnabledStatusStrip(card.transform, enabled);
+            CreateToggleActionRow(
                 card.transform,
                 Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MINION_MATERIAL_REQUEST_ENABLED),
                 enabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ACTION_CLOSE) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ON),
@@ -250,7 +259,7 @@ namespace StorageNetwork.UI
                     Config.Save();
                     UpdateProductionSettingsPanel(true);
                 },
-                enabled ? KleiPinkStyle() : KleiBlueStyle());
+                enabled);
             CreateFinePrint(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MINION_MATERIAL_REQUEST_DESC));
         }
 
@@ -343,12 +352,12 @@ namespace StorageNetwork.UI
         {
             GameObject card = CreateProductionCard(parent, "MaterialCard", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_TITLE), 0f);
             ApplyEqualAutomationCardLayout(card);
-            CreateStatusStrip(card.transform, requester.RequestEnabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STATUS_ENABLED) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STATUS_DISABLED), requester.RequestEnabled ? new Color(0.28f, 0.48f, 0.34f, 1f) : new Color(0.52f, 0.38f, 0.30f, 1f));
-            CreateProductionActionRow(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_ENABLED), requester.RequestEnabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ACTION_CLOSE) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ON), () =>
+            CreateEnabledStatusStrip(card.transform, requester.RequestEnabled);
+            CreateToggleActionRow(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_ENABLED), requester.RequestEnabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ACTION_CLOSE) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ON), () =>
             {
                 requester.RequestEnabled = !requester.RequestEnabled;
                 UpdateProductionSettingsPanel(true);
-            }, requester.RequestEnabled ? KleiPinkStyle() : KleiBlueStyle());
+            }, requester.RequestEnabled);
             CreateProductionActionRow(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SOURCE_POLICY), GetMaterialRequestModeName(requester), () => ShowMaterialSourcePicker(ownerStorage, requester));
             CreateProductionActionRow(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_LIMIT_ENABLED), requester.LimitEnabled ? string.Format("{0} / {1}", GameUtil.GetFormattedMass(Mathf.Max(0f, requester.GetRequestedAmountForDisplay())), GameUtil.GetFormattedMass(Mathf.Max(0f, requester.LimitKg))) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.NO_LIMIT), () =>
             {
@@ -374,11 +383,11 @@ namespace StorageNetwork.UI
             GameObject card = CreateProductionCard(parent, "OutputCard", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_TITLE), 0f);
             ApplyEqualAutomationCardLayout(card);
             CreateStatusStrip(card.transform, requester.OutputStoreEnabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_AUTO_STATUS) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_MANUAL_STATUS), requester.OutputStoreEnabled ? new Color(0.28f, 0.48f, 0.34f, 1f) : new Color(0.48f, 0.45f, 0.36f, 1f));
-            CreateProductionActionRow(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_ENABLED), requester.OutputStoreEnabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ACTION_CLOSE) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ON), () =>
+            CreateToggleActionRow(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_ENABLED), requester.OutputStoreEnabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ACTION_CLOSE) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ON), () =>
             {
                 requester.OutputStoreEnabled = !requester.OutputStoreEnabled;
                 UpdateProductionSettingsPanel(true);
-            }, requester.OutputStoreEnabled ? KleiPinkStyle() : KleiBlueStyle());
+            }, requester.OutputStoreEnabled);
             CreateProductionActionRow(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_POLICY), GetOutputStoreModeName(requester), () => ShowOutputStorePicker(ownerStorage, requester));
             productionAutomationView ??= new ProductionAutomationCardsView();
             productionAutomationView.OutputDescription = CreateFinePrint(card.transform, requester.OutputStoreEnabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_AUTO_DESC) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_MANUAL_DESC));
@@ -392,11 +401,11 @@ namespace StorageNetwork.UI
         {
             GameObject card = CreateProductionCard("StorageOutputCard", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STORAGE_OUTPUT_STORE_TITLE), 132f);
             CreateStatusStrip(card.transform, connector.OutputStoreEnabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_AUTO_STATUS) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_MANUAL_STATUS), connector.OutputStoreEnabled ? new Color(0.28f, 0.48f, 0.34f, 1f) : new Color(0.48f, 0.45f, 0.36f, 1f));
-            CreateProductionActionRow(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STORAGE_OUTPUT_STORE_ENABLED), connector.OutputStoreEnabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ACTION_CLOSE) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ON), () =>
+            CreateToggleActionRow(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STORAGE_OUTPUT_STORE_ENABLED), connector.OutputStoreEnabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ACTION_CLOSE) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ON), () =>
             {
                 connector.OutputStoreEnabled = !connector.OutputStoreEnabled;
                 UpdateProductionSettingsPanel(true);
-            }, connector.OutputStoreEnabled ? KleiPinkStyle() : KleiBlueStyle());
+            }, connector.OutputStoreEnabled);
             productionAutomationView ??= new ProductionAutomationCardsView();
             productionAutomationView.OutputDescription = CreateFinePrint(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STORAGE_OUTPUT_STORE_DESC));
             if (connector.OutputStoreEnabled && !string.IsNullOrEmpty(connector.LastOutputStatus))
@@ -549,6 +558,21 @@ namespace StorageNetwork.UI
             label.color = new Color(0.96f, 0.96f, 0.90f, 1f);
             label.fontStyle = FontStyles.Bold;
             Stretch(label.rectTransform(), 4f, 0f);
+        }
+
+        // 创建“已启用/已关闭”状态条，统一开关类卡片的状态颜色和文案。
+        private void CreateEnabledStatusStrip(Transform parent, bool enabled)
+        {
+            CreateStatusStrip(
+                parent,
+                enabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STATUS_ENABLED) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STATUS_DISABLED),
+                enabled ? new Color(0.28f, 0.48f, 0.34f, 1f) : new Color(0.52f, 0.38f, 0.30f, 1f));
+        }
+
+        // 创建开关操作行，开启状态使用粉色按钮表示“关闭”，关闭状态使用蓝色按钮表示“开启”。
+        private void CreateToggleActionRow(Transform parent, string label, string value, System.Action onClick, bool currentlyEnabled)
+        {
+            CreateProductionActionRow(parent, label, value, onClick, currentlyEnabled ? KleiPinkStyle() : KleiBlueStyle());
         }
 
         private void CreateProductionActionRow(Transform parent, string label, string value, System.Action onClick, ColorStyleSetting buttonStyle = null)
@@ -958,9 +982,7 @@ namespace StorageNetwork.UI
             CloseProductionPicker();
             GameObject pickerParent = productionSettingsRoot != null && productionSettingsRoot.activeSelf
                 ? productionSettingsRoot
-                : geyserSettingsRoot != null && geyserSettingsRoot.activeSelf
-                    ? geyserSettingsRoot
-                    : null;
+                : null;
             if (pickerParent == null || options == null || options.Count == 0)
             {
                 return;

@@ -138,6 +138,58 @@ namespace StorageNetwork.UI
             return input;
         }
 
+        private KInputTextField CreateFixedTextInput(Transform parent, string name, string value, float width, float height, int fontSize)
+        {
+            GameObject slot = new GameObject(name + "Slot");
+            slot.transform.SetParent(parent, false);
+            RectTransform slotRect = slot.AddComponent<RectTransform>();
+            slotRect.sizeDelta = new Vector2(width, height);
+            LayoutElement slotLayout = slot.AddComponent<LayoutElement>();
+            slotLayout.minWidth = width;
+            slotLayout.preferredWidth = width;
+            slotLayout.minHeight = height;
+            slotLayout.preferredHeight = height;
+            slotLayout.flexibleWidth = 1f;
+            slotLayout.flexibleHeight = 0f;
+
+            KInputTextField input = StorageNetworkInputBuilder.CreateKNumberInput(
+                slot.transform,
+                name,
+                value ?? string.Empty,
+                width,
+                height,
+                fontSize,
+                TextAlignmentOptions.MidlineLeft,
+                new Color(0.08f, 0.09f, 0.10f, 1f),
+                "web_box",
+                Color.white,
+                new Color(0.08f, 0.09f, 0.10f, 1f),
+                Vector2.one,
+                false);
+
+            input.characterLimit = 64;
+            input.characterValidation = TMP_InputField.CharacterValidation.None;
+            input.contentType = TMP_InputField.ContentType.Standard;
+            input.inputType = TMP_InputField.InputType.Standard;
+            input.keyboardType = TouchScreenKeyboardType.Default;
+            input.lineType = TMP_InputField.LineType.SingleLine;
+            if (input.textComponent != null)
+            {
+                input.textComponent.textWrappingMode = TextWrappingModes.NoWrap;
+                input.textComponent.overflowMode = TextOverflowModes.Ellipsis;
+            }
+
+            RectTransform inputRect = input.gameObject.GetComponent<RectTransform>();
+            inputRect.anchorMin = new Vector2(0.5f, 0.5f);
+            inputRect.anchorMax = new Vector2(0.5f, 0.5f);
+            inputRect.pivot = new Vector2(0.5f, 0.5f);
+            inputRect.anchoredPosition = Vector2.zero;
+            inputRect.sizeDelta = new Vector2(width, height);
+            EnsureInputFieldDragReferences(input, width, height);
+            input.gameObject.AddComponent<StorageNetworkTextInputGuard>().Configure(input, input.gameObject.GetComponent<Image>());
+            return input;
+        }
+
         /// <summary>
         /// TMP_InputField 在拖拽选择文本时会调用 MouseDragOutsideRect，内部强依赖 textViewport。
         /// 有些运行时动态创建的 KInputTextField 没有把 textViewport 正确挂上，拖拽时会在

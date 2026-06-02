@@ -25,6 +25,9 @@ namespace StorageNetwork
         [JsonProperty]
         public List<int> MinionsAllowedRequestMaterialsFromNetwork { get; set; }
 
+        [JsonProperty]
+        public Dictionary<string, StorageNetworkWindowLayout> WindowLayouts { get; set; }
+
         [ModConfigOption("请求成功冷却秒数", "材料已满足或达到限额后的检查间隔。", 0.5f, 60f)]
         [JsonProperty]
         public float MaterialRequestSuccessCooldownSeconds { get; set; }
@@ -70,6 +73,7 @@ namespace StorageNetwork
             SceneScanCacheSeconds = 0.25f;
             DefaultMaterialRequestLimitKg = 1000f;
             MinionsAllowedRequestMaterialsFromNetwork = new List<int>();
+            WindowLayouts = new Dictionary<string, StorageNetworkWindowLayout>();
             MaterialRequestSuccessCooldownSeconds = 2f;
             MaterialRequestRetryCooldownSeconds = 5f;
             InfiniteQueueRequestBatchCount = 2;
@@ -124,6 +128,11 @@ namespace StorageNetwork
             if (MinionsAllowedRequestMaterialsFromNetwork == null)
             {
                 MinionsAllowedRequestMaterialsFromNetwork = new List<int>();
+            }
+
+            if (WindowLayouts == null)
+            {
+                WindowLayouts = new Dictionary<string, StorageNetworkWindowLayout>();
             }
 
             bool currentlyAllowed = MinionsAllowedRequestMaterialsFromNetwork.Contains(instanceId);
@@ -193,5 +202,21 @@ namespace StorageNetwork
                 return controller ?? (controller = new ModConfigController<Config>(GetConfigPath(), "StorageNetwork", config => config.Normalize()));
             }
         }
+    }
+
+    [JsonObject(MemberSerialization.OptIn)]
+    public sealed class StorageNetworkWindowLayout
+    {
+        [JsonProperty]
+        public float X { get; set; }
+
+        [JsonProperty]
+        public float Y { get; set; }
+
+        [JsonProperty]
+        public float Width { get; set; }
+
+        [JsonProperty]
+        public float Height { get; set; }
     }
 }

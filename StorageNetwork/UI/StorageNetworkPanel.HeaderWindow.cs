@@ -11,7 +11,7 @@ namespace StorageNetwork.UI
     public sealed partial class StorageNetworkPanel : KScreen, IInputHandler
     {
         private const int MaxDisplayedProducts = 96;
-        private const int MaxDisplayedTrackingRecords = 12;
+        private const int MaxDisplayedTrackingRecords = 48;
         private const float OrderWindowMaxWidth = 1760f;
         private const float TrackingContentWidth = 460f;
 
@@ -22,6 +22,8 @@ namespace StorageNetwork.UI
         private RectTransform orderTrackingContent;
         private StorageNetworkKeyedRowCache orderTrackingRows;
         private RectTransform orderTrackingRowsContent;
+        private KInputTextField orderTrackingSearchInput;
+        private GameObject orderTrackingSearchRow;
         private GameObject orderTrackingDetailRoot;
         private bool compactOrderWindow;
         private bool inlineOrderTracking;
@@ -36,10 +38,21 @@ namespace StorageNetwork.UI
         private float orderPanelRefreshElapsed;
         private string orderDetailsSignature;
         private string orderTrackingSignature;
+        private string orderTrackingSearchText;
+        private TrackingFilterMode orderTrackingFilterMode = TrackingFilterMode.Current;
         private KInputTextField orderAmountInput;
         private KInputTextField keepRuleAmountInput;
         private string keepRuleDraftProductKey;
         private float keepRuleDraftAmount;
+
+        private enum TrackingFilterMode
+        {
+            Current,
+            All,
+            Running,
+            Completed,
+            Abnormal
+        }
         private void ToggleHeaderWindow()
         {
             EnsureHeaderWindow();
@@ -105,18 +118,22 @@ namespace StorageNetwork.UI
             inlineOrderTracking = true;
             headerWindowRoot = CreateBox("ProductionOrderCenter", rootParent, new Color(0.18f, 0.20f, 0.21f, 0.98f));
             ApplyThinBoxSprite(headerWindowRoot.GetComponent<Image>());
-            ApplyOrderWindowRootLayout(headerWindowRoot.GetComponent<RectTransform>());
+            RectTransform rootRect = headerWindowRoot.GetComponent<RectTransform>();
+            ApplyOrderWindowRootLayout(rootRect);
 
             GameObject header = CreateBox("Header", headerWindowRoot.transform, OniPinkInactive());
             SetTopStretch(header.GetComponent<RectTransform>(), 8f, 8f, 8f, 50f);
+            header.AddComponent<StorageNetworkWindowDrag>().Configure(rootRect, "orderCenter");
 
             TextMeshProUGUI title = CreateText("Title", header.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CENTER_TITLE), 18, TextAlignmentOptions.MidlineLeft);
             title.fontStyle = FontStyles.Bold;
+            title.raycastTarget = false;
             Stretch(title.rectTransform(), 12f, 0f);
             title.rectTransform().offsetMax = new Vector2(-270f, 0f);
 
             TextMeshProUGUI subtitle = CreateText("Subtitle", header.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CENTER_SUBTITLE), 11, TextAlignmentOptions.MidlineRight);
             subtitle.color = new Color(0.76f, 0.82f, 0.84f, 1f);
+            subtitle.raycastTarget = false;
             subtitle.textWrappingMode = TextWrappingModes.NoWrap;
             subtitle.overflowMode = TextOverflowModes.Ellipsis;
             RectTransform subtitleRect = subtitle.rectTransform();
@@ -152,26 +169,18 @@ namespace StorageNetwork.UI
 
         private void ApplyOrderWindowRootLayout(RectTransform rectTransform)
         {
-            float left = compactOrderWindow ? 24f : 72f;
-            float right = compactOrderWindow ? 24f : 96f;
-            float bottom = 44f;
-            float top = compactOrderWindow ? 54f : 72f;
             float canvasWidth = GetCanvasWidth();
-            float stretchedWidth = canvasWidth - left - right;
+            float canvasHeight = Screen.height;
+            float width = Mathf.Clamp(canvasWidth - (compactOrderWindow ? 48f : 144f), compactOrderWindow ? 980f : 1180f, OrderWindowMaxWidth);
+            float height = Mathf.Clamp(canvasHeight - (compactOrderWindow ? 104f : 136f), 620f, 980f);
 
-            if (!compactOrderWindow && stretchedWidth > OrderWindowMaxWidth)
-            {
-                rectTransform.anchorMin = new Vector2(0.5f, 0f);
-                rectTransform.anchorMax = new Vector2(0.5f, 1f);
-                rectTransform.pivot = new Vector2(0.5f, 0.5f);
-                rectTransform.sizeDelta = new Vector2(OrderWindowMaxWidth, -bottom - top);
-                rectTransform.anchoredPosition = Vector2.zero;
-                rectTransform.offsetMin = new Vector2(-OrderWindowMaxWidth * 0.5f, bottom);
-                rectTransform.offsetMax = new Vector2(OrderWindowMaxWidth * 0.5f, -top);
-                return;
-            }
-
-            SetStretch(rectTransform, left, right, bottom, top);
+            rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
+            rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
+            rectTransform.pivot = new Vector2(0.5f, 0.5f);
+            rectTransform.sizeDelta = new Vector2(width, height);
+            rectTransform.anchoredPosition = Vector2.zero;
+            StorageNetworkWindowDrag.TryApplyLayout("orderCenter", rectTransform, new Vector2(940f, 560f), new Vector2(width, height));
+            StorageNetworkWindowDrag.ClampToScreen(rectTransform);
         }
 
         private void CreateProductListPane(Transform parent)
@@ -179,7 +188,7 @@ namespace StorageNetwork.UI
             GameObject pane = CreatePane(parent, "ProductPane", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_PRODUCT_LIST_TITLE), compactOrderWindow ? 220f : 260f, compactOrderWindow ? 200f : 240f, 0f);
             RectTransform viewport = CreateScrollViewport(pane.transform, "ProductViewport", out productListContent, 42f, 8f, 8f, 8f, 8f);
             productRows = new StorageNetworkKeyedRowCache(productListContent);
-            Scrollbar scrollbar = CreateScrollbar(pane.transform, 42f, 8f);
+            Scrollbar scrollbar = CreateScrollbar(pane.transform, 96f, 8f);
             WireScrollRect(viewport.gameObject, productListContent, scrollbar, 24f);
         }
 
@@ -203,10 +212,88 @@ namespace StorageNetwork.UI
         private void CreateOrderTrackingPane(Transform parent)
         {
             GameObject pane = CreatePane(parent, "OrderTrackingPane", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_TRACKING_TITLE), compactOrderWindow ? 360f : 460f, compactOrderWindow ? 330f : 430f, 0f);
-            RectTransform viewport = CreateScrollViewport(pane.transform, "OrderTrackingViewport", out orderTrackingContent, 42f, 8f, 8f, 8f, 8f);
+            CreateOrderTrackingSearchBar(pane.transform);
+            RectTransform viewport = CreateScrollViewport(pane.transform, "OrderTrackingViewport", out orderTrackingContent, 96f, 8f, 8f, 8f, 8f);
             Scrollbar scrollbar = CreateScrollbar(pane.transform, 42f, 8f);
             ConfigureTrackingContentForHorizontalScroll(orderTrackingContent);
             WireScrollRect(viewport.gameObject, orderTrackingContent, scrollbar, 22f, allowHorizontal: true);
+        }
+
+        private void CreateOrderTrackingSearchBar(Transform parent)
+        {
+            if (orderTrackingSearchRow != null)
+            {
+                Destroy(orderTrackingSearchRow);
+                orderTrackingSearchRow = null;
+            }
+
+            orderTrackingSearchRow = CreatePlainImage("TrackingSearchRow", parent, new Color(0.60f, 0.61f, 0.55f, 1f));
+            RectTransform rowRect = orderTrackingSearchRow.GetComponent<RectTransform>();
+            rowRect.anchorMin = new Vector2(0f, 1f);
+            rowRect.anchorMax = new Vector2(1f, 1f);
+            rowRect.pivot = new Vector2(0.5f, 1f);
+            rowRect.offsetMin = new Vector2(8f, -92f);
+            rowRect.offsetMax = new Vector2(-22f, -36f);
+
+            VerticalLayoutGroup layout = orderTrackingSearchRow.AddComponent<VerticalLayoutGroup>();
+            layout.padding = new RectOffset(6, 6, 5, 5);
+            layout.spacing = 4f;
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.childForceExpandWidth = true;
+            layout.childForceExpandHeight = false;
+
+            orderTrackingSearchInput = CreateFixedTextInput(
+                orderTrackingSearchRow.transform,
+                "TrackingSearchInput",
+                orderTrackingSearchText ?? string.Empty,
+                320f,
+                22f,
+                11);
+            orderTrackingSearchInput.onValueChanged.AddListener(value =>
+            {
+                orderTrackingSearchText = value;
+                orderTrackingSignature = null;
+                RebuildOrderDetails();
+            });
+
+            GameObject filterRow = new GameObject("TrackingFilterRow");
+            filterRow.transform.SetParent(orderTrackingSearchRow.transform, false);
+            filterRow.AddComponent<RectTransform>();
+            filterRow.AddComponent<LayoutElement>().preferredHeight = 22f;
+            HorizontalLayoutGroup filterLayout = filterRow.AddComponent<HorizontalLayoutGroup>();
+            filterLayout.spacing = 4f;
+            filterLayout.childAlignment = TextAnchor.MiddleLeft;
+            filterLayout.childControlWidth = true;
+            filterLayout.childControlHeight = true;
+            filterLayout.childForceExpandWidth = true;
+            filterLayout.childForceExpandHeight = false;
+
+            AddTrackingFilterButton(filterRow.transform, "当前", TrackingFilterMode.Current);
+            AddTrackingFilterButton(filterRow.transform, "全部", TrackingFilterMode.All);
+            AddTrackingFilterButton(filterRow.transform, "运行中", TrackingFilterMode.Running);
+            AddTrackingFilterButton(filterRow.transform, "已完成", TrackingFilterMode.Completed);
+            AddTrackingFilterButton(filterRow.transform, "异常", TrackingFilterMode.Abnormal);
+        }
+
+        private void AddTrackingFilterButton(Transform parent, string text, TrackingFilterMode mode)
+        {
+            bool selected = orderTrackingFilterMode == mode;
+            GameObject button = CreateStyledButton("TrackingFilterButton", parent, text, () =>
+            {
+                orderTrackingFilterMode = mode;
+                orderTrackingSignature = null;
+                if (orderTrackingSearchRow != null && orderTrackingSearchRow.transform.parent != null)
+                {
+                    Transform searchParent = orderTrackingSearchRow.transform.parent;
+                    CreateOrderTrackingSearchBar(searchParent);
+                }
+
+                RebuildOrderDetails();
+            }, selected ? KleiPinkStyle() : KleiBlueStyle());
+            LayoutElement layout = button.AddComponent<LayoutElement>();
+            layout.preferredWidth = 58f;
+            layout.preferredHeight = 20f;
         }
 
         private GameObject CreatePane(Transform parent, string name, string title, float preferredWidth, float minWidth, float flexibleWidth)

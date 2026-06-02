@@ -32,7 +32,8 @@ namespace StorageNetwork.UI
             string rootName,
             string titleName,
             System.Action closeAction,
-            bool withScrollbar = false)
+            bool withScrollbar = false,
+            string layoutKey = null)
         {
             GameObject root = CreateBox(rootName, transform, new Color(0.78f, 0.79f, 0.80f, 0.98f));
             root.AddComponent<ScrollWheelBlocker>();
@@ -44,7 +45,7 @@ namespace StorageNetwork.UI
             rootRect.anchoredPosition = new Vector2(0f, 24f);
             rootRect.sizeDelta = new Vector2(760f, 560f);
 
-            TextMeshProUGUI title = CreateDraggableSettingsHeader(root.transform, rootRect, titleName, closeAction);
+            TextMeshProUGUI title = CreateDraggableSettingsHeader(root.transform, rootRect, titleName, closeAction, layoutKey);
             RectTransform content = CreateSettingsWindowViewport(root.transform, out ScrollRect scrollRect);
 
             if (withScrollbar)
@@ -60,11 +61,11 @@ namespace StorageNetwork.UI
         }
 
         // 创建设置窗口的顶部栏；标题文字不接收射线，避免挡住拖动事件。
-        private TextMeshProUGUI CreateDraggableSettingsHeader(Transform parent, RectTransform targetRect, string titleName, System.Action closeAction)
+        private TextMeshProUGUI CreateDraggableSettingsHeader(Transform parent, RectTransform targetRect, string titleName, System.Action closeAction, string layoutKey)
         {
             GameObject header = CreateBox("Header", parent, new Color(0.36f, 0.42f, 0.47f, 1f));
             SetTopStretch(header.GetComponent<RectTransform>(), 8f, 8f, 8f, 54f);
-            header.AddComponent<StorageNetworkWindowDrag>().Configure(targetRect);
+            header.AddComponent<StorageNetworkWindowDrag>().Configure(targetRect, layoutKey);
 
             TextMeshProUGUI title = CreateText("Title", header.transform, string.Empty, 13, TextAlignmentOptions.TopLeft);
             title.name = titleName;
@@ -119,7 +120,7 @@ namespace StorageNetwork.UI
         }
 
         // 保持设置窗口在屏幕内：首次打开使用默认位置，之后刷新只夹取位置，不覆盖用户拖动结果。
-        private static bool KeepDraggableSettingsWindowOnScreen(GameObject root, bool positionInitialized)
+        private static bool KeepDraggableSettingsWindowOnScreen(GameObject root, bool positionInitialized, string layoutKey = null)
         {
             if (root == null)
             {
@@ -145,7 +146,12 @@ namespace StorageNetwork.UI
             panelRect.sizeDelta = new Vector2(width, height);
             if (!positionInitialized)
             {
-                panelRect.anchoredPosition = new Vector2(0f, bottomMargin);
+                if (!StorageNetworkWindowDrag.TryApplyLayout(layoutKey, panelRect, new Vector2(620f, 360f), new Vector2(width, height)))
+                {
+                    panelRect.anchoredPosition = new Vector2(0f, bottomMargin);
+                }
+
+                StorageNetworkWindowDrag.ClampToScreen(panelRect);
                 return true;
             }
 
@@ -156,6 +162,7 @@ namespace StorageNetwork.UI
             panelRect.anchoredPosition = new Vector2(
                 Mathf.Clamp(panelRect.anchoredPosition.x, minX, maxX),
                 Mathf.Clamp(panelRect.anchoredPosition.y, minY, maxY));
+            StorageNetworkWindowDrag.ClampToScreen(panelRect);
             return true;
         }
 

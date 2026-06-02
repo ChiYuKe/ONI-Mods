@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using StorageNetwork.Components;
 using StorageNetwork.Core;
+using StorageNetwork.ProductionOrders;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -18,6 +19,7 @@ namespace StorageNetwork.UI
         private static Dictionary<string, Sprite> spriteCache;
         private StorageSceneSnapshot currentSnapshot;
         private TextMeshProUGUI summaryText;
+        private RectTransform healthContent;
         private RectTransform categoryContent;
         private RectTransform listContent;
         private ScrollRect listScrollRect;
@@ -39,7 +41,6 @@ namespace StorageNetwork.UI
         private RectTransform geyserSettingsContent;
         private Geyser geyserSettingsGeyser;
         private string geyserSettingsSignature;
-        private bool geyserSettingsPositionInitialized;
         private GameObject productionPickerRoot;
         private string productionSettingsSignature;
         private ProductionOverviewCardView productionOverviewView;
@@ -116,10 +117,6 @@ namespace StorageNetwork.UI
             else if (instance.productionSettingsRoot != null && instance.productionSettingsRoot.activeSelf)
             {
                 instance.CloseProductionSettingsPanel();
-            }
-            else if (instance.geyserSettingsRoot != null && instance.geyserSettingsRoot.activeSelf)
-            {
-                instance.CloseGeyserSettingsPanel();
             }
             else if (instance.enrollableWindowRoot != null && instance.enrollableWindowRoot.activeSelf)
             {
@@ -281,12 +278,15 @@ namespace StorageNetwork.UI
             windowRect.pivot = new Vector2(0.5f, 0.5f);
             windowRect.anchoredPosition = Vector2.zero;
             windowRect.sizeDelta = new Vector2(960f, 850f); 
+            StorageNetworkWindowDrag.TryApplyLayout("mainWindow", windowRect, new Vector2(760f, 520f), new Vector2(1400f, 1100f));
 
             GameObject header = CreateBox("Header", window.transform, new Color(0.43f, 0.20f, 0.34f, 1f));
             SetTopStretch(header.GetComponent<RectTransform>(), 6f, 6f, 6f, 28f);
+            header.AddComponent<StorageNetworkWindowDrag>().Configure(windowRect, "mainWindow");
 
             TextMeshProUGUI title = CreateText("Title", header.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TITLE), 14, TextAlignmentOptions.MidlineLeft);
             title.fontStyle = FontStyles.Bold;
+            title.raycastTarget = false;
             Stretch(title.rectTransform(), 12f, 0f);
             title.rectTransform().offsetMax = new Vector2(-210f, 0f);
 
@@ -333,8 +333,20 @@ namespace StorageNetwork.UI
             summaryText.rectTransform().offsetMax = new Vector2(-76f, -7f);
             CreateCategorySummaryButton(summary.transform);
 
+            GameObject healthBar = CreateBox("HealthBar", content.transform, new Color(0.74f, 0.75f, 0.69f, 1f));
+            SetTopStretch(healthBar.GetComponent<RectTransform>(), 8f, 8f, 64f, 36f);
+            HorizontalLayoutGroup healthLayout = healthBar.AddComponent<HorizontalLayoutGroup>();
+            healthLayout.padding = new RectOffset(8, 8, 4, 4);
+            healthLayout.spacing = 6f;
+            healthLayout.childAlignment = TextAnchor.MiddleLeft;
+            healthLayout.childControlWidth = true;
+            healthLayout.childControlHeight = true;
+            healthLayout.childForceExpandWidth = true;
+            healthLayout.childForceExpandHeight = true;
+            healthContent = healthBar.GetComponent<RectTransform>();
+
             GameObject list = CreateBox("List", content.transform, new Color(0.80f, 0.79f, 0.74f, 1f));
-            SetStretch(list.GetComponent<RectTransform>(), 8f, 8f, 8f, 70f);
+            SetStretch(list.GetComponent<RectTransform>(), 8f, 8f, 8f, 106f);
 
             HorizontalLayoutGroup listColumns = list.AddComponent<HorizontalLayoutGroup>();
             listColumns.padding = new RectOffset(8, 8, 8, 8);
@@ -453,6 +465,94 @@ namespace StorageNetwork.UI
                     currentSnapshot.Storages.Count,
                     GameUtil.GetFormattedMass(currentSnapshot.TotalStoredKg),
                     GameUtil.GetFormattedMass(currentSnapshot.TotalCapacityKg));
+            UpdateNetworkHealthBar();
+        }
+
+        private void UpdateNetworkHealthBar()
+        {
+            if (healthContent == null || currentSnapshot == null)
+            {
+                return;
+            }
+
+            ClearHealthBar();
+            float remainingCapacity = Mathf.Max(0f, currentSnapshot.TotalCapacityKg - currentSnapshot.TotalStoredKg);
+            float fillRatio = currentSnapshot.TotalCapacityKg > 0f ? currentSnapshot.TotalStoredKg / currentSnapshot.TotalCapacityKg : 0f;
+            int activeOrders = productionOrderService.Orders.Count(order => IsHealthActiveOrder(order));
+            int waitingOrders = productionOrderService.Orders.Count(order => order != null && order.State == ProductionOrderState.WaitingMaterials);
+            int abnormalOrders = productionOrderService.Orders.Count(order => order != null && order.State == ProductionOrderState.Abnormal);
+            int automationBuildings = currentSnapshot.Storages.Count(info => HasEnabledNetworkAutomation(info));
+
+            AddHealthTile("容量", string.Format("{0:P0}", Mathf.Clamp01(fillRatio)), fillRatio >= 0.92f ? DangerColor() : fillRatio >= 0.80f ? WarningColor() : PositiveColor());
+            AddHealthTile("剩余", GameUtil.GetFormattedMass(remainingCapacity), remainingCapacity <= 1000f ? WarningColor() : NeutralBlue());
+            AddHealthTile("订单", activeOrders.ToString(), activeOrders > 0 ? NeutralBlue() : MutedTextColor());
+            AddHealthTile("待料", waitingOrders.ToString(), waitingOrders > 0 ? WarningColor() : PositiveColor());
+            AddHealthTile("异常", abnormalOrders.ToString(), abnormalOrders > 0 ? DangerColor() : PositiveColor());
+            AddHealthTile("自动化", automationBuildings.ToString(), automationBuildings > 0 ? PositiveColor() : MutedTextColor());
+        }
+
+        private void ClearHealthBar()
+        {
+            for (int i = healthContent.childCount - 1; i >= 0; i--)
+            {
+                Destroy(healthContent.GetChild(i).gameObject);
+            }
+        }
+
+        private void AddHealthTile(string label, string value, Color valueColor)
+        {
+            GameObject tile = CreatePlainImage("HealthTile", healthContent, new Color(0.82f, 0.82f, 0.76f, 1f));
+            tile.AddComponent<LayoutElement>().flexibleWidth = 1f;
+            HorizontalLayoutGroup layout = tile.AddComponent<HorizontalLayoutGroup>();
+            layout.padding = new RectOffset(7, 7, 2, 2);
+            layout.spacing = 5f;
+            layout.childAlignment = TextAnchor.MiddleCenter;
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.childForceExpandWidth = false;
+            layout.childForceExpandHeight = true;
+
+            TextMeshProUGUI name = CreateText("Label", tile.transform, label, 9, TextAlignmentOptions.MidlineLeft);
+            name.color = MutedTextColor();
+            name.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+
+            TextMeshProUGUI amount = CreateText("Value", tile.transform, value, 10, TextAlignmentOptions.MidlineRight);
+            amount.color = valueColor;
+            amount.fontStyle = FontStyles.Bold;
+            amount.textWrappingMode = TextWrappingModes.NoWrap;
+            amount.overflowMode = TextOverflowModes.Ellipsis;
+            amount.gameObject.AddComponent<LayoutElement>().preferredWidth = 58f;
+        }
+
+        private static bool IsHealthActiveOrder(ProductionOrderRecord order)
+        {
+            return order != null &&
+                   order.State != ProductionOrderState.Completed &&
+                   order.State != ProductionOrderState.Abnormal &&
+                   order.State != ProductionOrderState.Cancelled;
+        }
+
+        private static bool HasEnabledNetworkAutomation(StorageInfo info)
+        {
+            if (info?.GameObject == null)
+            {
+                return false;
+            }
+
+            StorageNetworkMaterialRequester requester = info.GameObject.GetComponent<StorageNetworkMaterialRequester>();
+            if (requester != null && (requester.RequestEnabled || requester.OutputStoreEnabled))
+            {
+                return true;
+            }
+
+            StorageNetworkStorageConnector connector = info.GameObject.GetComponent<StorageNetworkStorageConnector>();
+            if (connector != null && connector.OutputStoreEnabled)
+            {
+                return true;
+            }
+
+            StorageNetworkEnrollment enrollment = info.GameObject.GetComponent<StorageNetworkEnrollment>();
+            return enrollment != null && enrollment.DirectGeyserOutputToNetwork;
         }
 
         private void RefreshEmptyStorageList(bool forceRebuild)

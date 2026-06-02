@@ -17,24 +17,12 @@ namespace StorageNetwork.UI
                 return;
             }
 
-            if (product == null)
-            {
-                string emptySignature = "none";
-                if (orderTrackingSignature == emptySignature)
-                {
-                    return;
-                }
-
-                orderTrackingSignature = emptySignature;
-                EnsureOrderTrackingRows();
-                orderTrackingRows.Begin();
-                UpdateTrackingInfoRow("no-product", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_NO_PRODUCT), 48f);
-                orderTrackingRows.Commit();
-                ForceOrderLayout(orderTrackingContent);
-                return;
-            }
-
-            List<ProductionOrderRecord> records = productionOrderService.GetRecentOrdersForProduct(product.ProductTag, MaxDisplayedTrackingRecords).ToList();
+            IEnumerable<ProductionOrderRecord> sourceRecords = orderTrackingFilterMode == TrackingFilterMode.Current && product != null
+                ? productionOrderService.GetRecentOrdersForProduct(product.ProductTag, MaxDisplayedTrackingRecords)
+                : productionOrderService.GetRecentOrders(MaxDisplayedTrackingRecords);
+            List<ProductionOrderRecord> records = sourceRecords
+                .Where(MatchesTrackingFilter)
+                .ToList();
             string signature = BuildOrderTrackingSignature(product, records);
             if (signature == orderTrackingSignature)
             {
@@ -45,7 +33,7 @@ namespace StorageNetwork.UI
             EnsureOrderTrackingRows();
             orderTrackingRows.Begin();
             int activeCount = records.Count(IsTrackingActive);
-            UpdateTrackingHeaderRow(product.ProductName, activeCount, records.Count);
+            UpdateTrackingHeaderRow(GetTrackingScopeTitle(product), activeCount, records.Count);
             if (records.Count == 0)
             {
                 UpdateTrackingInfoRow("empty", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_EMPTY), 58f);
@@ -63,7 +51,7 @@ namespace StorageNetwork.UI
             ForceOrderLayout(orderTrackingContent);
         }
 
-        private static string BuildOrderTrackingSignature(ProductDisplayGroup product, List<ProductionOrderRecord> records)
+        private string BuildOrderTrackingSignature(ProductDisplayGroup product, List<ProductionOrderRecord> records)
         {
             string recordsSignature = string.Join("|", records.Select(record => string.Format(
                 "{0}:{1}:{2}:{3:0.###}:{4:0.###}:{5}:{6}:{7:0.###}:{8}",
@@ -77,7 +65,73 @@ namespace StorageNetwork.UI
                 record.LastActivityCycle,
                 record.AbnormalReason ?? string.Empty)));
 
-            return string.Format("{0}|{1}", product?.ProductKey ?? string.Empty, recordsSignature);
+            return string.Format("{0}|{1}|{2}|{3}", product?.ProductKey ?? string.Empty, orderTrackingSearchText ?? string.Empty, orderTrackingFilterMode, recordsSignature);
+        }
+
+        private bool MatchesTrackingFilter(ProductionOrderRecord record)
+        {
+            if (record == null)
+            {
+                return false;
+            }
+
+            switch (orderTrackingFilterMode)
+            {
+                case TrackingFilterMode.Current:
+                case TrackingFilterMode.All:
+                    break;
+                case TrackingFilterMode.Abnormal:
+                    if (record.State != ProductionOrderState.Abnormal)
+                    {
+                        return false;
+                    }
+                    break;
+                case TrackingFilterMode.Completed:
+                    if (record.State != ProductionOrderState.Completed)
+                    {
+                        return false;
+                    }
+                    break;
+                case TrackingFilterMode.Running:
+                    if (!IsTrackingActive(record))
+                    {
+                        return false;
+                    }
+                    break;
+            }
+
+            if (string.IsNullOrWhiteSpace(orderTrackingSearchText))
+            {
+                return true;
+            }
+
+            string needle = orderTrackingSearchText.Trim();
+            return ContainsIgnoreCase(record.DisplayId.ToString(), needle) ||
+                   ContainsIgnoreCase(record.ProductName, needle) ||
+                   ContainsIgnoreCase(record.AbnormalReason, needle) ||
+                   (record.QueueAssignments ?? new List<ProductionOrderQueueAssignment>()).Any(assignment =>
+                       assignment != null &&
+                       (ContainsIgnoreCase(assignment.Fabricator != null ? assignment.Fabricator.GetProperName() : null, needle) ||
+                        ContainsIgnoreCase(assignment.OutputName, needle) ||
+                        ContainsIgnoreCase(assignment.ConsumerName, needle) ||
+                        ContainsIgnoreCase(assignment.Recipe != null ? assignment.Recipe.GetUIName(false) : null, needle)));
+        }
+
+        private static bool ContainsIgnoreCase(string haystack, string needle)
+        {
+            return !string.IsNullOrEmpty(haystack) &&
+                   !string.IsNullOrEmpty(needle) &&
+                   haystack.IndexOf(needle, System.StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private string GetTrackingScopeTitle(ProductDisplayGroup product)
+        {
+            if (orderTrackingFilterMode == TrackingFilterMode.Current && product != null)
+            {
+                return product.ProductName;
+            }
+
+            return "全部成品";
         }
 
         private void EnsureOrderTrackingRows()
@@ -274,10 +328,11 @@ namespace StorageNetwork.UI
             window.pivot = new Vector2(0.5f, 0.5f);
             window.anchoredPosition = Vector2.zero;
             window.sizeDelta = new Vector2(820f, 560f);
+            StorageNetworkWindowDrag.TryApplyLayout("orderTrackingDetail", window, new Vector2(680f, 420f), new Vector2(1200f, 860f));
 
             GameObject header = CreateBox("Header", orderTrackingDetailRoot.transform, OniPinkInactive());
             SetTopStretch(header.GetComponent<RectTransform>(), 8f, 8f, 8f, 40f);
-            header.AddComponent<StorageNetworkWindowDrag>().Configure(window);
+            header.AddComponent<StorageNetworkWindowDrag>().Configure(window, "orderTrackingDetail");
 
             TextMeshProUGUI title = CreateText(
                 "Title",
@@ -286,6 +341,7 @@ namespace StorageNetwork.UI
                 15,
                 TextAlignmentOptions.MidlineLeft);
             title.fontStyle = FontStyles.Bold;
+            title.raycastTarget = false;
             Stretch(title.rectTransform(), 12f, 0f);
             title.rectTransform().offsetMax = new Vector2(-42f, 0f);
 
@@ -319,6 +375,7 @@ namespace StorageNetwork.UI
             content.sizeDelta = new Vector2(1100f, contentHeight);
             AddTrackingDetailTree(content.transform, record, assignments);
             viewport.AddComponent<StorageNetworkPanZoom>().Configure(viewportRect, content);
+            StorageNetworkWindowDrag.ClampToScreen(window);
             orderTrackingDetailRoot.transform.SetAsLastSibling();
         }
 
@@ -384,13 +441,13 @@ namespace StorageNetwork.UI
             bool working = fabricator.CurrentWorkingOrder == assignment.Recipe;
             float progress = working ? Mathf.Clamp01(fabricator.OrderProgress) : 0f;
             string queuedText = queued == ComplexFabricator.QUEUE_INFINITE ? "∞" : Mathf.Max(0, queued).ToString();
-            Color roleColor = assignment.Primary ? NeutralBlue() : WarningColor();
+            Color stateColor = GetBuildingStateColor(assignment);
 
             GameObject card = CreatePlainImage("TrackingDetailFabricatorNode", parent, new Color(0.78f, 0.79f, 0.73f, 1f));
             ApplyOniInputSlotStyle(card.GetComponent<Image>());
             ApplyAbsoluteRect(card, position, new Vector2(360f, 96f));
 
-            GameObject accent = CreatePlainImage("Accent", card.transform, roleColor);
+            GameObject accent = CreatePlainImage("Accent", card.transform, stateColor);
             RectTransform accentRect = accent.GetComponent<RectTransform>();
             accentRect.anchorMin = new Vector2(0f, 0f);
             accentRect.anchorMax = new Vector2(0f, 1f);
@@ -414,9 +471,9 @@ namespace StorageNetwork.UI
             AddVerticalContainer(text, 2f, 0, 0, 0, 0);
 
             AddPlanLine(text.transform, fabricator.GetProperName(), 10, FontStyles.Bold, NeutralTextColor(), 17f);
-            AddPlanLine(text.transform, assignment.Recipe != null ? assignment.Recipe.GetUIName(false) : "?", 8, FontStyles.Bold, roleColor, 15f);
+            AddPlanLine(text.transform, string.Format("{0}  {1}", GetBuildingStateLabel(assignment), assignment.Recipe != null ? assignment.Recipe.GetUIName(false) : "?"), 8, FontStyles.Bold, stateColor, 15f);
             AddPlanLine(text.transform, string.Format("{0} x{1}    队列 {2}", assignment.Primary ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_PRODUCT_DISPATCH) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_DISPATCH_AUTO), assignment.OrderCount, queuedText), 8, FontStyles.Normal, MutedTextColor(), 15f);
-            AddPlanLine(text.transform, working ? string.Format("{0:P0}", progress) : GetProductionStateText(fabricator), 8, FontStyles.Bold, working ? PositiveColor() : MutedTextColor(), 15f);
+            AddPlanLine(text.transform, BuildBuildingDetailLine(assignment, progress), 8, FontStyles.Bold, stateColor, 15f);
         }
 
         private void AddTrackingDetailMaterialNodes(Transform parent, ProductionOrderRecord record, ProductionOrderQueueAssignment assignment, Vector2 position)
@@ -816,6 +873,108 @@ namespace StorageNetwork.UI
                 default:
                     return NeutralTextColor();
             }
+        }
+
+        // 统一建筑运行状态颜色，订单树和详情树都走这里，避免同一状态在不同卡片上颜色不一致。
+        private static Color GetBuildingStateColor(ProductionOrderQueueAssignment assignment)
+        {
+            switch (GetBuildingStateKind(assignment))
+            {
+                case BuildingStateKind.Running:
+                    return PositiveColor();
+                case BuildingStateKind.WaitingMaterials:
+                    return WarningColor();
+                case BuildingStateKind.Disabled:
+                    return new Color(0.46f, 0.46f, 0.42f, 1f);
+                case BuildingStateKind.NoRecipe:
+                    return new Color(0.40f, 0.44f, 0.48f, 1f);
+                case BuildingStateKind.Abnormal:
+                    return DangerColor();
+                default:
+                    return NeutralBlue();
+            }
+        }
+
+        private static string GetBuildingStateLabel(ProductionOrderQueueAssignment assignment)
+        {
+            switch (GetBuildingStateKind(assignment))
+            {
+                case BuildingStateKind.Running:
+                    return "正常运行";
+                case BuildingStateKind.WaitingMaterials:
+                    return "等待材料";
+                case BuildingStateKind.NoPower:
+                    return "缺电";
+                case BuildingStateKind.Disabled:
+                    return "禁用";
+                case BuildingStateKind.NoRecipe:
+                    return "无配方";
+                case BuildingStateKind.Abnormal:
+                    return "异常暂停";
+                default:
+                    return "排队中";
+            }
+        }
+
+        private static string BuildBuildingDetailLine(ProductionOrderQueueAssignment assignment, float progress)
+        {
+            ComplexFabricator fabricator = assignment?.Fabricator;
+            if (fabricator == null)
+            {
+                return "建筑不存在";
+            }
+
+            if (fabricator.CurrentWorkingOrder == assignment.Recipe)
+            {
+                return string.Format("进度 {0:P0}", Mathf.Clamp01(progress));
+            }
+
+            string state = GetProductionStateText(fabricator);
+            return string.IsNullOrEmpty(state) ? GetBuildingStateLabel(assignment) : state;
+        }
+
+        private static BuildingStateKind GetBuildingStateKind(ProductionOrderQueueAssignment assignment)
+        {
+            ComplexFabricator fabricator = assignment?.Fabricator;
+            if (fabricator == null)
+            {
+                return BuildingStateKind.Abnormal;
+            }
+
+            if (assignment.Recipe == null)
+            {
+                return BuildingStateKind.NoRecipe;
+            }
+
+            Operational operational = fabricator.GetComponent<Operational>();
+            if (operational != null && !operational.IsOperational)
+            {
+                return BuildingStateKind.Disabled;
+            }
+
+            if (fabricator.CurrentWorkingOrder == assignment.Recipe)
+            {
+                return BuildingStateKind.Running;
+            }
+
+            int queued = fabricator.GetRecipeQueueCount(assignment.Recipe);
+            if (queued != 0)
+            {
+                return BuildingStateKind.WaitingMaterials;
+            }
+
+            return BuildingStateKind.NoRecipe;
+        }
+
+        private enum BuildingStateKind
+        {
+            Queued,
+            Running,
+            WaitingMaterials,
+            NoPower,
+            Disabled,
+            NoRecipe,
+            Abnormal
         }
 
     }

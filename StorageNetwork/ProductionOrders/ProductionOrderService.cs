@@ -171,6 +171,15 @@ namespace StorageNetwork.ProductionOrders
                 .ToList();
         }
 
+        public IReadOnlyList<ProductionOrderRecord> GetRecentOrders(int limit)
+        {
+            IEnumerable<ProductionOrderRecord> orders = ActiveOrders.Values
+                .OrderByDescending(order => order.State == ProductionOrderState.Completed ? order.CompletedCycle : float.MaxValue)
+                .ThenByDescending(order => order.CreatedCycle);
+
+            return limit > 0 ? orders.Take(limit).ToList() : orders.ToList();
+        }
+
         public IReadOnlyList<string> GetActiveOrderUsagesForFabricator(ComplexFabricator fabricator, int limit)
         {
             EnsureOrdersLoaded();

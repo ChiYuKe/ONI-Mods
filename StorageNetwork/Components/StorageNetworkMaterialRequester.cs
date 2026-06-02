@@ -66,6 +66,7 @@ namespace StorageNetwork.Components
         private float outputStoreCooldown;
         private string lastStatus;
         private string lastOutputStatus;
+        private HashSet<Tag> lastRecipeResultTags;
 
         public string LastStatus => lastStatus;
         public string LastOutputStatus => lastOutputStatus;
@@ -293,7 +294,18 @@ namespace StorageNetwork.Components
             if (!OutputStoreEnabled)
             {
                 lastOutputStatus = string.Empty;
+                lastRecipeResultTags = null;
                 return;
+            }
+
+            HashSet<Tag> resultTags = GetCurrentRecipeResultTags();
+            if (resultTags.Count > 0)
+            {
+                lastRecipeResultTags = resultTags;
+            }
+            else
+            {
+                resultTags = GetKnownRecipeResultTags();
             }
 
             float totalMoved = 0f;
@@ -314,7 +326,8 @@ namespace StorageNetwork.Components
                     StorageTransferResult result = NetworkStorageTransferService.TransferLooseItemToNetwork(
                         output,
                         GetFabricatorStorages(),
-                        GetSpecificOutputTarget());
+                        GetSpecificOutputTarget(),
+                        resultTags);
                     totalMoved += result.MovedKg;
                     if (!string.IsNullOrEmpty(result.BlockedItem))
                     {
@@ -564,7 +577,75 @@ namespace StorageNetwork.Components
             return NetworkStorageTransferService.TransferStoredItemsToNetwork(
                 fabricator.outStorage,
                 GetFabricatorStorages(),
-                GetSpecificOutputTarget());
+                GetSpecificOutputTarget(),
+                GetAllowedOutputTags());
+        }
+
+        private HashSet<Tag> GetAllowedOutputTags()
+        {
+            HashSet<Tag> current = GetCurrentRecipeResultTags();
+            if (current.Count > 0)
+            {
+                lastRecipeResultTags = current;
+                return current;
+            }
+
+            return lastRecipeResultTags != null && lastRecipeResultTags.Count > 0
+                ? lastRecipeResultTags
+                : GetKnownRecipeResultTags();
+        }
+
+        // 只把当前配方 results 里的真实产物入网，避免金属精炼器冷却液这类工艺介质被当作成品搬走。
+        private HashSet<Tag> GetCurrentRecipeResultTags()
+        {
+            HashSet<Tag> tags = new HashSet<Tag>();
+            ComplexRecipe recipe = fabricator != null ? fabricator.CurrentWorkingOrder : null;
+            if (recipe == null)
+            {
+                recipe = fabricator != null ? fabricator.NextOrder : null;
+            }
+
+            if (recipe?.results == null)
+            {
+                return tags;
+            }
+
+            foreach (ComplexRecipe.RecipeElement result in recipe.results)
+            {
+                if (result != null && result.material != Tag.Invalid)
+                {
+                    tags.Add(result.material);
+                }
+            }
+
+            return tags;
+        }
+
+        private HashSet<Tag> GetKnownRecipeResultTags()
+        {
+            HashSet<Tag> tags = new HashSet<Tag>();
+            if (fabricator == null)
+            {
+                return tags;
+            }
+
+            foreach (ComplexRecipe recipe in fabricator.GetRecipes())
+            {
+                if (recipe?.results == null)
+                {
+                    continue;
+                }
+
+                foreach (ComplexRecipe.RecipeElement result in recipe.results)
+                {
+                    if (result != null && result.material != Tag.Invalid)
+                    {
+                        tags.Add(result.material);
+                    }
+                }
+            }
+
+            return tags;
         }
 
         private IEnumerable<Storage> GetSourceStorages(Tag tag)

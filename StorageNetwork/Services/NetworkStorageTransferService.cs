@@ -11,7 +11,8 @@ namespace StorageNetwork.Services
         public static StorageTransferResult TransferStoredItemsToNetwork(
             Storage source,
             IEnumerable<Storage> excludedStorages,
-            Storage specificTarget = null)
+            Storage specificTarget = null,
+            HashSet<Tag> allowedTags = null)
         {
             if (source == null || source.items == null)
             {
@@ -33,6 +34,11 @@ namespace StorageNetwork.Services
 
             foreach (GameObject item in items)
             {
+                if (!MatchesAllowedTags(item, allowedTags))
+                {
+                    continue;
+                }
+
                 StorageTransferResult result = TransferStoredItem(source, item, excluded, specificTarget, snapshot);
                 totalMoved += result.MovedKg;
                 if (!string.IsNullOrEmpty(result.BlockedItem))
@@ -47,7 +53,8 @@ namespace StorageNetwork.Services
         public static StorageTransferResult TransferLooseItemToNetwork(
             GameObject item,
             IEnumerable<Storage> excludedStorages,
-            Storage specificTarget = null)
+            Storage specificTarget = null,
+            HashSet<Tag> allowedTags = null)
         {
             if (item == null || StorageItemUtility.GetMass(item) <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
             {
@@ -55,6 +62,11 @@ namespace StorageNetwork.Services
             }
 
             Tag tag = StorageItemUtility.GetStorageTransferTag(item);
+            if (!MatchesAllowedTags(item, allowedTags))
+            {
+                return StorageTransferResult.Idle;
+            }
+
             HashSet<Tag> matchTags = StorageItemUtility.GetStorageMatchTags(item);
             HashSet<Storage> excluded = BuildExclusionSet(excludedStorages);
             Pickupable pickupable = item.GetComponent<Pickupable>();
@@ -285,6 +297,24 @@ namespace StorageNetwork.Services
             return remaining > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT
                 ? new StorageTransferResult(moved, StorageItemUtility.GetItemDisplayName(item, tag))
                 : new StorageTransferResult(moved, null);
+        }
+
+        private static bool MatchesAllowedTags(GameObject item, HashSet<Tag> allowedTags)
+        {
+            if (allowedTags == null || allowedTags.Count == 0)
+            {
+                return true;
+            }
+
+            foreach (Tag tag in StorageItemUtility.GetStorageMatchTags(item))
+            {
+                if (allowedTags.Contains(tag))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static float TransferStoredObject(Storage source, Storage target, GameObject item, float amount)

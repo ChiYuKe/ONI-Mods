@@ -292,6 +292,13 @@ namespace StorageNetwork.UI
 
         private void AddResearchRecipeNode(Transform parent, ProductionPlanNode node, int depth, Vector2 position, Vector2 size)
         {
+            // 生产节点卡片采用固定三段布局：顶部建筑栏、中部配方信息、底部产出条。
+            Vector2 headerIconPosition = new Vector2(8f, 4f);
+            Vector2 fabricatorIconPosition = new Vector2(25f, 42f);
+            Vector2 textColumnLeft = new Vector2(78f, 0f);
+            Vector2 textColumnRight = new Vector2(-12f, 0f);
+            const float progressY = 79f;
+
             GameObject card = CreatePlainImage("ResearchRecipeNode", parent, depth == 0 ? new Color(0.78f, 0.78f, 0.72f, 1f) : new Color(0.74f, 0.74f, 0.68f, 1f));
             ApplyOniInputSlotStyle(card.GetComponent<Image>());
             ApplyResearchNodeRect(card, position, size);
@@ -315,7 +322,7 @@ namespace StorageNetwork.UI
             Sprite fabricatorIcon = node.Assignments
                 .Select(assignment => assignment.Fabricator != null ? GetFabricatorSprite(assignment.Fabricator) : null)
                 .FirstOrDefault(sprite => sprite != null);
-            AddResearchIconSlot(header.transform, node.Recipe?.GetUIIcon(), new Vector2(8f, 4f), 20f);
+            AddResearchIconSlot(header.transform, node.Recipe?.GetUIIcon(), headerIconPosition, 20f);
 
             TextMeshProUGUI title = CreateOrderText("RecipeTitle", header.transform, node.FabricatorName, depth == 0 ? 9 : 8, TextAlignmentOptions.MidlineLeft);
             title.color = new Color(0.25f, 0.29f, 0.29f, 1f);
@@ -340,7 +347,7 @@ namespace StorageNetwork.UI
             badge.overflowMode = TextOverflowModes.Ellipsis;
             Stretch(badge.rectTransform(), 2f, 0f);
 
-            AddResearchIconSlot(card.transform, fabricatorIcon, new Vector2(25f, 42f), 40f);
+            AddResearchIconSlot(card.transform, fabricatorIcon, fabricatorIconPosition, 40f);
 
             TextMeshProUGUI recipe = CreateOrderText("RecipeName", card.transform, node.Recipe != null ? node.Recipe.GetUIName(false) : "?", depth == 0 ? 9 : 8, TextAlignmentOptions.MidlineLeft);
             recipe.color = new Color(0.18f, 0.20f, 0.19f, 1f);
@@ -351,8 +358,8 @@ namespace StorageNetwork.UI
             recipeRect.anchorMin = new Vector2(0f, 1f);
             recipeRect.anchorMax = new Vector2(1f, 1f);
             recipeRect.pivot = new Vector2(0.5f, 1f);
-            recipeRect.offsetMin = new Vector2(78f, -51f);
-            recipeRect.offsetMax = new Vector2(-12f, -34f);
+            recipeRect.offsetMin = new Vector2(textColumnLeft.x, -51f);
+            recipeRect.offsetMax = new Vector2(textColumnRight.x, -34f);
 
             TextMeshProUGUI assignment = CreateOrderText("RecipeAssignment", card.transform, string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_RESEARCH_BATCH_SUMMARY), node.OrderCount, BuildAssignmentSummary(node, 1)), 7, TextAlignmentOptions.MidlineLeft);
             assignment.color = NeutralTextColor();
@@ -363,10 +370,10 @@ namespace StorageNetwork.UI
             assignmentRect.anchorMin = new Vector2(0f, 1f);
             assignmentRect.anchorMax = new Vector2(1f, 1f);
             assignmentRect.pivot = new Vector2(0.5f, 1f);
-            assignmentRect.offsetMin = new Vector2(78f, -69f);
-            assignmentRect.offsetMax = new Vector2(-12f, -52f);
+            assignmentRect.offsetMin = new Vector2(textColumnLeft.x, -69f);
+            assignmentRect.offsetMax = new Vector2(textColumnRight.x, -52f);
 
-            AddResearchProgressLine(card.transform, 79f, string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_OUTPUT_AMOUNT), GameUtil.GetFormattedMass(node.OutputAmount * node.OrderCount)), PositiveColor());
+            AddResearchProgressLine(card.transform, progressY, string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_OUTPUT_AMOUNT), GameUtil.GetFormattedMass(node.OutputAmount * node.OrderCount)), PositiveColor());
         }
 
         private void AddResearchRecipeSlots(Transform parent, ProductionPlanNode node)
