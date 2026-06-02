@@ -138,6 +138,11 @@ namespace StorageNetwork.UI
             cardElement.preferredWidth = TrackingContentWidth - 54f;
             cardElement.preferredHeight = 156f;
             cardElement.flexibleWidth = 0f;
+            KButton cardButton = card.AddComponent<KButton>();
+            cardButton.bgImage = card.GetComponent<KImage>();
+            cardButton.additionalKImages = new KImage[0];
+            cardButton.soundPlayer = new ButtonSoundPlayer();
+            cardButton.onClick += () => ShowOrderTrackingDetail(record);
 
             HorizontalLayoutGroup cardLayout = card.AddComponent<HorizontalLayoutGroup>();
             cardLayout.padding = new RectOffset(10, 10, 10, 10);
@@ -248,6 +253,238 @@ namespace StorageNetwork.UI
             {
                 label.text = string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_SUMMARY), productName, activeCount, recordCount);
             }
+        }
+
+        private void ShowOrderTrackingDetail(ProductionOrderRecord record)
+        {
+            if (record == null)
+            {
+                return;
+            }
+
+            CloseOrderTrackingDetail();
+            Transform parent = headerWindowRoot != null && headerWindowRoot.transform.parent != null
+                ? headerWindowRoot.transform.parent
+                : transform;
+            orderTrackingDetailRoot = CreateBox("OrderTrackingDetailWindow", parent, new Color(0.78f, 0.79f, 0.80f, 0.98f));
+            ApplyThinBoxSprite(orderTrackingDetailRoot.GetComponent<Image>());
+            RectTransform window = orderTrackingDetailRoot.GetComponent<RectTransform>();
+            window.anchorMin = new Vector2(0.5f, 0.5f);
+            window.anchorMax = new Vector2(0.5f, 0.5f);
+            window.pivot = new Vector2(0.5f, 0.5f);
+            window.anchoredPosition = Vector2.zero;
+            window.sizeDelta = new Vector2(820f, 560f);
+
+            GameObject header = CreateBox("Header", orderTrackingDetailRoot.transform, OniPinkInactive());
+            SetTopStretch(header.GetComponent<RectTransform>(), 8f, 8f, 8f, 40f);
+            header.AddComponent<StorageNetworkWindowDrag>().Configure(window);
+
+            TextMeshProUGUI title = CreateText(
+                "Title",
+                header.transform,
+                string.Format("#{0} {1}", record.DisplayId, record.ProductName),
+                15,
+                TextAlignmentOptions.MidlineLeft);
+            title.fontStyle = FontStyles.Bold;
+            Stretch(title.rectTransform(), 12f, 0f);
+            title.rectTransform().offsetMax = new Vector2(-42f, 0f);
+
+            GameObject closeButton = CreateCloseIconButton("CloseButton", header.transform, CloseOrderTrackingDetail);
+            RectTransform closeRect = closeButton.GetComponent<RectTransform>();
+            closeRect.anchorMin = new Vector2(1f, 0.5f);
+            closeRect.anchorMax = new Vector2(1f, 0.5f);
+            closeRect.pivot = new Vector2(1f, 0.5f);
+            closeRect.anchoredPosition = new Vector2(-8f, 0f);
+            closeRect.sizeDelta = new Vector2(26f, 24f);
+
+            GameObject viewport = CreateBox("TrackingDetailViewport", orderTrackingDetailRoot.transform, new Color(0.88f, 0.86f, 0.79f, 1f));
+            RectTransform viewportRect = viewport.GetComponent<RectTransform>();
+            SetStretch(viewportRect, 12f, 12f, 12f, 58f);
+            viewport.AddComponent<RectMask2D>();
+
+            GameObject contentObject = new GameObject("TrackingDetailContent");
+            contentObject.transform.SetParent(viewport.transform, false);
+            RectTransform content = contentObject.AddComponent<RectTransform>();
+            content.anchorMin = new Vector2(0f, 1f);
+            content.anchorMax = new Vector2(0f, 1f);
+            content.pivot = new Vector2(0f, 1f);
+            content.anchoredPosition = Vector2.zero;
+
+            List<ProductionOrderQueueAssignment> assignments = (record.QueueAssignments ?? new List<ProductionOrderQueueAssignment>())
+                .Where(assignment => assignment != null && assignment.Fabricator != null && assignment.Recipe != null)
+                .OrderByDescending(assignment => assignment.Primary)
+                .ThenBy(assignment => assignment.Fabricator.GetProperName())
+                .ToList();
+            float contentHeight = Mathf.Max(420f, 80f + assignments.Count * 118f);
+            content.sizeDelta = new Vector2(1100f, contentHeight);
+            AddTrackingDetailTree(content.transform, record, assignments);
+            viewport.AddComponent<StorageNetworkPanZoom>().Configure(viewportRect, content);
+            orderTrackingDetailRoot.transform.SetAsLastSibling();
+        }
+
+        private void CloseOrderTrackingDetail()
+        {
+            if (orderTrackingDetailRoot != null)
+            {
+                Destroy(orderTrackingDetailRoot);
+                orderTrackingDetailRoot = null;
+            }
+        }
+
+        private void AddTrackingDetailTree(Transform parent, ProductionOrderRecord record, List<ProductionOrderQueueAssignment> assignments)
+        {
+            Vector2 rootPosition = new Vector2(28f, 36f);
+            Vector2 fabricatorStart = new Vector2(330f, 24f);
+            AddTrackingDetailOrderNode(parent, record, rootPosition);
+
+            if (assignments.Count == 0)
+            {
+                AddTrackingDetailInfoNode(parent, new Vector2(330f, 62f), Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_EMPTY));
+                AddResearchConnector(parent, 248f, 102f, 330f, 102f, MutedTextColor());
+                return;
+            }
+
+            for (int i = 0; i < assignments.Count; i++)
+            {
+                ProductionOrderQueueAssignment assignment = assignments[i];
+                float y = fabricatorStart.y + i * 118f;
+                AddTrackingDetailFabricatorNode(parent, record, assignment, new Vector2(fabricatorStart.x, y));
+                AddResearchConnector(parent, 248f, 102f, fabricatorStart.x - 14f, y + 52f, assignment.Primary ? NeutralBlue() : WarningColor());
+                AddTrackingDetailMaterialNodes(parent, record, assignment, new Vector2(730f, y + 8f));
+                AddResearchConnector(parent, fabricatorStart.x + 360f, y + 52f, 730f, y + 52f, assignment.Primary ? PositiveColor() : WarningColor());
+            }
+        }
+
+        private void AddTrackingDetailOrderNode(Transform parent, ProductionOrderRecord record, Vector2 position)
+        {
+            GameObject card = CreatePlainImage("TrackingDetailOrderNode", parent, new Color(0.76f, 0.77f, 0.70f, 1f));
+            ApplyOniInputSlotStyle(card.GetComponent<Image>());
+            ApplyAbsoluteRect(card, position, new Vector2(220f, 150f));
+            AddVerticalContainer(card, 5f, 10, 10, 10, 10);
+
+            GameObject top = AddHorizontalRow(card.transform, 8f);
+            top.GetComponent<LayoutElement>().preferredHeight = 42f;
+            AddIcon(top.transform, GetTagIcon(record.ProductTag), 38f);
+            TextMeshProUGUI title = CreateOrderText("OrderTitle", top.transform, string.Format("#{0} {1}", record.DisplayId, record.ProductName), 11, TextAlignmentOptions.MidlineLeft);
+            title.color = NeutralTextColor();
+            title.fontStyle = FontStyles.Bold;
+            title.textWrappingMode = TextWrappingModes.NoWrap;
+            title.overflowMode = TextOverflowModes.Ellipsis;
+            title.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+
+            AddPlanLine(card.transform, GetOrderStateLabel(record.State), 10, FontStyles.Bold, GetOrderStateColor(record.State), 20f);
+            AddPlanLine(card.transform, string.Format("{0} / {1}", GameUtil.GetFormattedMass(record.ProducedAtSubmit), GameUtil.GetFormattedMass(record.RequestedAmount)), 9, FontStyles.Bold, NeutralTextColor(), 18f);
+            AddPlanLine(card.transform, string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_CYCLE_VALUE), ProductionOrderFormatting.FormatCycle(record.LastActivityCycle)), 8, FontStyles.Normal, MutedTextColor(), 16f);
+        }
+
+        private void AddTrackingDetailFabricatorNode(Transform parent, ProductionOrderRecord record, ProductionOrderQueueAssignment assignment, Vector2 position)
+        {
+            ComplexFabricator fabricator = assignment.Fabricator;
+            int queued = fabricator.GetRecipeQueueCount(assignment.Recipe);
+            bool working = fabricator.CurrentWorkingOrder == assignment.Recipe;
+            float progress = working ? Mathf.Clamp01(fabricator.OrderProgress) : 0f;
+            string queuedText = queued == ComplexFabricator.QUEUE_INFINITE ? "∞" : Mathf.Max(0, queued).ToString();
+            Color roleColor = assignment.Primary ? NeutralBlue() : WarningColor();
+
+            GameObject card = CreatePlainImage("TrackingDetailFabricatorNode", parent, new Color(0.78f, 0.79f, 0.73f, 1f));
+            ApplyOniInputSlotStyle(card.GetComponent<Image>());
+            ApplyAbsoluteRect(card, position, new Vector2(360f, 96f));
+
+            GameObject accent = CreatePlainImage("Accent", card.transform, roleColor);
+            RectTransform accentRect = accent.GetComponent<RectTransform>();
+            accentRect.anchorMin = new Vector2(0f, 0f);
+            accentRect.anchorMax = new Vector2(0f, 1f);
+            accentRect.offsetMin = Vector2.zero;
+            accentRect.offsetMax = new Vector2(5f, 0f);
+
+            HorizontalLayoutGroup layout = card.AddComponent<HorizontalLayoutGroup>();
+            layout.padding = new RectOffset(12, 8, 8, 8);
+            layout.spacing = 9f;
+            layout.childAlignment = TextAnchor.MiddleLeft;
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.childForceExpandWidth = false;
+            layout.childForceExpandHeight = false;
+
+            AddIcon(card.transform, GetFabricatorSprite(fabricator), 48f);
+            GameObject text = new GameObject("Text");
+            text.transform.SetParent(card.transform, false);
+            text.AddComponent<RectTransform>();
+            text.AddComponent<LayoutElement>().flexibleWidth = 1f;
+            AddVerticalContainer(text, 2f, 0, 0, 0, 0);
+
+            AddPlanLine(text.transform, fabricator.GetProperName(), 10, FontStyles.Bold, NeutralTextColor(), 17f);
+            AddPlanLine(text.transform, assignment.Recipe != null ? assignment.Recipe.GetUIName(false) : "?", 8, FontStyles.Bold, roleColor, 15f);
+            AddPlanLine(text.transform, string.Format("{0} x{1}    队列 {2}", assignment.Primary ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_PRODUCT_DISPATCH) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_DISPATCH_AUTO), assignment.OrderCount, queuedText), 8, FontStyles.Normal, MutedTextColor(), 15f);
+            AddPlanLine(text.transform, working ? string.Format("{0:P0}", progress) : GetProductionStateText(fabricator), 8, FontStyles.Bold, working ? PositiveColor() : MutedTextColor(), 15f);
+        }
+
+        private void AddTrackingDetailMaterialNodes(Transform parent, ProductionOrderRecord record, ProductionOrderQueueAssignment assignment, Vector2 position)
+        {
+            GameObject card = CreatePlainImage("TrackingDetailMaterialNode", parent, new Color(0.74f, 0.74f, 0.68f, 1f));
+            ApplyResearchNodeRect(card, position, new Vector2(260f, 80f));
+            HorizontalLayoutGroup layout = card.AddComponent<HorizontalLayoutGroup>();
+            layout.padding = new RectOffset(8, 8, 7, 7);
+            layout.spacing = 8f;
+            layout.childAlignment = TextAnchor.MiddleLeft;
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.childForceExpandWidth = false;
+            layout.childForceExpandHeight = false;
+
+            AddMaterialIcon(card.transform, assignment.OutputTag.IsValid ? assignment.OutputTag : record.ProductTag, 38f);
+            GameObject text = new GameObject("Text");
+            text.transform.SetParent(card.transform, false);
+            text.AddComponent<RectTransform>();
+            text.AddComponent<LayoutElement>().flexibleWidth = 1f;
+            AddVerticalContainer(text, 1f, 0, 0, 0, 0);
+
+            string outputName = !string.IsNullOrEmpty(assignment.OutputName) ? assignment.OutputName : ProductionOrderFormatting.GetTagDisplayName(assignment.OutputTag);
+            AddPlanLine(text.transform, outputName, 9, FontStyles.Bold, assignment.Primary ? PositiveColor() : WarningColor(), 16f);
+            AddPlanLine(text.transform, assignment.Primary ? string.Format("目标 {0}", GameUtil.GetFormattedMass(record.RequestedAmount)) : string.Format("供给 {0}", string.IsNullOrEmpty(assignment.ConsumerName) ? record.ProductName : assignment.ConsumerName), 8, FontStyles.Normal, NeutralTextColor(), 15f);
+            AddPlanLine(text.transform, BuildTrackingLeaseSummary(record, assignment), 8, FontStyles.Bold, MutedTextColor(), 28f);
+        }
+
+        private string BuildTrackingLeaseSummary(ProductionOrderRecord record, ProductionOrderQueueAssignment assignment)
+        {
+            if (assignment.Primary)
+            {
+                float leased = (record.OutputLeases ?? new List<ProductionOrderOutputLease>())
+                    .Where(lease => lease != null && lease.FabricatorInstanceId == assignment.Fabricator.GetInstanceID())
+                    .Sum(lease => lease.Amount);
+                return leased > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT
+                    ? string.Format("产出预留 {0}", GameUtil.GetFormattedMass(leased))
+                    : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_MANUAL_DESC);
+            }
+
+            float materialLease = (record.MaterialLeases ?? new List<ProductionOrderMaterialLease>())
+                .Where(lease => lease != null && lease.ConsumerName == assignment.ConsumerName)
+                .Sum(lease => lease.Amount);
+            return materialLease > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT
+                ? string.Format("材料调拨 {0}", GameUtil.GetFormattedMass(materialLease))
+                : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_STATUS_WAITING_CONTENTS);
+        }
+
+        private void AddTrackingDetailInfoNode(Transform parent, Vector2 position, string text)
+        {
+            GameObject card = CreatePlainImage("TrackingDetailInfoNode", parent, new Color(0.74f, 0.74f, 0.68f, 1f));
+            ApplyAbsoluteRect(card, position, new Vector2(260f, 52f));
+            TextMeshProUGUI label = CreateOrderText("Info", card.transform, text, 10, TextAlignmentOptions.MidlineLeft);
+            label.color = MutedTextColor();
+            label.fontStyle = FontStyles.Italic;
+            label.textWrappingMode = TextWrappingModes.Normal;
+            label.overflowMode = TextOverflowModes.Ellipsis;
+            Stretch(label.rectTransform(), 10f, 0f);
+        }
+
+        private static void ApplyAbsoluteRect(GameObject node, Vector2 position, Vector2 size)
+        {
+            RectTransform rect = node.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0f, 1f);
+            rect.anchorMax = new Vector2(0f, 1f);
+            rect.pivot = new Vector2(0f, 1f);
+            rect.anchoredPosition = new Vector2(position.x, -position.y);
+            rect.sizeDelta = size;
         }
 
         private void UpdateTrackingInfoRow(string key, string text, float height)

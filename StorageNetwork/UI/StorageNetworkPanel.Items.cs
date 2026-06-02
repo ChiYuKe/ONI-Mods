@@ -263,6 +263,11 @@ namespace StorageNetwork.UI
 
         private static string GetStorageCategoryKey(StorageInfo storageInfo)
         {
+            if (storageInfo != null && storageInfo.Minion != null)
+            {
+                return StorageCategories.MinionKey;
+            }
+
             return storageInfo != null && storageInfo.Geyser != null
                 ? StorageCategories.GeyserKey
                 : GetStorageCategoryKey(storageInfo?.Storage);
@@ -297,6 +302,11 @@ namespace StorageNetwork.UI
 
         private static string GetStorageTypeKey(StorageInfo storageInfo)
         {
+            if (storageInfo?.Minion != null)
+            {
+                return StorageCategories.MinionKey;
+            }
+
             if (storageInfo?.Geyser != null)
             {
                 return GetObjectPrefabKey(storageInfo.GameObject, GetStorageTypeName(storageInfo));
@@ -313,6 +323,11 @@ namespace StorageNetwork.UI
 
         private static string GetStorageTypeName(StorageInfo storageInfo)
         {
+            if (storageInfo?.Minion != null)
+            {
+                return StorageCategories.GetName(StorageCategories.MinionKey);
+            }
+
             GameObject gameObject = storageInfo?.GameObject;
             return gameObject != null ? gameObject.GetProperName() : storageInfo.Name;
         }

@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
-using static StorageNetwork.STRINGS;
 
 namespace ModConfig
 {
@@ -52,11 +51,11 @@ namespace ModConfig
             {
                 ModTitlePrefix = modTitlePrefix,
                 ButtonName = buttonName,
-                ButtonText = StableText(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OPTIONS_BUTTON), "选项"),
-                Tooltip = StableText(tooltip, "调整 StorageNetwork 模组数值"),
+                ButtonText = "选项",
+                Tooltip = StableText(tooltip, "调整模组数值"),
                 OnClick = () => ShowDialog(
-                    StableText(dialogTitle, "StorageNetwork 选项"),
-                    StableText(hint, "保存后会写入 StorageNetworkConfig.json。建筑容量等部分数值需要重进存档或重建建筑才会完全体现。"))
+                    StableText(dialogTitle, "模组配置"),
+                    StableText(hint, "保存后会写入配置文件。部分数值需要重进存档或重启游戏才会完全体现。"))
             });
         }
 
@@ -74,16 +73,28 @@ namespace ModConfig
             List<OptionBinding> bindings = BuildBindings(config);
             foreach (OptionBinding binding in bindings)
             {
-                dialog.Fields.Add(new ModConfigField
+                ModConfigField field = new ModConfigField
                 {
-                    Label = TranslateOptionText(binding.Option.Label),
-                    Description = TranslateOptionText(binding.Option.Description),
-                    Value = binding.GetValue(config),
-                    Min = binding.Option.Min,
-                    Max = binding.Option.Max,
-                    Integer = binding.Option.Integer || binding.Property.PropertyType == typeof(int),
-                    Apply = value => binding.SetValue(config, value)
-                });
+                    Label = binding.Option.Label,
+                    Description = binding.Option.Description,
+                    IsBoolean = binding.IsBoolean
+                };
+
+                if (binding.IsBoolean)
+                {
+                    field.BoolValue = binding.GetBoolValue(config);
+                    field.ApplyBool = value => binding.SetBoolValue(config, value);
+                }
+                else
+                {
+                    field.Value = binding.GetNumberValue(config);
+                    field.Min = binding.Option.Min;
+                    field.Max = binding.Option.Max;
+                    field.Integer = binding.Option.Integer || binding.Property.PropertyType == typeof(int);
+                    field.Apply = value => binding.SetNumberValue(config, value);
+                }
+
+                dialog.Fields.Add(field);
             }
 
             dialog.Reset = inputs =>
@@ -92,41 +103,18 @@ namespace ModConfig
                 normalize?.Invoke(defaults);
                 for (int i = 0; i < inputs.Count && i < bindings.Count; i++)
                 {
-                    ModConfigDialog.SetInput(inputs[i], bindings[i].GetValue(defaults));
+                    if (bindings[i].IsBoolean)
+                    {
+                        inputs[i].SetBool(bindings[i].GetBoolValue(defaults));
+                    }
+                    else
+                    {
+                        inputs[i].SetNumber(bindings[i].GetNumberValue(defaults));
+                    }
                 }
             };
 
             ModConfigDialog.Show(dialog);
-        }
-
-        private static string TranslateOptionText(string text)
-        {
-            if (string.IsNullOrEmpty(text))
-            {
-                return text;
-            }
-
-            if (text == "场景储存箱容量 kg") return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_SCENE_STORAGE_CAPACITY);
-            if (text == "专用场景储存箱的容量。新建建筑生效。") return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_SCENE_STORAGE_CAPACITY_DESC);
-            if (text == "场景扫描缓存秒数") return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_SCENE_SCAN_CACHE);
-            if (text == "数值越小刷新越快，但遍历储存建筑更频繁。") return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_SCENE_SCAN_CACHE_DESC);
-            if (text == "材料请求默认限额 kg") return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_DEFAULT_MATERIAL_LIMIT);
-            if (text == "新接入生产建筑的默认请求限额。") return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_DEFAULT_MATERIAL_LIMIT_DESC);
-            if (text == "请求成功冷却秒数") return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_REQUEST_SUCCESS_COOLDOWN);
-            if (text == "材料已满足或达到限额后的检查间隔。") return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_REQUEST_SUCCESS_COOLDOWN_DESC);
-            if (text == "请求失败重试秒数") return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_REQUEST_RETRY_COOLDOWN);
-            if (text == "缺料或没有可请求配方后的重试间隔。") return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_REQUEST_RETRY_COOLDOWN_DESC);
-            if (text == "无限队列请求批次数") return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_INFINITE_QUEUE_BATCHES);
-            if (text == "生产队列为无限时，一次按多少批材料请求。") return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_INFINITE_QUEUE_BATCHES_DESC);
-            if (text == "最大请求批次数") return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_MAX_REQUEST_BATCHES);
-            if (text == "单次材料请求最多按多少批计算。") return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_MAX_REQUEST_BATCHES_DESC);
-            if (text == "生产计划递归深度") return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_PLAN_RECURSION_DEPTH);
-            if (text == "补产链路向下追踪的最大层数。") return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_PLAN_RECURSION_DEPTH_DESC);
-            if (text == "异常订单超时周期") return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_ABNORMAL_TIMEOUT);
-            if (text == "订单多长时间无进度后自动取消排产。") return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_ABNORMAL_TIMEOUT_DESC);
-            if (text == "完成订单保留周期") return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_COMPLETED_RETENTION);
-            if (text == "完成/取消/异常订单在列表中保留多久。") return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_COMPLETED_RETENTION_DESC);
-            return text;
         }
 
         private static string StableText(string value, string fallback)
@@ -157,7 +145,8 @@ namespace ModConfig
         {
             return type == typeof(float) ||
                    type == typeof(double) ||
-                   type == typeof(int);
+                   type == typeof(int) ||
+                   type == typeof(bool);
         }
 
         private sealed class OptionBinding
@@ -170,8 +159,23 @@ namespace ModConfig
 
             public PropertyInfo Property { get; }
             public ModConfigOptionAttribute Option { get; }
+            public bool IsBoolean
+            {
+                get { return Property.PropertyType == typeof(bool); }
+            }
 
-            public float GetValue(T config)
+            public bool GetBoolValue(T config)
+            {
+                object value = Property.GetValue(config, null);
+                return value is bool boolValue && boolValue;
+            }
+
+            public void SetBoolValue(T config, bool value)
+            {
+                Property.SetValue(config, value, null);
+            }
+
+            public float GetNumberValue(T config)
             {
                 object value = Property.GetValue(config, null);
                 if (value is int intValue)
@@ -187,7 +191,7 @@ namespace ModConfig
                 return value is float floatValue ? floatValue : 0f;
             }
 
-            public void SetValue(T config, float value)
+            public void SetNumberValue(T config, float value)
             {
                 float clamped = Clamp(value, Option.Min, Option.Max);
                 if (Option.Integer || Property.PropertyType == typeof(int))

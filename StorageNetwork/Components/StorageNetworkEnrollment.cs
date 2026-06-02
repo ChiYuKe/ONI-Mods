@@ -220,6 +220,7 @@ namespace StorageNetwork.Components
             }
 
             return StorageNetwork.Core.StorageSceneCollector.Collect().Storages
+                .Where(info => info?.Minion == null)
                 .Select(info => info.Storage)
                 .FirstOrDefault(target => GetStorageInstanceId(target) == GeyserOutputStorageInstanceId);
         }

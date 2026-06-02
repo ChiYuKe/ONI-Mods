@@ -1,7 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
-using StorageNetwork.UI;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -16,7 +15,10 @@ namespace ModConfig
         public float Min { get; set; }
         public float Max { get; set; }
         public bool Integer { get; set; }
+        public bool IsBoolean { get; set; }
+        public bool BoolValue { get; set; }
         public System.Action<float> Apply { get; set; }
+        public System.Action<bool> ApplyBool { get; set; }
     }
 
     public sealed class ModConfigDialogDefinition
@@ -25,9 +27,74 @@ namespace ModConfig
         public string Title { get; set; }
         public string Hint { get; set; }
         public List<ModConfigField> Fields { get; } = new List<ModConfigField>();
-        public System.Action<List<TMP_InputField>> Reset { get; set; }
+        public System.Action<List<ModConfigFieldControl>> Reset { get; set; }
         public System.Action Save { get; set; }
         public bool RestartRequired { get; set; } = true;
+    }
+
+    public sealed class ModConfigFieldControl
+    {
+        private readonly TMP_InputField input;
+        private readonly Toggle toggle;
+        private readonly TextMeshProUGUI toggleText;
+
+        public ModConfigFieldControl(TMP_InputField input)
+        {
+            this.input = input;
+        }
+
+        public ModConfigFieldControl(Toggle toggle, TextMeshProUGUI toggleText)
+        {
+            this.toggle = toggle;
+            this.toggleText = toggleText;
+            RefreshToggleText();
+        }
+
+        public string NumberText
+        {
+            get { return input != null ? input.text : string.Empty; }
+        }
+
+        public bool BoolValue
+        {
+            get { return toggle != null && toggle.isOn; }
+        }
+
+        public void SetNumber(float value)
+        {
+            if (input == null)
+            {
+                return;
+            }
+
+            ModConfigDialog.ModConfigInputBinding binding = input.GetComponent<ModConfigDialog.ModConfigInputBinding>();
+            if (binding != null)
+            {
+                binding.SetValue(value);
+                return;
+            }
+
+            input.text = value.ToString("0.###", CultureInfo.InvariantCulture);
+        }
+
+        public void SetBool(bool value)
+        {
+            if (toggle == null)
+            {
+                return;
+            }
+
+            toggle.isOn = value;
+            RefreshToggleText();
+        }
+
+        private void RefreshToggleText()
+        {
+            if (toggleText != null)
+            {
+                toggleText.text = BoolValue ? "开启" : "关闭";
+            }
+        }
     }
 
     public static class ModConfigDialog
@@ -52,7 +119,7 @@ namespace ModConfig
             }
 
             Close();
-            List<TMP_InputField> inputs = new List<TMP_InputField>();
+            List<ModConfigFieldControl> inputs = new List<ModConfigFieldControl>();
             Transform canvas = Global.Instance.globalCanvas.transform;
 
             GameObject overlay = new GameObject(definition.OverlayName);
@@ -111,9 +178,9 @@ namespace ModConfig
             footerLayout.childForceExpandHeight = false;
 
             AddSpacer(footer.transform);
-            CreateButton("ResetButton", footer.transform, StorageNetwork.STRINGS.Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.RESET_DEFAULTS), () => definition.Reset?.Invoke(inputs), false);
-            CreateButton("CancelButton", footer.transform, StorageNetwork.STRINGS.Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CANCEL), Close, false);
-            CreateButton("SaveButton", footer.transform, StorageNetwork.STRINGS.Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIRM), () =>
+            CreateButton("ResetButton", footer.transform, "默认值", () => definition.Reset?.Invoke(inputs), false);
+            CreateButton("CancelButton", footer.transform, "取消", Close, false);
+            CreateButton("SaveButton", footer.transform, "确定", () =>
             {
                 for (int i = 0; i < definition.Fields.Count && i < inputs.Count; i++)
                 {
@@ -129,21 +196,6 @@ namespace ModConfig
             }, true);
         }
 
-        public static void SetInput(TMP_InputField input, float value)
-        {
-            if (input != null)
-            {
-                ModConfigInputBinding binding = input.GetComponent<ModConfigInputBinding>();
-                if (binding != null)
-                {
-                    binding.SetValue(value);
-                    return;
-                }
-
-                input.text = Format(value);
-            }
-        }
-
         private static void Close()
         {
             if (currentDialog != null)
@@ -153,7 +205,7 @@ namespace ModConfig
             }
         }
 
-        private static TMP_InputField AddField(Transform parent, ModConfigField field)
+        private static ModConfigFieldControl AddField(Transform parent, ModConfigField field)
         {
             GameObject row = CreatePanel("FieldRow", parent, RowColor);
             row.AddComponent<LayoutElement>().preferredHeight = 74f;
@@ -185,18 +237,26 @@ namespace ModConfig
             desc.color = new Color(0.72f, 0.76f, 0.80f, 1f);
             desc.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
 
-            return CreateInputWithSlider(row.transform, field);
+            return field.IsBoolean
+                ? CreateBoolToggle(row.transform, field)
+                : CreateInputWithSlider(row.transform, field);
         }
 
-        private static void ApplyInput(ModConfigField field, TMP_InputField input)
+        private static void ApplyInput(ModConfigField field, ModConfigFieldControl input)
         {
             if (field == null || input == null)
             {
                 return;
             }
 
-            if (!float.TryParse(input.text, NumberStyles.Float, CultureInfo.CurrentCulture, out float value) &&
-                !float.TryParse(input.text, NumberStyles.Float, CultureInfo.InvariantCulture, out value))
+            if (field.IsBoolean)
+            {
+                field.ApplyBool?.Invoke(input.BoolValue);
+                return;
+            }
+
+            if (!float.TryParse(input.NumberText, NumberStyles.Float, CultureInfo.CurrentCulture, out float value) &&
+                !float.TryParse(input.NumberText, NumberStyles.Float, CultureInfo.InvariantCulture, out value))
             {
                 return;
             }
@@ -204,7 +264,7 @@ namespace ModConfig
             field.Apply?.Invoke(ClampFieldValue(field, value));
         }
 
-        private static TMP_InputField CreateInputWithSlider(Transform parent, ModConfigField field)
+        private static ModConfigFieldControl CreateInputWithSlider(Transform parent, ModConfigField field)
         {
             GameObject controlColumn = new GameObject("ControlColumn");
             controlColumn.transform.SetParent(parent, false);
@@ -237,12 +297,63 @@ namespace ModConfig
             ModConfigInputBinding binding = input.gameObject.AddComponent<ModConfigInputBinding>();
             binding.Configure(input, slider, field.Min, field.Max, field.Integer);
             binding.SetValue(field.Value);
-            return input;
+            return new ModConfigFieldControl(input);
+        }
+
+        private static ModConfigFieldControl CreateBoolToggle(Transform parent, ModConfigField field)
+        {
+            GameObject controlColumn = new GameObject("ControlColumn");
+            controlColumn.transform.SetParent(parent, false);
+            controlColumn.AddComponent<RectTransform>();
+            controlColumn.AddComponent<LayoutElement>().preferredWidth = 250f;
+
+            HorizontalLayoutGroup layout = controlColumn.AddComponent<HorizontalLayoutGroup>();
+            layout.spacing = 8f;
+            layout.childAlignment = TextAnchor.MiddleRight;
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.childForceExpandWidth = false;
+            layout.childForceExpandHeight = false;
+
+            AddSpacer(controlColumn.transform);
+
+            GameObject toggleObject = CreatePanel("Toggle", controlColumn.transform, field.BoolValue ? HeaderColor : new Color(0.18f, 0.21f, 0.28f, 1f));
+            LayoutElement toggleLayout = toggleObject.AddComponent<LayoutElement>();
+            toggleLayout.preferredWidth = 92f;
+            toggleLayout.preferredHeight = 28f;
+            toggleLayout.minWidth = 92f;
+            toggleLayout.minHeight = 28f;
+
+            Toggle toggle = toggleObject.AddComponent<Toggle>();
+            toggle.transition = Selectable.Transition.None;
+            toggle.targetGraphic = toggleObject.GetComponent<KImage>();
+            toggle.isOn = field.BoolValue;
+
+            GameObject check = CreatePanel("Checkmark", toggleObject.transform, new Color(0.88f, 0.96f, 1f, 1f));
+            RectTransform checkRect = check.GetComponent<RectTransform>();
+            checkRect.anchorMin = new Vector2(0f, 0.5f);
+            checkRect.anchorMax = new Vector2(0f, 0.5f);
+            checkRect.pivot = new Vector2(0.5f, 0.5f);
+            checkRect.anchoredPosition = new Vector2(16f, 0f);
+            checkRect.sizeDelta = new Vector2(14f, 14f);
+            toggle.graphic = check.GetComponent<KImage>();
+
+            TextMeshProUGUI text = CreateText("Label", toggleObject.transform, string.Empty, 12, TextAlignmentOptions.Center);
+            Stretch(text.rectTransform(), 18f, 0f);
+
+            ModConfigFieldControl control = new ModConfigFieldControl(toggle, text);
+            toggle.onValueChanged.AddListener(_ =>
+            {
+                toggle.targetGraphic.color = toggle.isOn ? HeaderColor : new Color(0.18f, 0.21f, 0.28f, 1f);
+                control.SetBool(toggle.isOn);
+            });
+            control.SetBool(field.BoolValue);
+            return control;
         }
 
         private static TMP_InputField CreateInput(Transform parent, string value)
         {
-            TMP_InputField input = StorageNetworkInputBuilder.CreateTmpNumberInput(
+            TMP_InputField input = ModConfigInputBuilder.CreateTmpNumberInput(
                 parent,
                 "Input",
                 value,
@@ -254,7 +365,7 @@ namespace ModConfig
                 InputColor,
                 InputTextColor,
                 Vector2.one);
-            input.gameObject.AddComponent<StorageNetworkInputFieldEvents>().Configure(input);
+            input.gameObject.AddComponent<ModConfigInputFieldEvents>().Configure(input);
             return input;
         }
 
@@ -344,14 +455,14 @@ namespace ModConfig
             }
 
             dialog.PopupConfirmDialog(
-                StorageNetwork.STRINGS.Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_RESTART_REQUIRED),
+                "要使这些选项完全生效，可能需要重新启动游戏。",
                 () => App.instance.Restart(),
                 () => { },
                 null,
                 null,
-                StorageNetwork.STRINGS.Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.INFO),
-                StorageNetwork.STRINGS.Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.RESTART),
-                StorageNetwork.STRINGS.Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONTINUE));
+                "信息",
+                "重启",
+                "继续");
             dialogObject.SetActive(true);
         }
 
@@ -432,10 +543,10 @@ namespace ModConfig
             scrollRect.decelerationRate = 0.08f;
             scrollRect.scrollSensitivity = sensitivity;
 
-            StorageNetwork.UI.SmoothScrollEdgeBounce edgeBounce = scrollRect.gameObject.GetComponent<StorageNetwork.UI.SmoothScrollEdgeBounce>();
+            SmoothScrollEdgeBounce edgeBounce = scrollRect.gameObject.GetComponent<SmoothScrollEdgeBounce>();
             if (edgeBounce == null)
             {
-                edgeBounce = scrollRect.gameObject.AddComponent<StorageNetwork.UI.SmoothScrollEdgeBounce>();
+                edgeBounce = scrollRect.gameObject.AddComponent<SmoothScrollEdgeBounce>();
             }
 
             edgeBounce.Configure(scrollRect);
@@ -650,7 +761,7 @@ namespace ModConfig
             return field.Integer ? Mathf.Round(value) : value;
         }
 
-        private sealed class ModConfigInputBinding : MonoBehaviour
+        internal sealed class ModConfigInputBinding : MonoBehaviour
         {
             private TMP_InputField input;
             private Slider slider;

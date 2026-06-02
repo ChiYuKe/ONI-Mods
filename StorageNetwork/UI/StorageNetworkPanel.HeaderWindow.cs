@@ -22,6 +22,7 @@ namespace StorageNetwork.UI
         private RectTransform orderTrackingContent;
         private StorageNetworkKeyedRowCache orderTrackingRows;
         private RectTransform orderTrackingRowsContent;
+        private GameObject orderTrackingDetailRoot;
         private bool compactOrderWindow;
         private bool inlineOrderTracking;
         private readonly ProductionOrderService productionOrderService = new ProductionOrderService();
@@ -67,6 +68,7 @@ namespace StorageNetwork.UI
                 DeactivateOrderInputs();
                 orderDetailsSignature = null;
                 orderTrackingSignature = null;
+                CloseOrderTrackingDetail();
                 headerWindowRoot.SetActive(false);
             }
         }

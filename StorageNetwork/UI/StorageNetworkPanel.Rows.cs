@@ -29,6 +29,7 @@ namespace StorageNetwork.UI
             string typeName = GetStorageTypeName(storages[0]);
             bool expanded = expandedStorageTypes.TryGetValue(typeKey, out bool isExpanded) && isExpanded;
             bool isGeyserGroup = storages[0].Geyser != null;
+            bool isMinionGroup = storages[0].Minion != null;
             float storedKg = storages.Sum(storage => storage.StoredKg);
             float capacityKg = storages.Sum(storage => storage.CapacityKg);
             float percent = capacityKg > 0f ? storedKg / capacityKg : 0f;
@@ -53,7 +54,10 @@ namespace StorageNetwork.UI
                 {
                     expandedStorageTypes[typeKey] = !expanded;
                     RefreshStoragePanel(StoragePanelRefreshMode.Structure);
-                });
+                },
+                null,
+                isMinionGroup ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STORAGE_SETTINGS) : null,
+                isMinionGroup ? () => ShowAllMinionSettingsDialog(storages) : null);
 
             header.GetComponent<HorizontalLayoutGroup>().padding = new RectOffset(10, 10, 0, 0);
 
@@ -93,8 +97,10 @@ namespace StorageNetwork.UI
             bool selected = selectedItemStorage == storage && string.IsNullOrEmpty(selectedItemKey);
             float percent = storageInfo.CapacityKg > 0f ? storageInfo.StoredKg / storageInfo.CapacityKg : 0f;
             StorageNetworkEnrollment enrollment = storage.GetComponent<StorageNetworkEnrollment>();
+            bool isMinionStorage = storageInfo.Minion != null;
             bool showSettingsButton = StorageNetworkStorageRules.IsProductionStorage(storage, enrollment) ||
                                       StorageNetworkStorageRules.HasSettingsButtonTag(storage) ||
+                                      isMinionStorage ||
                                       ShowDeprecatedStorageSettingsButton;
             string sourceModName = StorageNetworkStorageRules.HasModStorageTag(storage)
                 ? StorageNetworkModInfoResolver.GetSourceModName(storage)
@@ -124,7 +130,17 @@ namespace StorageNetwork.UI
                 },
                 string.IsNullOrEmpty(sourceModName) ? null : string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SOURCE_MOD_NAME), sourceModName),
                 showSettingsButton ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STORAGE_SETTINGS) : null,
-                showSettingsButton ? () => ShowStorageSettingsDialog(storage) : null);
+                showSettingsButton ? () =>
+                {
+                    if (isMinionStorage)
+                    {
+                        ShowMinionSettingsPanel(storageInfo.Minion, storage);
+                    }
+                    else
+                    {
+                        ShowStorageSettingsDialog(storage);
+                    }
+                } : null);
 
             RegisterStorageDropTarget(row, storage);
 

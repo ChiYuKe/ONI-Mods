@@ -44,6 +44,25 @@ namespace StorageNetwork.Core
                 }
             }
 
+            int activeWorldId = ClusterManager.Instance != null ? ClusterManager.Instance.activeWorldId : -1;
+            foreach (MinionIdentity minion in global::Components.LiveMinionIdentities)
+            {
+                if (minion == null || minion.gameObject == null || minion.gameObject.HasTag(GameTags.Dead))
+                {
+                    continue;
+                }
+
+                if (activeWorldId >= 0 && minion.GetMyWorldId() != activeWorldId)
+                {
+                    continue;
+                }
+
+                if (minion.GetComponent<Storage>() != null)
+                {
+                    collected.Add(new StorageInfo(minion));
+                }
+            }
+
             collected.Sort((left, right) => string.Compare(left?.Name, right?.Name, System.StringComparison.CurrentCulture));
 
             float totalStoredKg = 0f;

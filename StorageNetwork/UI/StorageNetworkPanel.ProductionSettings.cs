@@ -15,10 +15,27 @@ namespace StorageNetwork.UI
         {
             bool sameStorage = productionSettingsStorage == storage;
             productionSettingsStorage = storage;
+            productionSettingsMinion = null;
             EnsureProductionSettingsPanel();
             productionSettingsRoot.SetActive(true);
             KeepProductionSettingsPanelOnScreen();
             UpdateProductionSettingsPanel(!sameStorage);
+        }
+
+        private void ShowMinionSettingsPanel(MinionIdentity minion, Storage storage)
+        {
+            if (minion == null || storage == null)
+            {
+                return;
+            }
+
+            bool sameMinion = productionSettingsMinion == minion;
+            productionSettingsMinion = minion;
+            productionSettingsStorage = storage;
+            EnsureProductionSettingsPanel();
+            productionSettingsRoot.SetActive(true);
+            KeepProductionSettingsPanelOnScreen();
+            UpdateProductionSettingsPanel(!sameMinion);
         }
 
         private void CloseProductionSettingsPanel()
@@ -28,6 +45,8 @@ namespace StorageNetwork.UI
             {
                 productionSettingsRoot.SetActive(false);
             }
+
+            productionSettingsMinion = null;
         }
 
         private void EnsureProductionSettingsPanel()
@@ -37,93 +56,18 @@ namespace StorageNetwork.UI
                 return;
             }
 
-            productionSettingsRoot = CreateBox("ProductionSettingsPanel", transform, new Color(0.78f, 0.79f, 0.80f, 0.98f));
-            productionSettingsRoot.AddComponent<ScrollWheelBlocker>();
-            ApplyThinBoxSprite(productionSettingsRoot.GetComponent<Image>());
-            RectTransform panelRect = productionSettingsRoot.GetComponent<RectTransform>();
-            panelRect.anchorMin = new Vector2(0.5f, 0f);
-            panelRect.anchorMax = new Vector2(0.5f, 0f);
-            panelRect.pivot = new Vector2(0.5f, 0f);
-            panelRect.anchoredPosition = new Vector2(0f, 24f);
-            panelRect.sizeDelta = new Vector2(760f, 560f);
-
-            GameObject header = CreateBox("Header", productionSettingsRoot.transform, new Color(0.36f, 0.42f, 0.47f, 1f));
-            SetTopStretch(header.GetComponent<RectTransform>(), 8f, 8f, 8f, 54f);
-            TextMeshProUGUI title = CreateText("Title", header.transform, string.Empty, 13, TextAlignmentOptions.TopLeft);
-            title.name = "ProductionSettingsTitle";
-            title.fontStyle = FontStyles.Bold;
-            title.lineSpacing = 2f;
-            Stretch(title.rectTransform(), 10f, 7f);
-
-            GameObject closeButton = CreateCloseIconButton("CloseButton", header.transform, CloseProductionSettingsPanel);
-            RectTransform closeRect = closeButton.GetComponent<RectTransform>();
-            closeRect.anchorMin = new Vector2(1f, 1f);
-            closeRect.anchorMax = new Vector2(1f, 1f);
-            closeRect.pivot = new Vector2(1f, 1f);
-            closeRect.anchoredPosition = new Vector2(-4f, -4f);
-            closeRect.sizeDelta = new Vector2(22f, 20f);
-
-            GameObject viewport = CreateBox("Viewport", productionSettingsRoot.transform, new Color(0.72f, 0.72f, 0.66f, 1f));
-            SetStretch(viewport.GetComponent<RectTransform>(), 10f, 10f, 10f, 70f);
-            viewport.AddComponent<RectMask2D>();
-
-            GameObject content = new GameObject("Content");
-            content.transform.SetParent(viewport.transform, false);
-            productionSettingsContent = content.AddComponent<RectTransform>();
-            productionSettingsContent.anchorMin = new Vector2(0f, 1f);
-            productionSettingsContent.anchorMax = new Vector2(1f, 1f);
-            productionSettingsContent.pivot = new Vector2(0.5f, 1f);
-            productionSettingsContent.offsetMin = Vector2.zero;
-            productionSettingsContent.offsetMax = Vector2.zero;
-
-            VerticalLayoutGroup layout = content.AddComponent<VerticalLayoutGroup>();
-            layout.padding = new RectOffset(10, 10, 10, 10);
-            layout.spacing = 8f;
-            layout.childControlWidth = true;
-            layout.childControlHeight = true;
-            layout.childForceExpandWidth = true;
-            layout.childForceExpandHeight = false;
-            content.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-
-            Scrollbar scrollbar = CreateScrollbar(productionSettingsRoot.transform);
-
-            ScrollRect scrollRect = viewport.AddComponent<ScrollRect>();
-            scrollRect.viewport = viewport.GetComponent<RectTransform>();
-            scrollRect.content = productionSettingsContent;
-            ConfigureSmoothVerticalScroll(scrollRect, 26f);
-            scrollRect.verticalScrollbar = scrollbar;
-            scrollRect.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHideAndExpandViewport;
-            scrollRect.verticalScrollbarSpacing = 2f;
-            viewport.AddComponent<ScrollWheelBlocker>();
-
-            productionSettingsRoot.SetActive(false);
+            SettingsWindowParts window = CreateDraggableSettingsWindow(
+                "ProductionSettingsPanel",
+                "ProductionSettingsTitle",
+                CloseProductionSettingsPanel,
+                withScrollbar: true);
+            productionSettingsRoot = window.Root;
+            productionSettingsContent = window.Content;
         }
 
         private void KeepProductionSettingsPanelOnScreen()
         {
-            if (productionSettingsRoot == null)
-            {
-                return;
-            }
-
-            RectTransform panelRect = productionSettingsRoot.GetComponent<RectTransform>();
-            if (panelRect == null)
-            {
-                return;
-            }
-
-            const float sideSafeArea = 18f;
-            const float topSafeArea = 86f;
-            const float bottomMargin = 24f;
-            const float leftSafeArea = 18f;
-
-            float width = Mathf.Clamp(760f, 620f, Mathf.Max(620f, Screen.width - sideSafeArea - leftSafeArea));
-            float height = Mathf.Clamp(560f, 360f, Mathf.Max(360f, Screen.height - topSafeArea - bottomMargin));
-            panelRect.anchorMin = new Vector2(0.5f, 0f);
-            panelRect.anchorMax = new Vector2(0.5f, 0f);
-            panelRect.pivot = new Vector2(0.5f, 0f);
-            panelRect.sizeDelta = new Vector2(width, height);
-            panelRect.anchoredPosition = new Vector2(0f, bottomMargin);
+            productionSettingsPositionInitialized = KeepDraggableSettingsWindowOnScreen(productionSettingsRoot, productionSettingsPositionInitialized);
         }
 
         private void UpdateProductionSettingsPanel(bool force = false)
@@ -137,6 +81,25 @@ namespace StorageNetwork.UI
             if (storage == null)
             {
                 CloseProductionSettingsPanel();
+                return;
+            }
+
+            if (productionSettingsMinion != null)
+            {
+                string minionSignature = BuildMinionSettingsStructureSignature(productionSettingsMinion, storage);
+                if (!force && minionSignature == productionSettingsSignature)
+                {
+                    SetMinionSettingsTitle(productionSettingsMinion, storage);
+                    return;
+                }
+
+                productionSettingsSignature = minionSignature;
+                ClearProductionSettingsContent();
+                SetMinionSettingsTitle(productionSettingsMinion, storage);
+                KeepProductionSettingsPanelOnScreen();
+                AddMinionMaterialRequestCard(productionSettingsMinion, storage);
+                AddInventoryCard(storage, null);
+                LayoutRebuilder.MarkLayoutForRebuild(productionSettingsContent);
                 return;
             }
 
@@ -208,6 +171,21 @@ namespace StorageNetwork.UI
                 itemSignature);
         }
 
+        private static string BuildMinionSettingsStructureSignature(MinionIdentity minion, Storage storage)
+        {
+            string itemSignature = string.Join("|", GetProductionStorages(storage, null)
+                .SelectMany(itemStorage => itemStorage.items.Where(item => item != null))
+                .GroupBy(GetStoredItemKey)
+                .OrderBy(group => group.Key)
+                .Select(group => group.Key));
+
+            return string.Join(
+                "~",
+                minion != null ? minion.GetInstanceID().ToString() : "null",
+                Config.Instance.IsMinionAllowedRequestMaterialsFromNetwork(minion) ? "allow1" : "allow0",
+                itemSignature);
+        }
+
         private void UpdateProductionSettingsLive(Storage storage, ComplexFabricator fabricator)
         {
             if (storage == null)
@@ -235,6 +213,45 @@ namespace StorageNetwork.UI
                     GameUtil.GetFormattedMass(storage.Capacity()),
                     GameUtil.GetFormattedMass(Mathf.Max(0f, storage.RemainingCapacity())));
             }
+        }
+
+        private void SetMinionSettingsTitle(MinionIdentity minion, Storage storage)
+        {
+            TextMeshProUGUI title = productionSettingsRoot.GetComponentsInChildren<TextMeshProUGUI>(true)
+                .FirstOrDefault(text => text.name == "ProductionSettingsTitle");
+            if (title != null)
+            {
+                title.text = string.Format(
+                    "{0}\n{1}",
+                    minion != null ? minion.GetProperName() : storage.GetProperName(),
+                    string.Format(
+                        Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STORAGE_DETAILS),
+                        GameUtil.GetFormattedMass(storage.MassStored()),
+                        GameUtil.GetFormattedMass(storage.Capacity()),
+                        GameUtil.GetFormattedMass(Mathf.Max(0f, storage.RemainingCapacity()))));
+            }
+        }
+
+        private void AddMinionMaterialRequestCard(MinionIdentity minion, Storage storage)
+        {
+            GameObject card = CreateProductionCard("MinionMaterialRequestCard", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_TITLE), 126f);
+            bool enabled = Config.Instance.IsMinionAllowedRequestMaterialsFromNetwork(minion);
+            CreateStatusStrip(
+                card.transform,
+                enabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STATUS_ENABLED) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STATUS_DISABLED),
+                enabled ? new Color(0.28f, 0.48f, 0.34f, 1f) : new Color(0.52f, 0.38f, 0.30f, 1f));
+            CreateProductionActionRow(
+                card.transform,
+                Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MINION_MATERIAL_REQUEST_ENABLED),
+                enabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ACTION_CLOSE) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ON),
+                () =>
+                {
+                    Config.Instance.SetMinionAllowedRequestMaterialsFromNetwork(minion, !enabled);
+                    Config.Save();
+                    UpdateProductionSettingsPanel(true);
+                },
+                enabled ? KleiPinkStyle() : KleiBlueStyle());
+            CreateFinePrint(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MINION_MATERIAL_REQUEST_DESC));
         }
 
         private void AddProductionOverviewCard(Storage storage, ComplexFabricator fabricator, StorageNetworkMaterialRequester requester, StorageNetworkStorageConnector connector)

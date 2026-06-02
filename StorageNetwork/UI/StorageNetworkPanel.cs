@@ -33,10 +33,13 @@ namespace StorageNetwork.UI
         private GameObject productionSettingsRoot;
         private RectTransform productionSettingsContent;
         private Storage productionSettingsStorage;
+        private MinionIdentity productionSettingsMinion;
+        private bool productionSettingsPositionInitialized;
         private GameObject geyserSettingsRoot;
         private RectTransform geyserSettingsContent;
         private Geyser geyserSettingsGeyser;
         private string geyserSettingsSignature;
+        private bool geyserSettingsPositionInitialized;
         private GameObject productionPickerRoot;
         private string productionSettingsSignature;
         private ProductionOverviewCardView productionOverviewView;

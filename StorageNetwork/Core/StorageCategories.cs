@@ -9,6 +9,7 @@ namespace StorageNetwork.Core
         private const string VanillaStorageKey = "vanilla_storage";
         private const string RecipeBuildingKey = "recipe_building";
         private const string ModStorageKey = "mod_storage";
+        public const string MinionKey = "minion";
         public const string GeyserKey = "geyser";
 
         public static string GetKey(Storage storage)
@@ -39,6 +40,11 @@ namespace StorageNetwork.Core
                 return Loc.Get(Loc.UI.STORAGE_NETWORK.CATEGORY_GEYSER);
             }
 
+            if (key == MinionKey)
+            {
+                return Loc.Get(Loc.UI.STORAGE_NETWORK.CATEGORY_MINION);
+            }
+
             if (key == RecipeBuildingKey)
             {
                 return Loc.Get(Loc.UI.STORAGE_NETWORK.CATEGORY_RECIPE_BUILDING);
@@ -57,6 +63,11 @@ namespace StorageNetwork.Core
         public static int GetOrder(string key)
         {
             if (key == GeyserKey)
+            {
+                return 5;
+            }
+
+            if (key == MinionKey)
             {
                 return 4;
             }

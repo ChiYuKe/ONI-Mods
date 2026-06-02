@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using Newtonsoft.Json;
@@ -20,6 +21,9 @@ namespace StorageNetwork
         [ModConfigOption("材料请求默认限额 kg", "新接入生产建筑的默认请求限额。", 1f, 1000000f)]
         [JsonProperty]
         public float DefaultMaterialRequestLimitKg { get; set; }
+
+        [JsonProperty]
+        public List<int> MinionsAllowedRequestMaterialsFromNetwork { get; set; }
 
         [ModConfigOption("请求成功冷却秒数", "材料已满足或达到限额后的检查间隔。", 0.5f, 60f)]
         [JsonProperty]
@@ -65,6 +69,7 @@ namespace StorageNetwork
             SceneStorageBoxCapacityKg = 500000f;
             SceneScanCacheSeconds = 0.25f;
             DefaultMaterialRequestLimitKg = 1000f;
+            MinionsAllowedRequestMaterialsFromNetwork = new List<int>();
             MaterialRequestSuccessCooldownSeconds = 2f;
             MaterialRequestRetryCooldownSeconds = 5f;
             InfiniteQueueRequestBatchCount = 2;
@@ -100,8 +105,51 @@ namespace StorageNetwork
                 "保存后会写入 StorageNetworkConfig.json。建筑容量等部分数值需要重进存档或重建建筑才会完全体现。");
         }
 
+        public bool IsMinionAllowedRequestMaterialsFromNetwork(MinionIdentity minion)
+        {
+            int instanceId = GetMinionInstanceId(minion);
+            return instanceId != KPrefabID.InvalidInstanceID &&
+                   MinionsAllowedRequestMaterialsFromNetwork != null &&
+                   MinionsAllowedRequestMaterialsFromNetwork.Contains(instanceId);
+        }
+
+        public void SetMinionAllowedRequestMaterialsFromNetwork(MinionIdentity minion, bool allowed)
+        {
+            int instanceId = GetMinionInstanceId(minion);
+            if (instanceId == KPrefabID.InvalidInstanceID)
+            {
+                return;
+            }
+
+            if (MinionsAllowedRequestMaterialsFromNetwork == null)
+            {
+                MinionsAllowedRequestMaterialsFromNetwork = new List<int>();
+            }
+
+            bool currentlyAllowed = MinionsAllowedRequestMaterialsFromNetwork.Contains(instanceId);
+            if (allowed && !currentlyAllowed)
+            {
+                MinionsAllowedRequestMaterialsFromNetwork.Add(instanceId);
+            }
+            else if (!allowed && currentlyAllowed)
+            {
+                MinionsAllowedRequestMaterialsFromNetwork.Remove(instanceId);
+            }
+        }
+
+        public bool HasAnyMinionAllowedRequestMaterialsFromNetwork()
+        {
+            return MinionsAllowedRequestMaterialsFromNetwork != null &&
+                   MinionsAllowedRequestMaterialsFromNetwork.Count > 0;
+        }
+
         private void Normalize()
         {
+            if (MinionsAllowedRequestMaterialsFromNetwork == null)
+            {
+                MinionsAllowedRequestMaterialsFromNetwork = new List<int>();
+            }
+
             SceneStorageBoxCapacityKg = Clamp(SceneStorageBoxCapacityKg, 1000f, 10000000f);
             SceneScanCacheSeconds = Clamp(SceneScanCacheSeconds, 0.05f, 5f);
             DefaultMaterialRequestLimitKg = Clamp(DefaultMaterialRequestLimitKg, 1f, 1000000f);
@@ -122,6 +170,12 @@ namespace StorageNetwork
             }
 
             return Math.Max(min, Math.Min(max, value));
+        }
+
+        private static int GetMinionInstanceId(MinionIdentity minion)
+        {
+            KPrefabID prefabId = minion != null ? minion.GetComponent<KPrefabID>() : null;
+            return prefabId != null ? prefabId.InstanceID : KPrefabID.InvalidInstanceID;
         }
 
         private static string GetConfigPath()

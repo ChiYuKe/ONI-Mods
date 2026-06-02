@@ -44,7 +44,16 @@ namespace StorageNetwork.Core
         {
             return storage != null &&
                    storage != ownerStorage &&
+                   !IsMinionStorage(storage) &&
                    storage.GetComponent<ComplexFabricator>() == null;
+        }
+
+        /// <summary>
+        /// 判断 Storage 是否属于复制人的随身储存。复制人可显示为分类，但不能作为入网/转移目标。
+        /// </summary>
+        public static bool IsMinionStorage(Storage storage)
+        {
+            return storage?.GetComponent<MinionIdentity>() != null;
         }
 
         /// <summary>
@@ -56,7 +65,7 @@ namespace StorageNetwork.Core
             foreach (StorageInfo info in StorageSceneCollector.Collect().Storages)
             {
                 Storage storage = info?.Storage;
-                if (IsNetworkStorageTarget(storage, ownerStorage))
+                if (info?.Minion == null && IsNetworkStorageTarget(storage, ownerStorage))
                 {
                     targets.Add(storage);
                 }

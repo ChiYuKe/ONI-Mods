@@ -49,6 +49,7 @@ namespace StorageNetwork
                 public static LocString CATEGORY_VANILLA_STORAGE = "原版储存";
                 public static LocString CATEGORY_RECIPE_BUILDING = "生产建筑";
                 public static LocString CATEGORY_MOD_STORAGE = "模组建筑";
+                public static LocString CATEGORY_MINION = "复制人";
                 public static LocString CATEGORY_GEYSER = "泉";
                 public static LocString SOURCE_MOD_NAME = "来源：{0}";
 
@@ -129,6 +130,13 @@ namespace StorageNetwork
                 public static LocString PRODUCTION_NO_RECIPE = "当前没有正在制作的配方";
                 public static LocString MATERIAL_REQUEST_TITLE = "材料请求";
                 public static LocString MATERIAL_REQUEST_ENABLED = "向网络请求材料";
+                public static LocString MINION_MATERIAL_REQUEST_ENABLED = "允许复制人从网络中请求材料";
+                public static LocString MINION_MATERIAL_REQUEST_DESC = "开启后，复制人建造时可从储存网络调拨所需材料。";
+                public static LocString ALL_MINION_SETTINGS_TITLE = "全部复制人设置";
+                public static LocString ALL_MINION_SETTINGS_SUMMARY = "当前允许：{0} / {1}";
+                public static LocString ALL_MINION_SETTINGS_DESC = "批量控制当前列表中的复制人是否可以在建造时从储存网络请求材料。";
+                public static LocString ALL_MINION_ENABLE = "全部开启";
+                public static LocString ALL_MINION_DISABLE = "全部关闭";
                 public static LocString MATERIAL_REQUEST_MODE = "请求方式：{0}";
                 public static LocString MATERIAL_REQUEST_MODE_SEARCH = "从网络箱子中寻找合适材料";
                 public static LocString MATERIAL_REQUEST_MODE_SPECIFIC = "指定网络中某个箱子提供材料";

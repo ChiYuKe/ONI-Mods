@@ -208,6 +208,11 @@ namespace StorageNetwork.Components
 
             foreach (StorageInfo info in StorageSceneCollector.Collect().Storages)
             {
+                if (info?.Minion != null)
+                {
+                    continue;
+                }
+
                 Storage storage = info?.Storage;
                 if (GetStorageInstanceId(storage) == OutputStorageInstanceId)
                 {
@@ -579,7 +584,7 @@ namespace StorageNetwork.Components
             foreach (StorageInfo info in StorageSceneCollector.Collect().Storages)
             {
                 Storage storage = info?.Storage;
-                if (IsUsableSource(storage, tag))
+                if (info?.Minion == null && IsUsableSource(storage, tag))
                 {
                     sources.Add(storage);
                 }

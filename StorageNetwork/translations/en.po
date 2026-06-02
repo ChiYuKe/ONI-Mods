@@ -419,6 +419,14 @@ msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_ENABLED"
 msgid "向网络请求材料"
 msgstr "Request materials from network"
 
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MINION_MATERIAL_REQUEST_ENABLED"
+msgid "允许复制人从网络中请求材料"
+msgstr "Allow duplicants to request materials from the network"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MINION_MATERIAL_REQUEST_DESC"
+msgid "开启后，复制人建造时可从储存网络调拨所需材料。"
+msgstr "When enabled, duplicants can pull required materials from the Storage Network while building."
+
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_MODE"
 msgid "请求方式：{0}"
 msgstr "Request mode: {0}"

@@ -98,6 +98,84 @@ namespace StorageNetwork.Services
                 : StorageTransferResult.Blocked(StorageItemUtility.GetItemDisplayName(item, tag));
         }
 
+        public static float TransferFromNetworkToStorage(
+            IEnumerable<Tag> tags,
+            float amount,
+            Storage destination,
+            IEnumerable<Storage> excludedStorages = null)
+        {
+            if (tags == null ||
+                destination == null ||
+                amount <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ||
+                destination.RemainingCapacity() <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+            {
+                return 0f;
+            }
+
+            HashSet<Tag> wantedTags = new HashSet<Tag>();
+            foreach (Tag tag in tags)
+            {
+                if (tag != Tag.Invalid)
+                {
+                    wantedTags.Add(tag);
+                }
+            }
+
+            if (wantedTags.Count == 0)
+            {
+                return 0f;
+            }
+
+            HashSet<Storage> excluded = BuildExclusionSet(excludedStorages);
+            excluded.Add(destination);
+            List<Storage> sources = new List<Storage>();
+            foreach (StorageInfo info in StorageSceneCollector.Collect().Storages)
+            {
+                Storage storage = info?.Storage;
+                if (info?.Minion == null && IsUsableNetworkSource(storage, wantedTags, excluded))
+                {
+                    sources.Add(storage);
+                }
+            }
+
+            sources.Sort((left, right) => GetAmountAvailableByAnyMatchTag(right, wantedTags).CompareTo(GetAmountAvailableByAnyMatchTag(left, wantedTags)));
+
+            float moved = 0f;
+            foreach (Storage source in sources)
+            {
+                if (amount - moved <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ||
+                    destination.RemainingCapacity() <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+                {
+                    break;
+                }
+
+                foreach (Tag tag in wantedTags)
+                {
+                    if (amount - moved <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ||
+                        destination.RemainingCapacity() <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+                    {
+                        break;
+                    }
+
+                    float sourceAmount = source.GetAmountAvailable(tag);
+                    if (sourceAmount <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+                    {
+                        continue;
+                    }
+
+                    float transferAmount = Mathf.Min(amount - moved, sourceAmount, Mathf.Max(0f, destination.RemainingCapacity()));
+                    if (transferAmount <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+                    {
+                        continue;
+                    }
+
+                    moved += source.Transfer(destination, tag, transferAmount, block_events: false, hide_popups: true);
+                }
+            }
+
+            return moved;
+        }
+
         public static string FormatOutputStatus(StorageTransferResult result, string idleText)
         {
             if (result.MovedKg > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
@@ -149,7 +227,7 @@ namespace StorageNetwork.Services
             foreach (StorageInfo info in snapshot.Storages)
             {
                 Storage target = info?.Storage;
-                if (IsUsableElementOutputTarget(target, tag, excluded))
+                if (info?.Minion == null && IsUsableElementOutputTarget(target, tag, excluded))
                 {
                     targets.Add(target);
                 }
@@ -267,7 +345,9 @@ namespace StorageNetwork.Services
             foreach (StorageInfo info in snapshot.Storages)
             {
                 Storage target = info?.Storage;
-                if (!IsUsableOutputTarget(target, item, matchTags, excludedStorages) || !IsAutoOutputMatch(target, matchTags))
+                if (info?.Minion != null ||
+                    !IsUsableOutputTarget(target, item, matchTags, excludedStorages) ||
+                    !IsAutoOutputMatch(target, matchTags))
                 {
                     continue;
                 }
@@ -313,6 +393,7 @@ namespace StorageNetwork.Services
         {
             return target != null &&
                    !excludedStorages.Contains(target) &&
+                   !StorageNetworkStorageRules.IsMinionStorage(target) &&
                    target.GetComponent<ComplexFabricator>() == null &&
                    target.RemainingCapacity() > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT &&
                    IsStorageAccepting(target, matchTags) &&
@@ -324,12 +405,22 @@ namespace StorageNetwork.Services
             return target != null &&
                    tag != Tag.Invalid &&
                    !excludedStorages.Contains(target) &&
+                   !StorageNetworkStorageRules.IsMinionStorage(target) &&
                    target.GetComponent<ComplexFabricator>() == null &&
                    target.RemainingCapacity() > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT &&
                    IsStorageAccepting(target, tag) &&
                    (target.GetAmountAvailable(tag) > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ||
                     IsFilterAccepting(target, tag) ||
                     HasNoExplicitStorageFilter(target));
+        }
+
+        private static bool IsUsableNetworkSource(Storage source, IEnumerable<Tag> tags, HashSet<Storage> excludedStorages)
+        {
+            return source != null &&
+                   !excludedStorages.Contains(source) &&
+                   !StorageNetworkStorageRules.IsMinionStorage(source) &&
+                   source.GetComponent<ComplexFabricator>() == null &&
+                   GetAmountAvailableByAnyMatchTag(source, tags) > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT;
         }
 
         private static bool IsAutoOutputMatch(Storage target, HashSet<Tag> matchTags)

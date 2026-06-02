@@ -138,7 +138,7 @@ namespace StorageNetwork.UI
                 foreach (StorageInfo info in currentSnapshot.Storages)
                 {
                     Storage storage = info?.Storage;
-                    if (storage != null && StorageCategories.GetKey(storage) == selectedCategoryKey)
+                    if (storage != null && GetStorageCategoryKey(info) == selectedCategoryKey)
                     {
                         storages.Add(storage);
                     }

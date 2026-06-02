@@ -41,81 +41,17 @@ namespace StorageNetwork.UI
                 return;
             }
 
-            geyserSettingsRoot = CreateBox("GeyserSettingsPanel", transform, new Color(0.78f, 0.79f, 0.80f, 0.98f));
-            geyserSettingsRoot.AddComponent<ScrollWheelBlocker>();
-            ApplyThinBoxSprite(geyserSettingsRoot.GetComponent<Image>());
-            RectTransform panelRect = geyserSettingsRoot.GetComponent<RectTransform>();
-            panelRect.anchorMin = new Vector2(0.5f, 0f);
-            panelRect.anchorMax = new Vector2(0.5f, 0f);
-            panelRect.pivot = new Vector2(0.5f, 0f);
-            panelRect.anchoredPosition = new Vector2(0f, 24f);
-            panelRect.sizeDelta = new Vector2(760f, 560f);
-
-            GameObject header = CreateBox("Header", geyserSettingsRoot.transform, new Color(0.36f, 0.42f, 0.47f, 1f));
-            SetTopStretch(header.GetComponent<RectTransform>(), 8f, 8f, 8f, 54f);
-            TextMeshProUGUI title = CreateText("Title", header.transform, string.Empty, 13, TextAlignmentOptions.TopLeft);
-            title.name = "GeyserSettingsTitle";
-            title.fontStyle = FontStyles.Bold;
-            title.lineSpacing = 2f;
-            Stretch(title.rectTransform(), 10f, 7f);
-
-            GameObject closeButton = CreateCloseIconButton("CloseButton", header.transform, CloseGeyserSettingsPanel);
-            RectTransform closeRect = closeButton.GetComponent<RectTransform>();
-            closeRect.anchorMin = new Vector2(1f, 1f);
-            closeRect.anchorMax = new Vector2(1f, 1f);
-            closeRect.pivot = new Vector2(1f, 1f);
-            closeRect.anchoredPosition = new Vector2(-4f, -4f);
-            closeRect.sizeDelta = new Vector2(22f, 20f);
-
-            GameObject viewport = CreateBox("Viewport", geyserSettingsRoot.transform, new Color(0.72f, 0.72f, 0.66f, 1f));
-            SetStretch(viewport.GetComponent<RectTransform>(), 10f, 10f, 10f, 70f);
-            viewport.AddComponent<RectMask2D>();
-
-            GameObject content = new GameObject("Content");
-            content.transform.SetParent(viewport.transform, false);
-            geyserSettingsContent = content.AddComponent<RectTransform>();
-            geyserSettingsContent.anchorMin = new Vector2(0f, 1f);
-            geyserSettingsContent.anchorMax = new Vector2(1f, 1f);
-            geyserSettingsContent.pivot = new Vector2(0.5f, 1f);
-            geyserSettingsContent.offsetMin = Vector2.zero;
-            geyserSettingsContent.offsetMax = Vector2.zero;
-
-            VerticalLayoutGroup layout = content.AddComponent<VerticalLayoutGroup>();
-            layout.padding = new RectOffset(10, 10, 10, 10);
-            layout.spacing = 8f;
-            layout.childControlWidth = true;
-            layout.childControlHeight = true;
-            layout.childForceExpandWidth = true;
-            layout.childForceExpandHeight = false;
-            content.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-
-            geyserSettingsRoot.SetActive(false);
+            SettingsWindowParts window = CreateDraggableSettingsWindow(
+                "GeyserSettingsPanel",
+                "GeyserSettingsTitle",
+                CloseGeyserSettingsPanel);
+            geyserSettingsRoot = window.Root;
+            geyserSettingsContent = window.Content;
         }
 
         private void KeepGeyserSettingsPanelOnScreen()
         {
-            if (geyserSettingsRoot == null)
-            {
-                return;
-            }
-
-            RectTransform panelRect = geyserSettingsRoot.GetComponent<RectTransform>();
-            if (panelRect == null)
-            {
-                return;
-            }
-
-            const float sideSafeArea = 18f;
-            const float topSafeArea = 86f;
-            const float bottomMargin = 24f;
-            const float leftSafeArea = 18f;
-            float width = Mathf.Clamp(760f, 620f, Mathf.Max(620f, Screen.width - sideSafeArea - leftSafeArea));
-            float height = Mathf.Clamp(560f, 360f, Mathf.Max(360f, Screen.height - topSafeArea - bottomMargin));
-            panelRect.anchorMin = new Vector2(0.5f, 0f);
-            panelRect.anchorMax = new Vector2(0.5f, 0f);
-            panelRect.pivot = new Vector2(0.5f, 0f);
-            panelRect.sizeDelta = new Vector2(width, height);
-            panelRect.anchoredPosition = new Vector2(0f, bottomMargin);
+            geyserSettingsPositionInitialized = KeepDraggableSettingsWindowOnScreen(geyserSettingsRoot, geyserSettingsPositionInitialized);
         }
 
         private void UpdateGeyserSettingsPanel(bool force = false)

@@ -73,9 +73,19 @@ namespace StorageNetwork.Core
             CapacityKg = 0f;
         }
 
+        public StorageInfo(MinionIdentity minion)
+            : this(minion.GetComponent<Storage>())
+        {
+            Minion = minion;
+            GameObject = minion.gameObject;
+            Name = minion.GetProperName();
+        }
+
         public Storage Storage { get; }
 
         public Geyser Geyser { get; }
+
+        public MinionIdentity Minion { get; }
 
         public GameObject GameObject { get; }
 

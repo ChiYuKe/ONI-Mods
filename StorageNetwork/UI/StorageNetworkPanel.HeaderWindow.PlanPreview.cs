@@ -209,7 +209,6 @@ namespace StorageNetwork.UI
             RectTransform viewportRect = viewport.GetComponent<RectTransform>();
             Stretch(viewportRect, 10f, 10f);
             viewport.AddComponent<RectMask2D>();
-            viewport.AddComponent<ScrollWheelBlocker>();
 
             GameObject contentObject = new GameObject("MaterialResearchTreeContent");
             contentObject.transform.SetParent(viewport.transform, false);
@@ -226,22 +225,14 @@ namespace StorageNetwork.UI
             float cursorY = 16f;
             AddResearchRecipeBranch(content.transform, draft.Plan, 0, ref cursorY);
 
-            ScrollRect scrollRect = viewport.AddComponent<ScrollRect>();
-            scrollRect.viewport = viewportRect;
-            scrollRect.content = content;
-            scrollRect.horizontal = true;
-            scrollRect.vertical = true;
-            scrollRect.movementType = ScrollRect.MovementType.Clamped;
-            scrollRect.inertia = true;
-            scrollRect.decelerationRate = 0.08f;
-            scrollRect.scrollSensitivity = 24f;
+            viewport.AddComponent<StorageNetworkPanZoom>().Configure(viewportRect, content);
         }
 
         private float AddResearchRecipeBranch(Transform parent, ProductionPlanNode node, int depth, ref float cursorY)
         {
-            const float columnStep = 540f;
-            const float recipeWidth = 180f;
-            const float recipeHeight = 82f;
+            const float columnStep = 570f;
+            const float recipeWidth = 226f;
+            const float recipeHeight = 98f;
             const float materialWidth = 206f;
             const float materialHeight = 58f;
             const float rowGap = 18f;
@@ -271,6 +262,7 @@ namespace StorageNetwork.UI
                 {
                     float childCursor = cursorY;
                     float childCenter = AddResearchRecipeBranch(parent, requirement.Child, depth + 1, ref childCursor);
+                    childCursor = Mathf.Max(childCursor, cursorY + recipeHeight + rowGap);
                     materialCenter = childCenter;
                     materialY = materialCenter - materialHeight * 0.5f;
                     cursorY = Mathf.Max(childCursor, materialY + materialHeight + rowGap);
@@ -300,27 +292,81 @@ namespace StorageNetwork.UI
 
         private void AddResearchRecipeNode(Transform parent, ProductionPlanNode node, int depth, Vector2 position, Vector2 size)
         {
-            GameObject card = CreatePlainImage("ResearchRecipeNode", parent, new Color(0.42f, 0.42f, 0.38f, 1f));
+            GameObject card = CreatePlainImage("ResearchRecipeNode", parent, depth == 0 ? new Color(0.78f, 0.78f, 0.72f, 1f) : new Color(0.74f, 0.74f, 0.68f, 1f));
+            ApplyOniInputSlotStyle(card.GetComponent<Image>());
             ApplyResearchNodeRect(card, position, size);
 
-            GameObject header = CreatePlainImage("ResearchRecipeHeader", card.transform, new Color(0.19f, 0.20f, 0.18f, 1f));
+            GameObject accent = CreatePlainImage("ResearchRecipeAccent", card.transform, NeutralBlue());
+            RectTransform accentRect = accent.GetComponent<RectTransform>();
+            accentRect.anchorMin = new Vector2(0f, 0f);
+            accentRect.anchorMax = new Vector2(0f, 1f);
+            accentRect.pivot = new Vector2(0f, 0.5f);
+            accentRect.offsetMin = new Vector2(7f, 24f);
+            accentRect.offsetMax = new Vector2(12f, -8f);
+
+            GameObject header = CreatePlainImage("ResearchRecipeHeader", card.transform, new Color(0.90f, 0.88f, 0.80f, 1f));
             RectTransform headerRect = header.GetComponent<RectTransform>();
             headerRect.anchorMin = new Vector2(0f, 1f);
             headerRect.anchorMax = new Vector2(1f, 1f);
             headerRect.pivot = new Vector2(0.5f, 1f);
-            headerRect.offsetMin = new Vector2(0f, -22f);
-            headerRect.offsetMax = Vector2.zero;
+            headerRect.offsetMin = new Vector2(18f, -34f);
+            headerRect.offsetMax = new Vector2(-10f, -8f);
 
-            TextMeshProUGUI title = CreateOrderText("RecipeTitle", header.transform, node.FabricatorName, depth == 0 ? 8 : 7, TextAlignmentOptions.MidlineLeft);
-            title.color = new Color(0.95f, 0.94f, 0.88f, 1f);
+            Sprite fabricatorIcon = node.Assignments
+                .Select(assignment => assignment.Fabricator != null ? GetFabricatorSprite(assignment.Fabricator) : null)
+                .FirstOrDefault(sprite => sprite != null);
+            AddResearchIconSlot(header.transform, node.Recipe?.GetUIIcon(), new Vector2(8f, 4f), 20f);
+
+            TextMeshProUGUI title = CreateOrderText("RecipeTitle", header.transform, node.FabricatorName, depth == 0 ? 9 : 8, TextAlignmentOptions.MidlineLeft);
+            title.color = new Color(0.25f, 0.29f, 0.29f, 1f);
             title.fontStyle = FontStyles.Bold;
             title.textWrappingMode = TextWrappingModes.NoWrap;
             title.overflowMode = TextOverflowModes.Ellipsis;
-            Stretch(title.rectTransform(), 6f, 0f);
+            Stretch(title.rectTransform(), 7f, 0f);
+            title.rectTransform().offsetMin = new Vector2(34f, 0f);
+            title.rectTransform().offsetMax = new Vector2(-66f, 0f);
 
-            AddResearchRecipeSlots(card.transform, node);
-            AddResearchProgressLine(card.transform, 56f, string.Format("{0} / {1}", GameUtil.GetFormattedMass(node.OutputAmount * node.OrderCount), GameUtil.GetFormattedMass(node.OutputAmount * node.OrderCount)), PositiveColor());
-            AddResearchProgressLine(card.transform, 69f, string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_RESEARCH_BATCH_SUMMARY), node.OrderCount, BuildAssignmentSummary(node, 1)), NeutralBlue());
+            GameObject countBadge = CreatePlainImage("MachineCountBadge", header.transform, new Color(0.38f, 0.46f, 0.50f, 1f));
+            RectTransform badgeRect = countBadge.GetComponent<RectTransform>();
+            badgeRect.anchorMin = new Vector2(1f, 0.5f);
+            badgeRect.anchorMax = new Vector2(1f, 0.5f);
+            badgeRect.pivot = new Vector2(1f, 0.5f);
+            badgeRect.anchoredPosition = new Vector2(-6f, 0f);
+            badgeRect.sizeDelta = new Vector2(52f, 20f);
+            TextMeshProUGUI badge = CreateOrderText("MachineCountText", countBadge.transform, string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_MACHINE_COUNT), node.Assignments.Count), 7, TextAlignmentOptions.Center);
+            badge.color = new Color(0.95f, 0.94f, 0.88f, 1f);
+            badge.fontStyle = FontStyles.Bold;
+            badge.textWrappingMode = TextWrappingModes.NoWrap;
+            badge.overflowMode = TextOverflowModes.Ellipsis;
+            Stretch(badge.rectTransform(), 2f, 0f);
+
+            AddResearchIconSlot(card.transform, fabricatorIcon, new Vector2(25f, 42f), 40f);
+
+            TextMeshProUGUI recipe = CreateOrderText("RecipeName", card.transform, node.Recipe != null ? node.Recipe.GetUIName(false) : "?", depth == 0 ? 9 : 8, TextAlignmentOptions.MidlineLeft);
+            recipe.color = new Color(0.18f, 0.20f, 0.19f, 1f);
+            recipe.fontStyle = FontStyles.Bold;
+            recipe.textWrappingMode = TextWrappingModes.NoWrap;
+            recipe.overflowMode = TextOverflowModes.Ellipsis;
+            RectTransform recipeRect = recipe.rectTransform();
+            recipeRect.anchorMin = new Vector2(0f, 1f);
+            recipeRect.anchorMax = new Vector2(1f, 1f);
+            recipeRect.pivot = new Vector2(0.5f, 1f);
+            recipeRect.offsetMin = new Vector2(78f, -51f);
+            recipeRect.offsetMax = new Vector2(-12f, -34f);
+
+            TextMeshProUGUI assignment = CreateOrderText("RecipeAssignment", card.transform, string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_RESEARCH_BATCH_SUMMARY), node.OrderCount, BuildAssignmentSummary(node, 1)), 7, TextAlignmentOptions.MidlineLeft);
+            assignment.color = NeutralTextColor();
+            assignment.fontStyle = FontStyles.Bold;
+            assignment.textWrappingMode = TextWrappingModes.NoWrap;
+            assignment.overflowMode = TextOverflowModes.Ellipsis;
+            RectTransform assignmentRect = assignment.rectTransform();
+            assignmentRect.anchorMin = new Vector2(0f, 1f);
+            assignmentRect.anchorMax = new Vector2(1f, 1f);
+            assignmentRect.pivot = new Vector2(0.5f, 1f);
+            assignmentRect.offsetMin = new Vector2(78f, -69f);
+            assignmentRect.offsetMax = new Vector2(-12f, -52f);
+
+            AddResearchProgressLine(card.transform, 79f, string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_OUTPUT_AMOUNT), GameUtil.GetFormattedMass(node.OutputAmount * node.OrderCount)), PositiveColor());
         }
 
         private void AddResearchRecipeSlots(Transform parent, ProductionPlanNode node)
@@ -447,8 +493,8 @@ namespace StorageNetwork.UI
             rect.anchorMin = new Vector2(0f, 1f);
             rect.anchorMax = new Vector2(1f, 1f);
             rect.pivot = new Vector2(0.5f, 1f);
-            rect.offsetMin = new Vector2(7f, -y - 11f);
-            rect.offsetMax = new Vector2(-7f, -y);
+            rect.offsetMin = new Vector2(9f, -y - 13f);
+            rect.offsetMax = new Vector2(-9f, -y);
 
             TextMeshProUGUI label = CreateOrderText("ProgressText", bar.transform, text, 7, TextAlignmentOptions.Center);
             label.color = color;
@@ -515,7 +561,7 @@ namespace StorageNetwork.UI
             foreach (ProductionPlanRequirement requirement in requirements)
             {
                 height += requirement.Child != null && depth < 2
-                    ? Mathf.Max(74f, EstimateResearchTreeHeight(requirement.Child, depth + 1))
+                    ? Mathf.Max(110f, EstimateResearchTreeHeight(requirement.Child, depth + 1))
                     : 74f;
             }
 
