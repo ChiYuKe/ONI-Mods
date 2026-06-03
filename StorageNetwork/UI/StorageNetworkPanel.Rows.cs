@@ -30,9 +30,13 @@ namespace StorageNetwork.UI
             bool expanded = expandedStorageTypes.TryGetValue(typeKey, out bool isExpanded) && isExpanded;
             bool isGeyserGroup = storages[0].Geyser != null;
             bool isMinionGroup = storages[0].Minion != null;
+            int offlineServerCount = storages.Count(IsOfflineNetworkServer);
             float storedKg = storages.Sum(storage => storage.StoredKg);
             float capacityKg = storages.Sum(storage => storage.CapacityKg);
             float percent = capacityKg > 0f ? storedKg / capacityKg : 0f;
+            string groupInfo = offlineServerCount > 0
+                ? string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SERVER_OFFLINE_COUNT), offlineServerCount)
+                : null;
 
             GameObject row = CreateBox("StorageTypeRow", listContent, new Color(0.86f, 0.85f, 0.80f, 1f));
             AddVerticalContainer(row, 0f, 0, 0, 0, 0);
@@ -55,9 +59,10 @@ namespace StorageNetwork.UI
                     expandedStorageTypes[typeKey] = !expanded;
                     RefreshStoragePanel(StoragePanelRefreshMode.Structure);
                 },
-                null,
+                groupInfo,
                 isMinionGroup ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STORAGE_SETTINGS) : null,
-                isMinionGroup ? () => ShowAllMinionSettingsDialog(storages) : null);
+                isMinionGroup ? () => ShowAllMinionSettingsDialog(storages) : null,
+                offlineServerCount > 0 ? new Color(0.62f, 0.24f, 0.24f, 1f) : (Color?)null);
 
             header.GetComponent<HorizontalLayoutGroup>().padding = new RectOffset(10, 10, 0, 0);
 
@@ -105,6 +110,13 @@ namespace StorageNetwork.UI
             string sourceModName = StorageNetworkStorageRules.HasModStorageTag(storage)
                 ? StorageNetworkModInfoResolver.GetSourceModName(storage)
                 : null;
+            bool serverOffline = IsOfflineNetworkServer(storageInfo);
+            string amountText = serverOffline
+                ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SERVER_OFFLINE)
+                : string.Format("{0} / {1}  {2}%",
+                    GameUtil.GetFormattedMass(storageInfo.StoredKg),
+                    GameUtil.GetFormattedMass(storageInfo.CapacityKg),
+                    Mathf.RoundToInt(percent * 100f));
 
             GameObject row = CreateBox(
                 "StorageRow",
@@ -116,10 +128,7 @@ namespace StorageNetwork.UI
                 row.transform,
                 expanded,
                 storageInfo.Name,
-                string.Format("{0} / {1}  {2}%",
-                    GameUtil.GetFormattedMass(storageInfo.StoredKg),
-                    GameUtil.GetFormattedMass(storageInfo.CapacityKg),
-                    Mathf.RoundToInt(percent * 100f)),
+                amountText,
                 new Color(0.72f, 0.72f, 0.68f, 1f),
                 13,
                 210f,
@@ -128,7 +137,9 @@ namespace StorageNetwork.UI
                     expandedStorages[storage] = !expanded;
                     RefreshStoragePanel(StoragePanelRefreshMode.Structure);
                 },
-                string.IsNullOrEmpty(sourceModName) ? null : string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SOURCE_MOD_NAME), sourceModName),
+                serverOffline
+                    ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SERVER_OFFLINE)
+                    : string.IsNullOrEmpty(sourceModName) ? null : string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SOURCE_MOD_NAME), sourceModName),
                 showSettingsButton ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STORAGE_SETTINGS) : null,
                 showSettingsButton ? () =>
                 {
@@ -140,7 +151,8 @@ namespace StorageNetwork.UI
                     {
                         ShowStorageSettingsDialog(storage);
                     }
-                } : null);
+                } : null,
+                serverOffline ? new Color(0.62f, 0.24f, 0.24f, 1f) : (Color?)null);
 
             RegisterStorageDropTarget(row, storage);
 
@@ -185,6 +197,18 @@ namespace StorageNetwork.UI
             ContentSizeFitter fitter = details.AddComponent<ContentSizeFitter>();
             fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
             row.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        }
+
+        private static bool IsOfflineNetworkServer(StorageInfo storageInfo)
+        {
+            return storageInfo?.Storage != null && IsOfflineNetworkServer(storageInfo.Storage);
+        }
+
+        private static bool IsOfflineNetworkServer(Storage storage)
+        {
+            return storage != null &&
+                   StorageNetworkStorageRules.HasModStorageTag(storage) &&
+                   !StorageNetworkStorageRules.IsModStorageOnline(storage);
         }
 
         private void CreateGeyserRow(StorageInfo storageInfo, Transform parent)
@@ -528,6 +552,11 @@ namespace StorageNetwork.UI
             icon.raycastTarget = false;
             icon.preserveAspect = true;
             Sprite sprite = GetSpriteByName(expanded ? "iconDown" : "iconRight");
+            if (sprite == null)
+            {
+                sprite = GetSpriteByName(expanded ? "dash_arrow_down" : "dash_arrow");
+            }
+
             if (sprite != null)
             {
                 icon.sprite = sprite;

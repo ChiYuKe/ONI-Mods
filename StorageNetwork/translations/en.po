@@ -7,17 +7,137 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Application: Oxygen Not Included\n"
 
-msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKSCENESTORAGEBOX.NAME"
-msgid "场景储存箱"
-msgstr "Scene Storage Box"
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKCORE.NAME"
+msgid "储存网络核心"
+msgstr "Storage Network Core"
 
-msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKSCENESTORAGEBOX.DESC"
-msgid "供场景储存总览面板识别的专用储物箱。"
-msgstr "A dedicated storage bin recognized by the scene storage overview panel."
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKCORE.DESC"
+msgid "维持储存网络运行的核心节点。"
+msgstr "The core node that keeps the Storage Network running."
 
-msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKSCENESTORAGEBOX.EFFECT"
-msgid "复用原版储物箱动画与基础储存行为，并纳入当前场景储存总览。"
-msgstr "Reuses the vanilla storage bin animation and basic storage behavior, and is included in the current scene storage overview."
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKCORE.EFFECT"
+msgid "提供大容量通用储存，并作为储存网络的主要基础设施。"
+msgstr "Provides large general-purpose storage and acts as the main Storage Network infrastructure."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKSMALLSOLIDSERVER.NAME"
+msgid "小型固体服务器"
+msgstr "Small Solid Server"
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKSMALLSOLIDSERVER.DESC"
+msgid "用于接入储存网络的小型固体储存服务器。"
+msgstr "A small solid storage server for the Storage Network."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKSMALLSOLIDSERVER.EFFECT"
+msgid "储存固体物品，并显示在储存网络窗口中。"
+msgstr "Stores solid items and appears in the Storage Network window."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKSMALLLIQUIDSERVER.NAME"
+msgid "小型液体服务器"
+msgstr "Small Liquid Server"
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKSMALLLIQUIDSERVER.DESC"
+msgid "用于接入储存网络的小型液体储存服务器。"
+msgstr "A small liquid storage server for the Storage Network."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKSMALLLIQUIDSERVER.EFFECT"
+msgid "储存液体物品，并显示在储存网络窗口中。"
+msgstr "Stores liquids and appears in the Storage Network window."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKSMALLGASSERVER.NAME"
+msgid "小型气体服务器"
+msgstr "Small Gas Server"
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKSMALLGASSERVER.DESC"
+msgid "用于接入储存网络的小型气体储存服务器。"
+msgstr "A small gas storage server for the Storage Network."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKSMALLGASSERVER.EFFECT"
+msgid "储存气体物品，并显示在储存网络窗口中。"
+msgstr "Stores gases and appears in the Storage Network window."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKMEDIUMSOLIDSERVER.NAME"
+msgid "中型固体服务器"
+msgstr "Medium Solid Server"
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKMEDIUMSOLIDSERVER.DESC"
+msgid "用于接入储存网络的中型固体储存服务器。"
+msgstr "A medium solid storage server for the Storage Network."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKMEDIUMSOLIDSERVER.EFFECT"
+msgid "储存更多固体物品，并显示在储存网络窗口中。"
+msgstr "Stores more solid items and appears in the Storage Network window."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKMEDIUMLIQUIDSERVER.NAME"
+msgid "中型液体服务器"
+msgstr "Medium Liquid Server"
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKMEDIUMLIQUIDSERVER.DESC"
+msgid "用于接入储存网络的中型液体储存服务器。"
+msgstr "A medium liquid storage server for the Storage Network."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKMEDIUMLIQUIDSERVER.EFFECT"
+msgid "储存更多液体物品，并显示在储存网络窗口中。"
+msgstr "Stores more liquids and appears in the Storage Network window."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKMEDIUMGASSERVER.NAME"
+msgid "中型气体服务器"
+msgstr "Medium Gas Server"
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKMEDIUMGASSERVER.DESC"
+msgid "用于接入储存网络的中型气体储存服务器。"
+msgstr "A medium gas storage server for the Storage Network."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKMEDIUMGASSERVER.EFFECT"
+msgid "储存更多气体物品，并显示在储存网络窗口中。"
+msgstr "Stores more gases and appears in the Storage Network window."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKLARGESOLIDSERVER.NAME"
+msgid "大型固体服务器"
+msgstr "Large Solid Server"
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKLARGESOLIDSERVER.DESC"
+msgid "用于接入储存网络的大型固体储存服务器。"
+msgstr "A large solid storage server for the Storage Network."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKLARGESOLIDSERVER.EFFECT"
+msgid "储存大量固体物品，并显示在储存网络窗口中。"
+msgstr "Stores a large amount of solid items and appears in the Storage Network window."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKLARGELIQUIDSERVER.NAME"
+msgid "大型液体服务器"
+msgstr "Large Liquid Server"
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKLARGELIQUIDSERVER.DESC"
+msgid "用于接入储存网络的大型液体储存服务器。"
+msgstr "A large liquid storage server for the Storage Network."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKLARGELIQUIDSERVER.EFFECT"
+msgid "储存大量液体物品，并显示在储存网络窗口中。"
+msgstr "Stores a large amount of liquids and appears in the Storage Network window."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKLARGEGASSERVER.NAME"
+msgid "大型气体服务器"
+msgstr "Large Gas Server"
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKLARGEGASSERVER.DESC"
+msgid "用于接入储存网络的大型气体储存服务器。"
+msgstr "A large gas storage server for the Storage Network."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKLARGEGASSERVER.EFFECT"
+msgid "储存大量气体物品，并显示在储存网络窗口中。"
+msgstr "Stores a large amount of gases and appears in the Storage Network window."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKRELAYMODULE.NAME"
+msgid "储存网络中继器"
+msgstr "Storage Network Relay"
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKRELAYMODULE.DESC"
+msgid "安装在火箭上的储存网络中继舱。"
+msgstr "A Storage Network relay module installed on rockets."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKRELAYMODULE.EFFECT"
+msgid "火箭发射到太空后，允许储存网络跨星球传输物品。"
+msgstr "When the rocket is in space, allows the Storage Network to transfer items between planetoids."
 
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OVERVIEW_TOOLTIP"
 msgid "显示当前场景中的储存箱总览。"
@@ -40,8 +160,16 @@ msgid "当前场景没有可收集的储存建筑"
 msgstr "No collectible storage buildings in the current scene"
 
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.EMPTY_DETAILS"
-msgid "会收集专用场景储存箱，以及手动加入的原版储物箱。"
-msgstr "Collects dedicated scene storage boxes and vanilla storage bins that were manually added."
+msgid "会收集储存网络核心、服务器，以及手动加入的原版储物箱。"
+msgstr "Collects Storage Network cores, servers, and vanilla storage bins that were manually added."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CORE_OFFLINE_TITLE"
+msgid "储存网络未启动"
+msgstr "Storage Network offline"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CORE_OFFLINE_DETAILS"
+msgid "当前场景需要建造并供电至少一个储存网络核心，网络面板和材料调度才会启用。"
+msgstr "Build and power at least one Storage Network Core in the current scene to enable the panel and material scheduling."
 
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.NO_STORAGE_CONTENT"
 msgid "没有储存内容"
@@ -91,10 +219,6 @@ msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOCATE_TARGET_TOOLTIP"
 msgid "定位目标箱子"
 msgstr "Locate the target storage building."
 
-msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CATEGORY_SCENE_STORAGE"
-msgid "储存箱"
-msgstr "Storage Boxes"
-
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CATEGORY_VANILLA_STORAGE"
 msgid "原版储存"
 msgstr "Vanilla Storage"
@@ -114,6 +238,18 @@ msgstr "Geysers"
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SOURCE_MOD_NAME"
 msgid "来源：{0}"
 msgstr "Source: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SERVER_OFFLINE"
+msgid "服务器已掉线"
+msgstr "Server offline"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SERVER_OFFLINE_COUNT"
+msgid "{0} 台服务器已掉线"
+msgstr "{0} servers offline"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.HEALTH_OFFLINE"
+msgid "掉线"
+msgstr "Offline"
 
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SUMMARY_BUTTON"
 msgid "汇总"
@@ -306,6 +442,14 @@ msgstr "Geysers"
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENROLLABLE_GEYSER_OUTPUT"
 msgid "{0}  {1}"
 msgstr "{0}  {1}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENROLLABLE_WORLD_FILTER"
+msgid "星球"
+msgstr "Planet"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENROLLABLE_WORLD_ALL"
+msgid "全部星球"
+msgstr "All Planets"
 
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SUMMARY_EMPTY"
 msgid "当前分类没有储存内容"
@@ -1211,6 +1355,46 @@ msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.WORLD_CONNECTED_BUILDINGS"
 msgid "接入建筑：{0}"
 msgstr "Connected buildings: {0}"
 
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CORE_SIDE_SCREEN_TITLE"
+msgid "储存网络概览"
+msgstr "Storage Network Overview"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CORE_SIDE_SCREEN_STATUS"
+msgid "星球：{0}  状态：{1}"
+msgstr "Asteroid: {0}  Status: {1}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CORE_SIDE_SCREEN_ONLINE"
+msgid "在线"
+msgstr "Online"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CORE_SIDE_SCREEN_OFFLINE"
+msgid "离线"
+msgstr "Offline"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CORE_SIDE_SCREEN_CAPACITY"
+msgid "容量：{0} / {1}  剩余：{2}"
+msgstr "Capacity: {0} / {1}  Free: {2}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CORE_SIDE_SCREEN_BUILDINGS"
+msgid "服务器：{0}  接入储存：{1}"
+msgstr "Servers: {0}  Connected storage: {1}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CORE_SIDE_SCREEN_RELAY"
+msgid "跨星球中继：{0}"
+msgstr "Interplanetary relay: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CORE_SIDE_SCREEN_RELAY_ONLINE"
+msgid "已连接"
+msgstr "Connected"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CORE_SIDE_SCREEN_RELAY_OFFLINE"
+msgid "未连接"
+msgstr "Disconnected"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MAIN_SEARCH_TOOLTIP"
+msgid "搜索建筑、分类、储存物或泉输出。"
+msgstr "Search buildings, categories, stored items, or geyser outputs."
+
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_STATUS_NO_QUEUE"
 msgid "没有可请求材料的排队配方"
 msgstr "No queued recipe has requestable materials"
@@ -1278,14 +1462,6 @@ msgstr "Saving writes to StorageNetworkConfig.json. Some values, such as buildin
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_RESTART_REQUIRED"
 msgid "要使这些选项生效，必须重新启动游戏。"
 msgstr "The game must be restarted for these options to take effect."
-
-msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_SCENE_STORAGE_CAPACITY"
-msgid "场景储存箱容量 kg"
-msgstr "Scene Storage Box Capacity kg"
-
-msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_SCENE_STORAGE_CAPACITY_DESC"
-msgid "专用场景储存箱的容量。新建建筑生效。"
-msgstr "Capacity of dedicated scene storage boxes. Applies to newly built buildings."
 
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_SCENE_SCAN_CACHE"
 msgid "场景扫描缓存秒数"

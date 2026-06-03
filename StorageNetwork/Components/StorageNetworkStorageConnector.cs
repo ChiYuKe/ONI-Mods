@@ -1,4 +1,6 @@
 using KSerialization;
+using StorageNetwork.Buildings;
+using StorageNetwork.Core;
 using StorageNetwork.Services;
 using static StorageNetwork.STRINGS;
 
@@ -25,6 +27,14 @@ namespace StorageNetwork.Components
         {
             base.OnSpawn();
             EnsureStorage();
+            ApplyServerStorageModifiers();
+            StorageSceneRegistry.Register(gameObject);
+        }
+
+        protected override void OnCleanUp()
+        {
+            StorageSceneRegistry.Unregister(gameObject);
+            base.OnCleanUp();
         }
 
         public void Sim1000ms(float dt)
@@ -65,6 +75,21 @@ namespace StorageNetwork.Components
             if (storage == null)
             {
                 storage = GetComponent<Storage>();
+            }
+        }
+
+        private void ApplyServerStorageModifiers()
+        {
+            if (storage == null)
+            {
+                return;
+            }
+
+            KPrefabID prefabId = GetComponent<KPrefabID>();
+            string prefabTag = prefabId != null ? prefabId.PrefabTag.Name : string.Empty;
+            if (prefabTag != StorageNetworkCoreConfig.ID)
+            {
+                storage.SetDefaultStoredItemModifiers(Storage.StandardInsulatedStorage);
             }
         }
 

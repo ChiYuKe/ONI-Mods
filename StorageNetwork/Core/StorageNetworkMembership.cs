@@ -20,19 +20,7 @@ namespace StorageNetwork.Core
                 return false;
             }
 
-            if (candidate.GetComponent<SceneStorageBoxMarker>() != null)
-            {
-                reason = "scene storage marker";
-                return true;
-            }
-
             KPrefabID prefabId = candidate.GetComponent<KPrefabID>();
-            if (prefabId != null && prefabId.HasTag(StorageNetworkTags.SceneStorageBox))
-            {
-                reason = "scene storage tag";
-                return true;
-            }
-
             if (prefabId != null && prefabId.HasTag(StorageNetworkTags.ModStorage))
             {
                 reason = "mod storage tag";

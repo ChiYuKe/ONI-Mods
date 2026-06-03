@@ -69,6 +69,12 @@ namespace StorageNetwork.UI
                 return sprite;
             }
 
+            sprite = StorageNetworkSpriteLoader.GetSprite(spriteName);
+            if (sprite != null)
+            {
+                return sprite;
+            }
+
             if (spriteCache == null)
             {
                 spriteCache = new Dictionary<string, Sprite>();

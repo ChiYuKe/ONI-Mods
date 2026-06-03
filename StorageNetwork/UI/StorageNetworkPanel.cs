@@ -20,6 +20,11 @@ namespace StorageNetwork.UI
         private StorageSceneSnapshot currentSnapshot;
         private TextMeshProUGUI summaryText;
         private RectTransform healthContent;
+        private KInputTextField mainSearchInput;
+        private string mainSearchText = string.Empty;
+        private int mainWorldFilterId = UnsetEnrollableWorldFilterId;
+        private RectTransform mainWorldFilterContent;
+        private GameObject mainWorldDropdownRoot;
         private RectTransform categoryContent;
         private RectTransform listContent;
         private ScrollRect listScrollRect;
@@ -31,6 +36,11 @@ namespace StorageNetwork.UI
         private TextMeshProUGUI categorySummaryTitle;
         private GameObject enrollableWindowRoot;
         private string enrollableWindowSignature;
+        private int enrollableWorldFilterId = UnsetEnrollableWorldFilterId;
+        private RectTransform enrollableWorldFilterContent;
+        private GameObject enrollableWorldDropdownRoot;
+        private KInputTextField enrollableSearchInput;
+        private string enrollableSearchText = string.Empty;
         private GameObject headerWindowRoot;
         private GameObject productionSettingsRoot;
         private RectTransform productionSettingsContent;
@@ -193,6 +203,12 @@ namespace StorageNetwork.UI
 
         private void SetSnapshot(Storage focusStorage = null)
         {
+            if (mainWorldFilterId == UnsetEnrollableWorldFilterId)
+            {
+                int activeWorldId = GetActiveWorldFilterId();
+                mainWorldFilterId = activeWorldId != UnsetEnrollableWorldFilterId ? activeWorldId : AllEnrollableWorldsFilterId;
+            }
+
             currentSnapshot = null;
             lastListSignature = null;
             refreshElapsed = 0f;
@@ -330,7 +346,8 @@ namespace StorageNetwork.UI
             summaryText.rectTransform().anchorMin = Vector2.zero;
             summaryText.rectTransform().anchorMax = Vector2.one;
             summaryText.rectTransform().offsetMin = new Vector2(12f, 7f);
-            summaryText.rectTransform().offsetMax = new Vector2(-76f, -7f);
+            summaryText.rectTransform().offsetMax = new Vector2(-256f, -7f);
+            CreateMainWorldFilter(summary.transform);
             CreateCategorySummaryButton(summary.transform);
 
             GameObject healthBar = CreateBox("HealthBar", content.transform, new Color(0.74f, 0.75f, 0.69f, 1f));
@@ -440,8 +457,15 @@ namespace StorageNetwork.UI
 
             bool forceRebuild = mode == StoragePanelRefreshMode.Structure;
             bool checkStructure = forceRebuild || mode == StoragePanelRefreshMode.StructureCheck;
-            currentSnapshot = StorageSceneCollector.Collect(checkStructure);
+            EnsureValidMainWorldFilter();
+            currentSnapshot = CollectMainSnapshot(checkStructure);
             UpdateStorageSummaryText();
+
+            if (!currentSnapshot.NetworkOnline)
+            {
+                RefreshCoreOfflineStorageList(forceRebuild);
+                return;
+            }
 
             if (currentSnapshot.Storages.Count == 0)
             {
@@ -459,6 +483,7 @@ namespace StorageNetwork.UI
 
         private void UpdateStorageSummaryText()
         {
+            RebuildMainWorldFilter();
             summaryText.text =
                 Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SUMMARY_TITLE) + "\n" +
                 string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SUMMARY_LINE),
@@ -481,21 +506,28 @@ namespace StorageNetwork.UI
             int activeOrders = productionOrderService.Orders.Count(order => IsHealthActiveOrder(order));
             int waitingOrders = productionOrderService.Orders.Count(order => order != null && order.State == ProductionOrderState.WaitingMaterials);
             int abnormalOrders = productionOrderService.Orders.Count(order => order != null && order.State == ProductionOrderState.Abnormal);
-            int automationBuildings = currentSnapshot.Storages.Count(info => HasEnabledNetworkAutomation(info));
+            int offlineServers = currentSnapshot.Storages.Count(IsOfflineNetworkServer);
 
             AddHealthTile("容量", string.Format("{0:P0}", Mathf.Clamp01(fillRatio)), fillRatio >= 0.92f ? DangerColor() : fillRatio >= 0.80f ? WarningColor() : PositiveColor());
             AddHealthTile("剩余", GameUtil.GetFormattedMass(remainingCapacity), remainingCapacity <= 1000f ? WarningColor() : NeutralBlue());
             AddHealthTile("订单", activeOrders.ToString(), activeOrders > 0 ? NeutralBlue() : MutedTextColor());
             AddHealthTile("待料", waitingOrders.ToString(), waitingOrders > 0 ? WarningColor() : PositiveColor());
             AddHealthTile("异常", abnormalOrders.ToString(), abnormalOrders > 0 ? DangerColor() : PositiveColor());
-            AddHealthTile("自动化", automationBuildings.ToString(), automationBuildings > 0 ? PositiveColor() : MutedTextColor());
+            AddHealthTile(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.HEALTH_OFFLINE), offlineServers.ToString(), offlineServers > 0 ? DangerColor() : PositiveColor());
+            EnsureMainSearchTile();
         }
 
         private void ClearHealthBar()
         {
             for (int i = healthContent.childCount - 1; i >= 0; i--)
             {
-                Destroy(healthContent.GetChild(i).gameObject);
+                GameObject child = healthContent.GetChild(i).gameObject;
+                if (child.name == "MainSearchTile")
+                {
+                    continue;
+                }
+
+                Destroy(child);
             }
         }
 
@@ -522,6 +554,56 @@ namespace StorageNetwork.UI
             amount.textWrappingMode = TextWrappingModes.NoWrap;
             amount.overflowMode = TextOverflowModes.Ellipsis;
             amount.gameObject.AddComponent<LayoutElement>().preferredWidth = 58f;
+        }
+
+        private void EnsureMainSearchTile()
+        {
+            if (healthContent == null)
+            {
+                return;
+            }
+
+            Transform existing = healthContent.Find("MainSearchTile");
+            if (existing != null)
+            {
+                existing.SetAsLastSibling();
+                return;
+            }
+
+            GameObject tile = CreatePlainImage("MainSearchTile", healthContent, new Color(0.82f, 0.82f, 0.76f, 1f));
+            LayoutElement tileLayout = tile.AddComponent<LayoutElement>();
+            tileLayout.minWidth = 150f;
+            tileLayout.preferredWidth = 170f;
+            tileLayout.flexibleWidth = 1f;
+
+            HorizontalLayoutGroup layout = tile.AddComponent<HorizontalLayoutGroup>();
+            layout.padding = new RectOffset(6, 6, 3, 3);
+            layout.spacing = 0f;
+            layout.childAlignment = TextAnchor.MiddleCenter;
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.childForceExpandWidth = true;
+            layout.childForceExpandHeight = true;
+
+            mainSearchInput = CreateFixedTextInput(
+                tile.transform,
+                "MainSearchInput",
+                mainSearchText,
+                154f,
+                22f,
+                10);
+            mainSearchInput.onValueChanged.AddListener(value =>
+            {
+                mainSearchText = value ?? string.Empty;
+                selectedItemStorage = null;
+                selectedItemKey = null;
+                lastListSignature = null;
+                RefreshStoragePanel(StoragePanelRefreshMode.Structure);
+            });
+
+            ToolTip tooltip = tile.AddComponent<ToolTip>();
+            tooltip.toolTip = Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MAIN_SEARCH_TOOLTIP);
+            tile.transform.SetAsLastSibling();
         }
 
         private static bool IsHealthActiveOrder(ProductionOrderRecord order)
@@ -569,6 +651,20 @@ namespace StorageNetwork.UI
             }
         }
 
+        private void RefreshCoreOfflineStorageList(bool forceRebuild)
+        {
+            if (forceRebuild || lastListSignature != "core_offline")
+            {
+                lastListSignature = "core_offline";
+                ClearCategories();
+                ClearList();
+                CreateInfoRow(
+                    Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CORE_OFFLINE_TITLE),
+                    Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CORE_OFFLINE_DETAILS));
+                LiveUpdateStoragePanels();
+            }
+        }
+
         private bool ShouldRebuildStorageList(bool forceRebuild, bool checkStructure)
         {
             if (forceRebuild || string.IsNullOrEmpty(lastListSignature) || lastListSignature == "empty")
@@ -603,7 +699,8 @@ namespace StorageNetwork.UI
             ClearCategories();
             ClearList();
 
-            List<StorageNetworkCategoryGroup> groups = BuildCategoryGroups(storages).ToList();
+            List<StorageInfo> filteredStorages = FilterStorageInfosBySearch(storages).ToList();
+            List<StorageNetworkCategoryGroup> groups = BuildCategoryGroups(filteredStorages).ToList();
             EnsureSelectedCategory(groups);
             foreach (StorageNetworkCategoryGroup group in groups)
             {
@@ -636,7 +733,8 @@ namespace StorageNetwork.UI
 
         private static string BuildListSignature(IEnumerable<StorageInfo> storages)
         {
-            return string.Join("|", storages
+            string searchSignature = instance != null ? instance.mainSearchText ?? string.Empty : string.Empty;
+            return searchSignature + "|" + string.Join("|", storages
                 .OrderBy(GetStorageTypeKey)
                 .ThenBy(storage => storage.GameObject != null ? storage.GameObject.GetInstanceID() : 0)
                 .Select(storage =>
@@ -650,7 +748,7 @@ namespace StorageNetwork.UI
                     return string.Format("{0}:{1}:{2}",
                         GetStorageTypeKey(storage),
                         storage.GameObject != null ? storage.GameObject.GetInstanceID() : 0,
-                        items);
+                        items + ":" + (IsOfflineNetworkServer(storage) ? "offline" : "online"));
                 }));
         }
 
@@ -733,6 +831,7 @@ namespace StorageNetwork.UI
             CloseProductionSettingsPanel();
             CloseGeyserSettingsPanel();
             CloseEnrollableWindow();
+            CloseMainWorldDropdown();
             CloseHeaderWindow();
             if (IsActive())
             {

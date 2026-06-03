@@ -19,12 +19,18 @@ namespace StorageNetwork.Core
         public static void Translate(Type root, bool generateTemplate = false)
         {
             Localization.RegisterForTranslation(root);
+            RegisterBuildMenuStrings();
             LoadStrings();
             LocString.CreateLocStringKeys(root, null);
             if (generateTemplate)
             {
                 Localization.GenerateStringsTemplate(root, Path.Combine(GetModPath(), "translations"));
             }
+        }
+
+        private static void RegisterBuildMenuStrings()
+        {
+            Strings.Add("STRINGS.UI.NEWBUILDCATEGORIES.STORAGENETWORK.BUILDMENUTITLE", "储存网络");
         }
 
         private static void LoadStrings()

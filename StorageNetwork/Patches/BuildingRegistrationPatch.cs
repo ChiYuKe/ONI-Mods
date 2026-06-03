@@ -9,9 +9,28 @@ namespace StorageNetwork.Patches
         [HarmonyPatch(typeof(GeneratedBuildings), "LoadGeneratedBuildings")]
         public static class LoadGeneratedBuildingsPatch
         {
+            private const string StorageNetworkSubcategory = "StorageNetwork";
+
             public static void Prefix()
             {
-                ModUtil.AddBuildingToPlanScreen("Base", SceneStorageBoxConfig.ID);
+                if (!SelectModuleSideScreen.moduleButtonSortOrder.Contains(StorageNetworkRelayModuleConfig.ID))
+                {
+                    int insertIndex = SelectModuleSideScreen.moduleButtonSortOrder.IndexOf("ResearchClusterModule");
+                    if (insertIndex < 0)
+                    {
+                        insertIndex = SelectModuleSideScreen.moduleButtonSortOrder.Count - 1;
+                    }
+
+                    SelectModuleSideScreen.moduleButtonSortOrder.Insert(insertIndex + 1, StorageNetworkRelayModuleConfig.ID);
+                }
+
+                foreach (string buildingId in StorageNetworkStorageBuildingSpecs.AllIds)
+                {
+                    ModUtil.AddBuildingToPlanScreen("Base", buildingId, StorageNetworkSubcategory);
+                }
+
+                // 火箭舱由 SelectModuleSideScreen.moduleButtonSortOrder 显示。
+                // 同时加入 Rocketry 建造菜单会让 Codex 为同一舱块生成两次条目。
             }
         }
 
@@ -21,9 +40,12 @@ namespace StorageNetwork.Patches
             public static void Postfix()
             {
                 Tech tech = Db.Get().Techs.Get("SmartStorage");
-                if (tech != null && !tech.unlockedItemIDs.Contains(SceneStorageBoxConfig.ID))
+                foreach (string buildingId in StorageNetworkStorageBuildingSpecs.UnlockIds)
                 {
-                    tech.unlockedItemIDs.Add(SceneStorageBoxConfig.ID);
+                    if (tech != null && !tech.unlockedItemIDs.Contains(buildingId))
+                    {
+                        tech.unlockedItemIDs.Add(buildingId);
+                    }
                 }
             }
         }

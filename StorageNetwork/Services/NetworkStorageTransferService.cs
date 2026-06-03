@@ -19,10 +19,16 @@ namespace StorageNetwork.Services
                 return StorageTransferResult.Idle;
             }
 
+            int sourceWorldId = GetObjectWorldId(source.gameObject);
+            if (!StorageSceneRegistry.HasOnlineCoreInWorld(sourceWorldId))
+            {
+                return StorageTransferResult.Offline;
+            }
+
             HashSet<Storage> excluded = BuildExclusionSet(excludedStorages);
             float totalMoved = 0f;
             string blockedItem = null;
-            StorageSceneSnapshot snapshot = specificTarget == null ? StorageSceneCollector.Collect() : null;
+            StorageSceneSnapshot snapshot = specificTarget == null ? StorageSceneCollector.CollectForWorld(sourceWorldId) : null;
             List<GameObject> items = new List<GameObject>(source.items.Count);
             foreach (GameObject item in source.items)
             {
@@ -39,7 +45,7 @@ namespace StorageNetwork.Services
                     continue;
                 }
 
-                StorageTransferResult result = TransferStoredItem(source, item, excluded, specificTarget, snapshot);
+                StorageTransferResult result = TransferStoredItem(source, item, excluded, specificTarget, snapshot, sourceWorldId);
                 totalMoved += result.MovedKg;
                 if (!string.IsNullOrEmpty(result.BlockedItem))
                 {
@@ -61,6 +67,12 @@ namespace StorageNetwork.Services
                 return StorageTransferResult.Idle;
             }
 
+            int sourceWorldId = GetObjectWorldId(item);
+            if (!StorageSceneRegistry.HasOnlineCoreInWorld(sourceWorldId))
+            {
+                return StorageTransferResult.Offline;
+            }
+
             Tag tag = StorageItemUtility.GetStorageTransferTag(item);
             if (!MatchesAllowedTags(item, allowedTags))
             {
@@ -70,7 +82,7 @@ namespace StorageNetwork.Services
             HashSet<Tag> matchTags = StorageItemUtility.GetStorageMatchTags(item);
             HashSet<Storage> excluded = BuildExclusionSet(excludedStorages);
             Pickupable pickupable = item.GetComponent<Pickupable>();
-            Storage target = FindOutputTarget(item, matchTags, excluded, specificTarget);
+            Storage target = FindOutputTarget(item, matchTags, excluded, specificTarget, StorageSceneCollector.CollectForWorld(sourceWorldId), sourceWorldId);
             if (pickupable == null || target == null)
             {
                 return StorageTransferResult.Blocked(StorageItemUtility.GetItemDisplayName(item, tag));
@@ -124,6 +136,12 @@ namespace StorageNetwork.Services
                 return 0f;
             }
 
+            int destinationWorldId = GetObjectWorldId(destination.gameObject);
+            if (!StorageSceneRegistry.HasOnlineCoreInWorld(destinationWorldId))
+            {
+                return 0f;
+            }
+
             HashSet<Tag> wantedTags = new HashSet<Tag>();
             foreach (Tag tag in tags)
             {
@@ -141,10 +159,10 @@ namespace StorageNetwork.Services
             HashSet<Storage> excluded = BuildExclusionSet(excludedStorages);
             excluded.Add(destination);
             List<Storage> sources = new List<Storage>();
-            foreach (StorageInfo info in StorageSceneCollector.Collect().Storages)
+            foreach (StorageInfo info in StorageSceneCollector.CollectForWorld(destinationWorldId).Storages)
             {
                 Storage storage = info?.Storage;
-                if (info?.Minion == null && IsUsableNetworkSource(storage, wantedTags, excluded))
+                if (info?.Minion == null && IsUsableNetworkSource(storage, wantedTags, excluded, destinationWorldId))
                 {
                     sources.Add(storage);
                 }
@@ -195,6 +213,11 @@ namespace StorageNetwork.Services
                 return string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRANSFER_STATUS_MOVED), GameUtil.GetFormattedMass(result.MovedKg));
             }
 
+            if (result.NetworkOffline)
+            {
+                return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CORE_OFFLINE_TITLE);
+            }
+
             if (!string.IsNullOrEmpty(result.BlockedItem))
             {
                 return string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRANSFER_STATUS_BLOCKED), result.BlockedItem);
@@ -207,9 +230,10 @@ namespace StorageNetwork.Services
             SimHashes elementHash,
             HashSet<Storage> excludedStorages = null,
             Storage specificTarget = null,
-            StorageSceneSnapshot snapshot = null)
+            StorageSceneSnapshot snapshot = null,
+            int sourceWorldId = -1)
         {
-            List<Storage> targets = FindElementOutputTargets(elementHash, excludedStorages, specificTarget, snapshot);
+            List<Storage> targets = FindElementOutputTargets(elementHash, excludedStorages, specificTarget, snapshot, sourceWorldId);
             return targets.Count > 0 ? targets[0] : null;
         }
 
@@ -217,7 +241,8 @@ namespace StorageNetwork.Services
             SimHashes elementHash,
             HashSet<Storage> excludedStorages = null,
             Storage specificTarget = null,
-            StorageSceneSnapshot snapshot = null)
+            StorageSceneSnapshot snapshot = null,
+            int sourceWorldId = -1)
         {
             Element element = ElementLoader.FindElementByHash(elementHash);
             if (element == null)
@@ -229,17 +254,17 @@ namespace StorageNetwork.Services
             HashSet<Storage> excluded = excludedStorages ?? new HashSet<Storage>();
             if (specificTarget != null)
             {
-                return IsUsableElementOutputTarget(specificTarget, tag, excluded)
+                return IsUsableElementOutputTarget(specificTarget, tag, excluded, sourceWorldId)
                     ? new List<Storage> { specificTarget }
                     : new List<Storage>();
             }
 
-            snapshot = snapshot ?? StorageSceneCollector.Collect();
+            snapshot = snapshot ?? (sourceWorldId >= 0 ? StorageSceneCollector.CollectForWorld(sourceWorldId) : StorageSceneCollector.Collect());
             List<Storage> targets = new List<Storage>();
             foreach (StorageInfo info in snapshot.Storages)
             {
                 Storage target = info?.Storage;
-                if (info?.Minion == null && IsUsableElementOutputTarget(target, tag, excluded))
+                if (info?.Minion == null && IsUsableElementOutputTarget(target, tag, excluded, sourceWorldId))
                 {
                     targets.Add(target);
                 }
@@ -254,7 +279,8 @@ namespace StorageNetwork.Services
             GameObject item,
             HashSet<Storage> excludedStorages,
             Storage specificTarget,
-            StorageSceneSnapshot snapshot)
+            StorageSceneSnapshot snapshot,
+            int sourceWorldId)
         {
             float mass = StorageItemUtility.GetMass(item);
             if (mass <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
@@ -266,7 +292,7 @@ namespace StorageNetwork.Services
             HashSet<Tag> matchTags = StorageItemUtility.GetStorageMatchTags(item);
             float remaining = mass;
             float moved = 0f;
-            Storage target = FindOutputTarget(item, matchTags, excludedStorages, specificTarget, snapshot);
+            Storage target = FindOutputTarget(item, matchTags, excludedStorages, specificTarget, snapshot, sourceWorldId);
             if (target == null)
             {
                 return StorageTransferResult.Blocked(StorageItemUtility.GetItemDisplayName(item, tag));
@@ -360,11 +386,12 @@ namespace StorageNetwork.Services
             HashSet<Tag> matchTags,
             HashSet<Storage> excludedStorages,
             Storage specificTarget,
-            StorageSceneSnapshot snapshot = null)
+            StorageSceneSnapshot snapshot = null,
+            int sourceWorldId = -1)
         {
             if (specificTarget != null)
             {
-                return IsUsableOutputTarget(specificTarget, item, matchTags, excludedStorages) ? specificTarget : null;
+                return IsUsableOutputTarget(specificTarget, item, matchTags, excludedStorages, sourceWorldId) ? specificTarget : null;
             }
 
             snapshot = snapshot ?? StorageSceneCollector.Collect();
@@ -376,7 +403,7 @@ namespace StorageNetwork.Services
             {
                 Storage target = info?.Storage;
                 if (info?.Minion != null ||
-                    !IsUsableOutputTarget(target, item, matchTags, excludedStorages) ||
+                    !IsUsableOutputTarget(target, item, matchTags, excludedStorages, sourceWorldId) ||
                     !IsAutoOutputMatch(target, matchTags))
                 {
                     continue;
@@ -419,10 +446,12 @@ namespace StorageNetwork.Services
             return left.RemainingCapacity().CompareTo(right.RemainingCapacity());
         }
 
-        private static bool IsUsableOutputTarget(Storage target, GameObject item, HashSet<Tag> matchTags, HashSet<Storage> excludedStorages)
+        private static bool IsUsableOutputTarget(Storage target, GameObject item, HashSet<Tag> matchTags, HashSet<Storage> excludedStorages, int sourceWorldId = -1)
         {
             return target != null &&
+                   IsStorageReachableFromWorld(target, sourceWorldId) &&
                    !excludedStorages.Contains(target) &&
+                   StorageNetworkStorageRules.IsConnectedNetworkStorage(target) &&
                    !StorageNetworkStorageRules.IsMinionStorage(target) &&
                    target.GetComponent<ComplexFabricator>() == null &&
                    target.RemainingCapacity() > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT &&
@@ -430,11 +459,13 @@ namespace StorageNetwork.Services
                    (target.items == null || !target.items.Contains(item));
         }
 
-        private static bool IsUsableElementOutputTarget(Storage target, Tag tag, HashSet<Storage> excludedStorages)
+        private static bool IsUsableElementOutputTarget(Storage target, Tag tag, HashSet<Storage> excludedStorages, int sourceWorldId = -1)
         {
             return target != null &&
                    tag != Tag.Invalid &&
+                   IsStorageReachableFromWorld(target, sourceWorldId) &&
                    !excludedStorages.Contains(target) &&
+                   StorageNetworkStorageRules.IsConnectedNetworkStorage(target) &&
                    !StorageNetworkStorageRules.IsMinionStorage(target) &&
                    target.GetComponent<ComplexFabricator>() == null &&
                    target.RemainingCapacity() > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT &&
@@ -444,13 +475,47 @@ namespace StorageNetwork.Services
                     HasNoExplicitStorageFilter(target));
         }
 
-        private static bool IsUsableNetworkSource(Storage source, IEnumerable<Tag> tags, HashSet<Storage> excludedStorages)
+        private static bool IsUsableNetworkSource(Storage source, IEnumerable<Tag> tags, HashSet<Storage> excludedStorages, int destinationWorldId)
         {
             return source != null &&
+                   IsStorageReachableFromWorld(source, destinationWorldId) &&
                    !excludedStorages.Contains(source) &&
+                   StorageNetworkStorageRules.IsConnectedNetworkStorage(source) &&
                    !StorageNetworkStorageRules.IsMinionStorage(source) &&
                    source.GetComponent<ComplexFabricator>() == null &&
                    GetAmountAvailableByAnyMatchTag(source, tags) > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT;
+        }
+
+        private static bool IsStorageReachableFromWorld(Storage storage, int worldId)
+        {
+            if (storage == null)
+            {
+                return false;
+            }
+
+            if (worldId < 0 || StorageSceneRegistry.IsCrossPlanetRelayOnline())
+            {
+                return true;
+            }
+
+            return GetObjectWorldId(storage.gameObject) == worldId;
+        }
+
+        private static int GetObjectWorldId(GameObject gameObject)
+        {
+            if (gameObject == null)
+            {
+                return -1;
+            }
+
+            int worldId = gameObject.GetMyWorldId();
+            if (worldId != byte.MaxValue && worldId >= 0)
+            {
+                return worldId;
+            }
+
+            int cell = Grid.PosToCell(gameObject);
+            return Grid.IsValidCell(cell) ? Grid.WorldIdx[cell] : -1;
         }
 
         private static bool IsAutoOutputMatch(Storage target, HashSet<Tag> matchTags)
@@ -615,16 +680,20 @@ namespace StorageNetwork.Services
     internal sealed class StorageTransferResult
     {
         public static readonly StorageTransferResult Idle = new StorageTransferResult(0f, null);
+        public static readonly StorageTransferResult Offline = new StorageTransferResult(0f, null, true);
 
-        public StorageTransferResult(float movedKg, string blockedItem)
+        public StorageTransferResult(float movedKg, string blockedItem, bool networkOffline = false)
         {
             MovedKg = movedKg;
             BlockedItem = blockedItem;
+            NetworkOffline = networkOffline;
         }
 
         public float MovedKg { get; }
 
         public string BlockedItem { get; }
+
+        public bool NetworkOffline { get; }
 
         public static StorageTransferResult Blocked(string itemName)
         {

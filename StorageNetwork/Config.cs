@@ -10,10 +10,6 @@ namespace StorageNetwork
     [JsonObject(MemberSerialization.OptIn)]
     public class Config
     {
-        [ModConfigOption("场景储存箱容量 kg", "专用场景储存箱的容量。新建建筑生效。", 1000f, 10000000f)]
-        [JsonProperty]
-        public float SceneStorageBoxCapacityKg { get; set; }
-
         [ModConfigOption("场景扫描缓存秒数", "数值越小刷新越快，但遍历储存建筑更频繁。", 0.05f, 5f)]
         [JsonProperty]
         public float SceneScanCacheSeconds { get; set; }
@@ -69,7 +65,6 @@ namespace StorageNetwork
 
         public Config()
         {
-            SceneStorageBoxCapacityKg = 500000f;
             SceneScanCacheSeconds = 0.25f;
             DefaultMaterialRequestLimitKg = 1000f;
             MinionsAllowedRequestMaterialsFromNetwork = new List<int>();
@@ -159,7 +154,6 @@ namespace StorageNetwork
                 MinionsAllowedRequestMaterialsFromNetwork = new List<int>();
             }
 
-            SceneStorageBoxCapacityKg = Clamp(SceneStorageBoxCapacityKg, 1000f, 10000000f);
             SceneScanCacheSeconds = Clamp(SceneScanCacheSeconds, 0.05f, 5f);
             DefaultMaterialRequestLimitKg = Clamp(DefaultMaterialRequestLimitKg, 1f, 1000000f);
             MaterialRequestSuccessCooldownSeconds = Clamp(MaterialRequestSuccessCooldownSeconds, 0.5f, 60f);

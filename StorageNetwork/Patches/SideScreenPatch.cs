@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using HarmonyLib;
+using StorageNetwork.Components;
 using StorageNetwork.Core;
 using StorageNetwork.UI;
 using UnityEngine;
@@ -28,6 +29,46 @@ namespace StorageNetwork.Patches
                 catch (System.Exception exception)
                 {
                     Debug.LogWarning("[StorageNetwork] Failed to add management menu button: " + exception);
+                }
+            }
+        }
+
+        [HarmonyPatch(typeof(ClusterDestinationSideScreen), "IsValidForTarget")]
+        public static class ClusterDestinationSideScreenIsValidForTargetPatch
+        {
+            public static void Postfix(GameObject target, ref bool __result)
+            {
+                if (__result || target == null)
+                {
+                    return;
+                }
+
+                StorageNetworkRelayModule relay = target.GetComponent<StorageNetworkRelayModule>();
+                RocketModuleCluster module = target.GetComponent<RocketModuleCluster>();
+                __result = relay != null &&
+                           module != null &&
+                           module.CraftInterface != null &&
+                           module.CraftInterface.HasClusterDestinationSelector();
+            }
+        }
+
+        [HarmonyPatch(typeof(DetailsScreen), "OnPrefabInit")]
+        public static class DetailsScreenOnPrefabInitPatch
+        {
+            public static void Postfix(DetailsScreen __instance)
+            {
+                if (__instance == null)
+                {
+                    return;
+                }
+
+                try
+                {
+                    StorageNetworkCoreSideScreenRegistration.Add(__instance);
+                }
+                catch (System.Exception exception)
+                {
+                    Debug.LogWarning("[StorageNetwork] Failed to add core side screen: " + exception);
                 }
             }
         }
@@ -212,6 +253,35 @@ namespace StorageNetwork.Patches
                        text == global::STRINGS.UI.JOBS ||
                        text == global::STRINGS.UI.SCHEDULE ||
                        text == global::STRINGS.UI.SKILLS;
+            }
+        }
+
+        private static class StorageNetworkCoreSideScreenRegistration
+        {
+            private const string ScreenName = "StorageNetworkCoreSideScreen";
+
+            public static void Add(DetailsScreen detailsScreen)
+            {
+                HarmonyLib.Traverse traverse = HarmonyLib.Traverse.Create(detailsScreen);
+                List<DetailsScreen.SideScreenRef> sideScreens = traverse.Field("sideScreens").GetValue<List<DetailsScreen.SideScreenRef>>();
+                GameObject contentBody = traverse.Field("sideScreenContentBody").GetValue<GameObject>();
+                if (sideScreens == null || contentBody == null || sideScreens.Any(screen => screen.name == ScreenName))
+                {
+                    return;
+                }
+
+                GameObject prefabObject = new GameObject(ScreenName);
+                prefabObject.transform.SetParent(contentBody.transform, false);
+                prefabObject.SetActive(false);
+
+                StorageNetworkCoreSideScreen sideScreen = prefabObject.AddComponent<StorageNetworkCoreSideScreen>();
+                sideScreens.Add(new DetailsScreen.SideScreenRef
+                {
+                    name = ScreenName,
+                    offset = Vector2.zero,
+                    screenPrefab = sideScreen,
+                    tab = DetailsScreen.SidescreenTabTypes.Config
+                });
             }
         }
     }

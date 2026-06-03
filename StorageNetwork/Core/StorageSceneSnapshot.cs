@@ -6,16 +6,18 @@ namespace StorageNetwork.Core
     public sealed class StorageSceneSnapshot
     {
         public static readonly StorageSceneSnapshot Empty =
-            new StorageSceneSnapshot(new List<StorageInfo>(), 0f, 0f);
+            new StorageSceneSnapshot(new List<StorageInfo>(), 0f, 0f, true);
 
         public StorageSceneSnapshot(
             IReadOnlyList<StorageInfo> storages,
             float totalStoredKg,
-            float totalCapacityKg)
+            float totalCapacityKg,
+            bool networkOnline)
         {
             Storages = storages;
             TotalStoredKg = totalStoredKg;
             TotalCapacityKg = totalCapacityKg;
+            NetworkOnline = networkOnline;
         }
 
         public IReadOnlyList<StorageInfo> Storages { get; }
@@ -23,6 +25,8 @@ namespace StorageNetwork.Core
         public float TotalStoredKg { get; }
 
         public float TotalCapacityKg { get; }
+
+        public bool NetworkOnline { get; }
     }
 
     public sealed class StorageInfo
@@ -31,10 +35,11 @@ namespace StorageNetwork.Core
         {
             Storage = storage;
             GameObject = storage.gameObject;
+            bool connected = StorageNetworkStorageRules.IsConnectedNetworkStorage(storage);
             ContentStorages = GetContentStorages(storage);
             List<GameObject> storedItems = new List<GameObject>();
             float storedKg = 0f;
-            foreach (Storage contentStorage in ContentStorages)
+            foreach (Storage contentStorage in connected ? ContentStorages : new List<Storage>())
             {
                 if (contentStorage == null)
                 {
@@ -58,8 +63,9 @@ namespace StorageNetwork.Core
 
             StoredItems = storedItems;
             StoredKg = storedKg;
-            CapacityKg = storage.Capacity();
+            CapacityKg = connected ? storage.Capacity() : 0f;
             Name = GameObject.GetProperName();
+            ConnectedToNetwork = connected;
         }
 
         public StorageInfo(Geyser geyser)
@@ -71,6 +77,7 @@ namespace StorageNetwork.Core
             StoredItems = new List<GameObject>();
             StoredKg = 0f;
             CapacityKg = 0f;
+            ConnectedToNetwork = false;
         }
 
         public StorageInfo(MinionIdentity minion)
@@ -98,6 +105,8 @@ namespace StorageNetwork.Core
         public float StoredKg { get; }
 
         public float CapacityKg { get; }
+
+        public bool ConnectedToNetwork { get; }
 
         private static IReadOnlyList<Storage> GetContentStorages(Storage storage)
         {

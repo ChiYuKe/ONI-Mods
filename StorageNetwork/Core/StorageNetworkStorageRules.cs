@@ -18,6 +18,28 @@ namespace StorageNetwork.Core
         }
 
         /// <summary>
+        /// 判断模组服务器是否在线。没有 ModStorage 标签的普通储存不受这个规则影响。
+        /// </summary>
+        public static bool IsModStorageOnline(Storage storage)
+        {
+            if (storage == null || !HasModStorageTag(storage))
+            {
+                return true;
+            }
+
+            Operational operational = storage.GetComponent<Operational>();
+            return operational == null || operational.IsOperational;
+        }
+
+        /// <summary>
+        /// 判断 Storage 是否能参与网络容量、来源和目标计算。断电的服务器会被显示，但不会接入网络。
+        /// </summary>
+        public static bool IsConnectedNetworkStorage(Storage storage)
+        {
+            return storage != null && IsModStorageOnline(storage);
+        }
+
+        /// <summary>
         /// 判断 Storage 是否希望显示 StorageNetwork 设置按钮。
         /// </summary>
         public static bool HasSettingsButtonTag(Storage storage)
@@ -44,6 +66,7 @@ namespace StorageNetwork.Core
         {
             return storage != null &&
                    storage != ownerStorage &&
+                   IsConnectedNetworkStorage(storage) &&
                    !IsMinionStorage(storage) &&
                    storage.GetComponent<ComplexFabricator>() == null;
         }

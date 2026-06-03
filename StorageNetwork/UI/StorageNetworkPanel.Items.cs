@@ -227,19 +227,73 @@ namespace StorageNetwork.UI
         private IEnumerable<StorageNetworkCategoryGroup> BuildCategoryGroups(IEnumerable<StorageInfo> storages)
         {
             Dictionary<string, StorageNetworkCategoryGroup> groups = new Dictionary<string, StorageNetworkCategoryGroup>();
+            if (string.IsNullOrEmpty(NormalizeSearchText(mainSearchText)))
+            {
+                EnsureCategoryGroup(groups, StorageCategories.ModStorageKey);
+            }
+
             foreach (StorageInfo storageInfo in storages)
             {
                 string key = GetStorageCategoryKey(storageInfo);
-                if (!groups.TryGetValue(key, out StorageNetworkCategoryGroup group))
-                {
-                    group = new StorageNetworkCategoryGroup(key, GetStorageCategoryName(key));
-                    groups.Add(key, group);
-                }
+                StorageNetworkCategoryGroup group = EnsureCategoryGroup(groups, key);
 
                 group.Storages.Add(storageInfo);
             }
 
             return groups.Values.OrderBy(group => GetStorageCategoryOrder(group.Key));
+        }
+
+        private IEnumerable<StorageInfo> FilterStorageInfosBySearch(IEnumerable<StorageInfo> storages)
+        {
+            string query = NormalizeSearchText(mainSearchText);
+            if (string.IsNullOrEmpty(query))
+            {
+                return storages ?? Enumerable.Empty<StorageInfo>();
+            }
+
+            return (storages ?? Enumerable.Empty<StorageInfo>()).Where(storageInfo => MatchesMainSearch(storageInfo, query));
+        }
+
+        private static bool MatchesMainSearch(StorageInfo storageInfo, string query)
+        {
+            if (storageInfo == null)
+            {
+                return false;
+            }
+
+            if (ContainsSearchText(storageInfo.Name, query) ||
+                ContainsSearchText(GetStorageTypeName(storageInfo), query) ||
+                ContainsSearchText(GetStorageCategoryName(GetStorageCategoryKey(storageInfo)), query))
+            {
+                return true;
+            }
+
+            if (storageInfo.Geyser != null && ContainsSearchText(GetGeyserDetails(storageInfo.Geyser), query))
+            {
+                return true;
+            }
+
+            foreach (GameObject item in storageInfo.StoredItems ?? Enumerable.Empty<GameObject>())
+            {
+                if (ContainsSearchText(GetStoredItemName(item), query) ||
+                    ContainsSearchText(GetStoredItemKey(item), query))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static StorageNetworkCategoryGroup EnsureCategoryGroup(Dictionary<string, StorageNetworkCategoryGroup> groups, string key)
+        {
+            if (!groups.TryGetValue(key, out StorageNetworkCategoryGroup group))
+            {
+                group = new StorageNetworkCategoryGroup(key, GetStorageCategoryName(key));
+                groups.Add(key, group);
+            }
+
+            return group;
         }
 
         private void EnsureSelectedCategory(List<StorageNetworkCategoryGroup> groups)

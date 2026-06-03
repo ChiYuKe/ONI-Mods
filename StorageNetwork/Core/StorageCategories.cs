@@ -5,10 +5,9 @@ namespace StorageNetwork.Core
 {
     public static class StorageCategories
     {
-        private const string SceneStorageKey = "scene_storage";
         private const string VanillaStorageKey = "vanilla_storage";
         private const string RecipeBuildingKey = "recipe_building";
-        private const string ModStorageKey = "mod_storage";
+        public const string ModStorageKey = "mod_storage";
         public const string MinionKey = "minion";
         public const string GeyserKey = "geyser";
 
@@ -16,7 +15,7 @@ namespace StorageNetwork.Core
         {
             if (storage == null)
             {
-                return SceneStorageKey;
+                return VanillaStorageKey;
             }
 
             if (HasModStorageTag(storage))
@@ -27,7 +26,7 @@ namespace StorageNetwork.Core
             StorageNetworkEnrollment enrollment = storage.GetComponent<StorageNetworkEnrollment>();
             if (enrollment == null || !enrollment.IncludedInSceneNetwork)
             {
-                return SceneStorageKey;
+                return VanillaStorageKey;
             }
 
             return enrollment.IsComplexRecipeBuilding() ? RecipeBuildingKey : VanillaStorageKey;
@@ -55,9 +54,7 @@ namespace StorageNetwork.Core
                 return Loc.Get(Loc.UI.STORAGE_NETWORK.CATEGORY_MOD_STORAGE);
             }
 
-            return key == VanillaStorageKey
-                ? Loc.Get(Loc.UI.STORAGE_NETWORK.CATEGORY_VANILLA_STORAGE)
-                : Loc.Get(Loc.UI.STORAGE_NETWORK.CATEGORY_SCENE_STORAGE);
+            return Loc.Get(Loc.UI.STORAGE_NETWORK.CATEGORY_VANILLA_STORAGE);
         }
 
         public static int GetOrder(string key)

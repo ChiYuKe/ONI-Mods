@@ -13,11 +13,81 @@ namespace StorageNetwork
         {
             public class PREFABS
             {
-                public class STORAGENETWORKSCENESTORAGEBOX
+                public class STORAGENETWORKCORE
                 {
-                    public static LocString NAME = "场景储存箱";
-                    public static LocString DESC = "供场景储存总览面板识别的专用储物箱。";
-                    public static LocString EFFECT = "复用原版储物箱动画与基础储存行为，并纳入当前场景储存总览。";
+                    public static LocString NAME = "储存网络核心";
+                    public static LocString DESC = "维持储存网络运行的核心节点。";
+                    public static LocString EFFECT = "提供大容量通用储存，并作为储存网络的主要基础设施。";
+                }
+
+                public class STORAGENETWORKSMALLSOLIDSERVER
+                {
+                    public static LocString NAME = "小型固体服务器";
+                    public static LocString DESC = "用于接入储存网络的小型固体储存服务器。";
+                    public static LocString EFFECT = "储存固体物品，并显示在储存网络窗口中。";
+                }
+
+                public class STORAGENETWORKSMALLLIQUIDSERVER
+                {
+                    public static LocString NAME = "小型液体服务器";
+                    public static LocString DESC = "用于接入储存网络的小型液体储存服务器。";
+                    public static LocString EFFECT = "储存液体物品，并显示在储存网络窗口中。";
+                }
+
+                public class STORAGENETWORKSMALLGASSERVER
+                {
+                    public static LocString NAME = "小型气体服务器";
+                    public static LocString DESC = "用于接入储存网络的小型气体储存服务器。";
+                    public static LocString EFFECT = "储存气体物品，并显示在储存网络窗口中。";
+                }
+
+                public class STORAGENETWORKMEDIUMSOLIDSERVER
+                {
+                    public static LocString NAME = "中型固体服务器";
+                    public static LocString DESC = "用于接入储存网络的中型固体储存服务器。";
+                    public static LocString EFFECT = "储存更多固体物品，并显示在储存网络窗口中。";
+                }
+
+                public class STORAGENETWORKMEDIUMLIQUIDSERVER
+                {
+                    public static LocString NAME = "中型液体服务器";
+                    public static LocString DESC = "用于接入储存网络的中型液体储存服务器。";
+                    public static LocString EFFECT = "储存更多液体物品，并显示在储存网络窗口中。";
+                }
+
+                public class STORAGENETWORKMEDIUMGASSERVER
+                {
+                    public static LocString NAME = "中型气体服务器";
+                    public static LocString DESC = "用于接入储存网络的中型气体储存服务器。";
+                    public static LocString EFFECT = "储存更多气体物品，并显示在储存网络窗口中。";
+                }
+
+                public class STORAGENETWORKLARGESOLIDSERVER
+                {
+                    public static LocString NAME = "大型固体服务器";
+                    public static LocString DESC = "用于接入储存网络的大型固体储存服务器。";
+                    public static LocString EFFECT = "储存大量固体物品，并显示在储存网络窗口中。";
+                }
+
+                public class STORAGENETWORKLARGELIQUIDSERVER
+                {
+                    public static LocString NAME = "大型液体服务器";
+                    public static LocString DESC = "用于接入储存网络的大型液体储存服务器。";
+                    public static LocString EFFECT = "储存大量液体物品，并显示在储存网络窗口中。";
+                }
+
+                public class STORAGENETWORKLARGEGASSERVER
+                {
+                    public static LocString NAME = "大型气体服务器";
+                    public static LocString DESC = "用于接入储存网络的大型气体储存服务器。";
+                    public static LocString EFFECT = "储存大量气体物品，并显示在储存网络窗口中。";
+                }
+
+                public class STORAGENETWORKRELAYMODULE
+                {
+                    public static LocString NAME = "储存网络中继器";
+                    public static LocString DESC = "安装在火箭上的储存网络中继舱。";
+                    public static LocString EFFECT = "火箭发射到太空后，允许储存网络跨星球传输物品。";
                 }
             }
         }
@@ -31,7 +101,9 @@ namespace StorageNetwork
                 public static LocString SUMMARY_TITLE = "<b>场景储存总览</b>";
                 public static LocString SUMMARY_LINE = "储存建筑：{0}    容量：{1} / {2}";
                 public static LocString EMPTY_TITLE = "当前场景没有可收集的储存建筑";
-                public static LocString EMPTY_DETAILS = "会收集专用场景储存箱，以及手动加入的原版储物箱。";
+                public static LocString EMPTY_DETAILS = "会收集储存网络核心、服务器，以及手动加入的原版储物箱。";
+                public static LocString CORE_OFFLINE_TITLE = "储存网络未启动";
+                public static LocString CORE_OFFLINE_DETAILS = "当前场景需要建造并供电至少一个储存网络核心，网络面板和材料调度才会启用。";
                 public static LocString NO_STORAGE_CONTENT = "没有储存内容";
                 public static LocString STORAGE_SETTINGS = "设置";
                 public static LocString CATEGORY_COUNT = "<b>{0}</b>\n<size=10>{1} 个</size>";
@@ -45,13 +117,15 @@ namespace StorageNetwork
                 public static LocString LOCATE_SOURCE_TOOLTIP = "定位当前箱子";
                 public static LocString LOCATE_TARGET_TOOLTIP = "定位目标箱子";
 
-                public static LocString CATEGORY_SCENE_STORAGE = "储存箱";
                 public static LocString CATEGORY_VANILLA_STORAGE = "原版储存";
                 public static LocString CATEGORY_RECIPE_BUILDING = "生产建筑";
                 public static LocString CATEGORY_MOD_STORAGE = "模组建筑";
                 public static LocString CATEGORY_MINION = "复制人";
                 public static LocString CATEGORY_GEYSER = "泉";
                 public static LocString SOURCE_MOD_NAME = "来源：{0}";
+                public static LocString SERVER_OFFLINE = "服务器已掉线";
+                public static LocString SERVER_OFFLINE_COUNT = "{0} 台服务器已掉线";
+                public static LocString HEALTH_OFFLINE = "掉线";
 
                 public static LocString SUMMARY_BUTTON = "汇总";
                 public static LocString SUMMARY_TOOLTIP = "汇总当前分类中所有箱子的物品";
@@ -101,6 +175,8 @@ namespace StorageNetwork
                 public static LocString ENROLLABLE_CATEGORY_OTHER = "其他建筑";
                 public static LocString ENROLLABLE_CATEGORY_GEYSER = "泉";
                 public static LocString ENROLLABLE_GEYSER_OUTPUT = "{0}  {1}";
+                public static LocString ENROLLABLE_WORLD_FILTER = "星球";
+                public static LocString ENROLLABLE_WORLD_ALL = "全部星球";
                 public static LocString SUMMARY_EMPTY = "当前分类没有储存内容";
                 public static LocString SUMMARY_TITLE_LINE = "<b>{0}</b>\n箱子：{1}    总量：{2}";
                 public static LocString TREND_NO_DATA = "--/周期";
@@ -181,8 +257,6 @@ namespace StorageNetwork
                 public static LocString CONFIG_TOOLTIP = "调整 StorageNetwork 模组数值";
                 public static LocString CONFIG_HINT = "保存后会写入 StorageNetworkConfig.json。建筑容量等部分数值需要重进存档或重建建筑才会完全体现。";
                 public static LocString CONFIG_RESTART_REQUIRED = "要使这些选项生效，必须重新启动游戏。";
-                public static LocString CONFIG_SCENE_STORAGE_CAPACITY = "场景储存箱容量 kg";
-                public static LocString CONFIG_SCENE_STORAGE_CAPACITY_DESC = "专用场景储存箱的容量。新建建筑生效。";
                 public static LocString CONFIG_SCENE_SCAN_CACHE = "场景扫描缓存秒数";
                 public static LocString CONFIG_SCENE_SCAN_CACHE_DESC = "数值越小刷新越快，但遍历储存建筑更频繁。";
                 public static LocString CONFIG_DEFAULT_MATERIAL_LIMIT = "材料请求默认限额 kg";
@@ -354,6 +428,16 @@ namespace StorageNetwork
                 public static LocString WORLD_BUILDING_NO_STORAGE = "本建筑：未检测到 Storage";
                 public static LocString WORLD_OUTPUT_STATUS = "输出：{0}";
                 public static LocString WORLD_CONNECTED_BUILDINGS = "接入建筑：{0}";
+                public static LocString CORE_SIDE_SCREEN_TITLE = "储存网络概览";
+                public static LocString CORE_SIDE_SCREEN_STATUS = "星球：{0}  状态：{1}";
+                public static LocString CORE_SIDE_SCREEN_ONLINE = "在线";
+                public static LocString CORE_SIDE_SCREEN_OFFLINE = "离线";
+                public static LocString CORE_SIDE_SCREEN_CAPACITY = "容量：{0} / {1}  剩余：{2}";
+                public static LocString CORE_SIDE_SCREEN_BUILDINGS = "服务器：{0}  接入储存：{1}";
+                public static LocString CORE_SIDE_SCREEN_RELAY = "跨星球中继：{0}";
+                public static LocString CORE_SIDE_SCREEN_RELAY_ONLINE = "已连接";
+                public static LocString CORE_SIDE_SCREEN_RELAY_OFFLINE = "未连接";
+                public static LocString MAIN_SEARCH_TOOLTIP = "搜索建筑、分类、储存物或泉输出。";
 
                 public static LocString MATERIAL_STATUS_NO_QUEUE = "没有可请求材料的排队配方";
                 public static LocString MATERIAL_STATUS_LIMIT_REACHED = "已达到请求限额";

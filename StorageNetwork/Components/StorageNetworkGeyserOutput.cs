@@ -34,13 +34,26 @@ namespace StorageNetwork.Components
             Storage specificTarget = enrollment.CurrentGeyserOutputStoreMode == StorageNetworkMaterialRequester.OutputStoreMode.SpecificStorage
                 ? enrollment.ResolveGeyserOutputStorage()
                 : null;
-            StorageSceneSnapshot snapshot = specificTarget == null ? StorageSceneCollector.Collect() : null;
-            List<Storage> targets = NetworkStorageTransferService.FindElementOutputTargets(output.elementHash, null, specificTarget, snapshot);
+            int sourceWorldId = GetOutputWorldId();
+            StorageSceneSnapshot snapshot = specificTarget == null ? StorageSceneCollector.CollectForWorld(sourceWorldId) : null;
+            List<Storage> targets = NetworkStorageTransferService.FindElementOutputTargets(output.elementHash, null, specificTarget, snapshot, sourceWorldId);
             float overflow = StoreElementInNetwork(output.elementHash, mass, temperature, output.addedDiseaseIdx, diseaseCount, targets);
             if (overflow > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
             {
                 emitter.ForceEmit(overflow, output.addedDiseaseIdx, diseaseCount, temperature);
             }
+        }
+
+        private int GetOutputWorldId()
+        {
+            int worldId = gameObject.GetMyWorldId();
+            if (worldId != byte.MaxValue && worldId >= 0)
+            {
+                return worldId;
+            }
+
+            int cell = Grid.PosToCell(gameObject);
+            return Grid.IsValidCell(cell) ? Grid.WorldIdx[cell] : -1;
         }
 
         public bool CanCaptureOutput()
