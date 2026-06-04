@@ -92,6 +92,53 @@ namespace StorageNetwork
             }
         }
 
+        public class RESEARCH
+        {
+            public class TREES
+            {
+                public static LocString TITLE_STORAGENETWORK = "储存网络";
+            }
+
+            public class TECHS
+            {
+                public class STORAGENETWORK
+                {
+                    public static LocString NAME = "储存网络";
+                    public static LocString DESC = "解锁储存网络核心、服务器和跨星球中继设备。";
+                }
+
+                public class STORAGENETWORKCORE
+                {
+                    public static LocString NAME = "储存核心";
+                    public static LocString DESC = "解锁储存网络核心。";
+                }
+
+                public class STORAGENETWORKSMALLSTORAGE
+                {
+                    public static LocString NAME = "小型储存";
+                    public static LocString DESC = "解锁小型固体、液体、气体服务器。";
+                }
+
+                public class STORAGENETWORKMEDIUMSTORAGE
+                {
+                    public static LocString NAME = "中级储存";
+                    public static LocString DESC = "解锁中型固体、液体、气体服务器。";
+                }
+
+                public class STORAGENETWORKLARGESTORAGE
+                {
+                    public static LocString NAME = "高级储存";
+                    public static LocString DESC = "解锁大型固体、液体、气体服务器。";
+                }
+
+                public class STORAGENETWORKRELAY
+                {
+                    public static LocString NAME = "储存网络中继器";
+                    public static LocString DESC = "解锁可用于跨星球传输的储存网络中继舱。";
+                }
+            }
+        }
+
         public class UI
         {
             public class STORAGE_NETWORK

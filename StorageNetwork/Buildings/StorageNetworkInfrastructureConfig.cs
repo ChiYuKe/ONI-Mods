@@ -239,13 +239,23 @@ namespace StorageNetwork.Buildings
 
     public static class StorageNetworkStorageBuildingSpecs
     {
-        private const string StorageAnim = "storagelocker_kanim";
+        private const string CoreAnim = "storagenetwork_core_kanim";
+        private const string SmallSolidServerAnim = "storagenetwork_small_solid_server_kanim";
+        private const string SmallLiquidServerAnim = "storagenetwork_small_liquid_server_kanim";
+        private const string SmallGasServerAnim = "storagenetwork_small_gas_server_kanim";
+        private const string MediumSolidServerAnim = "storagenetwork_medium_solid_server_kanim";
+        private const string MediumLiquidServerAnim = "storagenetwork_medium_liquid_server_kanim";
+        private const string MediumGasServerAnim = "storagenetwork_medium_gas_server_kanim";
+        private const string LargeSolidServerAnim = "storagenetwork_large_solid_server_kanim";
+        private const string LargeLiquidServerAnim = "storagenetwork_large_liquid_server_kanim";
+        private const string LargeGasServerAnim = "storagenetwork_large_gas_server_kanim";
         private const float MeltingPoint = 1600f;
 
         public static readonly StorageNetworkStorageBuildingSpec Core = Create(
             StorageNetworkCoreConfig.ID,
             3,
             4,
+            CoreAnim,
             500000f,
             240f,
             2f,
@@ -254,8 +264,9 @@ namespace StorageNetwork.Buildings
 
         public static readonly StorageNetworkStorageBuildingSpec SmallSolid = CreateServer(
             SmallSolidServerConfig.ID,
-            2,
             1,
+            2,
+            SmallSolidServerAnim,
             25000f,
             60f,
             STORAGEFILTERS.STORAGE_LOCKERS_STANDARD,
@@ -263,8 +274,9 @@ namespace StorageNetwork.Buildings
 
         public static readonly StorageNetworkStorageBuildingSpec SmallLiquid = CreateServer(
             SmallLiquidServerConfig.ID,
-            2,
             1,
+            2,
+            SmallLiquidServerAnim,
             25000f,
             60f,
             STORAGEFILTERS.LIQUIDS,
@@ -272,8 +284,9 @@ namespace StorageNetwork.Buildings
 
         public static readonly StorageNetworkStorageBuildingSpec SmallGas = CreateServer(
             SmallGasServerConfig.ID,
-            2,
             1,
+            2,
+            SmallGasServerAnim,
             25000f,
             60f,
             STORAGEFILTERS.GASES,
@@ -283,6 +296,7 @@ namespace StorageNetwork.Buildings
             MediumSolidServerConfig.ID,
             2,
             2,
+            MediumSolidServerAnim,
             100000f,
             120f,
             STORAGEFILTERS.STORAGE_LOCKERS_STANDARD,
@@ -292,6 +306,7 @@ namespace StorageNetwork.Buildings
             MediumLiquidServerConfig.ID,
             2,
             2,
+            MediumLiquidServerAnim,
             100000f,
             120f,
             STORAGEFILTERS.LIQUIDS,
@@ -301,6 +316,7 @@ namespace StorageNetwork.Buildings
             MediumGasServerConfig.ID,
             2,
             2,
+            MediumGasServerAnim,
             100000f,
             120f,
             STORAGEFILTERS.GASES,
@@ -310,6 +326,7 @@ namespace StorageNetwork.Buildings
             LargeSolidServerConfig.ID,
             2,
             3,
+            LargeSolidServerAnim,
             250000f,
             240f,
             STORAGEFILTERS.STORAGE_LOCKERS_STANDARD,
@@ -319,6 +336,7 @@ namespace StorageNetwork.Buildings
             LargeLiquidServerConfig.ID,
             2,
             3,
+            LargeLiquidServerAnim,
             250000f,
             240f,
             STORAGEFILTERS.LIQUIDS,
@@ -327,7 +345,8 @@ namespace StorageNetwork.Buildings
         public static readonly StorageNetworkStorageBuildingSpec LargeGas = CreateServer(
             LargeGasServerConfig.ID,
             2,
-            3,
+            4,
+            LargeGasServerAnim,
             250000f,
             240f,
             STORAGEFILTERS.GASES,
@@ -378,18 +397,20 @@ namespace StorageNetwork.Buildings
             string id,
             int width,
             int height,
+            string animFile,
             float capacityKg,
             float powerWatts,
             List<Tag> filters,
             float[] constructionMass)
         {
-            return Create(id, width, height, capacityKg, powerWatts, 1f, filters, constructionMass);
+            return Create(id, width, height, animFile, capacityKg, powerWatts, 1f, filters, constructionMass);
         }
 
         private static StorageNetworkStorageBuildingSpec Create(
             string id,
             int width,
             int height,
+            string animFile,
             float capacityKg,
             float powerWatts,
             float selfHeatKilowatts,
@@ -401,7 +422,7 @@ namespace StorageNetwork.Buildings
                 Id = id,
                 Width = width,
                 Height = height,
-                AnimFile = StorageAnim,
+                AnimFile = animFile,
                 ConstructionTime = 30f,
                 ConstructionMass = constructionMass,
                 ConstructionMaterials = MATERIALS.REFINED_METALS,

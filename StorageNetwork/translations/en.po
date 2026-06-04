@@ -139,6 +139,58 @@ msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKRELAYMODULE.EFFE
 msgid "火箭发射到太空后，允许储存网络跨星球传输物品。"
 msgstr "When the rocket is in space, allows the Storage Network to transfer items between planetoids."
 
+msgctxt "StorageNetwork.STRINGS.RESEARCH.TECHS.STORAGENETWORK.NAME"
+msgid "储存网络"
+msgstr "Storage Network"
+
+msgctxt "StorageNetwork.STRINGS.RESEARCH.TECHS.STORAGENETWORK.DESC"
+msgid "解锁储存网络核心、服务器和跨星球中继设备。"
+msgstr "Unlocks the Storage Network core, servers, and interplanetary relay equipment."
+
+msgctxt "StorageNetwork.STRINGS.RESEARCH.TECHS.STORAGENETWORKCORE.NAME"
+msgid "储存核心"
+msgstr "Storage Core"
+
+msgctxt "StorageNetwork.STRINGS.RESEARCH.TECHS.STORAGENETWORKCORE.DESC"
+msgid "解锁储存网络核心。"
+msgstr "Unlocks the Storage Network Core."
+
+msgctxt "StorageNetwork.STRINGS.RESEARCH.TECHS.STORAGENETWORKSMALLSTORAGE.NAME"
+msgid "小型储存"
+msgstr "Small Storage"
+
+msgctxt "StorageNetwork.STRINGS.RESEARCH.TECHS.STORAGENETWORKSMALLSTORAGE.DESC"
+msgid "解锁小型固体、液体、气体服务器。"
+msgstr "Unlocks small solid, liquid, and gas servers."
+
+msgctxt "StorageNetwork.STRINGS.RESEARCH.TECHS.STORAGENETWORKMEDIUMSTORAGE.NAME"
+msgid "中级储存"
+msgstr "Medium Storage"
+
+msgctxt "StorageNetwork.STRINGS.RESEARCH.TECHS.STORAGENETWORKMEDIUMSTORAGE.DESC"
+msgid "解锁中型固体、液体、气体服务器。"
+msgstr "Unlocks medium solid, liquid, and gas servers."
+
+msgctxt "StorageNetwork.STRINGS.RESEARCH.TECHS.STORAGENETWORKLARGESTORAGE.NAME"
+msgid "高级储存"
+msgstr "Advanced Storage"
+
+msgctxt "StorageNetwork.STRINGS.RESEARCH.TECHS.STORAGENETWORKLARGESTORAGE.DESC"
+msgid "解锁大型固体、液体、气体服务器。"
+msgstr "Unlocks large solid, liquid, and gas servers."
+
+msgctxt "StorageNetwork.STRINGS.RESEARCH.TECHS.STORAGENETWORKRELAY.NAME"
+msgid "储存网络中继器"
+msgstr "Storage Network Relay"
+
+msgctxt "StorageNetwork.STRINGS.RESEARCH.TECHS.STORAGENETWORKRELAY.DESC"
+msgid "解锁可用于跨星球传输的储存网络中继舱。"
+msgstr "Unlocks the Storage Network relay module for interplanetary transfers."
+
+msgctxt "StorageNetwork.STRINGS.RESEARCH.TREES.TITLE_STORAGENETWORK"
+msgid "储存网络"
+msgstr "Storage Network"
+
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OVERVIEW_TOOLTIP"
 msgid "显示当前场景中的储存箱总览。"
 msgstr "Show an overview of storage buildings in the current scene."

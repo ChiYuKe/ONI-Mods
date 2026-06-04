@@ -1,6 +1,7 @@
 using HarmonyLib;
 using StorageNetwork.Buildings;
 using StorageNetwork.Core;
+using StorageNetwork.Research;
 
 namespace StorageNetwork.Patches
 {
@@ -39,14 +40,16 @@ namespace StorageNetwork.Patches
         {
             public static void Postfix()
             {
-                Tech tech = Db.Get().Techs.Get("SmartStorage");
-                foreach (string buildingId in StorageNetworkStorageBuildingSpecs.UnlockIds)
-                {
-                    if (tech != null && !tech.unlockedItemIDs.Contains(buildingId))
-                    {
-                        tech.unlockedItemIDs.Add(buildingId);
-                    }
-                }
+                StorageNetworkResearchInstaller.RefreshUnlockedItems();
+            }
+        }
+
+        [HarmonyPatch(typeof(Database.Techs), "Load")]
+        public static class TechsLoadPatch
+        {
+            public static void Postfix(Database.Techs __instance)
+            {
+                StorageNetworkResearchInstaller.Install(__instance);
             }
         }
 
