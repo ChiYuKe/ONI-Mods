@@ -291,6 +291,7 @@ namespace StorageNetwork
                 public static LocString PICKER_OPTION_COUNT = "可选网络服务器：{0} 个";
                 public static LocString PICKER_POLICY_HINT = "自动策略会在已接入网络的服务器中寻找合适目标；指定服务器后，只从该服务器取料或向该服务器存放。";
                 public static LocString CLOSE = "关闭";
+                public static LocString AMOUNT_TITLE = "数量";
                 public static LocString AMOUNT_LABEL = "数量：{0}";
                 public static LocString ALL = "全部";
                 public static LocString CONFIRM = "确定";

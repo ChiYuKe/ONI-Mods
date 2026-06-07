@@ -731,6 +731,10 @@ msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CLOSE"
 msgid "关闭"
 msgstr "Close"
 
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.AMOUNT_TITLE"
+msgid "数量"
+msgstr "Amount"
+
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.AMOUNT_LABEL"
 msgid "数量：{0}"
 msgstr "Amount: {0}"

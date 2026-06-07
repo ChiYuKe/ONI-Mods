@@ -654,7 +654,7 @@ namespace StorageNetwork.UI
             Stretch(label.rectTransform(), 4f, 0f);
         }
 
-        // 创建“已启用/已关闭”状态条，统一开关类卡片的状态颜色和文案。
+        // Builds the shared enabled/disabled status strip for toggle cards.
         private void CreateEnabledStatusStrip(Transform parent, bool enabled)
         {
             CreateStatusStrip(
@@ -663,7 +663,7 @@ namespace StorageNetwork.UI
                 enabled ? new Color(0.28f, 0.48f, 0.34f, 1f) : new Color(0.52f, 0.38f, 0.30f, 1f));
         }
 
-        // 创建开关操作行，开启状态使用粉色按钮表示“关闭”，关闭状态使用蓝色按钮表示“开启”。
+        // Builds a shared toggle action row: enabled cards show a pink close button, disabled cards show a blue enable button.
         private void CreateToggleActionRow(Transform parent, string label, string value, System.Action onClick, bool currentlyEnabled)
         {
             CreateProductionActionRow(parent, label, value, onClick, currentlyEnabled ? KleiPinkStyle() : KleiBlueStyle());
@@ -1459,7 +1459,7 @@ namespace StorageNetwork.UI
             layout.childForceExpandWidth = false;
             layout.childForceExpandHeight = false;
 
-            TextMeshProUGUI label = CreateText("SliderLabel", row.transform, "数量", 11, TextAlignmentOptions.MidlineLeft);
+            TextMeshProUGUI label = CreateText("SliderLabel", row.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.AMOUNT_TITLE), 11, TextAlignmentOptions.MidlineLeft);
             label.color = new Color(0.20f, 0.21f, 0.20f, 1f);
             label.gameObject.AddComponent<LayoutElement>().preferredWidth = 82f;
 
