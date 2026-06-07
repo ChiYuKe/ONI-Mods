@@ -173,13 +173,13 @@ namespace StorageNetwork.UI
             title.overflowMode = TextOverflowModes.Ellipsis;
             title.gameObject.AddComponent<LayoutElement>().preferredHeight = 24f;
 
-            AddPlanLine(titleColumn.transform, GetTrackingSummaryLine(record), 9, FontStyles.Normal, MutedTextColor(), 18f);
+            AddPlanLine(titleColumn.transform, StorageNetworkOrderTrackingRules.GetSummaryLine(record), 9, FontStyles.Normal, MutedTextColor(), 18f);
 
             GameObject detailArea = CreatePlainImage("TrackingDetailArea", main.transform, new Color(0.78f, 0.78f, 0.71f, 0.42f));
             detailArea.AddComponent<LayoutElement>().preferredHeight = 54f;
             AddVerticalContainer(detailArea, 4f, 6, 6, 4, 4);
             AddTrackingProgressRow(detailArea.transform, record, stateColor);
-            AddWrappedPlanLine(detailArea.transform, GetTrackingDetailLine(record), 10, abnormal ? FontStyles.Bold : FontStyles.Normal, abnormal ? DangerColor() : NeutralTextColor(), 17f, 2, 24);
+            AddWrappedPlanLine(detailArea.transform, StorageNetworkOrderTrackingRules.GetDetailLine(record), 10, abnormal ? FontStyles.Bold : FontStyles.Normal, abnormal ? DangerColor() : NeutralTextColor(), 17f, 2, 24);
 
             AddTrackingSeparator(card.transform, 1f);
 
@@ -195,7 +195,7 @@ namespace StorageNetwork.UI
                 sideLayout.childAlignment = TextAnchor.UpperRight;
             }
 
-            AddTrackingStateBadge(side.transform, GetOrderStateLabel(record.State), stateColor, 52f, 94f);
+            AddTrackingStateBadge(side.transform, StorageNetworkOrderTrackingRules.GetOrderStateLabel(record.State), stateColor, 52f, 94f);
             AddTrackingDottedLine(side.transform);
             AddPlanLine(side.transform, string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_CYCLE_VALUE), ProductionOrderFormatting.FormatCycle(record.CreatedCycle)), 10, FontStyles.Bold, NeutralTextColor(), 20f);
             AddPlanLine(side.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_CREATED_CYCLE), 8, FontStyles.Normal, MutedTextColor(), 15f);
@@ -356,7 +356,7 @@ namespace StorageNetwork.UI
             title.overflowMode = TextOverflowModes.Ellipsis;
             title.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
 
-            AddPlanLine(card.transform, GetOrderStateLabel(record.State), 10, FontStyles.Bold, GetOrderStateColor(record.State), 20f);
+            AddPlanLine(card.transform, StorageNetworkOrderTrackingRules.GetOrderStateLabel(record.State), 10, FontStyles.Bold, GetOrderStateColor(record.State), 20f);
             AddPlanLine(card.transform, string.Format("{0} / {1}", GameUtil.GetFormattedMass(record.ProducedAtSubmit), GameUtil.GetFormattedMass(record.RequestedAmount)), 9, FontStyles.Bold, NeutralTextColor(), 18f);
             AddPlanLine(card.transform, string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_CYCLE_VALUE), ProductionOrderFormatting.FormatCycle(record.LastActivityCycle)), 8, FontStyles.Normal, MutedTextColor(), 16f);
         }
@@ -535,44 +535,6 @@ namespace StorageNetwork.UI
             amount.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
         }
 
-        private static string GetTrackingSummaryLine(ProductionOrderRecord record)
-        {
-            return string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_ORDER_SOURCE_BATCH), GetOrderSourceLabel(record), record.OrderCount);
-        }
-
-        private static string GetTrackingDetailLine(ProductionOrderRecord record)
-        {
-            if (record.State == ProductionOrderState.Abnormal && !string.IsNullOrEmpty(record.AbnormalReason))
-            {
-                return record.AbnormalReason;
-            }
-
-            int primaryMachines = (record.QueueAssignments ?? new List<ProductionOrderQueueAssignment>())
-                .Where(assignment => assignment != null && assignment.Primary)
-                .Select(assignment => assignment.Fabricator)
-                .Where(fabricator => fabricator != null)
-                .Distinct()
-                .Count();
-            int materialMachines = (record.QueueAssignments ?? new List<ProductionOrderQueueAssignment>())
-                .Where(assignment => assignment != null && !assignment.Primary)
-                .Select(assignment => assignment.Fabricator)
-                .Where(fabricator => fabricator != null)
-                .Distinct()
-                .Count();
-
-            if (materialMachines > 0)
-            {
-                return string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_WAITING_MATERIALS), Mathf.Max(1, primaryMachines), materialMachines);
-            }
-
-            if (primaryMachines > 0)
-            {
-                return string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_MACHINES_RUNNING), primaryMachines);
-            }
-
-            return string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_STATE_CREATED), GetOrderStateLabel(record.State), ProductionOrderFormatting.FormatCycle(record.CreatedCycle));
-        }
-
         private void AddProgressBar(Transform parent, float progress, Color color, float width)
         {
             GameObject track = CreateRoundedOrderImage("ProgressTrack", parent, new Color(0.24f, 0.26f, 0.23f, 1f), "UISprite", "Background", "InputField");
@@ -724,37 +686,11 @@ namespace StorageNetwork.UI
                    GetSpriteByName("action_cancel.png");
         }
 
-        private static string GetOrderSourceLabel(ProductionOrderRecord record)
-        {
-            return record.IsAutomatic ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_SOURCE_KEEP) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_SOURCE_MANUAL);
-        }
-
         private void CancelTrackedOrder(string orderKey)
         {
             lastOrderStatus = productionOrderService.CancelOrder(orderKey, GetCurrentCycleTime());
             productionOrderService.Refresh();
             RebuildOrderDetails();
-        }
-
-        private static string GetOrderStateLabel(ProductionOrderState state)
-        {
-            switch (state)
-            {
-                case ProductionOrderState.Submitted:
-                    return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_STATE_SUBMITTED);
-                case ProductionOrderState.WaitingMaterials:
-                    return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_STATE_WAITING);
-                case ProductionOrderState.Producing:
-                    return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_STATE_PRODUCING);
-                case ProductionOrderState.Completed:
-                    return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_STATE_COMPLETED);
-                case ProductionOrderState.Abnormal:
-                    return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_STATE_ABNORMAL);
-                case ProductionOrderState.Cancelled:
-                    return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_STATE_CANCELLED);
-                default:
-                    return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_STATE_TRACKING);
-            }
         }
 
         private static Color GetOrderStateColor(ProductionOrderState state)
@@ -779,17 +715,17 @@ namespace StorageNetwork.UI
         // 统一建筑运行状态颜色，订单树和详情树都走这里，避免同一状态在不同卡片上颜色不一致。
         private static Color GetBuildingStateColor(ProductionOrderQueueAssignment assignment)
         {
-            switch (GetBuildingStateKind(assignment))
+            switch (StorageNetworkOrderTrackingRules.GetBuildingStateKind(assignment))
             {
-                case BuildingStateKind.Running:
+                case StorageNetworkOrderTrackingRules.BuildingStateKind.Running:
                     return PositiveColor();
-                case BuildingStateKind.WaitingMaterials:
+                case StorageNetworkOrderTrackingRules.BuildingStateKind.WaitingMaterials:
                     return WarningColor();
-                case BuildingStateKind.Disabled:
+                case StorageNetworkOrderTrackingRules.BuildingStateKind.Disabled:
                     return new Color(0.46f, 0.46f, 0.42f, 1f);
-                case BuildingStateKind.NoRecipe:
+                case StorageNetworkOrderTrackingRules.BuildingStateKind.NoRecipe:
                     return new Color(0.40f, 0.44f, 0.48f, 1f);
-                case BuildingStateKind.Abnormal:
+                case StorageNetworkOrderTrackingRules.BuildingStateKind.Abnormal:
                     return DangerColor();
                 default:
                     return NeutralBlue();
@@ -798,84 +734,13 @@ namespace StorageNetwork.UI
 
         private static string GetBuildingStateLabel(ProductionOrderQueueAssignment assignment)
         {
-            switch (GetBuildingStateKind(assignment))
-            {
-                case BuildingStateKind.Running:
-                    return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_BUILDING_RUNNING);
-                case BuildingStateKind.WaitingMaterials:
-                    return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_BUILDING_WAITING_MATERIALS);
-                case BuildingStateKind.NoPower:
-                    return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_BUILDING_NO_POWER);
-                case BuildingStateKind.Disabled:
-                    return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_BUILDING_DISABLED);
-                case BuildingStateKind.NoRecipe:
-                    return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_BUILDING_NO_RECIPE);
-                case BuildingStateKind.Abnormal:
-                    return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_BUILDING_ABNORMAL);
-                default:
-                    return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_BUILDING_QUEUED);
-            }
+            return StorageNetworkOrderTrackingRules.GetBuildingStateLabel(assignment);
         }
 
         private static string BuildBuildingDetailLine(ProductionOrderQueueAssignment assignment, float progress)
         {
             ComplexFabricator fabricator = assignment?.Fabricator;
-            if (fabricator == null)
-            {
-                return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_BUILDING_MISSING);
-            }
-
-            if (fabricator.CurrentWorkingOrder == assignment.Recipe)
-            {
-                return string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_BUILDING_PROGRESS), Mathf.Clamp01(progress));
-            }
-
-            string state = GetProductionStateText(fabricator);
-            return string.IsNullOrEmpty(state) ? GetBuildingStateLabel(assignment) : state;
-        }
-
-        private static BuildingStateKind GetBuildingStateKind(ProductionOrderQueueAssignment assignment)
-        {
-            ComplexFabricator fabricator = assignment?.Fabricator;
-            if (fabricator == null)
-            {
-                return BuildingStateKind.Abnormal;
-            }
-
-            if (assignment.Recipe == null)
-            {
-                return BuildingStateKind.NoRecipe;
-            }
-
-            Operational operational = fabricator.GetComponent<Operational>();
-            if (operational != null && !operational.IsOperational)
-            {
-                return BuildingStateKind.Disabled;
-            }
-
-            if (fabricator.CurrentWorkingOrder == assignment.Recipe)
-            {
-                return BuildingStateKind.Running;
-            }
-
-            int queued = fabricator.GetRecipeQueueCount(assignment.Recipe);
-            if (queued != 0)
-            {
-                return BuildingStateKind.WaitingMaterials;
-            }
-
-            return BuildingStateKind.NoRecipe;
-        }
-
-        private enum BuildingStateKind
-        {
-            Queued,
-            Running,
-            WaitingMaterials,
-            NoPower,
-            Disabled,
-            NoRecipe,
-            Abnormal
+            return StorageNetworkOrderTrackingRules.BuildBuildingDetailLine(assignment, progress, fabricator != null ? GetProductionStateText(fabricator) : null);
         }
 
     }
