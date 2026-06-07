@@ -150,7 +150,7 @@ namespace StorageNetwork.UI
 
         private static float GetStoredItemsMass(IEnumerable<GameObject> items)
         {
-            return items?.Sum(GetStoredItemMass) ?? 0f;
+            return StorageItemUtility.GetMass(items);
         }
 
         private static float GetStoredItemMass(GameObject item)

@@ -107,6 +107,25 @@ namespace StorageNetwork.Services
         }
 
         /// <summary>
+        /// 统计一组物品的总质量。没有 PrimaryElement 的对象按 0 处理。
+        /// </summary>
+        public static float GetMass(IEnumerable<GameObject> items)
+        {
+            if (items == null)
+            {
+                return 0f;
+            }
+
+            float mass = 0f;
+            foreach (GameObject item in items)
+            {
+                mass += GetMass(item);
+            }
+
+            return mass;
+        }
+
+        /// <summary>
         /// 统计 Storage 当前直接持有物品的总质量。
         /// </summary>
         public static float GetStoredMass(Storage storage)
@@ -119,10 +138,7 @@ namespace StorageNetwork.Services
             float mass = 0f;
             foreach (GameObject item in storage.items)
             {
-                if (item != null)
-                {
-                    mass += GetMass(item);
-                }
+                mass += GetMass(item);
             }
 
             return mass;
