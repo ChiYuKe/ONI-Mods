@@ -329,7 +329,7 @@ namespace StorageNetwork.UI
             AddMetricTile(band.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_METRIC_TARGET), GameUtil.GetFormattedMass(draft.RequestedAmount), GetRiskColor(draft.RiskLevel), 108f);
             AddMetricTile(band.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_METRIC_AVAILABLE), GameUtil.GetFormattedMass(draft.NetworkAvailableAmount), PositiveColor(), 108f);
             AddMetricTile(band.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_METRIC_BATCHES), draft.Plan != null ? draft.Plan.OrderCount.ToString() : "0", NeutralBlue(), 86f);
-            AddMetricTile(band.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_METRIC_STATUS), GetRiskLabel(draft.RiskLevel), GetRiskColor(draft.RiskLevel), 94f);
+            AddMetricTile(band.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_METRIC_STATUS), StorageNetworkOrderEditorText.GetRiskLabel(draft.RiskLevel), GetRiskColor(draft.RiskLevel), 94f);
         }
 
         private void AddOrderEditorAndPlan(Transform parent, ProductDisplayGroup product, RecipeDisplayInfo route, ProductionOrderDraft draft)
@@ -635,7 +635,7 @@ namespace StorageNetwork.UI
 
             AddStatusIcon(header.transform, draft.CanSubmit);
 
-            TextMeshProUGUI title = CreateText("ValidationTitle", header.transform, draft.CanSubmit ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_RISK_READY) : GetRiskLabel(draft.RiskLevel), 12, TextAlignmentOptions.MidlineLeft);
+            TextMeshProUGUI title = CreateText("ValidationTitle", header.transform, draft.CanSubmit ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_RISK_READY) : StorageNetworkOrderEditorText.GetRiskLabel(draft.RiskLevel), 12, TextAlignmentOptions.MidlineLeft);
             title.color = Color.white;
             title.fontStyle = FontStyles.Bold;
             title.textWrappingMode = TextWrappingModes.NoWrap;
@@ -719,33 +719,8 @@ namespace StorageNetwork.UI
 
         private string BuildOrderTrackingStatus(ProductDisplayGroup product, ProductionOrderDraft draft)
         {
-            if (!string.IsNullOrEmpty(lastOrderStatus))
-            {
-                return lastOrderStatus;
-            }
-
-            if (draft.DuplicateOrder != null)
-            {
-                return string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_DUPLICATE_FOUND), draft.DuplicateOrder.DisplayId);
-            }
-
             int activeCount = productionOrderService.GetActiveOrdersForProduct(product.ProductTag, 99).Count;
-            return activeCount > 0
-                ? string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_ACTIVE_ORDERS_FOUND), activeCount)
-                : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_NO_ACTIVE_ORDERS);
-        }
-
-        private static string GetRiskLabel(ProductionOrderRiskLevel risk)
-        {
-            switch (risk)
-            {
-                case ProductionOrderRiskLevel.Blocked:
-                    return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_RISK_BLOCKED);
-                case ProductionOrderRiskLevel.Warning:
-                    return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_RISK_WARNING);
-                default:
-                    return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_RISK_READY);
-            }
+            return StorageNetworkOrderEditorText.BuildTrackingStatus(lastOrderStatus, draft, activeCount);
         }
 
         private static Color GetRiskColor(ProductionOrderRiskLevel risk)
@@ -759,21 +734,6 @@ namespace StorageNetwork.UI
                 default:
                     return PositiveColor();
             }
-        }
-
-        private static string BuildAutomationSummary(ProductionOrderDraft draft)
-        {
-            if (draft.RiskLevel == ProductionOrderRiskLevel.Blocked)
-            {
-                return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_AUTOMATION_BLOCKED);
-            }
-
-            if (draft.ProducedRequirementCount > 0)
-            {
-                return string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_AUTOMATION_PRODUCE), draft.ProducedRequirementCount);
-            }
-
-            return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_AUTOMATION_READY);
         }
 
     }
