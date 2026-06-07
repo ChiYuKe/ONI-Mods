@@ -216,6 +216,11 @@ namespace StorageNetwork
                 public static LocString ORDER_ABNORMAL_NOTIFICATION_TOOLTIP = "以下生产订单已被储存网络自动取消，请检查材料来源、生产建筑或队列状态。\n";
                 public static LocString ORDER_ABNORMAL_NOTIFICATION_DETAIL = "• #{0} {1}：目标 {2}，已完成 {3}\n  {4}";
                 public static LocString ORDER_ABNORMAL_DEFAULT_REASON = "订单长时间没有进度变动。";
+                public static LocString ORDER_CANCEL_MISSING = "订单取消失败：找不到目标订单。";
+                public static LocString ORDER_CANCEL_ALREADY_DONE = "订单 #{0} 已经结束，无需取消。";
+                public static LocString ORDER_CANCEL_REASON_MANUAL = "用户手动取消。";
+                public static LocString ORDER_CANCEL_SUCCESS = "订单追踪：已手动取消订单 #{0}，并释放剩余排队批次。";
+                public static LocString ORDER_ABNORMAL_TIMEOUT_REASON = "{0:0.##} 周期内无进度变动，已自动取消建筑排产。最后变动周期 {1}";
                 public static LocString ORDER_DISPATCH_TITLE = "调度策略";
                 public static LocString ORDER_DISPATCH_SUMMARY = "优先调拨网络库存；缺口由已接入生产建筑补产；提交后自动开启材料请求。";
                 public static LocString ENROLLABLE_BUTTON_TOOLTIP = "显示当前场景中所有可接入储存网络的建筑。";

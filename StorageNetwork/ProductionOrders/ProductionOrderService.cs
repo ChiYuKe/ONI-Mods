@@ -5,6 +5,7 @@ using StorageNetwork.Components;
 using StorageNetwork.Core;
 using StorageNetwork.Services;
 using UnityEngine;
+using static StorageNetwork.STRINGS;
 
 namespace StorageNetwork.ProductionOrders
 {
@@ -219,20 +220,20 @@ namespace StorageNetwork.ProductionOrders
         {
             if (string.IsNullOrEmpty(orderKey) || !ActiveOrders.TryGetValue(orderKey, out ProductionOrderRecord order))
             {
-                return "订单取消失败：找不到目标订单。";
+                return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CANCEL_MISSING);
             }
 
             if (!IsOrderActive(order))
             {
-                return string.Format("订单 #{0} 已经结束，无需取消。", order.DisplayId);
+                return string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CANCEL_ALREADY_DONE), order.DisplayId);
             }
 
             CancelOrderQueues(order);
             ReleaseOrderAutomation(order.Key);
             order.State = ProductionOrderState.Cancelled;
             order.CompletedCycle = currentCycle;
-            order.AbnormalReason = "用户手动取消。";
-            return string.Format("订单追踪：已手动取消订单 #{0}，并释放剩余排队批次。", order.DisplayId);
+            order.AbnormalReason = Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CANCEL_REASON_MANUAL);
+            return string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CANCEL_SUCCESS), order.DisplayId);
         }
 
         public ProductionPlanNode BuildProductionPlan(ComplexRecipe recipe, List<ComplexFabricator> fabricators, Tag productTag, float requestedAmount)
@@ -1104,7 +1105,7 @@ namespace StorageNetwork.ProductionOrders
         {
             order.State = ProductionOrderState.Abnormal;
             order.CompletedCycle = currentCycle;
-            order.AbnormalReason = string.Format("{0:0.##} 周期内无进度变动，已自动取消建筑排产。最后变动周期 {1}", Config.Instance.AbnormalOrderTimeoutCycles, ProductionOrderFormatting.FormatCycle(order.LastActivityCycle));
+            order.AbnormalReason = string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_ABNORMAL_TIMEOUT_REASON), Config.Instance.AbnormalOrderTimeoutCycles, ProductionOrderFormatting.FormatCycle(order.LastActivityCycle));
             CancelOrderQueues(order);
             ReleaseOrderAutomation(order.Key);
             StorageNetworkNotifications.ShowAbnormalOrder(order);

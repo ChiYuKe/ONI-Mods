@@ -467,6 +467,26 @@ msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_ABNORMAL_DEFAULT_REASON
 msgid "订单长时间没有进度变动。"
 msgstr "The order made no progress for too long."
 
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CANCEL_MISSING"
+msgid "订单取消失败：找不到目标订单。"
+msgstr "Failed to cancel order: target order not found."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CANCEL_ALREADY_DONE"
+msgid "订单 #{0} 已经结束，无需取消。"
+msgstr "Order #{0} has already ended; no cancellation needed."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CANCEL_REASON_MANUAL"
+msgid "用户手动取消。"
+msgstr "Cancelled manually by the user."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CANCEL_SUCCESS"
+msgid "订单追踪：已手动取消订单 #{0}，并释放剩余排队批次。"
+msgstr "Order tracking: manually cancelled order #{0} and released remaining queued batches."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_ABNORMAL_TIMEOUT_REASON"
+msgid "{0:0.##} 周期内无进度变动，已自动取消建筑排产。最后变动周期 {1}"
+msgstr "No progress for {0:0.##} cycles; building queues were automatically cancelled. Last activity cycle {1}"
+
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_DISPATCH_TITLE"
 msgid "调度策略"
 msgstr "Dispatch Policy"
