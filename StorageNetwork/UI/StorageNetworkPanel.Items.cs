@@ -155,13 +155,7 @@ namespace StorageNetwork.UI
 
         private static float GetStoredItemMass(GameObject item)
         {
-            if (item == null)
-            {
-                return 0f;
-            }
-
-            PrimaryElement primaryElement = item.GetComponent<PrimaryElement>();
-            return primaryElement != null ? primaryElement.Mass : 0f;
+            return StorageItemUtility.GetMass(item);
         }
 
         private static List<GameObject> FindStoredItems(Storage storage, string itemKey)
