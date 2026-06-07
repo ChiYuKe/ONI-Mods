@@ -900,19 +900,19 @@ namespace StorageNetwork.UI
             switch (GetBuildingStateKind(assignment))
             {
                 case BuildingStateKind.Running:
-                    return "正常运行";
+                    return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_BUILDING_RUNNING);
                 case BuildingStateKind.WaitingMaterials:
-                    return "等待材料";
+                    return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_BUILDING_WAITING_MATERIALS);
                 case BuildingStateKind.NoPower:
-                    return "缺电";
+                    return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_BUILDING_NO_POWER);
                 case BuildingStateKind.Disabled:
-                    return "禁用";
+                    return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_BUILDING_DISABLED);
                 case BuildingStateKind.NoRecipe:
-                    return "无配方";
+                    return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_BUILDING_NO_RECIPE);
                 case BuildingStateKind.Abnormal:
-                    return "异常暂停";
+                    return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_BUILDING_ABNORMAL);
                 default:
-                    return "排队中";
+                    return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_BUILDING_QUEUED);
             }
         }
 
@@ -921,12 +921,12 @@ namespace StorageNetwork.UI
             ComplexFabricator fabricator = assignment?.Fabricator;
             if (fabricator == null)
             {
-                return "建筑不存在";
+                return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_BUILDING_MISSING);
             }
 
             if (fabricator.CurrentWorkingOrder == assignment.Recipe)
             {
-                return string.Format("进度 {0:P0}", Mathf.Clamp01(progress));
+                return string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_BUILDING_PROGRESS), Mathf.Clamp01(progress));
             }
 
             string state = GetProductionStateText(fabricator);

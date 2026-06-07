@@ -1263,6 +1263,42 @@ msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_STATE_TRACKING"
 msgid "追踪中"
 msgstr "Tracking"
 
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_BUILDING_RUNNING"
+msgid "正常运行"
+msgstr "Running"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_BUILDING_WAITING_MATERIALS"
+msgid "等待材料"
+msgstr "Waiting for materials"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_BUILDING_NO_POWER"
+msgid "缺电"
+msgstr "No power"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_BUILDING_DISABLED"
+msgid "禁用"
+msgstr "Disabled"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_BUILDING_NO_RECIPE"
+msgid "无配方"
+msgstr "No recipe"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_BUILDING_ABNORMAL"
+msgid "异常暂停"
+msgstr "Paused abnormally"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_BUILDING_QUEUED"
+msgid "排队中"
+msgstr "Queued"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_BUILDING_MISSING"
+msgid "建筑不存在"
+msgstr "Building missing"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_BUILDING_PROGRESS"
+msgid "进度 {0:P0}"
+msgstr "Progress {0:P0}"
+
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_METRIC_STORAGE"
 msgid "储存"
 msgstr "Storage"

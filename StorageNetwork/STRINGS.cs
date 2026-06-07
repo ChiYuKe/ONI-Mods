@@ -445,6 +445,15 @@ namespace StorageNetwork
                 public static LocString TRACKING_STATE_ABNORMAL = "异常取消";
                 public static LocString TRACKING_STATE_CANCELLED = "已取消";
                 public static LocString TRACKING_STATE_TRACKING = "追踪中";
+                public static LocString TRACKING_BUILDING_RUNNING = "正常运行";
+                public static LocString TRACKING_BUILDING_WAITING_MATERIALS = "等待材料";
+                public static LocString TRACKING_BUILDING_NO_POWER = "缺电";
+                public static LocString TRACKING_BUILDING_DISABLED = "禁用";
+                public static LocString TRACKING_BUILDING_NO_RECIPE = "无配方";
+                public static LocString TRACKING_BUILDING_ABNORMAL = "异常暂停";
+                public static LocString TRACKING_BUILDING_QUEUED = "排队中";
+                public static LocString TRACKING_BUILDING_MISSING = "建筑不存在";
+                public static LocString TRACKING_BUILDING_PROGRESS = "进度 {0:P0}";
 
                 public static LocString PRODUCTION_METRIC_STORAGE = "储存";
                 public static LocString PRODUCTION_METRIC_RUNNING = "运行";
