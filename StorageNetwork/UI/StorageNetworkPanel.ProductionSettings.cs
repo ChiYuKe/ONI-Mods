@@ -328,7 +328,7 @@ namespace StorageNetwork.UI
             CreateProductionActionRow(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SOURCE_POLICY), StorageNetworkProductionSettingsText.GetMaterialRequestModeName(requester), () => ShowMaterialSourcePicker(ownerStorage, requester));
             CreateToggleActionRow(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_LIMIT_ENABLED), requester.LimitEnabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ACTION_CLOSE) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ON), () =>
             {
-                SetMaterialRequestLimitEnabled(requester, !requester.LimitEnabled);
+                StorageNetworkMaterialLimitRules.SetEnabled(requester, !requester.LimitEnabled);
                 UpdateProductionSettingsPanel(true);
             }, requester.LimitEnabled);
             if (requester.LimitEnabled)
@@ -410,7 +410,7 @@ namespace StorageNetwork.UI
                 () => ShowEnergyGeneratorSourcePicker(ownerStorage, requester));
             CreateToggleActionRow(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_LIMIT_ENABLED), requester.LimitEnabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ACTION_CLOSE) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ON), () =>
             {
-                SetEnergyGeneratorMaterialRequestLimitEnabled(requester, !requester.LimitEnabled);
+                StorageNetworkMaterialLimitRules.SetEnabled(requester, !requester.LimitEnabled);
                 UpdateProductionSettingsPanel(true);
             }, requester.LimitEnabled);
             if (requester.LimitEnabled)
@@ -783,7 +783,7 @@ namespace StorageNetwork.UI
                 requester.LimitEnabled,
                 value =>
                 {
-                    SetMaterialRequestLimitEnabled(requester, value);
+                    StorageNetworkMaterialLimitRules.SetEnabled(requester, value);
                     UpdateProductionSettingsPanel();
                 });
 
@@ -1323,8 +1323,8 @@ namespace StorageNetwork.UI
                     UpdateProductionSettingsPanel(true);
                 });
 
-            float currentLimit = Mathf.Max(1f, requester.LimitKg <= 0f ? Config.Instance.DefaultMaterialRequestLimitKg : requester.LimitKg);
-            KSlider slider = CreateLimitAmountRow(body.transform, currentLimit, 1f, 1000000f, out KInputTextField input);
+            float currentLimit = StorageNetworkMaterialLimitRules.GetCurrentLimitKg(requester.LimitKg);
+            KSlider slider = CreateLimitAmountRow(body.transform, currentLimit, StorageNetworkMaterialLimitRules.MinLimitKg, StorageNetworkMaterialLimitRules.MaxLimitKg, out KInputTextField input);
             input.characterValidation = TMP_InputField.CharacterValidation.Decimal;
             input.contentType = TMP_InputField.ContentType.DecimalNumber;
             input.inputType = TMP_InputField.InputType.Standard;
@@ -1349,7 +1349,7 @@ namespace StorageNetwork.UI
                 }
 
                 syncingLimitControls = true;
-                slider.value = ParseMaterialLimitInput(value, slider.value);
+                slider.value = StorageNetworkMaterialLimitRules.ParseInput(value, slider.value);
                 syncingLimitControls = false;
             });
 
@@ -1371,13 +1371,13 @@ namespace StorageNetwork.UI
             CreateFlexibleSpacer(buttonRow.transform);
             CreateLimitDialogButton(buttonRow.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ALL), () =>
             {
-                input.text = "1000000";
-                slider.value = 1000000f;
+                input.text = StorageNetworkMaterialLimitRules.FormatMaxLimitInput();
+                slider.value = StorageNetworkMaterialLimitRules.MaxLimitKg;
             }, KleiBlueStyle());
             CreateLimitDialogButton(buttonRow.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CANCEL), CloseProductionPicker, KleiBlueStyle());
             CreateLimitDialogButton(buttonRow.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIRM), () =>
             {
-                requester.LimitKg = ParseMaterialLimitInput(input.text, currentLimit);
+                requester.LimitKg = StorageNetworkMaterialLimitRules.ParseInput(input.text, currentLimit);
                 requester.LimitEnabled = true;
                 CloseProductionPicker();
                 UpdateProductionSettingsPanel(true);
@@ -1445,8 +1445,8 @@ namespace StorageNetwork.UI
                     UpdateProductionSettingsPanel(true);
                 });
 
-            float currentLimit = Mathf.Max(1f, requester.LimitKg <= 0f ? Config.Instance.DefaultMaterialRequestLimitKg : requester.LimitKg);
-            KSlider slider = CreateLimitAmountRow(body.transform, currentLimit, 1f, 1000000f, out KInputTextField input);
+            float currentLimit = StorageNetworkMaterialLimitRules.GetCurrentLimitKg(requester.LimitKg);
+            KSlider slider = CreateLimitAmountRow(body.transform, currentLimit, StorageNetworkMaterialLimitRules.MinLimitKg, StorageNetworkMaterialLimitRules.MaxLimitKg, out KInputTextField input);
             input.characterValidation = TMP_InputField.CharacterValidation.Decimal;
             input.contentType = TMP_InputField.ContentType.DecimalNumber;
             input.inputType = TMP_InputField.InputType.Standard;
@@ -1471,7 +1471,7 @@ namespace StorageNetwork.UI
                 }
 
                 syncingLimitControls = true;
-                slider.value = ParseMaterialLimitInput(value, slider.value);
+                slider.value = StorageNetworkMaterialLimitRules.ParseInput(value, slider.value);
                 syncingLimitControls = false;
             });
 
@@ -1493,45 +1493,17 @@ namespace StorageNetwork.UI
             CreateFlexibleSpacer(buttonRow.transform);
             CreateLimitDialogButton(buttonRow.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ALL), () =>
             {
-                input.text = "1000000";
-                slider.value = 1000000f;
+                input.text = StorageNetworkMaterialLimitRules.FormatMaxLimitInput();
+                slider.value = StorageNetworkMaterialLimitRules.MaxLimitKg;
             }, KleiBlueStyle());
             CreateLimitDialogButton(buttonRow.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CANCEL), CloseProductionPicker, KleiBlueStyle());
             CreateLimitDialogButton(buttonRow.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIRM), () =>
             {
-                requester.LimitKg = ParseMaterialLimitInput(input.text, currentLimit);
+                requester.LimitKg = StorageNetworkMaterialLimitRules.ParseInput(input.text, currentLimit);
                 requester.LimitEnabled = true;
                 CloseProductionPicker();
                 UpdateProductionSettingsPanel(true);
             }, KleiPinkStyle());
-        }
-
-        private static void SetMaterialRequestLimitEnabled(StorageNetworkMaterialRequester requester, bool enabled)
-        {
-            if (requester == null)
-            {
-                return;
-            }
-
-            requester.LimitEnabled = enabled;
-            if (enabled && requester.LimitKg <= 0f)
-            {
-                requester.LimitKg = Mathf.Max(1f, Config.Instance.DefaultMaterialRequestLimitKg);
-            }
-        }
-
-        private static void SetEnergyGeneratorMaterialRequestLimitEnabled(StorageNetworkEnergyGeneratorRequester requester, bool enabled)
-        {
-            if (requester == null)
-            {
-                return;
-            }
-
-            requester.LimitEnabled = enabled;
-            if (enabled && requester.LimitKg <= 0f)
-            {
-                requester.LimitKg = Mathf.Max(1f, Config.Instance.DefaultMaterialRequestLimitKg);
-            }
         }
 
         private void CreateLimitInfoRow(Transform parent, string text, System.Action resetAction)
@@ -1623,17 +1595,6 @@ namespace StorageNetwork.UI
             spacer.transform.SetParent(parent, false);
             spacer.AddComponent<RectTransform>();
             spacer.AddComponent<LayoutElement>().flexibleWidth = 1f;
-        }
-
-        private static float ParseMaterialLimitInput(string text, float fallback)
-        {
-            string normalized = (text ?? string.Empty).Trim().Replace(',', '.');
-            if (!float.TryParse(normalized, out float value))
-            {
-                value = fallback;
-            }
-
-            return Mathf.Clamp(value, 1f, 1000000f);
         }
 
         private ProductionInventoryRowView CreateProductionSettingsItemRow(string itemName, string formattedMass, GameObject representative)
