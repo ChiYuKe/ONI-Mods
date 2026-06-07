@@ -159,7 +159,7 @@ namespace StorageNetwork.UI
             content.anchorMax = new Vector2(0f, 0.5f);
             content.pivot = new Vector2(0f, 0.5f);
             content.anchoredPosition = new Vector2(12f, 0f);
-            content.sizeDelta = new Vector2(EstimateMaterialTreeWidth(plan), compactOrderWindow ? 238f : 268f);
+            content.sizeDelta = new Vector2(StorageNetworkPlanPreviewMetrics.EstimateMaterialTreeWidth(plan), compactOrderWindow ? 238f : 268f);
 
             HorizontalLayoutGroup layout = contentObject.AddComponent<HorizontalLayoutGroup>();
             layout.padding = new RectOffset(10, 28, 10, 10);
@@ -218,8 +218,8 @@ namespace StorageNetwork.UI
             content.pivot = new Vector2(0f, 1f);
             content.anchoredPosition = new Vector2(0f, 0f);
 
-            float contentHeight = EstimateResearchTreeHeight(draft.Plan, 0) + 32f;
-            float contentWidth = Mathf.Max(680f, EstimateResearchTreeDepth(draft.Plan, 0) * 500f + 470f);
+            float contentHeight = StorageNetworkPlanPreviewMetrics.EstimateResearchTreeHeight(draft.Plan, 0) + 32f;
+            float contentWidth = Mathf.Max(680f, StorageNetworkPlanPreviewMetrics.EstimateResearchTreeDepth(draft.Plan, 0) * 500f + 470f);
             content.sizeDelta = new Vector2(contentWidth, Mathf.Max(compactOrderWindow ? 250f : 310f, contentHeight));
 
             float cursorY = 16f;
@@ -548,52 +548,6 @@ namespace StorageNetwork.UI
             rect.sizeDelta = size;
         }
 
-        private static float EstimateResearchTreeHeight(ProductionPlanNode node, int depth)
-        {
-            if (node == null)
-            {
-                return 0f;
-            }
-
-            List<ProductionPlanRequirement> requirements = node.Requirements
-                .Where(requirement => requirement != null && requirement.Material != Tag.Invalid)
-                .Take(depth == 0 ? 5 : 4)
-                .ToList();
-            if (requirements.Count == 0)
-            {
-                return 104f;
-            }
-
-            float height = 0f;
-            foreach (ProductionPlanRequirement requirement in requirements)
-            {
-                height += requirement.Child != null && depth < 2
-                    ? Mathf.Max(110f, EstimateResearchTreeHeight(requirement.Child, depth + 1))
-                    : 74f;
-            }
-
-            return Mathf.Max(104f, height);
-        }
-
-        private static int EstimateResearchTreeDepth(ProductionPlanNode node, int depth)
-        {
-            if (node == null || depth >= 3)
-            {
-                return depth + 1;
-            }
-
-            int maxDepth = depth + 1;
-            foreach (ProductionPlanRequirement requirement in node.Requirements)
-            {
-                if (requirement != null && requirement.Child != null)
-                {
-                    maxDepth = Mathf.Max(maxDepth, EstimateResearchTreeDepth(requirement.Child, depth + 1));
-                }
-            }
-
-            return maxDepth;
-        }
-
         private static Sprite GetFabricatorSprite(ComplexFabricator fabricator)
         {
             if (fabricator == null || fabricator.gameObject == null)
@@ -744,30 +698,6 @@ namespace StorageNetwork.UI
             rect.pivot = new Vector2(0.5f, 0.5f);
             rect.anchoredPosition = (start + end) * 0.5f;
             rect.sizeDelta = new Vector2(Mathf.Max(2f, Mathf.Abs(end.x - start.x)), Mathf.Max(2f, Mathf.Abs(end.y - start.y)));
-        }
-
-        private static float EstimateMaterialTreeWidth(ProductionPlanNode node)
-        {
-            return Mathf.Max(760f, 240f + EstimateMaterialTreeDepth(node, 0) * 360f);
-        }
-
-        private static int EstimateMaterialTreeDepth(ProductionPlanNode node, int depth)
-        {
-            if (node == null || depth >= 3)
-            {
-                return depth;
-            }
-
-            int maxDepth = depth;
-            foreach (ProductionPlanRequirement requirement in node.Requirements)
-            {
-                if (requirement != null && requirement.Child != null)
-                {
-                    maxDepth = Mathf.Max(maxDepth, EstimateMaterialTreeDepth(requirement.Child, depth + 1));
-                }
-            }
-
-            return maxDepth;
         }
 
         private void AddAssignmentCard(Transform parent, string fabricatorName, string orderCount, string outputAmount)
