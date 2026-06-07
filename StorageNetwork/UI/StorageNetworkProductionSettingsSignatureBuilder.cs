@@ -1,7 +1,6 @@
 using System.Linq;
 using StorageNetwork.Components;
 using StorageNetwork.Services;
-using UnityEngine;
 
 namespace StorageNetwork.UI
 {
@@ -49,14 +48,9 @@ namespace StorageNetwork.UI
         {
             return string.Join("|", StorageNetworkProductionStorageCollector.GetProductionStorages(storage, fabricator)
                 .SelectMany(itemStorage => itemStorage.items.Where(item => item != null))
-                .GroupBy(GetStoredItemKey)
+                .GroupBy(StorageItemUtility.GetStoredItemKey)
                 .OrderBy(group => group.Key)
                 .Select(group => group.Key));
-        }
-
-        private static string GetStoredItemKey(GameObject item)
-        {
-            return StorageItemUtility.GetStoredItemKey(item);
         }
     }
 }
