@@ -1259,133 +1259,47 @@ namespace StorageNetwork.UI
 
         private void ShowMaterialRequestLimitDialog(StorageNetworkMaterialRequester requester)
         {
-            CloseProductionPicker();
-            GameObject pickerParent = productionSettingsRoot != null && productionSettingsRoot.activeSelf
-                ? productionSettingsRoot
-                : null;
-            if (pickerParent == null || requester == null)
+            if (requester == null)
             {
                 return;
             }
 
-            productionPickerRoot = CreatePlainImage("MaterialLimitPicker", pickerParent.transform, new Color(0.17f, 0.19f, 0.22f, 0.98f));
-            productionPickerRoot.AddComponent<ScrollWheelBlocker>();
-            RectTransform pickerRect = productionPickerRoot.GetComponent<RectTransform>();
-            SetStretch(pickerRect, 84f, 84f, 118f, 96f);
-
-            GameObject header = CreatePlainImage("LimitHeader", productionPickerRoot.transform, new Color(0.36f, 0.42f, 0.47f, 1f));
-            SetTopStretch(header.GetComponent<RectTransform>(), 8f, 8f, 8f, 34f);
-            HorizontalLayoutGroup headerLayout = header.AddComponent<HorizontalLayoutGroup>();
-            headerLayout.padding = new RectOffset(10, 4, 3, 3);
-            headerLayout.spacing = 8f;
-            headerLayout.childAlignment = TextAnchor.MiddleLeft;
-            headerLayout.childControlWidth = true;
-            headerLayout.childControlHeight = true;
-            headerLayout.childForceExpandWidth = false;
-            headerLayout.childForceExpandHeight = true;
-
-            TextMeshProUGUI headerText = CreateText("LimitTitle", header.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_SET_LIMIT), 12, TextAlignmentOptions.MidlineLeft);
-            headerText.color = new Color(0.96f, 0.94f, 0.86f, 1f);
-            headerText.fontStyle = FontStyles.Bold;
-            headerText.textWrappingMode = TextWrappingModes.NoWrap;
-            headerText.overflowMode = TextOverflowModes.Ellipsis;
-            headerText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
-
-            GameObject closeButton = CreateCloseIconButton("LimitClose", header.transform, CloseProductionPicker);
-            LayoutElement closeLayout = closeButton.AddComponent<LayoutElement>();
-            closeLayout.preferredWidth = 24f;
-            closeLayout.preferredHeight = 22f;
-
-            GameObject body = CreatePlainImage("LimitBody", productionPickerRoot.transform, new Color(0.83f, 0.82f, 0.76f, 1f));
-            SetStretch(body.GetComponent<RectTransform>(), 8f, 8f, 8f, 48f);
-            VerticalLayoutGroup bodyLayout = body.AddComponent<VerticalLayoutGroup>();
-            bodyLayout.padding = new RectOffset(8, 8, 8, 8);
-            bodyLayout.spacing = 6f;
-            bodyLayout.childAlignment = TextAnchor.UpperLeft;
-            bodyLayout.childControlWidth = true;
-            bodyLayout.childControlHeight = true;
-            bodyLayout.childForceExpandWidth = true;
-            bodyLayout.childForceExpandHeight = false;
-
-            CreateLimitInfoRow(body.transform, string.Format(
-                Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_LIMIT),
-                GameUtil.GetFormattedMass(Mathf.Max(0f, requester.GetRequestedAmountForDisplay())),
-                GameUtil.GetFormattedMass(Mathf.Max(0f, requester.LimitKg))),
-                () =>
+            ShowMaterialLimitDialog(
+                () => requester.GetRequestedAmountForDisplay(),
+                () => requester.LimitKg,
+                () => requester.ResetRequestedAmount(),
+                value =>
                 {
-                    requester.ResetRequestedAmount();
-                    CloseProductionPicker();
-                    UpdateProductionSettingsPanel(true);
+                    requester.LimitKg = value;
+                    requester.LimitEnabled = true;
                 });
-
-            float currentLimit = StorageNetworkMaterialLimitRules.GetCurrentLimitKg(requester.LimitKg);
-            KSlider slider = CreateLimitAmountRow(body.transform, currentLimit, StorageNetworkMaterialLimitRules.MinLimitKg, StorageNetworkMaterialLimitRules.MaxLimitKg, out KInputTextField input);
-            input.characterValidation = TMP_InputField.CharacterValidation.Decimal;
-            input.contentType = TMP_InputField.ContentType.DecimalNumber;
-            input.inputType = TMP_InputField.InputType.Standard;
-
-            bool syncingLimitControls = false;
-            slider.onValueChanged.AddListener(value =>
-            {
-                if (syncingLimitControls)
-                {
-                    return;
-                }
-
-                syncingLimitControls = true;
-                input.text = Mathf.RoundToInt(value).ToString();
-                syncingLimitControls = false;
-            });
-            input.onValueChanged.AddListener(value =>
-            {
-                if (syncingLimitControls)
-                {
-                    return;
-                }
-
-                syncingLimitControls = true;
-                slider.value = StorageNetworkMaterialLimitRules.ParseInput(value, slider.value);
-                syncingLimitControls = false;
-            });
-
-            GameObject buttonRow = new GameObject("LimitButtonRow");
-            buttonRow.transform.SetParent(body.transform, false);
-            buttonRow.AddComponent<RectTransform>();
-            LayoutElement buttonRowLayout = buttonRow.AddComponent<LayoutElement>();
-            buttonRowLayout.minHeight = 34f;
-            buttonRowLayout.preferredHeight = 34f;
-            buttonRowLayout.flexibleHeight = 0f;
-            HorizontalLayoutGroup buttonLayout = buttonRow.AddComponent<HorizontalLayoutGroup>();
-            buttonLayout.spacing = 6f;
-            buttonLayout.childAlignment = TextAnchor.MiddleRight;
-            buttonLayout.childControlWidth = true;
-            buttonLayout.childControlHeight = false;
-            buttonLayout.childForceExpandWidth = false;
-            buttonLayout.childForceExpandHeight = false;
-
-            CreateFlexibleSpacer(buttonRow.transform);
-            CreateLimitDialogButton(buttonRow.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ALL), () =>
-            {
-                input.text = StorageNetworkMaterialLimitRules.FormatMaxLimitInput();
-                slider.value = StorageNetworkMaterialLimitRules.MaxLimitKg;
-            }, KleiBlueStyle());
-            CreateLimitDialogButton(buttonRow.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CANCEL), CloseProductionPicker, KleiBlueStyle());
-            CreateLimitDialogButton(buttonRow.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIRM), () =>
-            {
-                requester.LimitKg = StorageNetworkMaterialLimitRules.ParseInput(input.text, currentLimit);
-                requester.LimitEnabled = true;
-                CloseProductionPicker();
-                UpdateProductionSettingsPanel(true);
-            }, KleiPinkStyle());
         }
 
         private void ShowEnergyGeneratorMaterialRequestLimitDialog(StorageNetworkEnergyGeneratorRequester requester)
+        {
+            if (requester == null)
+            {
+                return;
+            }
+
+            ShowMaterialLimitDialog(
+                () => requester.GetRequestedAmountForDisplay(),
+                () => requester.LimitKg,
+                () => requester.ResetRequestedAmount(),
+                value =>
+                {
+                    requester.LimitKg = value;
+                    requester.LimitEnabled = true;
+                });
+        }
+
+        private void ShowMaterialLimitDialog(System.Func<float> getRequestedAmount, System.Func<float> getLimitKg, System.Action resetRequestedAmount, System.Action<float> applyLimit)
         {
             CloseProductionPicker();
             GameObject pickerParent = productionSettingsRoot != null && productionSettingsRoot.activeSelf
                 ? productionSettingsRoot
                 : null;
-            if (pickerParent == null || requester == null)
+            if (pickerParent == null || getRequestedAmount == null || getLimitKg == null || resetRequestedAmount == null || applyLimit == null)
             {
                 return;
             }
@@ -1431,16 +1345,16 @@ namespace StorageNetwork.UI
 
             CreateLimitInfoRow(body.transform, string.Format(
                 Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_LIMIT),
-                GameUtil.GetFormattedMass(Mathf.Max(0f, requester.GetRequestedAmountForDisplay())),
-                GameUtil.GetFormattedMass(Mathf.Max(0f, requester.LimitKg))),
+                GameUtil.GetFormattedMass(Mathf.Max(0f, getRequestedAmount())),
+                GameUtil.GetFormattedMass(Mathf.Max(0f, getLimitKg()))),
                 () =>
                 {
-                    requester.ResetRequestedAmount();
+                    resetRequestedAmount();
                     CloseProductionPicker();
                     UpdateProductionSettingsPanel(true);
                 });
 
-            float currentLimit = StorageNetworkMaterialLimitRules.GetCurrentLimitKg(requester.LimitKg);
+            float currentLimit = StorageNetworkMaterialLimitRules.GetCurrentLimitKg(getLimitKg());
             KSlider slider = CreateLimitAmountRow(body.transform, currentLimit, StorageNetworkMaterialLimitRules.MinLimitKg, StorageNetworkMaterialLimitRules.MaxLimitKg, out KInputTextField input);
             input.characterValidation = TMP_InputField.CharacterValidation.Decimal;
             input.contentType = TMP_InputField.ContentType.DecimalNumber;
@@ -1494,8 +1408,7 @@ namespace StorageNetwork.UI
             CreateLimitDialogButton(buttonRow.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CANCEL), CloseProductionPicker, KleiBlueStyle());
             CreateLimitDialogButton(buttonRow.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIRM), () =>
             {
-                requester.LimitKg = StorageNetworkMaterialLimitRules.ParseInput(input.text, currentLimit);
-                requester.LimitEnabled = true;
+                applyLimit(StorageNetworkMaterialLimitRules.ParseInput(input.text, currentLimit));
                 CloseProductionPicker();
                 UpdateProductionSettingsPanel(true);
             }, KleiPinkStyle());
