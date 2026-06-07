@@ -778,9 +778,11 @@ namespace StorageNetwork.ModConfig
             private float max;
             private bool integer;
             private bool updating;
+            private bool listenersRegistered;
 
             public void Configure(TMP_InputField inputField, Slider valueSlider, float minValue, float maxValue, bool integerValue)
             {
+                UnregisterListeners();
                 input = inputField;
                 slider = valueSlider;
                 min = minValue;
@@ -792,13 +794,38 @@ namespace StorageNetwork.ModConfig
                     slider.minValue = min;
                     slider.maxValue = max;
                     slider.wholeNumbers = integer;
-                    slider.onValueChanged.AddListener(OnSliderChanged);
                 }
 
-                if (input != null)
+                RegisterListeners();
+            }
+
+            private void OnDestroy()
+            {
+                UnregisterListeners();
+            }
+
+            private void RegisterListeners()
+            {
+                if (listenersRegistered)
                 {
-                    input.onEndEdit.AddListener(OnInputEndEdit);
+                    return;
                 }
+
+                slider?.onValueChanged.AddListener(OnSliderChanged);
+                input?.onEndEdit.AddListener(OnInputEndEdit);
+                listenersRegistered = true;
+            }
+
+            private void UnregisterListeners()
+            {
+                if (!listenersRegistered)
+                {
+                    return;
+                }
+
+                slider?.onValueChanged.RemoveListener(OnSliderChanged);
+                input?.onEndEdit.RemoveListener(OnInputEndEdit);
+                listenersRegistered = false;
             }
 
             public void SetValue(float value)
