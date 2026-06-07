@@ -233,11 +233,6 @@ namespace StorageNetwork.UI
             return ClusterManager.Instance != null ? ClusterManager.Instance.activeWorldId : UnsetEnrollableWorldFilterId;
         }
 
-        private static Sprite GetWorldFilterSprite(int worldId)
-        {
-            return StorageNetworkWorldText.GetWorldSprite(worldId);
-        }
-
         private static int GetObjectWorldId(GameObject gameObject)
         {
             return StorageNetworkWorldUtility.GetObjectWorldId(gameObject);

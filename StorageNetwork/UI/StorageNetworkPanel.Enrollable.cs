@@ -406,7 +406,7 @@ namespace StorageNetwork.UI
                 return;
             }
 
-            Sprite sprite = GetWorldFilterSprite(worldId);
+            Sprite sprite = StorageNetworkWorldText.GetWorldSprite(worldId);
             if (sprite == null)
             {
                 return;
@@ -719,13 +719,8 @@ namespace StorageNetwork.UI
             Image image = iconObject.AddComponent<Image>();
             image.raycastTarget = false;
             image.preserveAspect = true;
-            image.sprite = GetBuildingWorldSprite(gameObject);
+            image.sprite = StorageNetworkWorldText.GetObjectWorldSprite(gameObject);
             image.color = image.sprite != null ? Color.white : Color.clear;
-        }
-
-        private static Sprite GetBuildingWorldSprite(GameObject gameObject)
-        {
-            return StorageNetworkWorldText.GetObjectWorldSprite(gameObject);
         }
 
         private static WorldContainer GetBuildingWorld(GameObject gameObject)
