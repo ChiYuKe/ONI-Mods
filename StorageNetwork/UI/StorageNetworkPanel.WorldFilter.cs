@@ -235,10 +235,7 @@ namespace StorageNetwork.UI
 
         private static Sprite GetWorldFilterSprite(int worldId)
         {
-            WorldContainer world = ClusterManager.Instance != null ? ClusterManager.Instance.GetWorld(worldId) : null;
-            ClusterGridEntity clusterEntity = world != null ? world.GetComponent<ClusterGridEntity>() : null;
-            Sprite sprite = clusterEntity != null ? clusterEntity.GetUISprite() : null;
-            return sprite != null ? sprite : Assets.GetSprite("unknown_far");
+            return StorageNetworkWorldText.GetWorldSprite(worldId);
         }
 
         private static int GetObjectWorldId(GameObject gameObject)

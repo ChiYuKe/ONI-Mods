@@ -1,4 +1,6 @@
 using static StorageNetwork.STRINGS;
+using StorageNetwork.Core;
+using UnityEngine;
 
 namespace StorageNetwork.UI
 {
@@ -28,6 +30,19 @@ namespace StorageNetwork.UI
 
             WorldContainer world = ClusterManager.Instance != null ? ClusterManager.Instance.GetWorld(worldId) : null;
             return world != null && world.IsDiscovered;
+        }
+
+        public static Sprite GetWorldSprite(int worldId)
+        {
+            WorldContainer world = ClusterManager.Instance != null ? ClusterManager.Instance.GetWorld(worldId) : null;
+            ClusterGridEntity clusterEntity = world != null ? world.GetComponent<ClusterGridEntity>() : null;
+            Sprite sprite = clusterEntity != null ? clusterEntity.GetUISprite() : null;
+            return sprite != null ? sprite : Assets.GetSprite("unknown_far");
+        }
+
+        public static Sprite GetObjectWorldSprite(GameObject gameObject)
+        {
+            return GetWorldSprite(StorageNetworkWorldUtility.GetObjectWorldId(gameObject));
         }
     }
 }

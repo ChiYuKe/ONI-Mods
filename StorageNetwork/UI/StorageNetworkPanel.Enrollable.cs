@@ -725,10 +725,7 @@ namespace StorageNetwork.UI
 
         private static Sprite GetBuildingWorldSprite(GameObject gameObject)
         {
-            WorldContainer world = GetBuildingWorld(gameObject);
-            ClusterGridEntity clusterEntity = world != null ? world.GetComponent<ClusterGridEntity>() : null;
-            Sprite sprite = clusterEntity != null ? clusterEntity.GetUISprite() : null;
-            return sprite != null ? sprite : Assets.GetSprite("unknown_far");
+            return StorageNetworkWorldText.GetObjectWorldSprite(gameObject);
         }
 
         private static WorldContainer GetBuildingWorld(GameObject gameObject)
