@@ -49,6 +49,26 @@ namespace StorageNetwork.Services
             return primaryElement != null && primaryElement.ElementID.CreateTag() == tag;
         }
 
+        /// <summary>
+        /// 获取 UI、分组和刷新签名使用的稳定物品键。
+        /// </summary>
+        public static string GetStoredItemKey(GameObject item)
+        {
+            if (item == null)
+            {
+                return string.Empty;
+            }
+
+            KPrefabID prefabId = item.GetComponent<KPrefabID>();
+            if (prefabId != null)
+            {
+                return prefabId.PrefabID().ToString();
+            }
+
+            PrimaryElement primaryElement = item.GetComponent<PrimaryElement>();
+            return primaryElement != null ? primaryElement.ElementID.ToString() : item.name;
+        }
+
         public static HashSet<Tag> GetStorageMatchTags(GameObject item)
         {
             HashSet<Tag> tags = new HashSet<Tag>();

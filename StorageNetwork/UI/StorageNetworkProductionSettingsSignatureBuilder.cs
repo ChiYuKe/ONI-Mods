@@ -1,5 +1,6 @@
 using System.Linq;
 using StorageNetwork.Components;
+using StorageNetwork.Services;
 using UnityEngine;
 
 namespace StorageNetwork.UI
@@ -55,19 +56,7 @@ namespace StorageNetwork.UI
 
         private static string GetStoredItemKey(GameObject item)
         {
-            if (item == null)
-            {
-                return string.Empty;
-            }
-
-            KPrefabID prefabId = item.GetComponent<KPrefabID>();
-            if (prefabId != null)
-            {
-                return prefabId.PrefabID().ToString();
-            }
-
-            PrimaryElement primaryElement = item.GetComponent<PrimaryElement>();
-            return primaryElement != null ? primaryElement.ElementID.ToString() : item.name;
+            return StorageItemUtility.GetStoredItemKey(item);
         }
     }
 }

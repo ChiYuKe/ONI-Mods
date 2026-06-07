@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using StorageNetwork.Components;
 using StorageNetwork.Core;
+using StorageNetwork.Services;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -339,19 +340,7 @@ namespace StorageNetwork.UI
 
         private static string GetStoredItemKey(GameObject item)
         {
-            if (item == null)
-            {
-                return string.Empty;
-            }
-
-            KPrefabID prefabId = item.GetComponent<KPrefabID>();
-            if (prefabId != null)
-            {
-                return prefabId.PrefabID().ToString();
-            }
-
-            PrimaryElement primaryElement = item.GetComponent<PrimaryElement>();
-            return primaryElement != null ? primaryElement.ElementID.ToString() : item.name;
+            return StorageItemUtility.GetStoredItemKey(item);
         }
 
         private static string GetStorageTypeKey(StorageInfo storageInfo)
