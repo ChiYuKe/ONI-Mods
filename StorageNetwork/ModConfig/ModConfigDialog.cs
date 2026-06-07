@@ -5,6 +5,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using StorageNetwork.UI;
+using Loc = StorageNetwork.STRINGS;
 
 namespace StorageNetwork.ModConfig
 {
@@ -93,7 +94,9 @@ namespace StorageNetwork.ModConfig
         {
             if (toggleText != null)
             {
-                toggleText.text = BoolValue ? "开启" : "关闭";
+                toggleText.text = BoolValue
+                    ? Loc.Get(Loc.UI.STORAGE_NETWORK.CONFIG_TOGGLE_ON)
+                    : Loc.Get(Loc.UI.STORAGE_NETWORK.CONFIG_TOGGLE_OFF);
             }
         }
     }
@@ -179,9 +182,9 @@ namespace StorageNetwork.ModConfig
             footerLayout.childForceExpandHeight = false;
 
             AddSpacer(footer.transform);
-            CreateButton("ResetButton", footer.transform, "默认值", () => definition.Reset?.Invoke(inputs), false);
-            CreateButton("CancelButton", footer.transform, "取消", Close, false);
-            CreateButton("SaveButton", footer.transform, "确定", () =>
+            CreateButton("ResetButton", footer.transform, Loc.Get(Loc.UI.STORAGE_NETWORK.RESET_DEFAULTS), () => definition.Reset?.Invoke(inputs), false);
+            CreateButton("CancelButton", footer.transform, Loc.Get(Loc.UI.STORAGE_NETWORK.CANCEL), Close, false);
+            CreateButton("SaveButton", footer.transform, Loc.Get(Loc.UI.STORAGE_NETWORK.CONFIRM), () =>
             {
                 for (int i = 0; i < definition.Fields.Count && i < inputs.Count; i++)
                 {

@@ -1519,6 +1519,14 @@ msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_RESTART_REQUIRED"
 msgid "要使这些选项生效，必须重新启动游戏。"
 msgstr "The game must be restarted for these options to take effect."
 
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_TOGGLE_ON"
+msgid "开启"
+msgstr "On"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_TOGGLE_OFF"
+msgid "关闭"
+msgstr "Off"
+
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_SCENE_SCAN_CACHE"
 msgid "场景扫描缓存秒数"
 msgstr "Scene Scan Cache Seconds"

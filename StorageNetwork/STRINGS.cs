@@ -308,6 +308,8 @@ namespace StorageNetwork
                 public static LocString CONFIG_TOOLTIP = "调整 StorageNetwork 模组数值";
                 public static LocString CONFIG_HINT = "保存后会写入 StorageNetworkConfig.json。建筑容量等部分数值需要重进存档或重建建筑才会完全体现。";
                 public static LocString CONFIG_RESTART_REQUIRED = "要使这些选项生效，必须重新启动游戏。";
+                public static LocString CONFIG_TOGGLE_ON = "开启";
+                public static LocString CONFIG_TOGGLE_OFF = "关闭";
                 public static LocString CONFIG_SCENE_SCAN_CACHE = "场景扫描缓存秒数";
                 public static LocString CONFIG_SCENE_SCAN_CACHE_DESC = "数值越小刷新越快，但遍历储存建筑更频繁。";
                 public static LocString CONFIG_DEFAULT_MATERIAL_LIMIT = "材料请求默认限额 kg";
