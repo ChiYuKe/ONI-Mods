@@ -142,5 +142,11 @@ namespace StorageNetwork.Core
             cachedFrame = -1;
             cachedRegistryVersion = -1;
         }
+
+        public static void ResetRuntimeState()
+        {
+            InvalidateCache();
+            cachedNetworkOnline = false;
+        }
     }
 }

@@ -197,6 +197,11 @@ namespace StorageNetwork.ModConfig
             }, true);
         }
 
+        public static void ResetRuntimeState()
+        {
+            Close();
+        }
+
         private static void Close()
         {
             if (currentDialog != null)

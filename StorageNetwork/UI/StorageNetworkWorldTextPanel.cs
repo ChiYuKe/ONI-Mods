@@ -41,6 +41,18 @@ namespace StorageNetwork.UI
             LogDebug("[StorageNetworkWorldTextPanel] Installed on " + owner.name);
         }
 
+        public static void ResetRuntimeState()
+        {
+            if (instance != null)
+            {
+                instance.view.Destroy();
+                Destroy(instance);
+                instance = null;
+            }
+
+            StorageNetworkWorldPanelRegistry.Register(DefaultContentProvider);
+        }
+
         /// <summary>
         /// 供 SelectToolPatch 调用：玩家 Shift+左键选中建筑时尝试显示或隐藏面板。
         /// </summary>
@@ -70,6 +82,7 @@ namespace StorageNetwork.UI
 
         private void OnDestroy()
         {
+            view.Destroy();
             if (instance == this)
             {
                 instance = null;

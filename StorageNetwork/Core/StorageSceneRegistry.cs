@@ -16,6 +16,17 @@ namespace StorageNetwork.Core
 
         public static int Version => version;
 
+        public static void ResetRuntimeState()
+        {
+            Storages.Clear();
+            Geysers.Clear();
+            Enrollments.Clear();
+            Cores.Clear();
+            Relays.Clear();
+            sceneSeeded = false;
+            Invalidate();
+        }
+
         public static void Register(GameObject gameObject)
         {
             if (gameObject == null)

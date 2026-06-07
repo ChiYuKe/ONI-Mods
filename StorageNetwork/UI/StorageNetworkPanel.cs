@@ -104,6 +104,17 @@ namespace StorageNetwork.UI
             return instance != null && instance.gameObject != null && instance.gameObject.activeInHierarchy;
         }
 
+        public static void ResetRuntimeState()
+        {
+            if (instance != null && instance.gameObject != null)
+            {
+                Destroy(instance.gameObject);
+            }
+
+            instance = null;
+            spriteCache?.Clear();
+        }
+
         public static bool IsTextInputFocused()
         {
             return IsOpen() && (StorageNetworkNumberInputField.IsAnyEditing || StorageNetworkTextInputGuard.IsAnyFocused);

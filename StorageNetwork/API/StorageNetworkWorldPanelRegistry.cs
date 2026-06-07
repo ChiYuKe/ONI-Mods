@@ -40,6 +40,12 @@ namespace StorageNetwork.API
             ProviderPriorities.Remove(provider);
         }
 
+        public static void ResetRuntimeState()
+        {
+            Providers.Clear();
+            ProviderPriorities.Clear();
+        }
+
         /// <summary>
         /// 依次询问已注册提供器，获取第一个可用的面板内容。
         /// </summary>

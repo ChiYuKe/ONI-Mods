@@ -1791,6 +1791,14 @@ namespace StorageNetwork.ProductionOrders
         {
             ProductionOrderPersistence.Save(ActiveOrders.Values.ToList(), KeepRules.Values.ToList());
         }
+
+        public static void ResetRuntimeState()
+        {
+            ActiveOrders.Clear();
+            AutomationLeases.Clear();
+            KeepRules.Clear();
+            loadedStorePath = null;
+        }
     }
 
     internal sealed class ProductionOrderSubmitResult

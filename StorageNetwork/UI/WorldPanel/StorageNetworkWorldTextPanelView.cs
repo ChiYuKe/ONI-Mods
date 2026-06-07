@@ -115,6 +115,19 @@ namespace StorageNetwork.UI.WorldPanel
             }
         }
 
+        public void Destroy()
+        {
+            if (rootRect != null)
+            {
+                Object.Destroy(rootRect.gameObject);
+                rootRect = null;
+                titleText = null;
+                lineOneText = null;
+                lineTwoText = null;
+                lineThreeText = null;
+            }
+        }
+
         /// <summary>
         /// 输出面板坐标诊断日志，用于玩家反馈“看不到/位置不对”时定位。
         /// </summary>
