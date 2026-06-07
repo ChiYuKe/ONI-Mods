@@ -1,4 +1,3 @@
-using System.Text;
 using System.Linq;
 using System.Collections.Generic;
 using System.Globalization;
@@ -750,23 +749,12 @@ namespace StorageNetwork.UI
 
         private static string BuildListSignature(IEnumerable<StorageInfo> storages)
         {
-            string searchSignature = instance != null ? instance.mainSearchText ?? string.Empty : string.Empty;
-            return searchSignature + "|" + string.Join("|", storages
-                .OrderBy(GetStorageTypeKey)
-                .ThenBy(storage => storage.GameObject != null ? storage.GameObject.GetInstanceID() : 0)
-                .Select(storage =>
-                {
-                    IEnumerable<GameObject> storedItems = storage.StoredItems ?? Enumerable.Empty<GameObject>();
-                    string items = string.Join(",", storedItems
-                        .GroupBy(GetStoredItemKey)
-                        .OrderBy(group => group.Key)
-                        .Select(group => group.Key));
-
-                    return string.Format("{0}:{1}:{2}",
-                        GetStorageTypeKey(storage),
-                        storage.GameObject != null ? storage.GameObject.GetInstanceID() : 0,
-                        items + ":" + (IsOfflineNetworkServer(storage) ? "offline" : "online"));
-                }));
+            return StorageNetworkPanelListSignature.BuildStorageListSignature(
+                storages,
+                instance != null ? instance.mainSearchText : string.Empty,
+                GetStorageTypeKey,
+                GetStoredItemKey,
+                IsOfflineNetworkServer);
         }
 
         private void RebuildLayout()
