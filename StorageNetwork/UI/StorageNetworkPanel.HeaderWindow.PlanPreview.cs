@@ -361,7 +361,7 @@ namespace StorageNetwork.UI
             recipeRect.offsetMin = new Vector2(textColumnLeft.x, -51f);
             recipeRect.offsetMax = new Vector2(textColumnRight.x, -34f);
 
-            TextMeshProUGUI assignment = CreateOrderText("RecipeAssignment", card.transform, string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_RESEARCH_BATCH_SUMMARY), node.OrderCount, BuildAssignmentSummary(node, 1)), 7, TextAlignmentOptions.MidlineLeft);
+            TextMeshProUGUI assignment = CreateOrderText("RecipeAssignment", card.transform, string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_RESEARCH_BATCH_SUMMARY), node.OrderCount, StorageNetworkPlanPreviewText.BuildAssignmentSummary(node, 1)), 7, TextAlignmentOptions.MidlineLeft);
             assignment.color = NeutralTextColor();
             assignment.fontStyle = FontStyles.Bold;
             assignment.textWrappingMode = TextWrappingModes.NoWrap;
@@ -596,7 +596,7 @@ namespace StorageNetwork.UI
             AddVerticalLayout(text, 1f, 0, 0, 0, 0);
 
             AddPlanLine(text.transform, node.Recipe != null ? node.Recipe.GetUIName(false) : "?", 10, FontStyles.Bold, NeutralTextColor(), 19f);
-            AddPlanLine(text.transform, string.Format("x{0}  {1}", node.OrderCount, BuildAssignmentSummary(node, 2)), 8, FontStyles.Bold, NeutralBlue(), 17f);
+            AddPlanLine(text.transform, string.Format("x{0}  {1}", node.OrderCount, StorageNetworkPlanPreviewText.BuildAssignmentSummary(node, 2)), 8, FontStyles.Bold, NeutralBlue(), 17f);
             AddPlanLine(text.transform, string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_OUTPUT_AMOUNT), GameUtil.GetFormattedMass(node.OutputAmount * node.OrderCount)), 8, FontStyles.Bold, PositiveColor(), 17f);
         }
 
@@ -769,7 +769,7 @@ namespace StorageNetwork.UI
             string actionLine = covered
                 ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_ACTION_DIRECT)
                 : produced
-                    ? string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_ACTION_AUTO), BuildAssignmentSummary(requirement.Child, 3))
+                    ? string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_ACTION_AUTO), StorageNetworkPlanPreviewText.BuildAssignmentSummary(requirement.Child, 3))
                     : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_ACTION_BLOCKED);
 
             int detailLines = EstimateTextLineCount(stockLine, 2, compactOrderWindow ? 20 : 28) +
@@ -824,7 +824,7 @@ namespace StorageNetwork.UI
         private void AddChildRouteCard(Transform parent, ProductionPlanNode child, int depth)
         {
             string routeText = string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CHILD_ROUTE), child.Recipe != null ? child.Recipe.GetUIName(false) : "?", child.OrderCount);
-            string assignmentText = string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_DEVICE_LINE), BuildAssignmentSummary(child, 3));
+            string assignmentText = string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_DEVICE_LINE), StorageNetworkPlanPreviewText.BuildAssignmentSummary(child, 3));
             GameObject card = CreatePlainImage("MaterialRouteCard", parent, new Color(0.69f, 0.69f, 0.62f, 1f));
             card.AddComponent<LayoutElement>().preferredHeight = 58f;
             HorizontalLayoutGroup layout = card.AddComponent<HorizontalLayoutGroup>();
@@ -917,7 +917,7 @@ namespace StorageNetwork.UI
             route.overflowMode = TextOverflowModes.Ellipsis;
             route.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
 
-            AddStatusBadge(row.transform, BuildAssignmentSummary(child, 2), NeutralBlue(), 178f);
+            AddStatusBadge(row.transform, StorageNetworkPlanPreviewText.BuildAssignmentSummary(child, 2), NeutralBlue(), 178f);
         }
 
         private static void AddIndentGuide(Transform parent, Color color)
@@ -986,25 +986,6 @@ namespace StorageNetwork.UI
             label.textWrappingMode = TextWrappingModes.NoWrap;
             label.overflowMode = TextOverflowModes.Ellipsis;
             Stretch(label.rectTransform(), 4f, 0f);
-        }
-
-        private static string BuildAssignmentSummary(ProductionPlanNode node, int maxItems)
-        {
-            if (node == null || node.Assignments == null || node.Assignments.Count == 0)
-            {
-                return node != null ? node.FabricatorName : "?";
-            }
-
-            List<string> names = node.Assignments
-                .Take(maxItems)
-                .Select(assignment => string.Format("{0} x{1}", assignment.Fabricator != null ? assignment.Fabricator.GetProperName() : "?", assignment.OrderCount))
-                .ToList();
-            if (node.Assignments.Count > maxItems)
-            {
-                names.Add("+" + (node.Assignments.Count - maxItems));
-            }
-
-            return string.Join(" / ", names.ToArray());
         }
 
         private void AddProductionChain(Transform parent, ProductionOrderDraft draft)
@@ -1110,7 +1091,7 @@ namespace StorageNetwork.UI
             AddStatusBadge(row.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_PRODUCT_DISPATCH), NeutralBlue(), 72f);
             AddFlowRecipePill(row.transform, node, 180f);
             AddFlowArrow(row.transform, NeutralBlue());
-            AddStatusBadge(row.transform, BuildAssignmentSummary(node, 3), NeutralBlue(), 260f);
+            AddStatusBadge(row.transform, StorageNetworkPlanPreviewText.BuildAssignmentSummary(node, 3), NeutralBlue(), 260f);
         }
 
         private void AddDispatchRequirementRow(Transform parent, ProductionPlanRequirement requirement)
@@ -1133,7 +1114,7 @@ namespace StorageNetwork.UI
             AddStatusBadge(row.transform, covered ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_DISPATCH_DIRECT) : produced ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_NEEDS_PRODUCTION) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_STATUS_BLOCKED), color, 72f);
             AddFlowMaterialPill(row.transform, requirement, 220f);
             AddFlowArrow(row.transform, color);
-            AddStatusBadge(row.transform, covered ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_SEND_FROM_NETWORK) : produced ? BuildAssignmentSummary(requirement.Child, 3) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_DISPATCH_NO_ROUTE), color, 260f);
+            AddStatusBadge(row.transform, covered ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_SEND_FROM_NETWORK) : produced ? StorageNetworkPlanPreviewText.BuildAssignmentSummary(requirement.Child, 3) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_DISPATCH_NO_ROUTE), color, 260f);
         }
 
         private void AddChainSummary(Transform parent, ProductionPlanNode node)
@@ -1283,7 +1264,7 @@ namespace StorageNetwork.UI
                 AddFlowArrow(row.transform, WarningColor());
                 AddFlowRecipePill(row.transform, requirement.Child, 164f);
                 AddFlowArrow(row.transform, WarningColor());
-                AddFlowStatusPill(row.transform, BuildAssignmentSummary(requirement.Child, 2), WarningColor(), 132f);
+                AddFlowStatusPill(row.transform, StorageNetworkPlanPreviewText.BuildAssignmentSummary(requirement.Child, 2), WarningColor(), 132f);
             }
             else
             {
