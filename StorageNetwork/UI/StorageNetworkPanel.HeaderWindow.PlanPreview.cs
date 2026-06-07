@@ -390,9 +390,8 @@ namespace StorageNetwork.UI
 
         private void AddResearchMaterialNode(Transform parent, ProductionPlanRequirement requirement, Vector2 position, Vector2 size)
         {
-            float missing = Mathf.Max(0f, requirement.RequiredAmount - requirement.AvailableAmount);
-            bool covered = missing <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT;
-            bool produced = !covered && requirement.Child != null;
+            bool covered = StorageNetworkPlanPreviewText.IsCoveredByNetwork(requirement);
+            bool produced = StorageNetworkPlanPreviewText.CanProduceRequirement(requirement);
             Color statusColor = covered ? PositiveColor() : produced ? WarningColor() : DangerColor();
 
             GameObject card = CreatePlainImage("ResearchMaterialNode", parent, new Color(0.74f, 0.74f, 0.68f, 1f));
@@ -422,9 +421,7 @@ namespace StorageNetwork.UI
             name.overflowMode = TextOverflowModes.Ellipsis;
             name.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
 
-            string amount = covered
-                ? string.Format("{0}/{1}", GameUtil.GetFormattedMass(requirement.AvailableAmount), GameUtil.GetFormattedMass(requirement.RequiredAmount))
-                : string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_RESEARCH_MISSING_STOCK), GameUtil.GetFormattedMass(missing), GameUtil.GetFormattedMass(requirement.AvailableAmount));
+            string amount = StorageNetworkPlanPreviewText.BuildResearchAmountText(requirement, false);
             TextMeshProUGUI detail = CreateOrderText("MaterialAmount", textColumn.transform, amount, 8, TextAlignmentOptions.MidlineLeft);
             detail.color = NeutralTextColor();
             detail.textWrappingMode = TextWrappingModes.NoWrap;
@@ -644,7 +641,6 @@ namespace StorageNetwork.UI
 
         private void AddDiagramMaterialNode(Transform parent, ProductionPlanRequirement requirement, bool wide)
         {
-            float missing = Mathf.Max(0f, requirement.RequiredAmount - requirement.AvailableAmount);
             Color color = GetRequirementColor(requirement);
             GameObject card = CreatePlainImage("DiagramMaterialNode", parent, new Color(0.86f, 0.85f, 0.79f, 1f));
             LayoutElement cardLayout = card.AddComponent<LayoutElement>();
@@ -679,9 +675,7 @@ namespace StorageNetwork.UI
             name.overflowMode = TextOverflowModes.Ellipsis;
             name.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
 
-            string detail = missing <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT
-                ? string.Format("{0} / {1}", GameUtil.GetFormattedMass(requirement.AvailableAmount), GameUtil.GetFormattedMass(requirement.RequiredAmount))
-                : string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_RESEARCH_MISSING_STOCK), GameUtil.GetFormattedMass(missing), GameUtil.GetFormattedMass(requirement.AvailableAmount));
+            string detail = StorageNetworkPlanPreviewText.BuildResearchAmountText(requirement, true);
             TextMeshProUGUI amount = CreateOrderText("MaterialAmount", text.transform, detail, 8, TextAlignmentOptions.MidlineLeft);
             amount.color = NeutralTextColor();
             amount.textWrappingMode = TextWrappingModes.NoWrap;
@@ -758,19 +752,12 @@ namespace StorageNetwork.UI
 
         private void AddMaterialCard(Transform parent, ProductionPlanRequirement requirement, int depth)
         {
-            float missing = Mathf.Max(0f, requirement.RequiredAmount - requirement.AvailableAmount);
-            bool covered = missing <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT;
-            bool produced = !covered && requirement.Child != null;
+            bool covered = StorageNetworkPlanPreviewText.IsCoveredByNetwork(requirement);
+            bool produced = StorageNetworkPlanPreviewText.CanProduceRequirement(requirement);
             Color color = covered ? PositiveColor() : produced ? WarningColor() : DangerColor();
             string name = ProductionOrderFormatting.GetTagDisplayName(requirement.Material);
-            string stockLine = covered
-                ? string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_REQUIREMENT_STOCK), GameUtil.GetFormattedMass(requirement.RequiredAmount), GameUtil.GetFormattedMass(requirement.AvailableAmount))
-                : string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_REQUIREMENT_MISSING), GameUtil.GetFormattedMass(requirement.RequiredAmount), GameUtil.GetFormattedMass(missing));
-            string actionLine = covered
-                ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_ACTION_DIRECT)
-                : produced
-                    ? string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_ACTION_AUTO), StorageNetworkPlanPreviewText.BuildAssignmentSummary(requirement.Child, 3))
-                    : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_ACTION_BLOCKED);
+            string stockLine = StorageNetworkPlanPreviewText.BuildRequirementStockLine(requirement);
+            string actionLine = StorageNetworkPlanPreviewText.BuildRequirementActionLine(requirement, 3);
 
             int detailLines = EstimateTextLineCount(stockLine, 2, compactOrderWindow ? 20 : 28) +
                               EstimateTextLineCount(actionLine, 3, compactOrderWindow ? 20 : 28);
@@ -851,9 +838,8 @@ namespace StorageNetwork.UI
 
         private void AddMaterialRow(Transform parent, ProductionPlanRequirement requirement, int depth)
         {
-            float missing = Mathf.Max(0f, requirement.RequiredAmount - requirement.AvailableAmount);
-            bool covered = missing <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT;
-            bool produced = !covered && requirement.Child != null;
+            bool covered = StorageNetworkPlanPreviewText.IsCoveredByNetwork(requirement);
+            bool produced = StorageNetworkPlanPreviewText.CanProduceRequirement(requirement);
             Color color = covered ? PositiveColor() : produced ? WarningColor() : DangerColor();
             GameObject row = CreatePlainImage("MaterialLedgerRow", parent, depth == 0 ? new Color(0.78f, 0.79f, 0.73f, 1f) : new Color(0.71f, 0.73f, 0.68f, 1f));
             row.AddComponent<LayoutElement>().preferredHeight = depth == 0 ? 44f : 38f;
@@ -881,8 +867,8 @@ namespace StorageNetwork.UI
             name.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
 
             AddLedgerValue(row.transform, GameUtil.GetFormattedMass(requirement.RequiredAmount), NeutralTextColor(), 82f);
-            AddLedgerValue(row.transform, covered ? GameUtil.GetFormattedMass(requirement.AvailableAmount) : string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_MISSING_PREFIX), GameUtil.GetFormattedMass(missing)), color, 104f);
-            AddStatusBadge(row.transform, covered ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_DISPATCH_DIRECT) : produced ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_DISPATCH_AUTO) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_STATUS_BLOCKED), color, 128f);
+            AddLedgerValue(row.transform, StorageNetworkPlanPreviewText.BuildLedgerStockText(requirement), color, 104f);
+            AddStatusBadge(row.transform, StorageNetworkPlanPreviewText.GetDispatchStatusLabel(requirement), color, 128f);
 
             if (requirement.Child != null && depth < 2)
             {
@@ -1096,9 +1082,8 @@ namespace StorageNetwork.UI
 
         private void AddDispatchRequirementRow(Transform parent, ProductionPlanRequirement requirement)
         {
-            float missing = Mathf.Max(0f, requirement.RequiredAmount - requirement.AvailableAmount);
-            bool covered = missing <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT;
-            bool produced = !covered && requirement.Child != null;
+            bool covered = StorageNetworkPlanPreviewText.IsCoveredByNetwork(requirement);
+            bool produced = StorageNetworkPlanPreviewText.CanProduceRequirement(requirement);
             Color color = covered ? PositiveColor() : produced ? WarningColor() : DangerColor();
             GameObject row = CreatePlainImage("DispatchRequirementRow", parent, covered ? new Color(0.78f, 0.80f, 0.73f, 1f) : produced ? new Color(0.80f, 0.78f, 0.70f, 1f) : new Color(0.80f, 0.73f, 0.70f, 1f));
             row.AddComponent<LayoutElement>().preferredHeight = 32f;
@@ -1241,9 +1226,8 @@ namespace StorageNetwork.UI
 
         private void AddPlanFlowRow(Transform parent, ProductionPlanNode sourceNode, ProductionPlanRequirement requirement, int depth)
         {
-            float missing = Mathf.Max(0f, requirement.RequiredAmount - requirement.AvailableAmount);
-            bool covered = missing <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT;
-            bool produced = !covered && requirement.Child != null;
+            bool covered = StorageNetworkPlanPreviewText.IsCoveredByNetwork(requirement);
+            bool produced = StorageNetworkPlanPreviewText.CanProduceRequirement(requirement);
             Color statusColor = GetRequirementColor(requirement);
             GameObject row = CreatePlainImage("FlowRow", parent, covered ? new Color(0.78f, 0.80f, 0.73f, 1f) : produced ? new Color(0.80f, 0.78f, 0.70f, 1f) : new Color(0.80f, 0.73f, 0.70f, 1f));
             row.AddComponent<LayoutElement>().preferredHeight = 34f;
@@ -1270,7 +1254,7 @@ namespace StorageNetwork.UI
             {
                 AddFlowStatusPill(
                     row.transform,
-                    covered ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_DISPATCH_DIRECT) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_STILL_MISSING),
+                    StorageNetworkPlanPreviewText.GetDispatchFlowStatusLabel(requirement),
                     statusColor,
                     82f);
             }
@@ -1320,7 +1304,6 @@ namespace StorageNetwork.UI
 
         private void AddFlowMaterialPill(Transform parent, ProductionPlanRequirement requirement, float width)
         {
-            float missing = Mathf.Max(0f, requirement.RequiredAmount - requirement.AvailableAmount);
             Color color = GetRequirementColor(requirement);
             GameObject pill = CreatePlainImage("MaterialPill", parent, new Color(0.84f, 0.84f, 0.78f, 1f));
             LayoutElement pillLayout = pill.AddComponent<LayoutElement>();
@@ -1336,9 +1319,7 @@ namespace StorageNetwork.UI
             layout.childForceExpandHeight = true;
 
             AddMaterialIcon(pill.transform, requirement.Material, 16f);
-            string textValue = missing <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT
-                ? string.Format("{0}  {1}/{2}", ProductionOrderFormatting.GetTagDisplayName(requirement.Material), GameUtil.GetFormattedMass(requirement.AvailableAmount), GameUtil.GetFormattedMass(requirement.RequiredAmount))
-                : string.Format("{0}  {1}", ProductionOrderFormatting.GetTagDisplayName(requirement.Material), string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_MISSING_PREFIX), GameUtil.GetFormattedMass(missing)));
+            string textValue = StorageNetworkPlanPreviewText.BuildMaterialPillText(requirement);
             TextMeshProUGUI text = CreateOrderText("MaterialPillText", pill.transform, textValue, 8, TextAlignmentOptions.MidlineLeft);
             text.color = color;
             text.fontStyle = FontStyles.Bold;
@@ -1473,7 +1454,6 @@ namespace StorageNetwork.UI
 
         private void AddMaterialNode(Transform parent, ProductionPlanRequirement requirement)
         {
-            float missing = Mathf.Max(0f, requirement.RequiredAmount - requirement.AvailableAmount);
             Color color = GetRequirementColor(requirement);
             GameObject card = CreatePlainImage("MaterialNode", parent, new Color(0.80f, 0.80f, 0.74f, 1f));
             LayoutElement cardLayout = card.AddComponent<LayoutElement>();
@@ -1502,9 +1482,7 @@ namespace StorageNetwork.UI
             name.overflowMode = TextOverflowModes.Ellipsis;
             name.gameObject.AddComponent<LayoutElement>().preferredHeight = 14f;
 
-            string status = missing <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT
-                ? string.Format("{0} / {1}", GameUtil.GetFormattedMass(requirement.AvailableAmount), GameUtil.GetFormattedMass(requirement.RequiredAmount))
-                : string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_RESEARCH_MISSING_STOCK), GameUtil.GetFormattedMass(missing), GameUtil.GetFormattedMass(requirement.AvailableAmount));
+            string status = StorageNetworkPlanPreviewText.BuildResearchAmountText(requirement, true);
             TextMeshProUGUI detail = CreateText("MaterialDetail", textColumn.transform, status, 7, TextAlignmentOptions.MidlineLeft);
             detail.color = NeutralTextColor();
             detail.textWrappingMode = TextWrappingModes.NoWrap;
@@ -1538,8 +1516,7 @@ namespace StorageNetwork.UI
 
         private Color GetRequirementColor(ProductionPlanRequirement requirement)
         {
-            float missing = Mathf.Max(0f, requirement.RequiredAmount - requirement.AvailableAmount);
-            if (missing <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+            if (StorageNetworkPlanPreviewText.IsCoveredByNetwork(requirement))
             {
                 return PositiveColor();
             }
