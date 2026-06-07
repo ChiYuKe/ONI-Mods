@@ -84,7 +84,7 @@ namespace StorageNetwork.UI
             StorageSceneSnapshot snapshot = StorageSceneCollector.CollectForWorld(worldId, includeReachableWorlds: false);
             bool online = StorageSceneRegistry.HasOnlineCoreInWorld(worldId);
             bool relayOnline = StorageSceneRegistry.IsCrossPlanetRelayOnline();
-            string worldName = GetWorldName(worldId);
+            string worldName = StorageNetworkWorldDisplay.GetWorldName(worldId);
             float remaining = Mathf.Max(0f, snapshot.TotalCapacityKg - snapshot.TotalStoredKg);
             int storageCount = snapshot.Storages.Count(info => info != null && info.Storage != null && info.Minion == null);
             int serverCount = snapshot.Storages.Count(info =>
@@ -118,21 +118,6 @@ namespace StorageNetwork.UI
         private static bool IsStorageNetworkServer(GameObject gameObject)
         {
             return gameObject != null && gameObject.GetComponent<StorageNetworkStorageConnector>() != null;
-        }
-
-        private static string GetWorldName(int worldId)
-        {
-            WorldContainer world = ClusterManager.Instance != null ? ClusterManager.Instance.GetWorld(worldId) : null;
-            if (world != null)
-            {
-                string name = world.GetProperName();
-                if (!string.IsNullOrEmpty(name))
-                {
-                    return name;
-                }
-            }
-
-            return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STARMAP_NAME_HINT);
         }
 
         private static void SetText(TextMeshProUGUI text, string value)
