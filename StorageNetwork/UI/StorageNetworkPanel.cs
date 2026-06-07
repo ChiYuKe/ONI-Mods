@@ -70,6 +70,8 @@ namespace StorageNetwork.UI
         private string lastListSignature;
         private const float LiveRefreshSeconds = 1f;
         private const float StructureRefreshSeconds = 5f;
+        private const string EmptyListSignature = "empty";
+        private const string CoreOfflineListSignature = "core_offline";
         private static readonly bool DebugLogging = false;
 
         private enum StoragePanelRefreshMode
@@ -647,7 +649,7 @@ namespace StorageNetwork.UI
         {
             if (forceRebuild || string.IsNullOrEmpty(lastListSignature))
             {
-                lastListSignature = "empty";
+                lastListSignature = EmptyListSignature;
                 ClearCategories();
                 ClearList();
                 CreateInfoRow(
@@ -659,9 +661,9 @@ namespace StorageNetwork.UI
 
         private void RefreshCoreOfflineStorageList(bool forceRebuild)
         {
-            if (forceRebuild || lastListSignature != "core_offline")
+            if (forceRebuild || lastListSignature != CoreOfflineListSignature)
             {
-                lastListSignature = "core_offline";
+                lastListSignature = CoreOfflineListSignature;
                 ClearCategories();
                 ClearList();
                 CreateInfoRow(
@@ -673,7 +675,7 @@ namespace StorageNetwork.UI
 
         private bool ShouldRebuildStorageList(bool forceRebuild, bool checkStructure)
         {
-            if (forceRebuild || string.IsNullOrEmpty(lastListSignature) || lastListSignature == "empty")
+            if (forceRebuild || string.IsNullOrEmpty(lastListSignature) || lastListSignature == EmptyListSignature)
             {
                 return true;
             }
