@@ -331,7 +331,7 @@ namespace StorageNetwork.UI
             CreateEnrollableWorldDropdownOption(content.transform, AllEnrollableWorldsFilterId, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENROLLABLE_WORLD_ALL));
             foreach (int worldId in worldIds)
             {
-                CreateEnrollableWorldDropdownOption(content.transform, worldId, GetWorldFilterName(worldId));
+                CreateEnrollableWorldDropdownOption(content.transform, worldId, StorageNetworkWorldText.GetWorldName(worldId));
             }
 
             ScrollRect scrollRect = viewport.AddComponent<ScrollRect>();
@@ -448,7 +448,7 @@ namespace StorageNetwork.UI
         {
             return enrollableWorldFilterId == AllEnrollableWorldsFilterId
                 ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENROLLABLE_WORLD_ALL)
-                : GetWorldFilterName(enrollableWorldFilterId);
+                : StorageNetworkWorldText.GetWorldName(enrollableWorldFilterId);
         }
 
         private IEnumerable<StorageNetworkEnrollment> FilterEnrollmentsByWorld(IEnumerable<StorageNetworkEnrollment> enrollments)
@@ -522,7 +522,7 @@ namespace StorageNetwork.UI
         {
             HashSet<int> worldIds = new HashSet<int>();
             int activeWorldId = GetActiveWorldFilterId();
-            if (IsWorldDiscovered(activeWorldId))
+            if (StorageNetworkWorldText.IsWorldDiscovered(activeWorldId))
             {
                 worldIds.Add(activeWorldId);
             }
@@ -531,14 +531,14 @@ namespace StorageNetwork.UI
             {
                 if (enrollment != null &&
                     TryGetBuildingWorldId(enrollment.gameObject, out int worldId) &&
-                    IsWorldDiscovered(worldId))
+                    StorageNetworkWorldText.IsWorldDiscovered(worldId))
                 {
                     worldIds.Add(worldId);
                 }
             }
 
             return worldIds
-                .OrderBy(GetWorldFilterName)
+                .OrderBy(StorageNetworkWorldText.GetWorldName)
                 .ToList();
         }
 

@@ -28,7 +28,7 @@ namespace StorageNetwork.UI
             }
 
             List<StorageInfo> storages = snapshot.Storages
-                .Where(info => info != null && IsWorldDiscovered(GetObjectWorldId(info.GameObject)))
+                .Where(info => info != null && StorageNetworkWorldText.IsWorldDiscovered(GetObjectWorldId(info.GameObject)))
                 .ToList();
             float totalStoredKg = 0f;
             float totalCapacityKg = 0f;
@@ -138,7 +138,7 @@ namespace StorageNetwork.UI
             CreateMainWorldDropdownOption(content.transform, AllEnrollableWorldsFilterId, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENROLLABLE_WORLD_ALL));
             foreach (int worldId in worldIds)
             {
-                CreateMainWorldDropdownOption(content.transform, worldId, GetWorldFilterName(worldId));
+                CreateMainWorldDropdownOption(content.transform, worldId, StorageNetworkWorldText.GetWorldName(worldId));
             }
 
             ScrollRect scrollRect = viewport.AddComponent<ScrollRect>();
@@ -182,7 +182,7 @@ namespace StorageNetwork.UI
         {
             return mainWorldFilterId == AllEnrollableWorldsFilterId
                 ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENROLLABLE_WORLD_ALL)
-                : GetWorldFilterName(mainWorldFilterId);
+                : StorageNetworkWorldText.GetWorldName(mainWorldFilterId);
         }
 
         private void EnsureValidMainWorldFilter()
@@ -207,7 +207,7 @@ namespace StorageNetwork.UI
         {
             HashSet<int> worldIds = new HashSet<int>();
             int activeWorldId = GetActiveWorldFilterId();
-            if (IsWorldDiscovered(activeWorldId))
+            if (StorageNetworkWorldText.IsWorldDiscovered(activeWorldId))
             {
                 worldIds.Add(activeWorldId);
             }
@@ -218,29 +218,19 @@ namespace StorageNetwork.UI
                 if (storage != null)
                 {
                     int worldId = GetObjectWorldId(storage.gameObject);
-                    if (IsWorldDiscovered(worldId))
+                    if (StorageNetworkWorldText.IsWorldDiscovered(worldId))
                     {
                         worldIds.Add(worldId);
                     }
                 }
             }
 
-            return worldIds.OrderBy(GetWorldFilterName).ToList();
+            return worldIds.OrderBy(StorageNetworkWorldText.GetWorldName).ToList();
         }
 
         private static int GetActiveWorldFilterId()
         {
             return ClusterManager.Instance != null ? ClusterManager.Instance.activeWorldId : UnsetEnrollableWorldFilterId;
-        }
-
-        private static string GetWorldFilterName(int worldId)
-        {
-            return StorageNetworkWorldText.GetWorldName(worldId);
-        }
-
-        private static bool IsWorldDiscovered(int worldId)
-        {
-            return StorageNetworkWorldText.IsWorldDiscovered(worldId);
         }
 
         private static Sprite GetWorldFilterSprite(int worldId)
