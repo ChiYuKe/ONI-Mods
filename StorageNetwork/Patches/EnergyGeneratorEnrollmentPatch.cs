@@ -1,6 +1,5 @@
 using HarmonyLib;
-using StorageNetwork.Components;
-using UnityEngine;
+using StorageNetwork.Gameplay;
 
 namespace StorageNetwork.Patches
 {
@@ -11,17 +10,7 @@ namespace StorageNetwork.Patches
         {
             public static void Postfix()
             {
-                foreach (GameObject prefab in Assets.GetPrefabsWithComponent<EnergyGenerator>())
-                {
-                    EnergyGenerator generator = prefab != null ? prefab.GetComponent<EnergyGenerator>() : null;
-                    if (!StorageNetworkEnergyGeneratorRequester.HasFuelInputs(generator) || prefab.GetComponent<Storage>() == null)
-                    {
-                        continue;
-                    }
-
-                    prefab.AddOrGet<StorageNetworkEnrollment>();
-                    prefab.AddOrGet<StorageNetworkEnergyGeneratorRequester>();
-                }
+                StorageNetworkEnrollmentInstaller.InstallEnergyGeneratorPrefabs();
             }
         }
     }

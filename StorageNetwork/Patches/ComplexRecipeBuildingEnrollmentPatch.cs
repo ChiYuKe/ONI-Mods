@@ -1,6 +1,5 @@
 using HarmonyLib;
-using StorageNetwork.Components;
-using UnityEngine;
+using StorageNetwork.Gameplay;
 
 namespace StorageNetwork.Patches
 {
@@ -11,14 +10,7 @@ namespace StorageNetwork.Patches
         {
             public static void Postfix()
             {
-                foreach (GameObject prefab in Assets.GetPrefabsWithComponent<ComplexFabricator>())
-                {
-                    if (prefab != null && prefab.GetComponent<Storage>() != null)
-                    {
-                        prefab.AddOrGet<StorageNetworkEnrollment>();
-                        prefab.AddOrGet<StorageNetworkMaterialRequester>();
-                    }
-                }
+                StorageNetworkEnrollmentInstaller.InstallComplexRecipeBuildingPrefabs();
             }
         }
     }

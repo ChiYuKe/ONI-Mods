@@ -71,5 +71,32 @@ namespace StorageNetwork.Gameplay
                 }
             }
         }
+
+        public static void InstallComplexRecipeBuildingPrefabs()
+        {
+            foreach (GameObject prefab in Assets.GetPrefabsWithComponent<ComplexFabricator>())
+            {
+                if (prefab != null && prefab.GetComponent<Storage>() != null)
+                {
+                    prefab.AddOrGet<StorageNetworkEnrollment>();
+                    prefab.AddOrGet<StorageNetworkMaterialRequester>();
+                }
+            }
+        }
+
+        public static void InstallEnergyGeneratorPrefabs()
+        {
+            foreach (GameObject prefab in Assets.GetPrefabsWithComponent<EnergyGenerator>())
+            {
+                EnergyGenerator generator = prefab != null ? prefab.GetComponent<EnergyGenerator>() : null;
+                if (!StorageNetworkEnergyGeneratorRequester.HasFuelInputs(generator) || prefab.GetComponent<Storage>() == null)
+                {
+                    continue;
+                }
+
+                prefab.AddOrGet<StorageNetworkEnrollment>();
+                prefab.AddOrGet<StorageNetworkEnergyGeneratorRequester>();
+            }
+        }
     }
 }
