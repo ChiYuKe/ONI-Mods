@@ -185,10 +185,10 @@ namespace StorageNetwork.UI
 
             SetCategorySummaryTitle(categoryName, storages.Count, storedKg);
 
-            List<ItemTotal> totals = new List<ItemTotal>(totalsByKey.Count);
+            List<StorageNetworkCategorySummaryItemTotal> totals = new List<StorageNetworkCategorySummaryItemTotal>(totalsByKey.Count);
             foreach (ItemTotalAccumulator total in totalsByKey.Values)
             {
-                totals.Add(new ItemTotal(total.Key, total.Name, total.MassKg, total.Representative));
+                totals.Add(new StorageNetworkCategorySummaryItemTotal(total.Key, total.Name, total.MassKg, total.Representative));
             }
 
             totals.Sort((left, right) =>
@@ -198,7 +198,7 @@ namespace StorageNetwork.UI
             });
 
             UpdateCategorySummarySamples(selectedCategoryKey, totals);
-            string signature = BuildCategorySummarySignature(selectedCategoryKey, storages, totals);
+            string signature = StorageNetworkCategorySummarySignature.Build(selectedCategoryKey, storages, totals);
             if (signature == categorySummarySignature)
             {
                 return;
@@ -216,28 +216,13 @@ namespace StorageNetwork.UI
                 return;
             }
 
-            foreach (ItemTotal total in totals)
+            foreach (StorageNetworkCategorySummaryItemTotal total in totals)
             {
                 UpdateCategorySummaryItemRow(total, GetMassTrendPerCycle(selectedCategoryKey, total.Key));
             }
 
             categorySummaryRows.Commit();
             ForceCategorySummaryLayout();
-        }
-
-        private static string BuildCategorySummarySignature(string categoryKey, List<Storage> storages, List<ItemTotal> totals)
-        {
-            string storageSignature = string.Join(",", storages
-                .OrderBy(storage => storage != null ? storage.GetInstanceID() : 0)
-                .Select(storage => string.Format("{0}:{1:0.###}",
-                    storage != null ? storage.GetInstanceID() : 0,
-                    storage != null ? storage.MassStored() : 0f)));
-
-            string totalSignature = string.Join(",", totals
-                .OrderBy(total => total.Key)
-                .Select(total => string.Format("{0}:{1:0.###}", total.Key, total.MassKg)));
-
-            return string.Format("{0}|{1}|{2}", categoryKey ?? string.Empty, storageSignature, totalSignature);
         }
 
         private void ClearCategorySummaryContent()
@@ -293,7 +278,7 @@ namespace StorageNetwork.UI
             }
         }
 
-        private void UpdateCategorySummaryItemRow(ItemTotal total, float? trendKgPerCycle)
+        private void UpdateCategorySummaryItemRow(StorageNetworkCategorySummaryItemTotal total, float? trendKgPerCycle)
         {
             GameObject row = categorySummaryRows.Use("item:" + total.Key, () => CreateCategorySummaryItemRow());
             CategorySummaryRowView view = row.GetComponent<CategorySummaryRowView>();
@@ -356,10 +341,10 @@ namespace StorageNetwork.UI
             LayoutRebuilder.ForceRebuildLayoutImmediate(categorySummaryContent);
         }
 
-        private void UpdateCategorySummarySamples(string categoryKey, IEnumerable<ItemTotal> totals)
+        private void UpdateCategorySummarySamples(string categoryKey, IEnumerable<StorageNetworkCategorySummaryItemTotal> totals)
         {
             float currentCycle = GetCurrentCycleTime();
-            foreach (ItemTotal total in totals)
+            foreach (StorageNetworkCategorySummaryItemTotal total in totals)
             {
                 string key = BuildSampleKey(categoryKey, total.Key);
                 if (!categorySummarySamples.TryGetValue(key, out Queue<MassSample> samples))
@@ -432,25 +417,6 @@ namespace StorageNetwork.UI
             return trendKgPerCycle.Value > 0f
                 ? new Color(0.24f, 0.46f, 0.30f, 1f)
                 : new Color(0.58f, 0.25f, 0.25f, 1f);
-        }
-
-        private readonly struct ItemTotal
-        {
-            public ItemTotal(string key, string name, float massKg, GameObject representative)
-            {
-                Key = key;
-                Name = name;
-                MassKg = massKg;
-                Representative = representative;
-            }
-
-            public string Key { get; }
-
-            public string Name { get; }
-
-            public float MassKg { get; }
-
-            public GameObject Representative { get; }
         }
 
         private readonly struct MassSample
