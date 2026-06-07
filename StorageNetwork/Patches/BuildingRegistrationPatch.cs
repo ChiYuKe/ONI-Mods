@@ -1,6 +1,6 @@
 using HarmonyLib;
-using StorageNetwork.Buildings;
 using StorageNetwork.Core;
+using StorageNetwork.Gameplay;
 using StorageNetwork.Research;
 
 namespace StorageNetwork.Patches
@@ -10,28 +10,9 @@ namespace StorageNetwork.Patches
         [HarmonyPatch(typeof(GeneratedBuildings), "LoadGeneratedBuildings")]
         public static class LoadGeneratedBuildingsPatch
         {
-            private const string StorageNetworkSubcategory = "StorageNetwork";
-
             public static void Prefix()
             {
-                if (!SelectModuleSideScreen.moduleButtonSortOrder.Contains(StorageNetworkRelayModuleConfig.ID))
-                {
-                    int insertIndex = SelectModuleSideScreen.moduleButtonSortOrder.IndexOf("ResearchClusterModule");
-                    if (insertIndex < 0)
-                    {
-                        insertIndex = SelectModuleSideScreen.moduleButtonSortOrder.Count - 1;
-                    }
-
-                    SelectModuleSideScreen.moduleButtonSortOrder.Insert(insertIndex + 1, StorageNetworkRelayModuleConfig.ID);
-                }
-
-                foreach (string buildingId in StorageNetworkStorageBuildingSpecs.AllIds)
-                {
-                    ModUtil.AddBuildingToPlanScreen("Base", buildingId, StorageNetworkSubcategory);
-                }
-
-                // 火箭舱由 SelectModuleSideScreen.moduleButtonSortOrder 显示。
-                // 同时加入 Rocketry 建造菜单会让 Codex 为同一舱块生成两次条目。
+                StorageNetworkBuildingPlanInstaller.Install();
             }
         }
 
