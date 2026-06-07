@@ -511,19 +511,17 @@ namespace StorageNetwork.UI
             }
 
             ClearHealthBar();
-            float remainingCapacity = Mathf.Max(0f, currentSnapshot.TotalCapacityKg - currentSnapshot.TotalStoredKg);
-            float fillRatio = currentSnapshot.TotalCapacityKg > 0f ? currentSnapshot.TotalStoredKg / currentSnapshot.TotalCapacityKg : 0f;
-            int activeOrders = productionOrderService.Orders.Count(order => IsHealthActiveOrder(order));
-            int waitingOrders = productionOrderService.Orders.Count(order => order != null && order.State == ProductionOrderState.WaitingMaterials);
-            int abnormalOrders = productionOrderService.Orders.Count(order => order != null && order.State == ProductionOrderState.Abnormal);
-            int offlineServers = currentSnapshot.Storages.Count(IsOfflineNetworkServer);
+            StorageNetworkPanelHealthMetrics metrics = StorageNetworkPanelHealthMetrics.Create(
+                currentSnapshot,
+                productionOrderService.Orders,
+                IsOfflineNetworkServer);
 
-            AddHealthTile(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.HEALTH_CAPACITY), string.Format("{0:P0}", Mathf.Clamp01(fillRatio)), fillRatio >= 0.92f ? DangerColor() : fillRatio >= 0.80f ? WarningColor() : PositiveColor());
-            AddHealthTile(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.HEALTH_REMAINING), GameUtil.GetFormattedMass(remainingCapacity), remainingCapacity <= 1000f ? WarningColor() : NeutralBlue());
-            AddHealthTile(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.HEALTH_ORDERS), activeOrders.ToString(), activeOrders > 0 ? NeutralBlue() : MutedTextColor());
-            AddHealthTile(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.HEALTH_WAITING), waitingOrders.ToString(), waitingOrders > 0 ? WarningColor() : PositiveColor());
-            AddHealthTile(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.HEALTH_ABNORMAL), abnormalOrders.ToString(), abnormalOrders > 0 ? DangerColor() : PositiveColor());
-            AddHealthTile(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.HEALTH_OFFLINE), offlineServers.ToString(), offlineServers > 0 ? DangerColor() : PositiveColor());
+            AddHealthTile(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.HEALTH_CAPACITY), string.Format("{0:P0}", Mathf.Clamp01(metrics.FillRatio)), metrics.FillRatio >= 0.92f ? DangerColor() : metrics.FillRatio >= 0.80f ? WarningColor() : PositiveColor());
+            AddHealthTile(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.HEALTH_REMAINING), GameUtil.GetFormattedMass(metrics.RemainingCapacityKg), metrics.RemainingCapacityKg <= 1000f ? WarningColor() : NeutralBlue());
+            AddHealthTile(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.HEALTH_ORDERS), metrics.ActiveOrders.ToString(), metrics.ActiveOrders > 0 ? NeutralBlue() : MutedTextColor());
+            AddHealthTile(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.HEALTH_WAITING), metrics.WaitingOrders.ToString(), metrics.WaitingOrders > 0 ? WarningColor() : PositiveColor());
+            AddHealthTile(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.HEALTH_ABNORMAL), metrics.AbnormalOrders.ToString(), metrics.AbnormalOrders > 0 ? DangerColor() : PositiveColor());
+            AddHealthTile(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.HEALTH_OFFLINE), metrics.OfflineServers.ToString(), metrics.OfflineServers > 0 ? DangerColor() : PositiveColor());
             EnsureMainSearchTile();
         }
 
@@ -614,14 +612,6 @@ namespace StorageNetwork.UI
             ToolTip tooltip = tile.AddComponent<ToolTip>();
             tooltip.toolTip = Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MAIN_SEARCH_TOOLTIP);
             tile.transform.SetAsLastSibling();
-        }
-
-        private static bool IsHealthActiveOrder(ProductionOrderRecord order)
-        {
-            return order != null &&
-                   order.State != ProductionOrderState.Completed &&
-                   order.State != ProductionOrderState.Abnormal &&
-                   order.State != ProductionOrderState.Cancelled;
         }
 
         private static bool HasEnabledNetworkAutomation(StorageInfo info)
