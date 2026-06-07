@@ -31,6 +31,18 @@ msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKSMALLSOLIDSERVER
 msgid "储存固体物品，并显示在储存网络窗口中。"
 msgstr "Stores solid items and appears in the Storage Network window."
 
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKSCENESTORAGEBOX.NAME"
+msgid "场景储存箱（已弃用）"
+msgstr "Scene Storage Box (Deprecated)"
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKSCENESTORAGEBOX.DESC"
+msgid "旧版本储存网络使用的兼容储存箱，已弃用。"
+msgstr "A deprecated compatibility storage box used by older versions of Storage Network."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKSCENESTORAGEBOX.EFFECT"
+msgid "此建筑仅用于保护旧存档中的材料，可能会在将来的模组更新中被移除。请尽快取出或转移箱子中的材料，并拆除该箱子。"
+msgstr "This building only protects materials in old saves and may be removed in a future mod update. Remove or transfer its stored materials as soon as possible, then deconstruct the box."
+
 msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKSMALLLIQUIDSERVER.NAME"
 msgid "小型液体服务器"
 msgstr "Small Liquid Server"
@@ -1814,3 +1826,23 @@ msgstr "Average Output"
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_METRIC_DIRECT_OUTPUT"
 msgid "直入"
 msgstr "Direct"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_FILTER_CURRENT"
+msgid "当前"
+msgstr "Current"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_FILTER_ALL"
+msgid "全部"
+msgstr "All"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_FILTER_RUNNING"
+msgid "运行中"
+msgstr "Running"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_FILTER_COMPLETED"
+msgid "已完成"
+msgstr "Completed"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_FILTER_ABNORMAL"
+msgid "异常"
+msgstr "Abnormal"

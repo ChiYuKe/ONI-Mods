@@ -27,6 +27,13 @@ namespace StorageNetwork
                     public static LocString EFFECT = "储存固体物品，并显示在储存网络窗口中。";
                 }
 
+                public class STORAGENETWORKSCENESTORAGEBOX
+                {
+                    public static LocString NAME = "场景储存箱（已弃用）";
+                    public static LocString DESC = "旧版本储存网络使用的兼容储存箱，已弃用。";
+                    public static LocString EFFECT = "此建筑仅用于保护旧存档中的材料，可能会在将来的模组更新中被移除。请尽快取出或转移箱子中的材料，并拆除该箱子。";
+                }
+
                 public class STORAGENETWORKSMALLLIQUIDSERVER
                 {
                     public static LocString NAME = "小型液体服务器";
@@ -453,6 +460,11 @@ namespace StorageNetwork
                 public static LocString TRACKING_CYCLE_VALUE = "{0} 周期";
                 public static LocString TRACKING_MERGED_ACTIVITY = "已合并 {0} 次 · 活动周期 {1}";
                 public static LocString TRACKING_SUMMARY = "{0}：{1} 个活动订单 / {2} 条最近记录";
+                public static LocString TRACKING_FILTER_CURRENT = "当前";
+                public static LocString TRACKING_FILTER_ALL = "全部";
+                public static LocString TRACKING_FILTER_RUNNING = "运行中";
+                public static LocString TRACKING_FILTER_COMPLETED = "已完成";
+                public static LocString TRACKING_FILTER_ABNORMAL = "异常";
                 public static LocString TRACKING_ORDER_SOURCE_BATCH = "{0}订单 · 批次 x{1}";
                 public static LocString TRACKING_WAITING_MATERIALS = "成品设备 {0} 台等待材料，{1} 台设备补产缺口。";
                 public static LocString TRACKING_MACHINES_RUNNING = "{0} 台设备正在处理该订单。";

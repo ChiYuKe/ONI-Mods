@@ -42,6 +42,9 @@ namespace StorageNetwork.UI
         private KInputTextField enrollableSearchInput;
         private string enrollableSearchText = string.Empty;
         private GameObject headerWindowRoot;
+        private int orderWorldFilterId = UnsetEnrollableWorldFilterId;
+        private RectTransform orderWorldFilterContent;
+        private GameObject orderWorldDropdownRoot;
         private GameObject productionSettingsRoot;
         private RectTransform productionSettingsContent;
         private Storage productionSettingsStorage;

@@ -19,6 +19,7 @@ namespace StorageNetwork.Core
             ProductionOrderService.ResetRuntimeState();
             StorageNetworkWorldPanelRegistry.ResetRuntimeState();
             StorageNetworkWorldTextPanel.ResetRuntimeState();
+            StorageNetworkModInfoResolver.ResetRuntimeState();
         }
     }
 }

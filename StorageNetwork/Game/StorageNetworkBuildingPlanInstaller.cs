@@ -11,8 +11,8 @@ namespace StorageNetwork.Gameplay
             InstallRocketModuleSortOrder();
             InstallStorageBuildings();
 
-            // 火箭舱由 SelectModuleSideScreen.moduleButtonSortOrder 显示。
-            // 同时加入 Rocketry 建造菜单会让 Codex 为同一舱块生成两次条目。
+            // Rocket modules are shown by SelectModuleSideScreen.moduleButtonSortOrder.
+            // Adding the relay to the Rocketry build menu as well creates duplicate Codex entries.
         }
 
         private static void InstallRocketModuleSortOrder()

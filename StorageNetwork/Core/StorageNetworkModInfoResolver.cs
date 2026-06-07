@@ -11,8 +11,13 @@ namespace StorageNetwork.Core
         private static readonly Assembly StorageNetworkAssembly = typeof(StorageNetworkModInfoResolver).Assembly;
         private static Dictionary<Assembly, string> modNamesByAssembly;
 
+        public static void ResetRuntimeState()
+        {
+            modNamesByAssembly = null;
+        }
+
         /// <summary>
-        /// 从建筑组件所属程序集推断来源模组名。会跳过 StorageNetwork 自己，避免适配组件污染来源显示。
+        /// Infers a building's source mod from component assemblies, skipping StorageNetwork itself.
         /// </summary>
         public static string GetSourceModName(Storage storage)
         {

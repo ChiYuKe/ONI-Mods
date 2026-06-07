@@ -118,7 +118,7 @@ namespace StorageNetwork.UI
             closeRect.anchorMax = new Vector2(1f, 0.5f);
             closeRect.pivot = new Vector2(1f, 0.5f);
             closeRect.anchoredPosition = new Vector2(-10f, 0f);
-            closeRect.sizeDelta = new Vector2(24f, 22f);
+            closeRect.sizeDelta = new Vector2(30f, 30f);
 
             CreateEnrollableSearchBar(enrollableWindowRoot.transform);
 

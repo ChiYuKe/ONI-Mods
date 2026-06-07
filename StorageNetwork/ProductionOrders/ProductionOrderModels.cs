@@ -29,7 +29,7 @@ namespace StorageNetwork.ProductionOrders
 
     internal struct RecipeDisplayInfo
     {
-        public RecipeDisplayInfo(string name, string fabricatorName, string details, ComplexRecipe recipe, List<ComplexFabricator> fabricators, Sprite icon, string productKey, string productName, Tag productTag)
+        public RecipeDisplayInfo(string name, string fabricatorName, string details, ComplexRecipe recipe, List<ComplexFabricator> fabricators, Sprite icon, string productKey, string productName, Tag productTag, List<int> worldIds)
         {
             Name = name;
             FabricatorName = fabricatorName;
@@ -40,6 +40,7 @@ namespace StorageNetwork.ProductionOrders
             ProductKey = productKey;
             ProductName = productName;
             ProductTag = productTag;
+            WorldIds = worldIds ?? new List<int>();
         }
 
         public string Name { get; }
@@ -59,6 +60,8 @@ namespace StorageNetwork.ProductionOrders
         public string ProductName { get; }
 
         public Tag ProductTag { get; }
+
+        public List<int> WorldIds { get; }
     }
 
     internal sealed class ProductDisplayGroup

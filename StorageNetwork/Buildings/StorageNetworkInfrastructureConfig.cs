@@ -11,6 +11,8 @@ namespace StorageNetwork.Buildings
         protected abstract StorageNetworkStorageBuildingSpec Spec { get; }
         protected virtual bool ProvidesStorage => true;
         protected virtual bool OnePerWorld => false;
+        protected virtual bool AllowManualRemoval => false;
+        protected virtual Storage.FetchCategory FetchCategory => Storage.FetchCategory.Building;
 
         public override BuildingDef CreateBuildingDef()
         {
@@ -56,11 +58,11 @@ namespace StorageNetwork.Buildings
                 Storage storage = go.AddOrGet<Storage>();
                 storage.capacityKg = spec.CapacityKg;
                 storage.showInUI = true;
-                storage.allowItemRemoval = false;
+                storage.allowItemRemoval = AllowManualRemoval;
                 storage.showDescriptor = true;
                 storage.storageFilters = spec.Filters;
                 storage.storageFullMargin = STORAGE.STORAGE_LOCKER_FILLED_MARGIN;
-                storage.fetchCategory = Storage.FetchCategory.Building;
+                storage.fetchCategory = FetchCategory;
                 storage.showCapacityStatusItem = true;
                 storage.showCapacityAsMainStatus = true;
                 storage.SetDefaultStoredItemModifiers(Storage.StandardInsulatedStorage);
@@ -71,6 +73,7 @@ namespace StorageNetwork.Buildings
             }
             else
             {
+                prefabId?.AddTag(GameTags.UniquePerWorld);
                 go.AddOrGet<StorageNetworkCore>();
             }
 
@@ -156,6 +159,24 @@ namespace StorageNetwork.Buildings
     {
         public const string ID = "StorageNetworkLargeGasServer";
         protected override StorageNetworkStorageBuildingSpec Spec => StorageNetworkStorageBuildingSpecs.LargeGas;
+    }
+
+    [System.Obsolete("Compatibility prefab for old saves only. It may be removed in a future StorageNetwork update.")]
+    public sealed class SceneStorageBoxConfig : StorageNetworkStorageBuildingBase
+    {
+        public const string ID = "StorageNetworkSceneStorageBox";
+        protected override StorageNetworkStorageBuildingSpec Spec => StorageNetworkStorageBuildingSpecs.LegacySceneStorageBox;
+        protected override bool AllowManualRemoval => true;
+        protected override Storage.FetchCategory FetchCategory => Storage.FetchCategory.GeneralStorage;
+
+        public override void ConfigureBuildingTemplate(GameObject go, Tag prefabTag)
+        {
+            base.ConfigureBuildingTemplate(go, prefabTag);
+            go.GetComponent<KPrefabID>()?.AddTag(StorageSceneTags.SceneStorageBox);
+            go.AddOrGet<SceneStorageBoxMarker>();
+            go.AddOrGet<CopyBuildingSettings>().copyGroupTag = GameTags.StorageLocker;
+            go.AddOrGet<StorageLocker>();
+        }
     }
 
     public sealed class StorageNetworkRelayModuleConfig : IBuildingConfig
@@ -254,6 +275,8 @@ namespace StorageNetwork.Buildings
         private const string LargeSolidServerAnim = "storagenetwork_large_solid_server_kanim";
         private const string LargeLiquidServerAnim = "storagenetwork_large_liquid_server_kanim";
         private const string LargeGasServerAnim = "storagenetwork_large_gas_server_kanim";
+        private const string LegacySceneStorageBoxId = "StorageNetworkSceneStorageBox";
+        private const string LegacySceneStorageBoxAnim = "storagelocker_kanim";
         private const float MeltingPoint = 1600f;
 
         public static readonly StorageNetworkStorageBuildingSpec Core = Create(
@@ -357,6 +380,19 @@ namespace StorageNetwork.Buildings
             STORAGEFILTERS.GASES,
             BUILDINGS.CONSTRUCTION_MASS_KG.TIER5);
 
+        public static readonly StorageNetworkStorageBuildingSpec LegacySceneStorageBox = Create(
+            LegacySceneStorageBoxId,
+            1,
+            2,
+            LegacySceneStorageBoxAnim,
+            500000f,
+            0f,
+            0f,
+            STORAGEFILTERS.STORAGE_LOCKERS_STANDARD,
+            BUILDINGS.CONSTRUCTION_MASS_KG.TIER4,
+            MATERIALS.RAW_MINERALS_OR_METALS,
+            10f);
+
         public static IEnumerable<string> AllIds
         {
             get
@@ -422,15 +458,31 @@ namespace StorageNetwork.Buildings
             List<Tag> filters,
             float[] constructionMass)
         {
+            return Create(id, width, height, animFile, capacityKg, powerWatts, selfHeatKilowatts, filters, constructionMass, MATERIALS.REFINED_METALS, 30f);
+        }
+
+        private static StorageNetworkStorageBuildingSpec Create(
+            string id,
+            int width,
+            int height,
+            string animFile,
+            float capacityKg,
+            float powerWatts,
+            float selfHeatKilowatts,
+            List<Tag> filters,
+            float[] constructionMass,
+            string[] constructionMaterials,
+            float constructionTime)
+        {
             return new StorageNetworkStorageBuildingSpec
             {
                 Id = id,
                 Width = width,
                 Height = height,
                 AnimFile = animFile,
-                ConstructionTime = 30f,
+                ConstructionTime = constructionTime,
                 ConstructionMass = constructionMass,
-                ConstructionMaterials = MATERIALS.REFINED_METALS,
+                ConstructionMaterials = constructionMaterials,
                 MeltingPoint = MeltingPoint,
                 CapacityKg = capacityKg,
                 PowerWatts = powerWatts,

@@ -59,7 +59,13 @@ namespace StorageNetwork.ProductionOrders
                         recipe.GetUIIcon(),
                         GetProductKey(recipe),
                         GetProductDisplayName(recipe),
-                        GetProductTag(recipe));
+                        GetProductTag(recipe),
+                        fabricators
+                            .Select(fabricator => StorageNetworkWorldUtility.GetObjectWorldId(fabricator.gameObject))
+                            .Where(worldId => worldId >= 0)
+                            .Distinct()
+                            .OrderBy(worldId => worldId)
+                            .ToList());
                 })
                 .OrderBy(recipe => recipe.ProductName)
                 .ThenBy(recipe => recipe.FabricatorName)

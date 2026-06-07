@@ -82,6 +82,7 @@ namespace StorageNetwork.UI
                 orderDetailsSignature = null;
                 orderTrackingSignature = null;
                 CloseOrderTrackingDetail();
+                CloseOrderWorldDropdown();
                 headerWindowRoot.SetActive(false);
             }
         }
@@ -186,6 +187,7 @@ namespace StorageNetwork.UI
         private void CreateProductListPane(Transform parent)
         {
             GameObject pane = CreatePane(parent, "ProductPane", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_PRODUCT_LIST_TITLE), compactOrderWindow ? 220f : 260f, compactOrderWindow ? 200f : 240f, 0f);
+            CreateOrderWorldFilter(pane.transform);
             RectTransform viewport = CreateScrollViewport(pane.transform, "ProductViewport", out productListContent, 42f, 8f, 8f, 8f, 8f);
             productRows = new StorageNetworkKeyedRowCache(productListContent);
             Scrollbar scrollbar = CreateScrollbar(pane.transform, 96f, 8f);
@@ -269,11 +271,11 @@ namespace StorageNetwork.UI
             filterLayout.childForceExpandWidth = true;
             filterLayout.childForceExpandHeight = false;
 
-            AddTrackingFilterButton(filterRow.transform, "当前", TrackingFilterMode.Current);
-            AddTrackingFilterButton(filterRow.transform, "全部", TrackingFilterMode.All);
-            AddTrackingFilterButton(filterRow.transform, "运行中", TrackingFilterMode.Running);
-            AddTrackingFilterButton(filterRow.transform, "已完成", TrackingFilterMode.Completed);
-            AddTrackingFilterButton(filterRow.transform, "异常", TrackingFilterMode.Abnormal);
+            AddTrackingFilterButton(filterRow.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_FILTER_CURRENT), TrackingFilterMode.Current);
+            AddTrackingFilterButton(filterRow.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_FILTER_ALL), TrackingFilterMode.All);
+            AddTrackingFilterButton(filterRow.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_FILTER_RUNNING), TrackingFilterMode.Running);
+            AddTrackingFilterButton(filterRow.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_FILTER_COMPLETED), TrackingFilterMode.Completed);
+            AddTrackingFilterButton(filterRow.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_FILTER_ABNORMAL), TrackingFilterMode.Abnormal);
         }
 
         private void AddTrackingFilterButton(Transform parent, string text, TrackingFilterMode mode)
@@ -384,7 +386,9 @@ namespace StorageNetwork.UI
             {
                 productionOrderService.Refresh();
                 craftableRecipes = productionOrderService.GetCraftableRecipes();
-                orderProducts = productionOrderService.GetProductGroups();
+                EnsureValidOrderWorldFilter();
+                RebuildOrderWorldFilter();
+                orderProducts = GetFilteredOrderProductGroups();
                 if (orderProducts.Count == 0)
                 {
                     selectedProductKey = null;
@@ -425,6 +429,25 @@ namespace StorageNetwork.UI
                 return;
             }
 
+            EnsureValidOrderWorldFilter();
+            orderProducts = GetFilteredOrderProductGroups();
+            if (productListContent != null)
+            {
+                RebuildOrderWorldFilter();
+                RebuildProductList();
+            }
+
+            if (orderProducts.Count == 0)
+            {
+                selectedProductKey = null;
+                selectedRouteIndex = 0;
+            }
+            else if (string.IsNullOrEmpty(selectedProductKey) || orderProducts.All(product => product.ProductKey != selectedProductKey))
+            {
+                SelectProduct(orderProducts[0].ProductKey, false);
+            }
+
+            orderDetailsSignature = null;
             RebuildOrderTracking(GetSelectedProduct());
         }
 

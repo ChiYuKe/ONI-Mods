@@ -50,7 +50,7 @@ namespace StorageNetwork.UI
 
             if (withScrollbar)
             {
-                Scrollbar scrollbar = CreateScrollbar(root.transform);
+                Scrollbar scrollbar = CreateScrollbar(root.transform, 70f, 10f);
                 scrollRect.verticalScrollbar = scrollbar;
                 scrollRect.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHideAndExpandViewport;
                 scrollRect.verticalScrollbarSpacing = 2f;
