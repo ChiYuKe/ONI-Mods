@@ -473,7 +473,7 @@ namespace StorageNetwork.UI
 
         private IEnumerable<StorageNetworkEnrollment> FilterEnrollmentsBySearch(IEnumerable<StorageNetworkEnrollment> enrollments)
         {
-            string query = NormalizeSearchText(enrollableSearchText);
+            string query = StorageNetworkTextFormatting.NormalizeSearchText(enrollableSearchText);
             if (string.IsNullOrEmpty(query))
             {
                 return enrollments;
@@ -489,10 +489,10 @@ namespace StorageNetwork.UI
                 return false;
             }
 
-            return ContainsSearchText(enrollment.gameObject.GetProperName(), query) ||
-                   ContainsSearchText(GetBuildingWorldName(enrollment.gameObject), query) ||
-                   ContainsSearchText(GetPlanCategoryName(StorageNetworkPlanCategoryOrder.GetCategoryKey(enrollment)), query) ||
-                   ContainsSearchText(GetGeyserEnrollmentDetails(enrollment), query);
+            return StorageNetworkTextFormatting.ContainsSearchText(enrollment.gameObject.GetProperName(), query) ||
+                   StorageNetworkTextFormatting.ContainsSearchText(GetBuildingWorldName(enrollment.gameObject), query) ||
+                   StorageNetworkTextFormatting.ContainsSearchText(GetPlanCategoryName(StorageNetworkPlanCategoryOrder.GetCategoryKey(enrollment)), query) ||
+                   StorageNetworkTextFormatting.ContainsSearchText(GetGeyserEnrollmentDetails(enrollment), query);
         }
 
         private void EnsureValidEnrollableWorldFilter(List<StorageNetworkEnrollment> enrollments)

@@ -202,7 +202,7 @@ namespace StorageNetwork.UI
         private IEnumerable<StorageNetworkCategoryGroup> BuildCategoryGroups(IEnumerable<StorageInfo> storages)
         {
             Dictionary<string, StorageNetworkCategoryGroup> groups = new Dictionary<string, StorageNetworkCategoryGroup>();
-            if (string.IsNullOrEmpty(NormalizeSearchText(mainSearchText)))
+            if (string.IsNullOrEmpty(StorageNetworkTextFormatting.NormalizeSearchText(mainSearchText)))
             {
                 EnsureCategoryGroup(groups, StorageCategories.ModStorageKey);
             }
@@ -220,7 +220,7 @@ namespace StorageNetwork.UI
 
         private IEnumerable<StorageInfo> FilterStorageInfosBySearch(IEnumerable<StorageInfo> storages)
         {
-            string query = NormalizeSearchText(mainSearchText);
+            string query = StorageNetworkTextFormatting.NormalizeSearchText(mainSearchText);
             if (string.IsNullOrEmpty(query))
             {
                 return storages ?? Enumerable.Empty<StorageInfo>();
@@ -236,22 +236,22 @@ namespace StorageNetwork.UI
                 return false;
             }
 
-            if (ContainsSearchText(storageInfo.Name, query) ||
-                ContainsSearchText(GetStorageTypeName(storageInfo), query) ||
-                ContainsSearchText(GetStorageCategoryName(GetStorageCategoryKey(storageInfo)), query))
+            if (StorageNetworkTextFormatting.ContainsSearchText(storageInfo.Name, query) ||
+                StorageNetworkTextFormatting.ContainsSearchText(GetStorageTypeName(storageInfo), query) ||
+                StorageNetworkTextFormatting.ContainsSearchText(GetStorageCategoryName(GetStorageCategoryKey(storageInfo)), query))
             {
                 return true;
             }
 
-            if (storageInfo.Geyser != null && ContainsSearchText(GetGeyserDetails(storageInfo.Geyser), query))
+            if (storageInfo.Geyser != null && StorageNetworkTextFormatting.ContainsSearchText(GetGeyserDetails(storageInfo.Geyser), query))
             {
                 return true;
             }
 
             foreach (GameObject item in storageInfo.StoredItems ?? Enumerable.Empty<GameObject>())
             {
-                if (ContainsSearchText(GetStoredItemName(item), query) ||
-                    ContainsSearchText(StorageItemUtility.GetStoredItemKey(item), query))
+                if (StorageNetworkTextFormatting.ContainsSearchText(GetStoredItemName(item), query) ||
+                    StorageNetworkTextFormatting.ContainsSearchText(StorageItemUtility.GetStoredItemKey(item), query))
                 {
                     return true;
                 }

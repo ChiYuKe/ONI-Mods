@@ -272,16 +272,6 @@ namespace StorageNetwork.UI
             return StorageNetworkWorldUtility.GetObjectWorldId(gameObject);
         }
 
-        private static bool ContainsSearchText(string text, string query)
-        {
-            return StorageNetworkTextFormatting.ContainsSearchText(text, query);
-        }
-
-        private static string NormalizeSearchText(string text)
-        {
-            return StorageNetworkTextFormatting.NormalizeSearchText(text);
-        }
-
         private static string StripKleiLinkFormatting(string text)
         {
             return StorageNetworkTextFormatting.StripKleiLinkFormatting(text);
