@@ -39,7 +39,14 @@ namespace StorageNetwork.UI
             }
 
             ProductionOrderDraft draft = productionOrderService.BuildDraft(product, route, requestedProductAmount);
-            string signature = BuildOrderDetailsSignature(product, route, draft);
+            string signature = StorageNetworkOrderEditorSignatureBuilder.Build(
+                product,
+                route,
+                draft,
+                productionOrderService.GetKeepRule(product.ProductTag),
+                selectedRouteIndex,
+                requestedProductAmount,
+                lastOrderStatus);
             if (signature == orderDetailsSignature)
             {
                 RebuildOrderTracking(product);
@@ -55,61 +62,6 @@ namespace StorageNetwork.UI
             ForceOrderLayout(orderDetailsContent);
             ApplyOrderWorkspaceViewportFill();
             ForceOrderLayout(orderDetailsContent);
-        }
-
-        private string BuildOrderDetailsSignature(ProductDisplayGroup product, RecipeDisplayInfo route, ProductionOrderDraft draft)
-        {
-            string assignments = draft.Plan == null
-                ? string.Empty
-                : string.Join(",", draft.Plan.Assignments
-                    .OrderBy(assignment => assignment.Fabricator != null ? assignment.Fabricator.GetInstanceID() : 0)
-                    .Select(assignment => string.Format("{0}:{1}:{2:0.###}",
-                        assignment.Fabricator != null ? assignment.Fabricator.GetInstanceID().ToString() : string.Empty,
-                        assignment.OrderCount,
-                        assignment.OutputAmount)));
-
-            string requirements = draft.Plan == null
-                ? string.Empty
-                : BuildRequirementSignature(draft.Plan, 0);
-
-            ProductionKeepRule keepRule = productionOrderService.GetKeepRule(product.ProductTag);
-            string validation = string.Join(",", draft.ValidationMessages);
-
-            return string.Format(
-                "{0}|{1}|{2}|{3:0.###}|{4}|{5}|{6}|{7}|{8}|{9}|{10}",
-                product.ProductKey,
-                ProductionRecipeCatalog.GetRecipeKey(route.Recipe),
-                selectedRouteIndex,
-                requestedProductAmount,
-                keepRule != null ? keepRule.RecipeKey : string.Empty,
-                keepRule != null ? keepRule.TargetAmount.ToString("0.###") : string.Empty,
-                draft.RiskLevel,
-                draft.DuplicateOrder != null ? draft.DuplicateOrder.Key : string.Empty,
-                lastOrderStatus ?? string.Empty,
-                assignments,
-                requirements + "|" + validation);
-        }
-
-        private static string BuildRequirementSignature(ProductionPlanNode node, int depth)
-        {
-            if (node == null || depth > 4)
-            {
-                return string.Empty;
-            }
-
-            string requirements = string.Join(",", node.Requirements
-                .OrderBy(requirement => requirement.Material.ToString())
-                .Select(requirement => string.Format("{0}:{1:0.###}:{2:0.###}:{3}",
-                    requirement.Material,
-                    requirement.RequiredAmount,
-                    requirement.AvailableAmount,
-                    BuildRequirementSignature(requirement.Child, depth + 1))));
-
-            return string.Format("{0}:{1}:{2:0.###}[{3}]",
-                node.Recipe != null ? node.Recipe.id : string.Empty,
-                node.OrderCount,
-                node.OutputAmount,
-                requirements);
         }
 
         private void AddOrderWorkspace(Transform parent, ProductDisplayGroup product, RecipeDisplayInfo route, ProductionOrderDraft draft)
