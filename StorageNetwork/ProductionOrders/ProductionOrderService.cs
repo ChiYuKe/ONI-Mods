@@ -121,7 +121,7 @@ namespace StorageNetwork.ProductionOrders
                     }
 
                     Storage source = FindNetworkStorageByInstanceIdStatic(lease.SourceStorageInstanceId);
-                    if (source == null || source == target || source.GetComponent<ComplexFabricator>() != null)
+                    if (source == null || source == target || StorageNetworkStorageRules.IsProductionStorage(source))
                     {
                         continue;
                     }
@@ -434,7 +434,7 @@ namespace StorageNetwork.ProductionOrders
             networkAmountCache.Clear();
             foreach (Storage storage in networkSourceStorageCache)
             {
-                if (storage == null || storage.GetComponent<ComplexFabricator>() != null || storage.items == null)
+                if (storage == null || StorageNetworkStorageRules.IsProductionStorage(storage) || storage.items == null)
                 {
                     continue;
                 }
@@ -793,7 +793,7 @@ namespace StorageNetwork.ProductionOrders
                 sources.Clear();
                 foreach (Storage storage in networkSourceStorageCache)
                 {
-                    if (storage != null && storage.GetComponent<ComplexFabricator>() == null)
+                    if (storage != null && !StorageNetworkStorageRules.IsProductionStorage(storage))
                     {
                         sources.Add(storage);
                     }
@@ -1582,7 +1582,7 @@ namespace StorageNetwork.ProductionOrders
             if (storage == null ||
                 storage == target ||
                 seen.Contains(storage) ||
-                storage.GetComponent<ComplexFabricator>() != null ||
+                StorageNetworkStorageRules.IsProductionStorage(storage) ||
                 storage.GetAmountAvailable(tag) <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
             {
                 return;

@@ -166,6 +166,7 @@ namespace StorageNetwork
 
                 public static LocString CATEGORY_VANILLA_STORAGE = "原版储存";
                 public static LocString CATEGORY_RECIPE_BUILDING = "生产建筑";
+                public static LocString CATEGORY_ENERGY_GENERATOR = "发电设施";
                 public static LocString CATEGORY_MOD_STORAGE = "模组建筑";
                 public static LocString CATEGORY_MINION = "复制人";
                 public static LocString CATEGORY_GEYSER = "泉";
@@ -261,7 +262,7 @@ namespace StorageNetwork
                 public static LocString ALL_MINION_ENABLE = "全部开启";
                 public static LocString ALL_MINION_DISABLE = "全部关闭";
                 public static LocString MATERIAL_REQUEST_MODE = "请求方式：{0}";
-                public static LocString MATERIAL_REQUEST_MODE_SEARCH = "从网络箱子中寻找合适材料";
+                public static LocString MATERIAL_REQUEST_MODE_SEARCH = "从服务器中寻找材料";
                 public static LocString MATERIAL_REQUEST_MODE_SPECIFIC = "指定网络中某个箱子提供材料";
                 public static LocString MATERIAL_REQUEST_SOURCE = "指定箱子：{0}";
                 public static LocString MATERIAL_REQUEST_SOURCE_NONE = "未指定";
@@ -274,6 +275,7 @@ namespace StorageNetwork
                 public static LocString MATERIAL_REQUEST_STATUS_ITEM = "材料提供由储存网络供给";
                 public static LocString MATERIAL_REQUEST_STATUS_TOOLTIP = "这个建筑会从储存网络中请求当前生产需要的材料。\n{0}";
                 public static LocString MATERIAL_REQUEST_AUTO_DESC = "自动从已接入网络的箱子中寻找材料，优先使用库存最多的来源。";
+                public static LocString ENERGY_GENERATOR_SOURCE_DESC = "发电设施会从已接入网络的服务器中自动寻找可用燃料。";
                 public static LocString OUTPUT_STORE_TITLE = "成品入网";
                 public static LocString OUTPUT_STORE_ENABLED = "加工完成后自动存入网络";
                 public static LocString STORAGE_OUTPUT_STORE_TITLE = "内容物入网";
@@ -286,6 +288,8 @@ namespace StorageNetwork
                 public static LocString OUTPUT_STORE_STATUS = "入网状态：{0}";
                 public static LocString OUTPUT_STORE_TARGET = "目标箱子：{0}";
                 public static LocString OUTPUT_STORE_TARGET_DETAILS = "当前 {0} / {1}    剩余 {2}";
+                public static LocString PICKER_OPTION_COUNT = "可选网络服务器：{0} 个";
+                public static LocString PICKER_POLICY_HINT = "自动策略会在已接入网络的服务器中寻找合适目标；指定服务器后，只从该服务器取料或向该服务器存放。";
                 public static LocString CLOSE = "关闭";
                 public static LocString AMOUNT_LABEL = "数量：{0}";
                 public static LocString ALL = "全部";
@@ -441,6 +445,7 @@ namespace StorageNetwork
                 public static LocString PRODUCTION_METRIC_STORAGE = "储存";
                 public static LocString PRODUCTION_METRIC_RUNNING = "运行";
                 public static LocString PRODUCTION_METRIC_RECIPE = "配方";
+                public static LocString PRODUCTION_METRIC_REQUIRED = "需求物";
                 public static LocString PRODUCTION_METRIC_NETWORK = "网络";
                 public static LocString STATUS_ENABLED = "已开启";
                 public static LocString STATUS_DISABLED = "已关闭";

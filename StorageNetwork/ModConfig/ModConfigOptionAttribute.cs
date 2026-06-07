@@ -1,6 +1,6 @@
 using System;
 
-namespace ModConfig
+namespace StorageNetwork.ModConfig
 {
     [AttributeUsage(AttributeTargets.Property)]
     public sealed class ModConfigOptionAttribute : Attribute

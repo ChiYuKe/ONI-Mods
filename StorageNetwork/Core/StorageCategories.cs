@@ -7,6 +7,7 @@ namespace StorageNetwork.Core
     {
         private const string VanillaStorageKey = "vanilla_storage";
         private const string RecipeBuildingKey = "recipe_building";
+        private const string EnergyGeneratorKey = "energy_generator";
         public const string ModStorageKey = "mod_storage";
         public const string MinionKey = "minion";
         public const string GeyserKey = "geyser";
@@ -29,6 +30,11 @@ namespace StorageNetwork.Core
                 return VanillaStorageKey;
             }
 
+            if (enrollment.IsEnergyGeneratorBuilding())
+            {
+                return EnergyGeneratorKey;
+            }
+
             return enrollment.IsComplexRecipeBuilding() ? RecipeBuildingKey : VanillaStorageKey;
         }
 
@@ -47,6 +53,11 @@ namespace StorageNetwork.Core
             if (key == RecipeBuildingKey)
             {
                 return Loc.Get(Loc.UI.STORAGE_NETWORK.CATEGORY_RECIPE_BUILDING);
+            }
+
+            if (key == EnergyGeneratorKey)
+            {
+                return Loc.Get(Loc.UI.STORAGE_NETWORK.CATEGORY_ENERGY_GENERATOR);
             }
 
             if (key == ModStorageKey)
@@ -72,6 +83,11 @@ namespace StorageNetwork.Core
             if (key == RecipeBuildingKey)
             {
                 return 3;
+            }
+
+            if (key == EnergyGeneratorKey)
+            {
+                return 4;
             }
 
             if (key == ModStorageKey)

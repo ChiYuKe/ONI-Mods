@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using Newtonsoft.Json;
-using ModConfig;
+using StorageNetwork.ModConfig;
 
 namespace StorageNetwork
 {

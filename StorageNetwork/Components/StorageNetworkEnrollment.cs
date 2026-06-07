@@ -149,7 +149,7 @@ namespace StorageNetwork.Components
                 return true;
             }
 
-            return storage != null && (IsStorageLocker() || IsRefrigerator() || IsReservoirStorage() || IsComplexRecipeBuilding());
+            return storage != null && (IsStorageLocker() || IsRefrigerator() || IsReservoirStorage() || IsComplexRecipeBuilding() || IsEnergyGeneratorBuilding());
         }
 
         /// <summary>
@@ -182,6 +182,14 @@ namespace StorageNetwork.Components
         public bool IsComplexRecipeBuilding()
         {
             return GetComponent<ComplexFabricator>() != null;
+        }
+
+        /// <summary>
+        /// 判断建筑是否是带燃料输入配方的发电机。
+        /// </summary>
+        public bool IsEnergyGeneratorBuilding()
+        {
+            return StorageNetworkEnergyGeneratorRequester.HasFuelInputs(GetComponent<EnergyGenerator>());
         }
 
         /// <summary>

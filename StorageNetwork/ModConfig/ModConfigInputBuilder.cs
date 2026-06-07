@@ -2,7 +2,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace ModConfig
+namespace StorageNetwork.ModConfig
 {
     internal sealed class ModConfigInputFieldMarker : MonoBehaviour
     {

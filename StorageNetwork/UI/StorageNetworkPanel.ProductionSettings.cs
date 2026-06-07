@@ -129,7 +129,8 @@ namespace StorageNetwork.UI
             KeepProductionSettingsPanelOnScreen();
             StorageNetworkMaterialRequester requester = storage.GetComponent<StorageNetworkMaterialRequester>();
             StorageNetworkStorageConnector connector = GetStorageConnector(storage);
-            AddProductionOverviewCard(storage, fabricator, requester, connector);
+            StorageNetworkEnergyGeneratorRequester energyRequester = storage.GetComponent<StorageNetworkEnergyGeneratorRequester>();
+            AddProductionOverviewCard(storage, fabricator, requester, connector, energyRequester);
             if (requester != null)
             {
                 AddAutomationCards(storage, requester);
@@ -137,6 +138,10 @@ namespace StorageNetwork.UI
             else if (connector != null)
             {
                 AddStorageOutputCard(storage, connector);
+            }
+            else if (energyRequester != null)
+            {
+                AddEnergyGeneratorMaterialCard(storage, energyRequester);
             }
             AddInventoryCard(storage, fabricator);
             UpdateProductionSettingsLive(storage, fabricator);
@@ -160,6 +165,8 @@ namespace StorageNetwork.UI
         {
             StorageNetworkMaterialRequester requester = storage != null ? storage.GetComponent<StorageNetworkMaterialRequester>() : null;
             StorageNetworkStorageConnector connector = storage != null ? storage.GetComponent<StorageNetworkStorageConnector>() : null;
+            StorageNetworkEnergyGeneratorRequester energyRequester = storage != null ? storage.GetComponent<StorageNetworkEnergyGeneratorRequester>() : null;
+            StorageNetworkEnrollment enrollment = storage != null ? storage.GetComponent<StorageNetworkEnrollment>() : null;
             string itemSignature = string.Join("|", GetProductionStorages(storage, fabricator)
                 .SelectMany(itemStorage => itemStorage.items.Where(item => item != null))
                 .GroupBy(GetStoredItemKey)
@@ -177,9 +184,14 @@ namespace StorageNetwork.UI
                 requester != null ? requester.OutputStoreModeValue.ToString() : "0",
                 requester != null ? requester.OutputStorageInstanceId.ToString() : "0",
                 connector != null && connector.OutputStoreEnabled ? "conn1" : "conn0",
+                energyRequester != null && energyRequester.RequestEnabled ? "energyReq1" : "energyReq0",
+                energyRequester != null ? energyRequester.Mode.ToString() : "0",
+                energyRequester != null ? energyRequester.SourceStorageInstanceId.ToString() : "0",
+                energyRequester != null && energyRequester.LimitEnabled ? "energyLim1" : "energyLim0",
                 requester != null && !string.IsNullOrEmpty(requester.LastStatus) ? "matStatus1" : "matStatus0",
                 requester != null && !string.IsNullOrEmpty(requester.LastOutputStatus) ? "reqOutStatus1" : "reqOutStatus0",
                 connector != null && !string.IsNullOrEmpty(connector.LastOutputStatus) ? "connOutStatus1" : "connOutStatus0",
+                energyRequester != null && !string.IsNullOrEmpty(energyRequester.LastStatus) ? "energyStatus1" : "energyStatus0",
                 itemSignature);
         }
 
@@ -208,8 +220,9 @@ namespace StorageNetwork.UI
             SetProductionSettingsTitle(storage);
             StorageNetworkMaterialRequester requester = storage.GetComponent<StorageNetworkMaterialRequester>();
             StorageNetworkStorageConnector connector = GetStorageConnector(storage);
-            UpdateProductionOverviewCard(storage, fabricator, requester, connector);
-            UpdateProductionAutomationCards(requester, connector);
+            StorageNetworkEnergyGeneratorRequester energyRequester = storage.GetComponent<StorageNetworkEnergyGeneratorRequester>();
+            UpdateProductionOverviewCard(storage, fabricator, requester, connector, energyRequester);
+            UpdateProductionAutomationCards(requester, connector, energyRequester);
             UpdateProductionInventoryCard(storage, fabricator);
         }
 
@@ -246,7 +259,8 @@ namespace StorageNetwork.UI
 
         private void AddMinionMaterialRequestCard(MinionIdentity minion, Storage storage)
         {
-            GameObject card = CreateProductionCard("MinionMaterialRequestCard", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_TITLE), 126f);
+            GameObject card = CreateProductionCard("MinionMaterialRequestCard", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_TITLE), 0f);
+            MakeProductionCardAutoHeight(card, 126f);
             bool enabled = Config.Instance.IsMinionAllowedRequestMaterialsFromNetwork(minion);
             CreateEnabledStatusStrip(card.transform, enabled);
             CreateToggleActionRow(
@@ -263,9 +277,9 @@ namespace StorageNetwork.UI
             CreateFinePrint(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MINION_MATERIAL_REQUEST_DESC));
         }
 
-        private void AddProductionOverviewCard(Storage storage, ComplexFabricator fabricator, StorageNetworkMaterialRequester requester, StorageNetworkStorageConnector connector)
+        private void AddProductionOverviewCard(Storage storage, ComplexFabricator fabricator, StorageNetworkMaterialRequester requester, StorageNetworkStorageConnector connector, StorageNetworkEnergyGeneratorRequester energyRequester)
         {
-            GameObject card = CreateProductionCard("OverviewCard", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_STATUS_TITLE), 116f);
+            GameObject card = CreateProductionCard("OverviewCard", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_STATUS_TITLE), 132f);
             TextMeshProUGUI title = CreateText("BuildingName", card.transform, storage.GetProperName(), 16, TextAlignmentOptions.MidlineLeft);
             title.color = new Color(0.14f, 0.15f, 0.14f, 1f);
             title.fontStyle = FontStyles.Bold;
@@ -283,19 +297,19 @@ namespace StorageNetwork.UI
             layout.childControlWidth = true;
             layout.childControlHeight = true;
             layout.childForceExpandWidth = true;
-            layout.childForceExpandHeight = true;
+            layout.childForceExpandHeight = false;
 
             productionOverviewView = new ProductionOverviewCardView
             {
                 BuildingName = title,
                 StorageValue = CreateMetricTile(metrics.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_METRIC_STORAGE), string.Empty, new Color(0.35f, 0.40f, 0.43f, 1f)),
                 StateValue = CreateMetricTile(metrics.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_METRIC_RUNNING), string.Empty, GetProductionStateColor(fabricator)),
-                RecipeValue = CreateMetricTile(metrics.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_METRIC_RECIPE), string.Empty, new Color(0.39f, 0.42f, 0.45f, 1f)),
-                NetworkValue = CreateMetricTile(metrics.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_METRIC_NETWORK), string.Empty, requester != null && requester.RequestEnabled || connector != null && connector.OutputStoreEnabled ? new Color(0.28f, 0.48f, 0.34f, 1f) : new Color(0.50f, 0.42f, 0.34f, 1f))
+                RecipeValue = CreateMetricTile(metrics.transform, Get(GetProductionInputMetricLabel(fabricator, energyRequester)), string.Empty, new Color(0.39f, 0.42f, 0.45f, 1f)),
+                NetworkValue = CreateMetricTile(metrics.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_METRIC_NETWORK), string.Empty, IsNetworkAutomationEnabled(storage, requester, connector, energyRequester) ? new Color(0.28f, 0.48f, 0.34f, 1f) : new Color(0.50f, 0.42f, 0.34f, 1f))
             };
         }
 
-        private void UpdateProductionOverviewCard(Storage storage, ComplexFabricator fabricator, StorageNetworkMaterialRequester requester, StorageNetworkStorageConnector connector)
+        private void UpdateProductionOverviewCard(Storage storage, ComplexFabricator fabricator, StorageNetworkMaterialRequester requester, StorageNetworkStorageConnector connector, StorageNetworkEnergyGeneratorRequester energyRequester)
         {
             if (productionOverviewView == null)
             {
@@ -306,9 +320,9 @@ namespace StorageNetwork.UI
             SetTextIfChanged(productionOverviewView.StorageValue, string.Format("{0} / {1}", GameUtil.GetFormattedMass(storage.MassStored()), GameUtil.GetFormattedMass(storage.Capacity())));
             SetTextIfChanged(productionOverviewView.StateValue, GetProductionStateText(fabricator));
             productionOverviewView.StateValue.color = GetProductionStateColor(fabricator);
-            SetTextIfChanged(productionOverviewView.RecipeValue, GetCurrentRecipeText(fabricator));
-            SetTextIfChanged(productionOverviewView.NetworkValue, GetNetworkStateText(requester, connector));
-            productionOverviewView.NetworkValue.color = requester != null && requester.RequestEnabled || connector != null && connector.OutputStoreEnabled
+            SetTextIfChanged(productionOverviewView.RecipeValue, energyRequester != null && fabricator == null ? GetEnergyGeneratorFuelText(storage.GetComponent<EnergyGenerator>()) : GetCurrentRecipeText(fabricator));
+            SetTextIfChanged(productionOverviewView.NetworkValue, GetNetworkStateText(storage, requester, connector, energyRequester));
+            productionOverviewView.NetworkValue.color = IsNetworkAutomationEnabled(storage, requester, connector, energyRequester)
                 ? new Color(0.28f, 0.48f, 0.34f, 1f)
                 : new Color(0.50f, 0.42f, 0.34f, 1f);
         }
@@ -320,8 +334,9 @@ namespace StorageNetwork.UI
             grid.AddComponent<RectTransform>();
             bool compact = productionSettingsRoot != null && productionSettingsRoot.GetComponent<RectTransform>().rect.width < 620f;
             LayoutElement gridLayout = grid.AddComponent<LayoutElement>();
-            gridLayout.minHeight = compact ? 360f : 184f;
-            grid.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            float gridHeight = Mathf.Max(GetMaterialAutomationCardHeight(requester), GetOutputAutomationCardHeight(requester));
+            gridLayout.minHeight = compact ? gridHeight * 2f + 8f : gridHeight;
+            gridLayout.preferredHeight = -1f;
 
             if (compact)
             {
@@ -331,7 +346,7 @@ namespace StorageNetwork.UI
                 layout.childControlWidth = true;
                 layout.childControlHeight = true;
                 layout.childForceExpandWidth = true;
-                layout.childForceExpandHeight = true;
+                layout.childForceExpandHeight = false;
             }
             else
             {
@@ -341,7 +356,7 @@ namespace StorageNetwork.UI
                 layout.childControlWidth = true;
                 layout.childControlHeight = true;
                 layout.childForceExpandWidth = true;
-                layout.childForceExpandHeight = true;
+                layout.childForceExpandHeight = false;
             }
 
             AddMaterialAutomationCard(grid.transform, storage, requester);
@@ -351,7 +366,7 @@ namespace StorageNetwork.UI
         private void AddMaterialAutomationCard(Transform parent, Storage ownerStorage, StorageNetworkMaterialRequester requester)
         {
             GameObject card = CreateProductionCard(parent, "MaterialCard", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_TITLE), 0f);
-            ApplyEqualAutomationCardLayout(card);
+            ApplyAutomationCardLayout(card, GetMaterialAutomationCardHeight(requester));
             CreateEnabledStatusStrip(card.transform, requester.RequestEnabled);
             CreateToggleActionRow(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_ENABLED), requester.RequestEnabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ACTION_CLOSE) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ON), () =>
             {
@@ -359,29 +374,34 @@ namespace StorageNetwork.UI
                 UpdateProductionSettingsPanel(true);
             }, requester.RequestEnabled);
             CreateProductionActionRow(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SOURCE_POLICY), GetMaterialRequestModeName(requester), () => ShowMaterialSourcePicker(ownerStorage, requester));
-            CreateProductionActionRow(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_LIMIT_ENABLED), requester.LimitEnabled ? string.Format("{0} / {1}", GameUtil.GetFormattedMass(Mathf.Max(0f, requester.GetRequestedAmountForDisplay())), GameUtil.GetFormattedMass(Mathf.Max(0f, requester.LimitKg))) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.NO_LIMIT), () =>
+            CreateToggleActionRow(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_LIMIT_ENABLED), requester.LimitEnabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ACTION_CLOSE) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ON), () =>
             {
-                if (requester.LimitEnabled)
-                {
-                    ShowMaterialRequestLimitDialog(requester);
-                }
-                else
-                {
-                    requester.LimitEnabled = true;
-                    UpdateProductionSettingsPanel(true);
-                }
-            });
+                SetMaterialRequestLimitEnabled(requester, !requester.LimitEnabled);
+                UpdateProductionSettingsPanel(true);
+            }, requester.LimitEnabled);
+            if (requester.LimitEnabled)
+            {
+                CreateProductionActionRow(
+                    card.transform,
+                    string.Format(
+                        Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_LIMIT),
+                        GameUtil.GetFormattedMass(Mathf.Max(0f, requester.GetRequestedAmountForDisplay())),
+                        GameUtil.GetFormattedMass(Mathf.Max(0f, requester.LimitKg))),
+                    Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_SET_LIMIT),
+                    () => ShowMaterialRequestLimitDialog(requester));
+            }
             if (!string.IsNullOrEmpty(requester.LastStatus))
             {
                 productionAutomationView ??= new ProductionAutomationCardsView();
                 productionAutomationView.MaterialStatus = CreateFinePrint(card.transform, string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_STATUS), requester.LastStatus));
+                SetFinePrintPreferredHeight(productionAutomationView.MaterialStatus, 24f);
             }
         }
 
         private void AddOutputAutomationCard(Transform parent, Storage ownerStorage, StorageNetworkMaterialRequester requester)
         {
             GameObject card = CreateProductionCard(parent, "OutputCard", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_TITLE), 0f);
-            ApplyEqualAutomationCardLayout(card);
+            ApplyAutomationCardLayout(card, GetOutputAutomationCardHeight(requester));
             CreateStatusStrip(card.transform, requester.OutputStoreEnabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_AUTO_STATUS) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_MANUAL_STATUS), requester.OutputStoreEnabled ? new Color(0.28f, 0.48f, 0.34f, 1f) : new Color(0.48f, 0.45f, 0.36f, 1f));
             CreateToggleActionRow(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_ENABLED), requester.OutputStoreEnabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ACTION_CLOSE) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ON), () =>
             {
@@ -391,15 +411,18 @@ namespace StorageNetwork.UI
             CreateProductionActionRow(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_POLICY), GetOutputStoreModeName(requester), () => ShowOutputStorePicker(ownerStorage, requester));
             productionAutomationView ??= new ProductionAutomationCardsView();
             productionAutomationView.OutputDescription = CreateFinePrint(card.transform, requester.OutputStoreEnabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_AUTO_DESC) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_MANUAL_DESC));
+            SetFinePrintPreferredHeight(productionAutomationView.OutputDescription, requester.OutputStoreEnabled ? 42f : 22f);
             if (requester.OutputStoreEnabled && !string.IsNullOrEmpty(requester.LastOutputStatus))
             {
                 productionAutomationView.OutputStatus = CreateFinePrint(card.transform, string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_STATUS), requester.LastOutputStatus));
+                SetFinePrintPreferredHeight(productionAutomationView.OutputStatus, 22f);
             }
         }
 
         private void AddStorageOutputCard(Storage ownerStorage, StorageNetworkStorageConnector connector)
         {
-            GameObject card = CreateProductionCard("StorageOutputCard", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STORAGE_OUTPUT_STORE_TITLE), 132f);
+            GameObject card = CreateProductionCard("StorageOutputCard", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STORAGE_OUTPUT_STORE_TITLE), 0f);
+            MakeProductionCardAutoHeight(card, string.IsNullOrEmpty(connector.LastOutputStatus) ? 132f : 156f);
             CreateStatusStrip(card.transform, connector.OutputStoreEnabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_AUTO_STATUS) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_MANUAL_STATUS), connector.OutputStoreEnabled ? new Color(0.28f, 0.48f, 0.34f, 1f) : new Color(0.48f, 0.45f, 0.36f, 1f));
             CreateToggleActionRow(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STORAGE_OUTPUT_STORE_ENABLED), connector.OutputStoreEnabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ACTION_CLOSE) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ON), () =>
             {
@@ -411,10 +434,53 @@ namespace StorageNetwork.UI
             if (connector.OutputStoreEnabled && !string.IsNullOrEmpty(connector.LastOutputStatus))
             {
                 productionAutomationView.OutputStatus = CreateFinePrint(card.transform, string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_STATUS), connector.LastOutputStatus));
+                SetFinePrintPreferredHeight(productionAutomationView.OutputStatus, 22f);
             }
         }
 
-        private void UpdateProductionAutomationCards(StorageNetworkMaterialRequester requester, StorageNetworkStorageConnector connector)
+        private void AddEnergyGeneratorMaterialCard(Storage ownerStorage, StorageNetworkEnergyGeneratorRequester requester)
+        {
+            bool enabled = requester != null && requester.RequestEnabled;
+            GameObject card = CreateProductionCard("EnergyGeneratorMaterialCard", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_TITLE), 0f);
+            MakeProductionCardAutoHeight(card, string.IsNullOrEmpty(requester.LastStatus) ? 126f : 154f);
+
+            CreateEnabledStatusStrip(card.transform, enabled);
+            CreateToggleActionRow(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_ENABLED), enabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ACTION_CLOSE) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ON), () =>
+            {
+                requester.RequestEnabled = !enabled;
+                productionSettingsSignature = null;
+                UpdateProductionSettingsPanel(true);
+            }, enabled);
+            CreateProductionActionRow(
+                card.transform,
+                Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SOURCE_POLICY),
+                GetEnergyGeneratorSourceModeName(requester),
+                () => ShowEnergyGeneratorSourcePicker(ownerStorage, requester));
+            CreateToggleActionRow(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_LIMIT_ENABLED), requester.LimitEnabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ACTION_CLOSE) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ON), () =>
+            {
+                SetEnergyGeneratorMaterialRequestLimitEnabled(requester, !requester.LimitEnabled);
+                UpdateProductionSettingsPanel(true);
+            }, requester.LimitEnabled);
+            if (requester.LimitEnabled)
+            {
+                CreateProductionActionRow(
+                    card.transform,
+                    string.Format(
+                        Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_LIMIT),
+                        GameUtil.GetFormattedMass(Mathf.Max(0f, requester.GetRequestedAmountForDisplay())),
+                        GameUtil.GetFormattedMass(Mathf.Max(0f, requester.LimitKg))),
+                    Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_SET_LIMIT),
+                    () => ShowEnergyGeneratorMaterialRequestLimitDialog(requester));
+            }
+            productionAutomationView ??= new ProductionAutomationCardsView();
+            if (!string.IsNullOrEmpty(requester.LastStatus))
+            {
+                productionAutomationView.MaterialStatus = CreateFinePrint(card.transform, string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_STATUS), requester.LastStatus));
+                SetFinePrintPreferredHeight(productionAutomationView.MaterialStatus, 22f);
+            }
+        }
+
+        private void UpdateProductionAutomationCards(StorageNetworkMaterialRequester requester, StorageNetworkStorageConnector connector, StorageNetworkEnergyGeneratorRequester energyRequester)
         {
             if (productionAutomationView == null)
             {
@@ -430,11 +496,21 @@ namespace StorageNetwork.UI
                         : string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_STATUS), requester.LastStatus));
             }
 
+            if (productionAutomationView.MaterialStatus != null && energyRequester != null)
+            {
+                SetTextIfChanged(
+                    productionAutomationView.MaterialStatus,
+                    string.IsNullOrEmpty(energyRequester.LastStatus)
+                        ? string.Empty
+                        : string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_STATUS), energyRequester.LastStatus));
+            }
+
             if (productionAutomationView.OutputDescription != null && requester != null)
             {
                 SetTextIfChanged(
                     productionAutomationView.OutputDescription,
                     requester.OutputStoreEnabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_AUTO_DESC) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_MANUAL_DESC));
+                SetFinePrintPreferredHeight(productionAutomationView.OutputDescription, requester.OutputStoreEnabled ? 42f : 22f);
             }
 
             if (productionAutomationView.OutputStatus != null)
@@ -448,7 +524,34 @@ namespace StorageNetwork.UI
             }
         }
 
-        private static void ApplyEqualAutomationCardLayout(GameObject card)
+        private static float GetMaterialAutomationCardHeight(StorageNetworkMaterialRequester requester)
+        {
+            float height = requester != null && requester.LimitEnabled ? 214f : 176f;
+            if (requester != null && !string.IsNullOrEmpty(requester.LastStatus))
+            {
+                height += 30f;
+            }
+
+            return height;
+        }
+
+        private static float GetOutputAutomationCardHeight(StorageNetworkMaterialRequester requester)
+        {
+            float height = 176f;
+            if (requester != null && requester.OutputStoreEnabled)
+            {
+                height += 40f;
+            }
+
+            if (requester != null && !string.IsNullOrEmpty(requester.LastOutputStatus))
+            {
+                height += 30f;
+            }
+
+            return height;
+        }
+
+        private static void ApplyAutomationCardLayout(GameObject card, float minHeight)
         {
             LayoutElement layout = card.GetComponent<LayoutElement>();
             if (layout == null)
@@ -459,14 +562,48 @@ namespace StorageNetwork.UI
             layout.minWidth = 0f;
             layout.preferredWidth = 0f;
             layout.flexibleWidth = 1f;
-            layout.flexibleHeight = 1f;
-            layout.minHeight = 0f;
+            layout.flexibleHeight = 0f;
+            layout.minHeight = minHeight;
             layout.preferredHeight = -1f;
 
             if (card.GetComponent<ContentSizeFitter>() == null)
             {
                 card.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
             }
+        }
+
+        private static void ApplyEqualAutomationCardLayout(GameObject card)
+        {
+            ApplyAutomationCardLayout(card, 0f);
+        }
+
+        private static void MakeProductionCardAutoHeight(GameObject card, float minHeight)
+        {
+            LayoutElement layout = card.GetComponent<LayoutElement>();
+            if (layout == null)
+            {
+                layout = card.AddComponent<LayoutElement>();
+            }
+
+            layout.minHeight = minHeight;
+            layout.preferredHeight = -1f;
+
+            if (card.GetComponent<ContentSizeFitter>() == null)
+            {
+                card.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            }
+        }
+
+        private static void SetFinePrintPreferredHeight(TextMeshProUGUI text, float height)
+        {
+            LayoutElement layout = text != null ? text.GetComponent<LayoutElement>() : null;
+            if (layout == null)
+            {
+                return;
+            }
+
+            layout.minHeight = height;
+            layout.preferredHeight = height;
         }
 
         private void AddInventoryCard(Storage storage, ComplexFabricator fabricator)
@@ -512,6 +649,7 @@ namespace StorageNetwork.UI
             VerticalLayoutGroup layout = card.AddComponent<VerticalLayoutGroup>();
             layout.padding = new RectOffset(10, 10, 8, 8);
             layout.spacing = 6f;
+            layout.childAlignment = TextAnchor.UpperLeft;
             layout.childControlWidth = true;
             layout.childControlHeight = true;
             layout.childForceExpandWidth = true;
@@ -521,7 +659,9 @@ namespace StorageNetwork.UI
             heading.color = new Color(0.18f, 0.19f, 0.18f, 1f);
             heading.fontStyle = FontStyles.Bold;
             heading.textWrappingMode = TextWrappingModes.NoWrap;
-            heading.gameObject.AddComponent<LayoutElement>().preferredHeight = 20f;
+            LayoutElement headingLayout = heading.gameObject.AddComponent<LayoutElement>();
+            headingLayout.minHeight = 20f;
+            headingLayout.preferredHeight = 20f;
             return card;
         }
 
@@ -553,7 +693,9 @@ namespace StorageNetwork.UI
         private void CreateStatusStrip(Transform parent, string text, Color color)
         {
             GameObject strip = CreatePlainImage("StatusStrip", parent, color);
-            strip.AddComponent<LayoutElement>().preferredHeight = 24f;
+            LayoutElement stripLayout = strip.AddComponent<LayoutElement>();
+            stripLayout.minHeight = 24f;
+            stripLayout.preferredHeight = 24f;
             TextMeshProUGUI label = CreateText("Status", strip.transform, text, 11, TextAlignmentOptions.Center);
             label.color = new Color(0.96f, 0.96f, 0.90f, 1f);
             label.fontStyle = FontStyles.Bold;
@@ -578,7 +720,9 @@ namespace StorageNetwork.UI
         private void CreateProductionActionRow(Transform parent, string label, string value, System.Action onClick, ColorStyleSetting buttonStyle = null)
         {
             GameObject row = CreatePlainImage("ActionRow", parent, new Color(0.76f, 0.76f, 0.70f, 1f));
-            row.AddComponent<LayoutElement>().preferredHeight = 30f;
+            LayoutElement rowLayout = row.AddComponent<LayoutElement>();
+            rowLayout.minHeight = 30f;
+            rowLayout.preferredHeight = 30f;
             HorizontalLayoutGroup layout = row.AddComponent<HorizontalLayoutGroup>();
             layout.padding = new RectOffset(8, 5, 3, 3);
             layout.spacing = 6f;
@@ -586,20 +730,53 @@ namespace StorageNetwork.UI
             layout.childControlWidth = true;
             layout.childControlHeight = true;
             layout.childForceExpandWidth = false;
-            layout.childForceExpandHeight = true;
+            layout.childForceExpandHeight = false;
 
             TextMeshProUGUI labelText = CreateText("Label", row.transform, label, 10, TextAlignmentOptions.MidlineLeft);
             labelText.color = new Color(0.20f, 0.21f, 0.20f, 1f);
             labelText.textWrappingMode = TextWrappingModes.NoWrap;
             labelText.overflowMode = TextOverflowModes.Ellipsis;
-            labelText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+            LayoutElement labelLayout = labelText.gameObject.AddComponent<LayoutElement>();
+            labelLayout.flexibleWidth = 1f;
+            labelLayout.preferredHeight = 24f;
 
             GameObject button = CreateStyledButton("Action", row.transform, value, onClick, buttonStyle ?? KleiBlueStyle());
             LayoutElement buttonLayout = button.AddComponent<LayoutElement>();
             buttonLayout.preferredWidth = 150f;
             buttonLayout.minWidth = 126f;
             buttonLayout.flexibleWidth = 0f;
+            buttonLayout.minHeight = 24f;
             buttonLayout.preferredHeight = 24f;
+            buttonLayout.flexibleHeight = 0f;
+        }
+
+        private void CreateProductionReadOnlyRow(Transform parent, string label, string value)
+        {
+            GameObject row = CreatePlainImage("ReadOnlyRow", parent, new Color(0.76f, 0.76f, 0.70f, 1f));
+            row.AddComponent<LayoutElement>().preferredHeight = 30f;
+            HorizontalLayoutGroup layout = row.AddComponent<HorizontalLayoutGroup>();
+            layout.padding = new RectOffset(8, 8, 3, 3);
+            layout.spacing = 6f;
+            layout.childAlignment = TextAnchor.MiddleLeft;
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.childForceExpandWidth = false;
+            layout.childForceExpandHeight = false;
+
+            TextMeshProUGUI labelText = CreateText("Label", row.transform, label, 10, TextAlignmentOptions.MidlineLeft);
+            labelText.color = new Color(0.20f, 0.21f, 0.20f, 1f);
+            labelText.textWrappingMode = TextWrappingModes.NoWrap;
+            labelText.overflowMode = TextOverflowModes.Ellipsis;
+            LayoutElement labelLayout = labelText.gameObject.AddComponent<LayoutElement>();
+            labelLayout.flexibleWidth = 1f;
+            labelLayout.preferredHeight = 24f;
+
+            TextMeshProUGUI valueText = CreateText("Value", row.transform, value, 10, TextAlignmentOptions.MidlineRight);
+            valueText.color = new Color(0.26f, 0.28f, 0.27f, 1f);
+            valueText.fontStyle = FontStyles.Bold;
+            valueText.textWrappingMode = TextWrappingModes.NoWrap;
+            valueText.overflowMode = TextOverflowModes.Ellipsis;
+            valueText.gameObject.AddComponent<LayoutElement>().preferredWidth = 150f;
         }
 
         private TextMeshProUGUI CreateFinePrint(Transform parent, string text)
@@ -642,7 +819,7 @@ namespace StorageNetwork.UI
                 : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.NONE);
         }
 
-        private static string GetNetworkStateText(StorageNetworkMaterialRequester requester, StorageNetworkStorageConnector connector)
+        private static string GetNetworkStateText(Storage storage, StorageNetworkMaterialRequester requester, StorageNetworkStorageConnector connector, StorageNetworkEnergyGeneratorRequester energyRequester)
         {
             if (requester != null)
             {
@@ -654,7 +831,58 @@ namespace StorageNetwork.UI
                 return connector.OutputStoreEnabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_ON_SHORT) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_OFF_SHORT);
             }
 
+            if (energyRequester != null)
+            {
+                return energyRequester.RequestEnabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.REQUEST_ON_SHORT) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.REQUEST_OFF_SHORT);
+            }
+
             return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.NO_COMPONENT);
+        }
+
+        private static LocString GetProductionInputMetricLabel(ComplexFabricator fabricator, StorageNetworkEnergyGeneratorRequester energyRequester)
+        {
+            return energyRequester != null && fabricator == null
+                ? StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_METRIC_REQUIRED
+                : StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_METRIC_RECIPE;
+        }
+
+        private static bool IsNetworkAutomationEnabled(Storage storage, StorageNetworkMaterialRequester requester, StorageNetworkStorageConnector connector, StorageNetworkEnergyGeneratorRequester energyRequester)
+        {
+            if (requester != null)
+            {
+                return requester.RequestEnabled || requester.OutputStoreEnabled;
+            }
+
+            if (connector != null)
+            {
+                return connector.OutputStoreEnabled;
+            }
+
+            if (energyRequester != null)
+            {
+                return energyRequester.RequestEnabled;
+            }
+
+            return false;
+        }
+
+        private static string GetEnergyGeneratorFuelText(EnergyGenerator generator)
+        {
+            if (generator == null || generator.formula.inputs == null || generator.formula.inputs.Length == 0)
+            {
+                return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.NONE);
+            }
+
+            List<string> names = new List<string>();
+            foreach (EnergyGenerator.InputItem input in generator.formula.inputs)
+            {
+                if (input.tag != Tag.Invalid)
+                {
+                    names.Add(input.tag.ProperName());
+                }
+            }
+
+            return names.Count > 0 ? string.Join(", ", names) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.NONE);
         }
 
         private void AddProductionSettingsInfo(Storage storage, ComplexFabricator fabricator)
@@ -691,7 +919,7 @@ namespace StorageNetwork.UI
                 requester.LimitEnabled,
                 value =>
                 {
-                    requester.LimitEnabled = value;
+                    SetMaterialRequestLimitEnabled(requester, value);
                     UpdateProductionSettingsPanel();
                 });
 
@@ -943,6 +1171,40 @@ namespace StorageNetwork.UI
             ShowProductionPicker(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_SELECT_SOURCE), options);
         }
 
+        private void ShowEnergyGeneratorSourcePicker(Storage ownerStorage, StorageNetworkEnergyGeneratorRequester requester)
+        {
+            List<ProductionPickerOption> options = new List<ProductionPickerOption>
+            {
+                new ProductionPickerOption(
+                    Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_MODE_SEARCH),
+                    Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENERGY_GENERATOR_SOURCE_DESC),
+                    requester.CurrentMode == StorageNetworkMaterialRequester.RequestMode.SearchNetwork,
+                    () =>
+                    {
+                        requester.UseAutomaticMaterialSource();
+                        CloseProductionPicker();
+                        UpdateProductionSettingsPanel(true);
+                    })
+            };
+
+            foreach (Storage target in GetNetworkStorageTargets(ownerStorage))
+            {
+                Storage captured = target;
+                options.Add(new ProductionPickerOption(
+                    string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_SOURCE), captured.GetProperName()),
+                    FormatStorageOptionDetails(captured),
+                    requester.CurrentMode == StorageNetworkMaterialRequester.RequestMode.SpecificStorage && requester.ResolveSourceStorage() == captured,
+                    () =>
+                    {
+                        requester.SetSourceStorage(captured);
+                        CloseProductionPicker();
+                        UpdateProductionSettingsPanel(true);
+                    }));
+            }
+
+            ShowProductionPicker(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_SELECT_SOURCE), options);
+        }
+
         private void ShowOutputStorePicker(Storage ownerStorage, StorageNetworkMaterialRequester requester)
         {
             List<ProductionPickerOption> options = new List<ProductionPickerOption>
@@ -991,7 +1253,7 @@ namespace StorageNetwork.UI
             productionPickerRoot = CreatePlainImage("ProductionPicker", pickerParent.transform, new Color(0.17f, 0.19f, 0.22f, 0.98f));
             productionPickerRoot.AddComponent<ScrollWheelBlocker>();
             RectTransform pickerRect = productionPickerRoot.GetComponent<RectTransform>();
-            SetStretch(pickerRect, 14f, 14f, 76f, 74f);
+            SetStretch(pickerRect, 10f, 10f, 8f, 78f);
 
             GameObject header = CreatePlainImage("PickerHeader", productionPickerRoot.transform, new Color(0.36f, 0.42f, 0.47f, 1f));
             RectTransform headerRect = header.GetComponent<RectTransform>();
@@ -1048,6 +1310,8 @@ namespace StorageNetwork.UI
             {
                 CreateStorageOptionRow(content.transform, option.Title, option.Details, option.Selected, option.OnClick);
             }
+
+            CreateProductionPickerFooter(content.transform, options.Count);
         }
 
         private void CloseProductionPicker()
@@ -1101,7 +1365,58 @@ namespace StorageNetwork.UI
             detailText.gameObject.AddComponent<LayoutElement>().preferredWidth = 170f;
         }
 
+        private void CreateProductionPickerFooter(Transform parent, int optionCount)
+        {
+            GameObject footer = CreatePlainImage("PickerFooter", parent, new Color(0.68f, 0.68f, 0.61f, 1f));
+            LayoutElement footerLayout = footer.AddComponent<LayoutElement>();
+            footerLayout.minHeight = 82f;
+            footerLayout.preferredHeight = 82f;
+
+            VerticalLayoutGroup layout = footer.AddComponent<VerticalLayoutGroup>();
+            layout.padding = new RectOffset(10, 10, 8, 8);
+            layout.spacing = 4f;
+            layout.childAlignment = TextAnchor.UpperLeft;
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.childForceExpandWidth = true;
+            layout.childForceExpandHeight = false;
+
+            TextMeshProUGUI countText = CreateText(
+                "PickerFooterCount",
+                footer.transform,
+                string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PICKER_OPTION_COUNT), Mathf.Max(0, optionCount - 1)),
+                11,
+                TextAlignmentOptions.MidlineLeft);
+            countText.color = new Color(0.22f, 0.24f, 0.23f, 1f);
+            countText.fontStyle = FontStyles.Bold;
+            countText.gameObject.AddComponent<LayoutElement>().preferredHeight = 22f;
+
+            TextMeshProUGUI hintText = CreateText(
+                "PickerFooterHint",
+                footer.transform,
+                Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PICKER_POLICY_HINT),
+                10,
+                TextAlignmentOptions.TopLeft);
+            hintText.color = new Color(0.30f, 0.31f, 0.30f, 1f);
+            hintText.textWrappingMode = TextWrappingModes.Normal;
+            hintText.overflowMode = TextOverflowModes.Ellipsis;
+            hintText.gameObject.AddComponent<LayoutElement>().preferredHeight = 42f;
+        }
+
         private static string GetMaterialRequestModeName(StorageNetworkMaterialRequester requester)
+        {
+            if (requester.CurrentMode == StorageNetworkMaterialRequester.RequestMode.SpecificStorage)
+            {
+                Storage source = requester.ResolveSourceStorage();
+                return source != null
+                    ? string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_SOURCE), source.GetProperName())
+                    : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_MODE_SPECIFIC);
+            }
+
+            return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_MODE_SEARCH);
+        }
+
+        private static string GetEnergyGeneratorSourceModeName(StorageNetworkEnergyGeneratorRequester requester)
         {
             if (requester.CurrentMode == StorageNetworkMaterialRequester.RequestMode.SpecificStorage)
             {
@@ -1173,19 +1488,376 @@ namespace StorageNetwork.UI
 
         private void ShowMaterialRequestLimitDialog(StorageNetworkMaterialRequester requester)
         {
-            ShowAmountDialog(
-                Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_SET_LIMIT),
-                Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_LIMIT_ENABLED),
-                string.Format(
-                    Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_LIMIT),
-                    GameUtil.GetFormattedMass(Mathf.Max(0f, requester.GetRequestedAmountForDisplay())),
-                    GameUtil.GetFormattedMass(Mathf.Max(0f, requester.LimitKg))),
-                Mathf.Max(1f, requester.LimitKg <= 0f ? Config.Instance.DefaultMaterialRequestLimitKg : requester.LimitKg * 10f),
-                amount =>
+            CloseProductionPicker();
+            GameObject pickerParent = productionSettingsRoot != null && productionSettingsRoot.activeSelf
+                ? productionSettingsRoot
+                : null;
+            if (pickerParent == null || requester == null)
+            {
+                return;
+            }
+
+            productionPickerRoot = CreatePlainImage("MaterialLimitPicker", pickerParent.transform, new Color(0.17f, 0.19f, 0.22f, 0.98f));
+            productionPickerRoot.AddComponent<ScrollWheelBlocker>();
+            RectTransform pickerRect = productionPickerRoot.GetComponent<RectTransform>();
+            SetStretch(pickerRect, 84f, 84f, 118f, 96f);
+
+            GameObject header = CreatePlainImage("LimitHeader", productionPickerRoot.transform, new Color(0.36f, 0.42f, 0.47f, 1f));
+            SetTopStretch(header.GetComponent<RectTransform>(), 8f, 8f, 8f, 34f);
+            HorizontalLayoutGroup headerLayout = header.AddComponent<HorizontalLayoutGroup>();
+            headerLayout.padding = new RectOffset(10, 4, 3, 3);
+            headerLayout.spacing = 8f;
+            headerLayout.childAlignment = TextAnchor.MiddleLeft;
+            headerLayout.childControlWidth = true;
+            headerLayout.childControlHeight = true;
+            headerLayout.childForceExpandWidth = false;
+            headerLayout.childForceExpandHeight = true;
+
+            TextMeshProUGUI headerText = CreateText("LimitTitle", header.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_SET_LIMIT), 12, TextAlignmentOptions.MidlineLeft);
+            headerText.color = new Color(0.96f, 0.94f, 0.86f, 1f);
+            headerText.fontStyle = FontStyles.Bold;
+            headerText.textWrappingMode = TextWrappingModes.NoWrap;
+            headerText.overflowMode = TextOverflowModes.Ellipsis;
+            headerText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+
+            GameObject closeButton = CreateCloseIconButton("LimitClose", header.transform, CloseProductionPicker);
+            LayoutElement closeLayout = closeButton.AddComponent<LayoutElement>();
+            closeLayout.preferredWidth = 24f;
+            closeLayout.preferredHeight = 22f;
+
+            GameObject body = CreatePlainImage("LimitBody", productionPickerRoot.transform, new Color(0.83f, 0.82f, 0.76f, 1f));
+            SetStretch(body.GetComponent<RectTransform>(), 8f, 8f, 8f, 48f);
+            VerticalLayoutGroup bodyLayout = body.AddComponent<VerticalLayoutGroup>();
+            bodyLayout.padding = new RectOffset(8, 8, 8, 8);
+            bodyLayout.spacing = 6f;
+            bodyLayout.childAlignment = TextAnchor.UpperLeft;
+            bodyLayout.childControlWidth = true;
+            bodyLayout.childControlHeight = true;
+            bodyLayout.childForceExpandWidth = true;
+            bodyLayout.childForceExpandHeight = false;
+
+            CreateLimitInfoRow(body.transform, string.Format(
+                Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_LIMIT),
+                GameUtil.GetFormattedMass(Mathf.Max(0f, requester.GetRequestedAmountForDisplay())),
+                GameUtil.GetFormattedMass(Mathf.Max(0f, requester.LimitKg))),
+                () =>
                 {
-                    requester.LimitKg = amount;
-                    UpdateProductionSettingsPanel();
+                    requester.ResetRequestedAmount();
+                    CloseProductionPicker();
+                    UpdateProductionSettingsPanel(true);
                 });
+
+            float currentLimit = Mathf.Max(1f, requester.LimitKg <= 0f ? Config.Instance.DefaultMaterialRequestLimitKg : requester.LimitKg);
+            KSlider slider = CreateLimitAmountRow(body.transform, currentLimit, 1f, 1000000f, out KInputTextField input);
+            input.characterValidation = TMP_InputField.CharacterValidation.Decimal;
+            input.contentType = TMP_InputField.ContentType.DecimalNumber;
+            input.inputType = TMP_InputField.InputType.Standard;
+
+            bool syncingLimitControls = false;
+            slider.onValueChanged.AddListener(value =>
+            {
+                if (syncingLimitControls)
+                {
+                    return;
+                }
+
+                syncingLimitControls = true;
+                input.text = Mathf.RoundToInt(value).ToString();
+                syncingLimitControls = false;
+            });
+            input.onValueChanged.AddListener(value =>
+            {
+                if (syncingLimitControls)
+                {
+                    return;
+                }
+
+                syncingLimitControls = true;
+                slider.value = ParseMaterialLimitInput(value, slider.value);
+                syncingLimitControls = false;
+            });
+
+            GameObject buttonRow = new GameObject("LimitButtonRow");
+            buttonRow.transform.SetParent(body.transform, false);
+            buttonRow.AddComponent<RectTransform>();
+            LayoutElement buttonRowLayout = buttonRow.AddComponent<LayoutElement>();
+            buttonRowLayout.minHeight = 34f;
+            buttonRowLayout.preferredHeight = 34f;
+            buttonRowLayout.flexibleHeight = 0f;
+            HorizontalLayoutGroup buttonLayout = buttonRow.AddComponent<HorizontalLayoutGroup>();
+            buttonLayout.spacing = 6f;
+            buttonLayout.childAlignment = TextAnchor.MiddleRight;
+            buttonLayout.childControlWidth = true;
+            buttonLayout.childControlHeight = false;
+            buttonLayout.childForceExpandWidth = false;
+            buttonLayout.childForceExpandHeight = false;
+
+            CreateFlexibleSpacer(buttonRow.transform);
+            CreateLimitDialogButton(buttonRow.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ALL), () =>
+            {
+                input.text = "1000000";
+                slider.value = 1000000f;
+            }, KleiBlueStyle());
+            CreateLimitDialogButton(buttonRow.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CANCEL), CloseProductionPicker, KleiBlueStyle());
+            CreateLimitDialogButton(buttonRow.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIRM), () =>
+            {
+                requester.LimitKg = ParseMaterialLimitInput(input.text, currentLimit);
+                requester.LimitEnabled = true;
+                CloseProductionPicker();
+                UpdateProductionSettingsPanel(true);
+            }, KleiPinkStyle());
+        }
+
+        private void ShowEnergyGeneratorMaterialRequestLimitDialog(StorageNetworkEnergyGeneratorRequester requester)
+        {
+            CloseProductionPicker();
+            GameObject pickerParent = productionSettingsRoot != null && productionSettingsRoot.activeSelf
+                ? productionSettingsRoot
+                : null;
+            if (pickerParent == null || requester == null)
+            {
+                return;
+            }
+
+            productionPickerRoot = CreatePlainImage("MaterialLimitPicker", pickerParent.transform, new Color(0.17f, 0.19f, 0.22f, 0.98f));
+            productionPickerRoot.AddComponent<ScrollWheelBlocker>();
+            RectTransform pickerRect = productionPickerRoot.GetComponent<RectTransform>();
+            SetStretch(pickerRect, 84f, 84f, 118f, 96f);
+
+            GameObject header = CreatePlainImage("LimitHeader", productionPickerRoot.transform, new Color(0.36f, 0.42f, 0.47f, 1f));
+            SetTopStretch(header.GetComponent<RectTransform>(), 8f, 8f, 8f, 34f);
+            HorizontalLayoutGroup headerLayout = header.AddComponent<HorizontalLayoutGroup>();
+            headerLayout.padding = new RectOffset(10, 4, 3, 3);
+            headerLayout.spacing = 8f;
+            headerLayout.childAlignment = TextAnchor.MiddleLeft;
+            headerLayout.childControlWidth = true;
+            headerLayout.childControlHeight = true;
+            headerLayout.childForceExpandWidth = false;
+            headerLayout.childForceExpandHeight = true;
+
+            TextMeshProUGUI headerText = CreateText("LimitTitle", header.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_SET_LIMIT), 12, TextAlignmentOptions.MidlineLeft);
+            headerText.color = new Color(0.96f, 0.94f, 0.86f, 1f);
+            headerText.fontStyle = FontStyles.Bold;
+            headerText.textWrappingMode = TextWrappingModes.NoWrap;
+            headerText.overflowMode = TextOverflowModes.Ellipsis;
+            headerText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+
+            GameObject closeButton = CreateCloseIconButton("LimitClose", header.transform, CloseProductionPicker);
+            LayoutElement closeLayout = closeButton.AddComponent<LayoutElement>();
+            closeLayout.preferredWidth = 24f;
+            closeLayout.preferredHeight = 22f;
+
+            GameObject body = CreatePlainImage("LimitBody", productionPickerRoot.transform, new Color(0.83f, 0.82f, 0.76f, 1f));
+            SetStretch(body.GetComponent<RectTransform>(), 8f, 8f, 8f, 48f);
+            VerticalLayoutGroup bodyLayout = body.AddComponent<VerticalLayoutGroup>();
+            bodyLayout.padding = new RectOffset(8, 8, 8, 8);
+            bodyLayout.spacing = 6f;
+            bodyLayout.childAlignment = TextAnchor.UpperLeft;
+            bodyLayout.childControlWidth = true;
+            bodyLayout.childControlHeight = true;
+            bodyLayout.childForceExpandWidth = true;
+            bodyLayout.childForceExpandHeight = false;
+
+            CreateLimitInfoRow(body.transform, string.Format(
+                Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_LIMIT),
+                GameUtil.GetFormattedMass(Mathf.Max(0f, requester.GetRequestedAmountForDisplay())),
+                GameUtil.GetFormattedMass(Mathf.Max(0f, requester.LimitKg))),
+                () =>
+                {
+                    requester.ResetRequestedAmount();
+                    CloseProductionPicker();
+                    UpdateProductionSettingsPanel(true);
+                });
+
+            float currentLimit = Mathf.Max(1f, requester.LimitKg <= 0f ? Config.Instance.DefaultMaterialRequestLimitKg : requester.LimitKg);
+            KSlider slider = CreateLimitAmountRow(body.transform, currentLimit, 1f, 1000000f, out KInputTextField input);
+            input.characterValidation = TMP_InputField.CharacterValidation.Decimal;
+            input.contentType = TMP_InputField.ContentType.DecimalNumber;
+            input.inputType = TMP_InputField.InputType.Standard;
+
+            bool syncingLimitControls = false;
+            slider.onValueChanged.AddListener(value =>
+            {
+                if (syncingLimitControls)
+                {
+                    return;
+                }
+
+                syncingLimitControls = true;
+                input.text = Mathf.RoundToInt(value).ToString();
+                syncingLimitControls = false;
+            });
+            input.onValueChanged.AddListener(value =>
+            {
+                if (syncingLimitControls)
+                {
+                    return;
+                }
+
+                syncingLimitControls = true;
+                slider.value = ParseMaterialLimitInput(value, slider.value);
+                syncingLimitControls = false;
+            });
+
+            GameObject buttonRow = new GameObject("LimitButtonRow");
+            buttonRow.transform.SetParent(body.transform, false);
+            buttonRow.AddComponent<RectTransform>();
+            LayoutElement buttonRowLayout = buttonRow.AddComponent<LayoutElement>();
+            buttonRowLayout.minHeight = 34f;
+            buttonRowLayout.preferredHeight = 34f;
+            buttonRowLayout.flexibleHeight = 0f;
+            HorizontalLayoutGroup buttonLayout = buttonRow.AddComponent<HorizontalLayoutGroup>();
+            buttonLayout.spacing = 6f;
+            buttonLayout.childAlignment = TextAnchor.MiddleRight;
+            buttonLayout.childControlWidth = true;
+            buttonLayout.childControlHeight = false;
+            buttonLayout.childForceExpandWidth = false;
+            buttonLayout.childForceExpandHeight = false;
+
+            CreateFlexibleSpacer(buttonRow.transform);
+            CreateLimitDialogButton(buttonRow.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ALL), () =>
+            {
+                input.text = "1000000";
+                slider.value = 1000000f;
+            }, KleiBlueStyle());
+            CreateLimitDialogButton(buttonRow.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CANCEL), CloseProductionPicker, KleiBlueStyle());
+            CreateLimitDialogButton(buttonRow.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIRM), () =>
+            {
+                requester.LimitKg = ParseMaterialLimitInput(input.text, currentLimit);
+                requester.LimitEnabled = true;
+                CloseProductionPicker();
+                UpdateProductionSettingsPanel(true);
+            }, KleiPinkStyle());
+        }
+
+        private static void SetMaterialRequestLimitEnabled(StorageNetworkMaterialRequester requester, bool enabled)
+        {
+            if (requester == null)
+            {
+                return;
+            }
+
+            requester.LimitEnabled = enabled;
+            if (enabled && requester.LimitKg <= 0f)
+            {
+                requester.LimitKg = Mathf.Max(1f, Config.Instance.DefaultMaterialRequestLimitKg);
+            }
+        }
+
+        private static void SetEnergyGeneratorMaterialRequestLimitEnabled(StorageNetworkEnergyGeneratorRequester requester, bool enabled)
+        {
+            if (requester == null)
+            {
+                return;
+            }
+
+            requester.LimitEnabled = enabled;
+            if (enabled && requester.LimitKg <= 0f)
+            {
+                requester.LimitKg = Mathf.Max(1f, Config.Instance.DefaultMaterialRequestLimitKg);
+            }
+        }
+
+        private void CreateLimitInfoRow(Transform parent, string text, System.Action resetAction)
+        {
+            GameObject row = CreatePlainImage("LimitInfoRow", parent, new Color(0.68f, 0.68f, 0.61f, 1f));
+            row.AddComponent<LayoutElement>().preferredHeight = 32f;
+            HorizontalLayoutGroup layout = row.AddComponent<HorizontalLayoutGroup>();
+            layout.padding = new RectOffset(10, 8, 3, 3);
+            layout.spacing = 8f;
+            layout.childAlignment = TextAnchor.MiddleLeft;
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.childForceExpandWidth = false;
+            layout.childForceExpandHeight = false;
+
+            TextMeshProUGUI label = CreateText("LimitInfo", row.transform, text, 11, TextAlignmentOptions.MidlineLeft);
+            label.color = new Color(0.22f, 0.24f, 0.23f, 1f);
+            label.fontStyle = FontStyles.Bold;
+            label.textWrappingMode = TextWrappingModes.NoWrap;
+            label.overflowMode = TextOverflowModes.Ellipsis;
+            label.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+
+            GameObject button = CreateStyledButton("ResetLimitButton", row.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_RESET), resetAction, KleiBlueStyle());
+            LayoutElement buttonLayout = button.AddComponent<LayoutElement>();
+            buttonLayout.preferredWidth = 100f;
+            buttonLayout.minWidth = 92f;
+            buttonLayout.preferredHeight = 24f;
+            buttonLayout.minHeight = 24f;
+        }
+
+        private KSlider CreateLimitAmountRow(Transform parent, float value, float minValue, float maxValue, out KInputTextField input)
+        {
+            GameObject row = CreatePlainImage("LimitAmountRow", parent, new Color(0.76f, 0.76f, 0.70f, 1f));
+            LayoutElement rowLayout = row.AddComponent<LayoutElement>();
+            rowLayout.minHeight = 44f;
+            rowLayout.preferredHeight = 44f;
+            rowLayout.flexibleHeight = 0f;
+
+            HorizontalLayoutGroup layout = row.AddComponent<HorizontalLayoutGroup>();
+            layout.padding = new RectOffset(10, 10, 6, 6);
+            layout.spacing = 10f;
+            layout.childAlignment = TextAnchor.MiddleLeft;
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.childForceExpandWidth = false;
+            layout.childForceExpandHeight = false;
+
+            TextMeshProUGUI label = CreateText("SliderLabel", row.transform, "数量", 11, TextAlignmentOptions.MidlineLeft);
+            label.color = new Color(0.20f, 0.21f, 0.20f, 1f);
+            label.gameObject.AddComponent<LayoutElement>().preferredWidth = 82f;
+
+            KSlider slider = CreateAmountSlider(row.transform, maxValue);
+            LayoutElement sliderLayout = slider.gameObject.GetComponent<LayoutElement>();
+            if (sliderLayout != null)
+            {
+                sliderLayout.minWidth = 160f;
+                sliderLayout.preferredHeight = 32f;
+                sliderLayout.flexibleWidth = 1f;
+                sliderLayout.flexibleHeight = 0f;
+            }
+
+            input = CreateFixedTextInput(row.transform, "MaterialLimitInput", Mathf.RoundToInt(Mathf.Clamp(value, minValue, maxValue)).ToString(), 170f, 24f, 11);
+
+            slider.minValue = minValue;
+            slider.maxValue = maxValue;
+            slider.wholeNumbers = true;
+            slider.value = Mathf.Clamp(value, minValue, maxValue);
+            return slider;
+        }
+
+        private void CreateLimitDialogButton(Transform parent, string text, System.Action onClick, ColorStyleSetting style)
+        {
+            GameObject button = CreateStyledButton("LimitButton", parent, text, onClick, style);
+            LayoutElement layout = button.AddComponent<LayoutElement>();
+            layout.preferredWidth = 96f;
+            layout.minWidth = 82f;
+            layout.minHeight = 26f;
+            layout.preferredHeight = 26f;
+            RectTransform rect = button.GetComponent<RectTransform>();
+            if (rect != null)
+            {
+                rect.sizeDelta = new Vector2(96f, 26f);
+            }
+        }
+
+        private static void CreateFlexibleSpacer(Transform parent)
+        {
+            GameObject spacer = new GameObject("Spacer");
+            spacer.transform.SetParent(parent, false);
+            spacer.AddComponent<RectTransform>();
+            spacer.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        }
+
+        private static float ParseMaterialLimitInput(string text, float fallback)
+        {
+            string normalized = (text ?? string.Empty).Trim().Replace(',', '.');
+            if (!float.TryParse(normalized, out float value))
+            {
+                value = fallback;
+            }
+
+            return Mathf.Clamp(value, 1f, 1000000f);
         }
 
         private ProductionInventoryRowView CreateProductionSettingsItemRow(string itemName, string formattedMass, GameObject representative)

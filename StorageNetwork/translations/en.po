@@ -1275,6 +1275,10 @@ msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_METRIC_RECIPE"
 msgid "配方"
 msgstr "Recipe"
 
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_METRIC_REQUIRED"
+msgid "需求物"
+msgstr "Required"
+
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_METRIC_NETWORK"
 msgid "网络"
 msgstr "Network"

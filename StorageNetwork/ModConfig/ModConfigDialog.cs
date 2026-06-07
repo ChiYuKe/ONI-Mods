@@ -4,8 +4,9 @@ using System.Globalization;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using StorageNetwork.UI;
 
-namespace ModConfig
+namespace StorageNetwork.ModConfig
 {
     public sealed class ModConfigField
     {
@@ -365,7 +366,7 @@ namespace ModConfig
                 InputColor,
                 InputTextColor,
                 Vector2.one);
-            input.gameObject.AddComponent<ModConfigInputFieldEvents>().Configure(input);
+            input.gameObject.AddComponent<StorageNetworkInputFieldEvents>().Configure(input);
             return input;
         }
 

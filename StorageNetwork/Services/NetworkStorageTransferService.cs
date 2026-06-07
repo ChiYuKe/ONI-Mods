@@ -126,7 +126,8 @@ namespace StorageNetwork.Services
             IEnumerable<Tag> tags,
             float amount,
             Storage destination,
-            IEnumerable<Storage> excludedStorages = null)
+            IEnumerable<Storage> excludedStorages = null,
+            Storage specificSource = null)
         {
             if (tags == null ||
                 destination == null ||
@@ -159,12 +160,22 @@ namespace StorageNetwork.Services
             HashSet<Storage> excluded = BuildExclusionSet(excludedStorages);
             excluded.Add(destination);
             List<Storage> sources = new List<Storage>();
-            foreach (StorageInfo info in StorageSceneCollector.CollectForWorld(destinationWorldId).Storages)
+            if (specificSource != null)
             {
-                Storage storage = info?.Storage;
-                if (info?.Minion == null && IsUsableNetworkSource(storage, wantedTags, excluded, destinationWorldId))
+                if (IsUsableNetworkSource(specificSource, wantedTags, excluded, destinationWorldId))
                 {
-                    sources.Add(storage);
+                    sources.Add(specificSource);
+                }
+            }
+            else
+            {
+                foreach (StorageInfo info in StorageSceneCollector.CollectForWorld(destinationWorldId).Storages)
+                {
+                    Storage storage = info?.Storage;
+                    if (info?.Minion == null && IsUsableNetworkSource(storage, wantedTags, excluded, destinationWorldId))
+                    {
+                        sources.Add(storage);
+                    }
                 }
             }
 
@@ -453,7 +464,7 @@ namespace StorageNetwork.Services
                    !excludedStorages.Contains(target) &&
                    StorageNetworkStorageRules.IsConnectedNetworkStorage(target) &&
                    !StorageNetworkStorageRules.IsMinionStorage(target) &&
-                   target.GetComponent<ComplexFabricator>() == null &&
+                   !StorageNetworkStorageRules.IsProductionStorage(target) &&
                    target.RemainingCapacity() > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT &&
                    IsStorageAccepting(target, matchTags) &&
                    (target.items == null || !target.items.Contains(item));
@@ -467,7 +478,7 @@ namespace StorageNetwork.Services
                    !excludedStorages.Contains(target) &&
                    StorageNetworkStorageRules.IsConnectedNetworkStorage(target) &&
                    !StorageNetworkStorageRules.IsMinionStorage(target) &&
-                   target.GetComponent<ComplexFabricator>() == null &&
+                   !StorageNetworkStorageRules.IsProductionStorage(target) &&
                    target.RemainingCapacity() > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT &&
                    IsStorageAccepting(target, tag) &&
                    (target.GetAmountAvailable(tag) > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ||
@@ -482,7 +493,7 @@ namespace StorageNetwork.Services
                    !excludedStorages.Contains(source) &&
                    StorageNetworkStorageRules.IsConnectedNetworkStorage(source) &&
                    !StorageNetworkStorageRules.IsMinionStorage(source) &&
-                   source.GetComponent<ComplexFabricator>() == null &&
+                   !StorageNetworkStorageRules.IsProductionStorage(source) &&
                    GetAmountAvailableByAnyMatchTag(source, tags) > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT;
         }
 

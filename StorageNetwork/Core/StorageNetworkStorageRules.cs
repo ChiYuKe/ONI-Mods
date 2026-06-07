@@ -56,6 +56,8 @@ namespace StorageNetwork.Core
         public static bool IsProductionStorage(Storage storage, StorageNetworkEnrollment enrollment = null)
         {
             return (enrollment != null && enrollment.IsComplexRecipeBuilding()) ||
+                   (enrollment != null && enrollment.IsEnergyGeneratorBuilding()) ||
+                   StorageNetworkEnergyGeneratorRequester.HasFuelInputs(storage?.GetComponent<EnergyGenerator>()) ||
                    storage?.GetComponent<ComplexFabricator>() != null;
         }
 
@@ -68,7 +70,7 @@ namespace StorageNetwork.Core
                    storage != ownerStorage &&
                    IsConnectedNetworkStorage(storage) &&
                    !IsMinionStorage(storage) &&
-                   storage.GetComponent<ComplexFabricator>() == null;
+                   !IsProductionStorage(storage);
         }
 
         /// <summary>

@@ -3,7 +3,7 @@ using System.IO;
 using Newtonsoft.Json;
 using UnityEngine;
 
-namespace ModConfig
+namespace StorageNetwork.ModConfig
 {
     public static class JsonConfigStore
     {

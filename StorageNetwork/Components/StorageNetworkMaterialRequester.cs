@@ -684,7 +684,7 @@ namespace StorageNetwork.Components
                    storage != fabricator.inStorage &&
                    storage != fabricator.buildStorage &&
                    storage != fabricator.outStorage &&
-                   storage.GetComponent<ComplexFabricator>() == null &&
+                   !StorageNetworkStorageRules.IsProductionStorage(storage) &&
                    storage.GetAmountAvailable(tag) > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT;
         }
 

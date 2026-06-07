@@ -3,7 +3,7 @@ using HarmonyLib;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace ModConfig
+namespace StorageNetwork.ModConfig
 {
     public sealed class ModsScreenOptionsButtonDefinition
     {

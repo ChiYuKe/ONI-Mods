@@ -10,6 +10,7 @@ namespace StorageNetwork.Buildings
     {
         protected abstract StorageNetworkStorageBuildingSpec Spec { get; }
         protected virtual bool ProvidesStorage => true;
+        protected virtual bool OnePerWorld => false;
 
         public override BuildingDef CreateBuildingDef()
         {
@@ -35,6 +36,7 @@ namespace StorageNetwork.Buildings
             buildingDef.RequiresPowerInput = spec.PowerWatts > 0f;
             buildingDef.EnergyConsumptionWhenActive = spec.PowerWatts;
             buildingDef.SelfHeatKilowattsWhenActive = spec.SelfHeatKilowatts;
+            buildingDef.OnePerWorld = OnePerWorld;
             buildingDef.AddSearchTerms(global::STRINGS.SEARCH_TERMS.STORAGE);
             return buildingDef;
         }
@@ -54,18 +56,18 @@ namespace StorageNetwork.Buildings
                 Storage storage = go.AddOrGet<Storage>();
                 storage.capacityKg = spec.CapacityKg;
                 storage.showInUI = true;
-                storage.allowItemRemoval = true;
+                storage.allowItemRemoval = false;
                 storage.showDescriptor = true;
                 storage.storageFilters = spec.Filters;
                 storage.storageFullMargin = STORAGE.STORAGE_LOCKER_FILLED_MARGIN;
-                storage.fetchCategory = Storage.FetchCategory.GeneralStorage;
+                storage.fetchCategory = Storage.FetchCategory.Building;
                 storage.showCapacityStatusItem = true;
                 storage.showCapacityAsMainStatus = true;
                 storage.SetDefaultStoredItemModifiers(Storage.StandardInsulatedStorage);
 
                 go.AddOrGet<StorageNetworkStorageConnector>();
-                go.AddOrGet<StorageLocker>();
-                go.AddOrGet<CopyBuildingSettings>().copyGroupTag = GameTags.StorageLocker;
+                go.AddOrGet<TreeFilterable>();
+                go.AddOrGet<StorageNetworkDefaultFilterInitializer>();
             }
             else
             {
@@ -98,6 +100,7 @@ namespace StorageNetwork.Buildings
     {
         public const string ID = "StorageNetworkCore";
         protected override bool ProvidesStorage => false;
+        protected override bool OnePerWorld => true;
         protected override StorageNetworkStorageBuildingSpec Spec => StorageNetworkStorageBuildingSpecs.Core;
     }
 
@@ -158,6 +161,7 @@ namespace StorageNetwork.Buildings
     public sealed class StorageNetworkRelayModuleConfig : IBuildingConfig
     {
         public const string ID = "StorageNetworkRelayModule";
+        private const string Anim = "storagenetwork_relay_module_kanim";
 
         public override string[] GetRequiredDlcIds()
         {
@@ -168,9 +172,9 @@ namespace StorageNetwork.Buildings
         {
             BuildingDef buildingDef = BuildingTemplates.CreateBuildingDef(
                 ID,
+                5,
                 3,
-                3,
-                "rocket_scanner_module_kanim",
+                Anim,
                 1000,
                 120f,
                 BUILDINGS.ROCKETRY_MASS_KG.HOLLOW_TIER2,
@@ -200,6 +204,7 @@ namespace StorageNetwork.Buildings
         public override void ConfigureBuildingTemplate(GameObject go, Tag prefabTag)
         {
             BuildingConfigManager.Instance.IgnoreDefaultKComponent(typeof(RequiresFoundation), prefabTag);
+            SoundEventVolumeCache.instance.AddVolume(Anim, "RocketScannerModule_radar", NOISE_POLLUTION.NOISY.TIER2);
             go.AddOrGet<LoopingSounds>();
             go.AddOrGet<StorageNetworkRelayModule>();
             go.GetComponent<KPrefabID>()?.AddTag(GameTags.LaunchButtonRocketModule);
@@ -325,7 +330,7 @@ namespace StorageNetwork.Buildings
         public static readonly StorageNetworkStorageBuildingSpec LargeSolid = CreateServer(
             LargeSolidServerConfig.ID,
             2,
-            3,
+            4,
             LargeSolidServerAnim,
             250000f,
             240f,
@@ -335,7 +340,7 @@ namespace StorageNetwork.Buildings
         public static readonly StorageNetworkStorageBuildingSpec LargeLiquid = CreateServer(
             LargeLiquidServerConfig.ID,
             2,
-            3,
+            4,
             LargeLiquidServerAnim,
             250000f,
             240f,

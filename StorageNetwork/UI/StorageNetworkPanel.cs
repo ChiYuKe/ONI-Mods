@@ -634,6 +634,12 @@ namespace StorageNetwork.UI
             }
 
             StorageNetworkEnrollment enrollment = info.GameObject.GetComponent<StorageNetworkEnrollment>();
+            StorageNetworkEnergyGeneratorRequester energyRequester = info.GameObject.GetComponent<StorageNetworkEnergyGeneratorRequester>();
+            if (energyRequester != null && enrollment != null && enrollment.IncludedInSceneNetwork && energyRequester.RequestEnabled)
+            {
+                return true;
+            }
+
             return enrollment != null && enrollment.DirectGeyserOutputToNetwork;
         }
 

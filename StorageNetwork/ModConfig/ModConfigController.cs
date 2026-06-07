@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
 
-namespace ModConfig
+namespace StorageNetwork.ModConfig
 {
     public sealed class ModConfigController<T> where T : class, new()
     {
