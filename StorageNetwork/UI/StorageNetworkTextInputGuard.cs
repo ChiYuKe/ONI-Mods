@@ -17,6 +17,7 @@ namespace StorageNetwork.UI
         private static KInputTextField focusedInput;
         private static StorageNetworkTextInputGuard focusedGuard;
         private bool editing;
+        private bool listenersRegistered;
         private Coroutine endEditRoutine;
 
         public static bool IsAnyFocused => focusedGuard != null && focusedGuard.editing && focusedGuard.input != null;
@@ -59,19 +60,8 @@ namespace StorageNetwork.UI
                 return;
             }
 
-            input.customCaretColor = true;
-            input.caretColor = new Color(0.05f, 0.06f, 0.07f, 1f);
-            input.caretWidth = 2;
-            input.selectionColor = new Color(0.66f, 0.82f, 1f, 0.82f);
-            input.onFocusSelectAll = true;
-            input.keepTextSelectionVisible = true;
-            input.onFocus = (global::System.Action)Delegate.Combine(input.onFocus, new global::System.Action(BeginEdit));
-            input.onSelect.AddListener(_ => BeginEdit());
-            input.onEndEdit.AddListener(_ => EndEdit());
-            input.onValueChanged.AddListener(_ =>
-            {
-                SetSelectionHighlight(false);
-            });
+            ConfigureInputStyle();
+            RegisterInputListeners();
             EnsureSelectionHighlight();
             ApplyFocusVisual(false);
 
@@ -79,6 +69,49 @@ namespace StorageNetwork.UI
             {
                 Activate();
             }
+        }
+
+        private void ConfigureInputStyle()
+        {
+            if (input == null)
+            {
+                return;
+            }
+
+            input.customCaretColor = true;
+            input.caretColor = new Color(0.05f, 0.06f, 0.07f, 1f);
+            input.caretWidth = 2;
+            input.selectionColor = new Color(0.66f, 0.82f, 1f, 0.82f);
+            input.onFocusSelectAll = true;
+            input.keepTextSelectionVisible = true;
+        }
+
+        private void RegisterInputListeners()
+        {
+            if (input == null || listenersRegistered)
+            {
+                return;
+            }
+
+            input.onFocus = (global::System.Action)Delegate.Combine(input.onFocus, new global::System.Action(BeginEdit));
+            input.onSelect.AddListener(OnInputSelected);
+            input.onEndEdit.AddListener(OnInputEndEdit);
+            input.onValueChanged.AddListener(OnInputValueChanged);
+            listenersRegistered = true;
+        }
+
+        private void UnregisterInputListeners()
+        {
+            if (input == null || !listenersRegistered)
+            {
+                return;
+            }
+
+            input.onFocus = (global::System.Action)Delegate.Remove(input.onFocus, new global::System.Action(BeginEdit));
+            input.onSelect.RemoveListener(OnInputSelected);
+            input.onEndEdit.RemoveListener(OnInputEndEdit);
+            input.onValueChanged.RemoveListener(OnInputValueChanged);
+            listenersRegistered = false;
         }
 
         public void OnPointerClick(PointerEventData eventData)
@@ -111,8 +144,24 @@ namespace StorageNetwork.UI
         protected override void OnCleanUp()
         {
             StopEditing();
+            UnregisterInputListeners();
             RefreshFocusedState();
             base.OnCleanUp();
+        }
+
+        private void OnInputSelected(string _)
+        {
+            BeginEdit();
+        }
+
+        private void OnInputEndEdit(string _)
+        {
+            EndEdit();
+        }
+
+        private void OnInputValueChanged(string _)
+        {
+            SetSelectionHighlight(false);
         }
 
         private void BeginEdit()
