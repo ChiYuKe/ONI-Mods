@@ -263,7 +263,7 @@ namespace StorageNetwork.UI
 
             foreach (Descriptor descriptor in geyser.GetDescriptors(geyser.gameObject).Where(descriptor => descriptor.type == Descriptor.DescriptorType.Effect))
             {
-                TextMeshProUGUI text = CreateText("GeyserDescriptor", details.transform, StripKleiLinkFormatting(descriptor.text), 11, TextAlignmentOptions.MidlineLeft);
+                TextMeshProUGUI text = CreateText("GeyserDescriptor", details.transform, StorageNetworkTextFormatting.StripKleiLinkFormatting(descriptor.text), 11, TextAlignmentOptions.MidlineLeft);
                 text.color = new Color(0.22f, 0.23f, 0.22f, 1f);
                 text.textWrappingMode = TextWrappingModes.Normal;
                 text.overflowMode = TextOverflowModes.Overflow;
@@ -284,7 +284,7 @@ namespace StorageNetwork.UI
             string elementName = element != null ? element.name : geyser.configuration.GetElement().CreateTag().ProperName();
             return string.Format(
                 Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_OUTPUT),
-                StripKleiLinkFormatting(elementName),
+                StorageNetworkTextFormatting.StripKleiLinkFormatting(elementName),
                 GameUtil.GetFormattedMass(geyser.configuration.GetAverageEmission(), GameUtil.TimeSlice.PerSecond, GameUtil.MetricMassFormat.UseThreshold, true, "{0:0.#}"));
         }
 

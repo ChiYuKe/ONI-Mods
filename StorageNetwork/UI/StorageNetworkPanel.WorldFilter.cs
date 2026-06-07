@@ -241,7 +241,7 @@ namespace StorageNetwork.UI
                 string name = world.GetProperName();
                 if (!string.IsNullOrEmpty(name))
                 {
-                    return StripKleiLinkFormatting(name);
+                    return StorageNetworkTextFormatting.StripKleiLinkFormatting(name);
                 }
             }
 
@@ -272,9 +272,5 @@ namespace StorageNetwork.UI
             return StorageNetworkWorldUtility.GetObjectWorldId(gameObject);
         }
 
-        private static string StripKleiLinkFormatting(string text)
-        {
-            return StorageNetworkTextFormatting.StripKleiLinkFormatting(text);
-        }
     }
 }

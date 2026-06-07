@@ -670,7 +670,7 @@ namespace StorageNetwork.UI
                 string worldName = world.GetProperName();
                 if (!string.IsNullOrEmpty(worldName))
                 {
-                    return StripKleiLinkFormatting(worldName);
+                    return StorageNetworkTextFormatting.StripKleiLinkFormatting(worldName);
                 }
             }
 
@@ -780,7 +780,7 @@ namespace StorageNetwork.UI
             string key = "STRINGS.UI.BUILDCATEGORIES." + categoryKey.ToUpperInvariant() + ".NAME";
             if (Strings.TryGet(key, out StringEntry entry) && entry != null && !string.IsNullOrEmpty(entry.String))
             {
-                return StripKleiLinkFormatting(entry.String);
+                return StorageNetworkTextFormatting.StripKleiLinkFormatting(entry.String);
             }
 
             return categoryKey;
@@ -798,7 +798,7 @@ namespace StorageNetwork.UI
             string elementName = element != null ? element.name : geyser.configuration.GetElement().CreateTag().ProperName();
             return string.Format(
                 Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENROLLABLE_GEYSER_OUTPUT),
-                StripKleiLinkFormatting(elementName),
+                StorageNetworkTextFormatting.StripKleiLinkFormatting(elementName),
                 GameUtil.GetFormattedMass(geyser.configuration.GetAverageEmission(), GameUtil.TimeSlice.PerSecond, GameUtil.MetricMassFormat.UseThreshold, true, "{0:0.#}"));
         }
 

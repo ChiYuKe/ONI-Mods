@@ -267,7 +267,7 @@ namespace StorageNetwork.UI
 
             Element element = ElementLoader.FindElementByHash(geyser.configuration.GetElement());
             string elementName = element != null ? element.name : geyser.configuration.GetElement().CreateTag().ProperName();
-            return StripKleiLinkFormatting(elementName);
+            return StorageNetworkTextFormatting.StripKleiLinkFormatting(elementName);
         }
 
         private static string GetGeyserAverageRate(Geyser geyser)
