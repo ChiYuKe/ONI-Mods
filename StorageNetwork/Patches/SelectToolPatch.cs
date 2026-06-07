@@ -3,7 +3,6 @@ using System.Linq;
 using System.Reflection;
 using HarmonyLib;
 using StorageNetwork.UI;
-using UnityEngine;
 
 namespace StorageNetwork.Patches
 {
@@ -18,18 +17,7 @@ namespace StorageNetwork.Patches
 
         public static void Postfix()
         {
-            if (!IsShiftLeftClick())
-            {
-                return;
-            }
-
-            StorageNetworkWorldTextPanel.HandleSelectionClick();
-        }
-
-        private static bool IsShiftLeftClick()
-        {
-            return (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) &&
-                   (Input.GetMouseButton(0) || Input.GetMouseButtonDown(0) || Input.GetMouseButtonUp(0));
+            StorageNetworkSelectionInputHandler.HandleSelectToolPostfix();
         }
     }
 }
