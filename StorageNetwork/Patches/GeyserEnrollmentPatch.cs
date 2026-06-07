@@ -1,5 +1,5 @@
 using HarmonyLib;
-using StorageNetwork.Components;
+using StorageNetwork.Gameplay;
 using UnityEngine;
 
 namespace StorageNetwork.Patches
@@ -26,7 +26,7 @@ namespace StorageNetwork.Patches
         {
             public static void Postfix(GameObject __result)
             {
-                AddGeyserEnrollment(__result);
+                StorageNetworkEnrollmentInstaller.AddGeyserEnrollment(__result);
             }
         }
 
@@ -35,25 +35,8 @@ namespace StorageNetwork.Patches
         {
             public static void Postfix()
             {
-                foreach (Geyser geyser in Object.FindObjectsByType<Geyser>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
-                {
-                    if (geyser != null)
-                    {
-                        AddGeyserEnrollment(geyser.gameObject);
-                    }
-                }
+                StorageNetworkEnrollmentInstaller.RefreshGeyserInstances();
             }
-        }
-
-        private static void AddGeyserEnrollment(GameObject go)
-        {
-            if (go == null || go.GetComponent<Geyser>() == null)
-            {
-                return;
-            }
-
-            go.AddOrGet<StorageNetworkEnrollment>();
-            go.AddOrGet<StorageNetworkGeyserOutput>();
         }
     }
 }

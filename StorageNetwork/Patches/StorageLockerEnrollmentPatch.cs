@@ -1,7 +1,5 @@
 using HarmonyLib;
-using StorageNetwork.API;
-using StorageNetwork.Components;
-using UnityEngine;
+using StorageNetwork.Gameplay;
 
 namespace StorageNetwork.Patches
 {
@@ -12,7 +10,7 @@ namespace StorageNetwork.Patches
         {
             public static void Postfix(UnityEngine.GameObject go)
             {
-                go.AddOrGet<StorageNetworkEnrollment>();
+                StorageNetworkEnrollmentInstaller.AddStorageLockerEnrollment(go);
             }
         }
 
@@ -21,7 +19,7 @@ namespace StorageNetwork.Patches
         {
             public static void Postfix(UnityEngine.GameObject go)
             {
-                AddPlainStorageEnrollment(go);
+                StorageNetworkEnrollmentInstaller.AddPlainStorageEnrollment(go);
             }
         }
 
@@ -30,7 +28,7 @@ namespace StorageNetwork.Patches
         {
             public static void Postfix(UnityEngine.GameObject go)
             {
-                AddPlainStorageEnrollment(go);
+                StorageNetworkEnrollmentInstaller.AddPlainStorageEnrollment(go);
             }
         }
 
@@ -39,7 +37,7 @@ namespace StorageNetwork.Patches
         {
             public static void Postfix(UnityEngine.GameObject go)
             {
-                AddPlainStorageEnrollment(go);
+                StorageNetworkEnrollmentInstaller.AddPlainStorageEnrollment(go);
             }
         }
 
@@ -48,45 +46,8 @@ namespace StorageNetwork.Patches
         {
             public static void Postfix()
             {
-                foreach (Refrigerator refrigerator in Object.FindObjectsByType<Refrigerator>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
-                {
-                    if (refrigerator == null)
-                    {
-                        continue;
-                    }
-
-                    GameObject go = refrigerator.gameObject;
-                    AddPlainStorageEnrollment(go);
-                }
-
-                foreach (Reservoir reservoir in Object.FindObjectsByType<Reservoir>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
-                {
-                    if (reservoir == null)
-                    {
-                        continue;
-                    }
-
-                    AddPlainStorageEnrollment(reservoir.gameObject);
-                }
+                StorageNetworkEnrollmentInstaller.RefreshPlainStorageInstances();
             }
         }
-
-        private static void AddPlainStorageEnrollment(UnityEngine.GameObject go)
-        {
-            if (go == null)
-            {
-                return;
-            }
-
-            go.AddOrGet<StorageNetworkEnrollment>();
-            if (go.GetComponent<Reservoir>() != null)
-            {
-                go.AddOrGet<UserNameable>();
-            }
-
-            KPrefabID prefabId = go.GetComponent<KPrefabID>();
-            prefabId?.RemoveTag(StorageNetworkTags.ShowSettingsButton);
-        }
-
     }
 }
