@@ -516,7 +516,7 @@ namespace StorageNetwork.UI
             StorageNetworkPanelHealthMetrics metrics = StorageNetworkPanelHealthMetrics.Create(
                 currentSnapshot,
                 productionOrderService.Orders,
-                IsOfflineNetworkServer);
+                StorageNetworkStorageRules.IsOfflineNetworkServer);
 
             AddHealthTile(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.HEALTH_CAPACITY), string.Format("{0:P0}", Mathf.Clamp01(metrics.FillRatio)), metrics.FillRatio >= 0.92f ? DangerColor() : metrics.FillRatio >= 0.80f ? WarningColor() : PositiveColor());
             AddHealthTile(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.HEALTH_REMAINING), GameUtil.GetFormattedMass(metrics.RemainingCapacityKg), metrics.RemainingCapacityKg <= 1000f ? WarningColor() : NeutralBlue());
@@ -746,7 +746,7 @@ namespace StorageNetwork.UI
                 instance != null ? instance.mainSearchText : string.Empty,
                 GetStorageTypeKey,
                 GetStoredItemKey,
-                IsOfflineNetworkServer);
+                StorageNetworkStorageRules.IsOfflineNetworkServer);
         }
 
         private void RebuildLayout()

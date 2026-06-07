@@ -32,6 +32,24 @@ namespace StorageNetwork.Core
         }
 
         /// <summary>
+        /// 判断储存网络服务器是否离线。普通储存不属于服务器，始终不会被视为离线服务器。
+        /// </summary>
+        public static bool IsOfflineNetworkServer(StorageInfo storageInfo)
+        {
+            return storageInfo?.Storage != null && IsOfflineNetworkServer(storageInfo.Storage);
+        }
+
+        /// <summary>
+        /// 判断储存网络服务器是否离线。普通储存不属于服务器，始终不会被视为离线服务器。
+        /// </summary>
+        public static bool IsOfflineNetworkServer(Storage storage)
+        {
+            return storage != null &&
+                   HasModStorageTag(storage) &&
+                   !IsModStorageOnline(storage);
+        }
+
+        /// <summary>
         /// 判断 Storage 是否能参与网络容量、来源和目标计算。断电的服务器会被显示，但不会接入网络。
         /// </summary>
         public static bool IsConnectedNetworkStorage(Storage storage)

@@ -30,7 +30,7 @@ namespace StorageNetwork.UI
             bool expanded = expandedStorageTypes.TryGetValue(typeKey, out bool isExpanded) && isExpanded;
             bool isGeyserGroup = storages[0].Geyser != null;
             bool isMinionGroup = storages[0].Minion != null;
-            int offlineServerCount = storages.Count(IsOfflineNetworkServer);
+            int offlineServerCount = storages.Count(StorageNetworkStorageRules.IsOfflineNetworkServer);
             float storedKg = storages.Sum(storage => storage.StoredKg);
             float capacityKg = storages.Sum(storage => storage.CapacityKg);
             float percent = capacityKg > 0f ? storedKg / capacityKg : 0f;
@@ -110,7 +110,7 @@ namespace StorageNetwork.UI
             string sourceModName = StorageNetworkStorageRules.HasModStorageTag(storage)
                 ? StorageNetworkModInfoResolver.GetSourceModName(storage)
                 : null;
-            bool serverOffline = IsOfflineNetworkServer(storageInfo);
+            bool serverOffline = StorageNetworkStorageRules.IsOfflineNetworkServer(storageInfo);
             string amountText = serverOffline
                 ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SERVER_OFFLINE)
                 : string.Format("{0} / {1}  {2}%",
@@ -197,18 +197,6 @@ namespace StorageNetwork.UI
             ContentSizeFitter fitter = details.AddComponent<ContentSizeFitter>();
             fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
             row.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-        }
-
-        private static bool IsOfflineNetworkServer(StorageInfo storageInfo)
-        {
-            return storageInfo?.Storage != null && IsOfflineNetworkServer(storageInfo.Storage);
-        }
-
-        private static bool IsOfflineNetworkServer(Storage storage)
-        {
-            return storage != null &&
-                   StorageNetworkStorageRules.HasModStorageTag(storage) &&
-                   !StorageNetworkStorageRules.IsModStorageOnline(storage);
         }
 
         private void CreateGeyserRow(StorageInfo storageInfo, Transform parent)
