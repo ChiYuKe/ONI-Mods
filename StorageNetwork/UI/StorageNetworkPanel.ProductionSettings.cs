@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using StorageNetwork.Components;
 using StorageNetwork.Core;
+using StorageNetwork.Gameplay;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -128,7 +129,7 @@ namespace StorageNetwork.UI
             SetProductionSettingsTitle(storage);
             KeepProductionSettingsPanelOnScreen();
             StorageNetworkMaterialRequester requester = storage.GetComponent<StorageNetworkMaterialRequester>();
-            StorageNetworkStorageConnector connector = GetStorageConnector(storage);
+            StorageNetworkStorageConnector connector = StorageNetworkStorageConnectorResolver.GetOrCreateForSettingsStorage(storage);
             StorageNetworkEnergyGeneratorRequester energyRequester = storage.GetComponent<StorageNetworkEnergyGeneratorRequester>();
             AddProductionOverviewCard(storage, fabricator, requester, connector, energyRequester);
             if (requester != null)
@@ -170,7 +171,7 @@ namespace StorageNetwork.UI
 
             SetProductionSettingsTitle(storage);
             StorageNetworkMaterialRequester requester = storage.GetComponent<StorageNetworkMaterialRequester>();
-            StorageNetworkStorageConnector connector = GetStorageConnector(storage);
+            StorageNetworkStorageConnector connector = StorageNetworkStorageConnectorResolver.GetOrCreateForSettingsStorage(storage);
             StorageNetworkEnergyGeneratorRequester energyRequester = storage.GetComponent<StorageNetworkEnergyGeneratorRequester>();
             UpdateProductionOverviewCard(storage, fabricator, requester, connector, energyRequester);
             UpdateProductionAutomationCards(requester, connector, energyRequester);
@@ -1327,16 +1328,6 @@ namespace StorageNetwork.UI
         private static List<Storage> GetNetworkStorageTargets(Storage ownerStorage)
         {
             return StorageNetworkStorageRules.GetNetworkStorageTargets(ownerStorage);
-        }
-
-        private static StorageNetworkStorageConnector GetStorageConnector(Storage storage)
-        {
-            if (storage == null || !StorageNetworkStorageRules.HasSettingsButtonTag(storage))
-            {
-                return null;
-            }
-
-            return storage.GetComponent<StorageNetworkStorageConnector>() ?? storage.gameObject.AddOrGet<StorageNetworkStorageConnector>();
         }
 
         private void ShowMaterialRequestSourceSelection(Storage ownerStorage, StorageNetworkMaterialRequester requester)
