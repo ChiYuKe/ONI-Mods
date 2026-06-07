@@ -8,6 +8,7 @@ namespace StorageNetwork.UI
     internal sealed class StorageNetworkInputFieldEvents : KScreen
     {
         private TMP_InputField input;
+        private bool listenersRegistered;
 
         public void Configure(TMP_InputField inputField)
         {
@@ -22,7 +23,18 @@ namespace StorageNetwork.UI
         protected override void OnSpawn()
         {
             base.OnSpawn();
-            if (input == null)
+            RegisterInputListeners();
+        }
+
+        protected override void OnCleanUp()
+        {
+            UnregisterInputListeners();
+            base.OnCleanUp();
+        }
+
+        private void RegisterInputListeners()
+        {
+            if (input == null || listenersRegistered)
             {
                 return;
             }
@@ -30,18 +42,20 @@ namespace StorageNetwork.UI
             input.onFocus = (System.Action)System.Delegate.Combine(input.onFocus, new System.Action(OnFocus));
             input.onValueChanged.AddListener(OnValueChanged);
             input.onEndEdit.AddListener(OnEndEdit);
+            listenersRegistered = true;
         }
 
-        protected override void OnCleanUp()
+        private void UnregisterInputListeners()
         {
-            if (input != null)
+            if (input == null || !listenersRegistered)
             {
-                input.onFocus = (System.Action)System.Delegate.Remove(input.onFocus, new System.Action(OnFocus));
-                input.onValueChanged.RemoveListener(OnValueChanged);
-                input.onEndEdit.RemoveListener(OnEndEdit);
+                return;
             }
 
-            base.OnCleanUp();
+            input.onFocus = (System.Action)System.Delegate.Remove(input.onFocus, new System.Action(OnFocus));
+            input.onValueChanged.RemoveListener(OnValueChanged);
+            input.onEndEdit.RemoveListener(OnEndEdit);
+            listenersRegistered = false;
         }
 
         public override float GetSortKey()
