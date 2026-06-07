@@ -28,7 +28,7 @@ namespace StorageNetwork.UI
             }
 
             List<StorageInfo> storages = snapshot.Storages
-                .Where(info => info != null && StorageNetworkWorldDisplay.IsWorldDiscovered(GetObjectWorldId(info.GameObject)))
+                .Where(info => info != null && StorageNetworkWorldDisplay.IsWorldDiscovered(StorageNetworkWorldUtility.GetObjectWorldId(info.GameObject)))
                 .ToList();
             float totalStoredKg = 0f;
             float totalCapacityKg = 0f;
@@ -217,7 +217,7 @@ namespace StorageNetwork.UI
             {
                 if (storage != null)
                 {
-                    int worldId = GetObjectWorldId(storage.gameObject);
+                    int worldId = StorageNetworkWorldUtility.GetObjectWorldId(storage.gameObject);
                     if (StorageNetworkWorldDisplay.IsWorldDiscovered(worldId))
                     {
                         worldIds.Add(worldId);
@@ -231,11 +231,6 @@ namespace StorageNetwork.UI
         private static int GetActiveWorldFilterId()
         {
             return ClusterManager.Instance != null ? ClusterManager.Instance.activeWorldId : UnsetEnrollableWorldFilterId;
-        }
-
-        private static int GetObjectWorldId(GameObject gameObject)
-        {
-            return StorageNetworkWorldUtility.GetObjectWorldId(gameObject);
         }
 
     }
