@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using StorageNetwork.Services;
 using UnityEngine;
 
 namespace StorageNetwork.Core
@@ -110,32 +111,8 @@ namespace StorageNetwork.Core
 
         private static IReadOnlyList<Storage> GetContentStorages(Storage storage)
         {
-            HashSet<Storage> storages = new HashSet<Storage>();
-            AddStorage(storages, storage);
-
-            ComplexFabricator fabricator = storage.GetComponent<ComplexFabricator>();
-            if (fabricator != null)
-            {
-                AddStorage(storages, fabricator.inStorage);
-                AddStorage(storages, fabricator.buildStorage);
-                AddStorage(storages, fabricator.outStorage);
-            }
-
-            List<Storage> result = new List<Storage>(storages.Count);
-            foreach (Storage contentStorage in storages)
-            {
-                result.Add(contentStorage);
-            }
-
-            return result;
-        }
-
-        private static void AddStorage(HashSet<Storage> storages, Storage storage)
-        {
-            if (storage != null)
-            {
-                storages.Add(storage);
-            }
+            ComplexFabricator fabricator = storage != null ? storage.GetComponent<ComplexFabricator>() : null;
+            return new List<Storage>(StorageNetworkProductionStorageCollector.GetProductionStorages(storage, fabricator));
         }
     }
 }
