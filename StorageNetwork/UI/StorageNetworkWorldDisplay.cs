@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace StorageNetwork.UI
 {
-    internal static class StorageNetworkWorldText
+    internal static class StorageNetworkWorldDisplay
     {
         public static string GetWorldName(int worldId)
         {

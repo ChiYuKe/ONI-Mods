@@ -28,7 +28,7 @@ namespace StorageNetwork.UI
             }
 
             List<StorageInfo> storages = snapshot.Storages
-                .Where(info => info != null && StorageNetworkWorldText.IsWorldDiscovered(GetObjectWorldId(info.GameObject)))
+                .Where(info => info != null && StorageNetworkWorldDisplay.IsWorldDiscovered(GetObjectWorldId(info.GameObject)))
                 .ToList();
             float totalStoredKg = 0f;
             float totalCapacityKg = 0f;
@@ -138,7 +138,7 @@ namespace StorageNetwork.UI
             CreateMainWorldDropdownOption(content.transform, AllEnrollableWorldsFilterId, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENROLLABLE_WORLD_ALL));
             foreach (int worldId in worldIds)
             {
-                CreateMainWorldDropdownOption(content.transform, worldId, StorageNetworkWorldText.GetWorldName(worldId));
+                CreateMainWorldDropdownOption(content.transform, worldId, StorageNetworkWorldDisplay.GetWorldName(worldId));
             }
 
             ScrollRect scrollRect = viewport.AddComponent<ScrollRect>();
@@ -182,7 +182,7 @@ namespace StorageNetwork.UI
         {
             return mainWorldFilterId == AllEnrollableWorldsFilterId
                 ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENROLLABLE_WORLD_ALL)
-                : StorageNetworkWorldText.GetWorldName(mainWorldFilterId);
+                : StorageNetworkWorldDisplay.GetWorldName(mainWorldFilterId);
         }
 
         private void EnsureValidMainWorldFilter()
@@ -207,7 +207,7 @@ namespace StorageNetwork.UI
         {
             HashSet<int> worldIds = new HashSet<int>();
             int activeWorldId = GetActiveWorldFilterId();
-            if (StorageNetworkWorldText.IsWorldDiscovered(activeWorldId))
+            if (StorageNetworkWorldDisplay.IsWorldDiscovered(activeWorldId))
             {
                 worldIds.Add(activeWorldId);
             }
@@ -218,14 +218,14 @@ namespace StorageNetwork.UI
                 if (storage != null)
                 {
                     int worldId = GetObjectWorldId(storage.gameObject);
-                    if (StorageNetworkWorldText.IsWorldDiscovered(worldId))
+                    if (StorageNetworkWorldDisplay.IsWorldDiscovered(worldId))
                     {
                         worldIds.Add(worldId);
                     }
                 }
             }
 
-            return worldIds.OrderBy(StorageNetworkWorldText.GetWorldName).ToList();
+            return worldIds.OrderBy(StorageNetworkWorldDisplay.GetWorldName).ToList();
         }
 
         private static int GetActiveWorldFilterId()
