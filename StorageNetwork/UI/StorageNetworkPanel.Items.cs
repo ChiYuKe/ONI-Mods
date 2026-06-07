@@ -243,7 +243,7 @@ namespace StorageNetwork.UI
                 return true;
             }
 
-            if (storageInfo.Geyser != null && StorageNetworkTextFormatting.ContainsSearchText(GetGeyserDetails(storageInfo.Geyser), query))
+            if (storageInfo.Geyser != null && StorageNetworkTextFormatting.ContainsSearchText(StorageNetworkGeyserText.GetStorageListDetails(storageInfo.Geyser), query))
             {
                 return true;
             }

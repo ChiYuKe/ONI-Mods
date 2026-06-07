@@ -212,7 +212,7 @@ namespace StorageNetwork.UI
             GameObject row = CreateBox("GeyserRow", parent, new Color(0.88f, 0.87f, 0.82f, 1f));
             AddVerticalContainer(row, 0f, 0, 0, 0, 0);
 
-            string details = GetGeyserDetails(geyser);
+            string details = StorageNetworkGeyserText.GetStorageListDetails(geyser);
             bool erupting = IsGeyserErupting(geyser);
             CreateFoldoutHeader(
                 row.transform,
@@ -271,21 +271,6 @@ namespace StorageNetwork.UI
             }
 
             details.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-        }
-
-        private static string GetGeyserDetails(Geyser geyser)
-        {
-            if (geyser == null || geyser.configuration == null)
-            {
-                return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_ANALYZED);
-            }
-
-            Element element = ElementLoader.FindElementByHash(geyser.configuration.GetElement());
-            string elementName = element != null ? element.name : geyser.configuration.GetElement().CreateTag().ProperName();
-            return string.Format(
-                Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_OUTPUT),
-                StorageNetworkTextFormatting.StripKleiLinkFormatting(elementName),
-                GameUtil.GetFormattedMass(geyser.configuration.GetAverageEmission(), GameUtil.TimeSlice.PerSecond, GameUtil.MetricMassFormat.UseThreshold, true, "{0:0.#}"));
         }
 
         private void CreateInfoRow(string title, string details)

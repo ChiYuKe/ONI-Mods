@@ -492,7 +492,7 @@ namespace StorageNetwork.UI
             return StorageNetworkTextFormatting.ContainsSearchText(enrollment.gameObject.GetProperName(), query) ||
                    StorageNetworkTextFormatting.ContainsSearchText(GetBuildingWorldName(enrollment.gameObject), query) ||
                    StorageNetworkTextFormatting.ContainsSearchText(GetPlanCategoryName(StorageNetworkPlanCategoryOrder.GetCategoryKey(enrollment)), query) ||
-                   StorageNetworkTextFormatting.ContainsSearchText(GetGeyserEnrollmentDetails(enrollment), query);
+                   StorageNetworkTextFormatting.ContainsSearchText(StorageNetworkGeyserText.GetEnrollmentDetails(enrollment), query);
         }
 
         private void EnsureValidEnrollableWorldFilter(List<StorageNetworkEnrollment> enrollments)
@@ -585,7 +585,7 @@ namespace StorageNetwork.UI
                 row.transform,
                 storage != null
                     ? string.Format("{0} / {1}", GameUtil.GetFormattedMass(storage.MassStored()), GameUtil.GetFormattedMass(storage.Capacity()))
-                    : GetGeyserEnrollmentDetails(enrollment),
+                    : StorageNetworkGeyserText.GetEnrollmentDetails(enrollment),
                 11,
                 TextAlignmentOptions.MidlineRight);
             capacity.color = new Color(0.28f, 0.29f, 0.29f, 1f);
@@ -784,22 +784,6 @@ namespace StorageNetwork.UI
             }
 
             return categoryKey;
-        }
-
-        private static string GetGeyserEnrollmentDetails(StorageNetworkEnrollment enrollment)
-        {
-            Geyser geyser = enrollment != null ? enrollment.GetComponent<Geyser>() : null;
-            if (geyser == null || geyser.configuration == null)
-            {
-                return string.Empty;
-            }
-
-            Element element = ElementLoader.FindElementByHash(geyser.configuration.GetElement());
-            string elementName = element != null ? element.name : geyser.configuration.GetElement().CreateTag().ProperName();
-            return string.Format(
-                Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENROLLABLE_GEYSER_OUTPUT),
-                StorageNetworkTextFormatting.StripKleiLinkFormatting(elementName),
-                GameUtil.GetFormattedMass(geyser.configuration.GetAverageEmission(), GameUtil.TimeSlice.PerSecond, GameUtil.MetricMassFormat.UseThreshold, true, "{0:0.#}"));
         }
 
     }

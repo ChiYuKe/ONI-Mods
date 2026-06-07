@@ -107,7 +107,7 @@ namespace StorageNetwork.UI
                 .FirstOrDefault(text => text.name == "ProductionSettingsTitle");
             if (title != null)
             {
-                title.text = geyser.GetProperName() + "\n" + GetGeyserDetails(geyser);
+                title.text = geyser.GetProperName() + "\n" + StorageNetworkGeyserText.GetStorageListDetails(geyser);
             }
         }
 
@@ -133,8 +133,8 @@ namespace StorageNetwork.UI
             layout.childForceExpandWidth = true;
             layout.childForceExpandHeight = true;
 
-            CreateMetricTile(metrics.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_METRIC_OUTPUT), GetGeyserElementName(geyser), new Color(0.35f, 0.40f, 0.43f, 1f));
-            CreateMetricTile(metrics.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_METRIC_RATE), GetGeyserAverageRate(geyser), new Color(0.35f, 0.40f, 0.43f, 1f));
+            CreateMetricTile(metrics.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_METRIC_OUTPUT), StorageNetworkGeyserText.GetElementName(geyser), new Color(0.35f, 0.40f, 0.43f, 1f));
+            CreateMetricTile(metrics.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_METRIC_RATE), StorageNetworkGeyserText.GetAverageRate(geyser), new Color(0.35f, 0.40f, 0.43f, 1f));
             CreateMetricTile(metrics.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_METRIC_NETWORK), enrollment.IncludedInSceneNetwork ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_AUTO_STATUS) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_MANUAL_STATUS), enrollment.IncludedInSceneNetwork ? new Color(0.28f, 0.48f, 0.34f, 1f) : new Color(0.50f, 0.42f, 0.34f, 1f));
             CreateMetricTile(metrics.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_METRIC_DIRECT_OUTPUT), enrollment.DirectGeyserOutputToNetwork ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STATUS_ENABLED) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STATUS_DISABLED), enrollment.DirectGeyserOutputToNetwork ? new Color(0.28f, 0.48f, 0.34f, 1f) : new Color(0.50f, 0.42f, 0.34f, 1f));
         }
@@ -246,35 +246,16 @@ namespace StorageNetwork.UI
             icon.preserveAspect = true;
             SetGeyserElementIcon(icon, geyser);
 
-            TextMeshProUGUI name = CreateText("Name", row.transform, GetGeyserElementName(geyser), 11, TextAlignmentOptions.MidlineLeft);
+            TextMeshProUGUI name = CreateText("Name", row.transform, StorageNetworkGeyserText.GetElementName(geyser), 11, TextAlignmentOptions.MidlineLeft);
             name.color = new Color(0.18f, 0.19f, 0.19f, 1f);
             name.textWrappingMode = TextWrappingModes.NoWrap;
             name.overflowMode = TextOverflowModes.Ellipsis;
             name.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
 
-            TextMeshProUGUI mass = CreateText("Rate", row.transform, GetGeyserAverageRate(geyser), 11, TextAlignmentOptions.MidlineRight);
+            TextMeshProUGUI mass = CreateText("Rate", row.transform, StorageNetworkGeyserText.GetAverageRate(geyser), 11, TextAlignmentOptions.MidlineRight);
             mass.color = new Color(0.28f, 0.29f, 0.29f, 1f);
             mass.textWrappingMode = TextWrappingModes.NoWrap;
             mass.gameObject.AddComponent<LayoutElement>().preferredWidth = 120f;
-        }
-
-        private static string GetGeyserElementName(Geyser geyser)
-        {
-            if (geyser == null || geyser.configuration == null)
-            {
-                return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_UNKNOWN);
-            }
-
-            Element element = ElementLoader.FindElementByHash(geyser.configuration.GetElement());
-            string elementName = element != null ? element.name : geyser.configuration.GetElement().CreateTag().ProperName();
-            return StorageNetworkTextFormatting.StripKleiLinkFormatting(elementName);
-        }
-
-        private static string GetGeyserAverageRate(Geyser geyser)
-        {
-            return geyser != null && geyser.configuration != null
-                ? GameUtil.GetFormattedMass(geyser.configuration.GetAverageEmission(), GameUtil.TimeSlice.PerSecond, GameUtil.MetricMassFormat.UseThreshold, true, "{0:0.#}")
-                : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_UNKNOWN);
         }
 
         private static string GetGeyserOutputStoreModeName(StorageNetworkEnrollment enrollment)
