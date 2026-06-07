@@ -80,6 +80,32 @@ namespace StorageNetwork.Core
         }
 
         /// <summary>
+        /// 判断建筑是否启用了任意储存网络自动化入口或出口。
+        /// </summary>
+        public static bool IsNetworkAutomationEnabled(
+            StorageNetworkMaterialRequester requester,
+            StorageNetworkStorageConnector connector,
+            StorageNetworkEnergyGeneratorRequester energyRequester)
+        {
+            if (requester != null)
+            {
+                return requester.RequestEnabled || requester.OutputStoreEnabled;
+            }
+
+            if (connector != null)
+            {
+                return connector.OutputStoreEnabled;
+            }
+
+            if (energyRequester != null)
+            {
+                return energyRequester.RequestEnabled;
+            }
+
+            return false;
+        }
+
+        /// <summary>
         /// 判断 Storage 是否能作为自动入网目标。
         /// </summary>
         public static bool IsNetworkStorageTarget(Storage storage, Storage ownerStorage = null)

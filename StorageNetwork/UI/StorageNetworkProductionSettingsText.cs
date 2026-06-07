@@ -1,4 +1,5 @@
 using StorageNetwork.Components;
+using StorageNetwork.Core;
 using UnityEngine;
 using static StorageNetwork.STRINGS;
 
@@ -122,22 +123,7 @@ namespace StorageNetwork.UI
             StorageNetworkStorageConnector connector,
             StorageNetworkEnergyGeneratorRequester energyRequester)
         {
-            if (requester != null)
-            {
-                return requester.RequestEnabled || requester.OutputStoreEnabled;
-            }
-
-            if (connector != null)
-            {
-                return connector.OutputStoreEnabled;
-            }
-
-            if (energyRequester != null)
-            {
-                return energyRequester.RequestEnabled;
-            }
-
-            return false;
+            return StorageNetworkStorageRules.IsNetworkAutomationEnabled(requester, connector, energyRequester);
         }
 
         public static string GetEnergyGeneratorFuelText(EnergyGenerator generator)
