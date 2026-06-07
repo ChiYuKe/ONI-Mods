@@ -11,26 +11,6 @@ namespace StorageNetwork.UI
 {
     public sealed partial class StorageNetworkPanel : KScreen, IInputHandler
     {
-        private static readonly string[] PlanCategoryIds =
-        {
-            "Geyser",
-            "Base",
-            "Oxygen",
-            "Power",
-            "Food",
-            "Plumbing",
-            "HVAC",
-            "Refining",
-            "Medical",
-            "Furniture",
-            "Equipment",
-            "Utilities",
-            "Automation",
-            "Conveyance",
-            "Rocketry",
-            "HEP"
-        };
-
         private const int AllEnrollableWorldsFilterId = -1;
         private const int UnsetEnrollableWorldFilterId = -2;
 
@@ -75,8 +55,8 @@ namespace StorageNetwork.UI
             else
             {
                 foreach (IGrouping<string, StorageNetworkEnrollment> categoryGroup in filteredEnrollments
-                    .GroupBy(GetPlanCategoryKey)
-                    .OrderBy(group => GetPlanCategorySortOrder(group.Key))
+                    .GroupBy(StorageNetworkPlanCategoryOrder.GetCategoryKey)
+                    .OrderBy(group => StorageNetworkPlanCategoryOrder.GetSortOrder(group.Key))
                     .ThenBy(group => GetPlanCategoryName(group.Key)))
                 {
                     List<StorageNetworkEnrollment> categoryEnrollments = categoryGroup
@@ -511,7 +491,7 @@ namespace StorageNetwork.UI
 
             return ContainsSearchText(enrollment.gameObject.GetProperName(), query) ||
                    ContainsSearchText(GetBuildingWorldName(enrollment.gameObject), query) ||
-                   ContainsSearchText(GetPlanCategoryName(GetPlanCategoryKey(enrollment)), query) ||
+                   ContainsSearchText(GetPlanCategoryName(StorageNetworkPlanCategoryOrder.GetCategoryKey(enrollment)), query) ||
                    ContainsSearchText(GetGeyserEnrollmentDetails(enrollment), query);
         }
 
@@ -682,32 +662,6 @@ namespace StorageNetwork.UI
             countText.gameObject.AddComponent<LayoutElement>().preferredWidth = 90f;
         }
 
-        private static string GetPlanCategoryKey(StorageNetworkEnrollment enrollment)
-        {
-            if (enrollment != null && enrollment.IsGeyser())
-            {
-                return "Geyser";
-            }
-
-            KPrefabID prefabId = enrollment != null ? enrollment.GetComponent<KPrefabID>() : null;
-            string buildingId = prefabId != null ? prefabId.PrefabID().ToString() : null;
-            if (string.IsNullOrEmpty(buildingId))
-            {
-                return "Other";
-            }
-
-            foreach (PlanScreen.PlanInfo planInfo in global::TUNING.BUILDINGS.PLANORDER)
-            {
-                if (planInfo.buildingAndSubcategoryData != null &&
-                    planInfo.buildingAndSubcategoryData.Any(entry => entry.Key == buildingId))
-                {
-                    return GetPlanCategoryId(planInfo);
-                }
-            }
-
-            return "Other";
-        }
-
         private static string GetBuildingWorldName(GameObject gameObject)
         {
             WorldContainer world = GetBuildingWorld(gameObject);
@@ -809,32 +763,6 @@ namespace StorageNetwork.UI
 
             worldId = Grid.WorldIdx[cell];
             return worldId != byte.MaxValue && worldId >= 0;
-        }
-
-        private static int GetPlanCategorySortOrder(string categoryKey)
-        {
-            for (int i = 0; i < PlanCategoryIds.Length; i++)
-            {
-                if (PlanCategoryIds[i] == categoryKey)
-                {
-                    return i;
-                }
-            }
-
-            return int.MaxValue;
-        }
-
-        private static string GetPlanCategoryId(PlanScreen.PlanInfo planInfo)
-        {
-            foreach (string categoryId in PlanCategoryIds)
-            {
-                if (planInfo.category == new HashedString(categoryId))
-                {
-                    return categoryId;
-                }
-            }
-
-            return "Other";
         }
 
         private static string GetPlanCategoryName(string categoryKey)
