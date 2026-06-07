@@ -490,7 +490,7 @@ namespace StorageNetwork.UI
             }
 
             return StorageNetworkTextFormatting.ContainsSearchText(enrollment.gameObject.GetProperName(), query) ||
-                   StorageNetworkTextFormatting.ContainsSearchText(GetBuildingWorldName(enrollment.gameObject), query) ||
+                   StorageNetworkTextFormatting.ContainsSearchText(StorageNetworkWorldDisplay.GetObjectWorldName(enrollment.gameObject), query) ||
                    StorageNetworkTextFormatting.ContainsSearchText(GetPlanCategoryName(StorageNetworkPlanCategoryOrder.GetCategoryKey(enrollment)), query) ||
                    StorageNetworkTextFormatting.ContainsSearchText(StorageNetworkGeyserText.GetEnrollmentDetails(enrollment), query);
         }
@@ -662,21 +662,6 @@ namespace StorageNetwork.UI
             countText.gameObject.AddComponent<LayoutElement>().preferredWidth = 90f;
         }
 
-        private static string GetBuildingWorldName(GameObject gameObject)
-        {
-            WorldContainer world = GetBuildingWorld(gameObject);
-            if (world != null)
-            {
-                string worldName = world.GetProperName();
-                if (!string.IsNullOrEmpty(worldName))
-                {
-                    return StorageNetworkTextFormatting.StripKleiLinkFormatting(worldName);
-                }
-            }
-
-            return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STARMAP_NAME_HINT);
-        }
-
         private static void CreateWorldCell(Transform parent, GameObject gameObject)
         {
             GameObject cell = new GameObject("WorldCell");
@@ -698,7 +683,7 @@ namespace StorageNetwork.UI
             TextMeshProUGUI world = CreateText(
                 "World",
                 cell.transform,
-                GetBuildingWorldName(gameObject),
+                StorageNetworkWorldDisplay.GetObjectWorldName(gameObject),
                 11,
                 TextAlignmentOptions.MidlineLeft);
             world.color = new Color(0.30f, 0.34f, 0.34f, 1f);
@@ -721,16 +706,6 @@ namespace StorageNetwork.UI
             image.preserveAspect = true;
             image.sprite = StorageNetworkWorldDisplay.GetObjectWorldSprite(gameObject);
             image.color = image.sprite != null ? Color.white : Color.clear;
-        }
-
-        private static WorldContainer GetBuildingWorld(GameObject gameObject)
-        {
-            if (TryGetBuildingWorldId(gameObject, out int worldId) && ClusterManager.Instance != null)
-            {
-                return ClusterManager.Instance.GetWorld(worldId);
-            }
-
-            return null;
         }
 
         private static bool TryGetBuildingWorldId(GameObject gameObject, out int worldId)

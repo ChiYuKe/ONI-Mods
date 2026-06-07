@@ -44,5 +44,10 @@ namespace StorageNetwork.UI
         {
             return GetWorldSprite(StorageNetworkWorldUtility.GetObjectWorldId(gameObject));
         }
+
+        public static string GetObjectWorldName(GameObject gameObject)
+        {
+            return GetWorldName(StorageNetworkWorldUtility.GetObjectWorldId(gameObject));
+        }
     }
 }
