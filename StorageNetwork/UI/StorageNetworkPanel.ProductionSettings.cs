@@ -98,7 +98,7 @@ namespace StorageNetwork.UI
 
             if (productionSettingsMinion != null)
             {
-                string minionSignature = BuildMinionSettingsStructureSignature(productionSettingsMinion, storage);
+                string minionSignature = StorageNetworkProductionSettingsSignatureBuilder.BuildMinion(productionSettingsMinion, storage);
                 if (!force && minionSignature == productionSettingsSignature)
                 {
                     SetMinionSettingsTitle(productionSettingsMinion, storage);
@@ -116,7 +116,7 @@ namespace StorageNetwork.UI
             }
 
             ComplexFabricator fabricator = storage.GetComponent<ComplexFabricator>();
-            string signature = BuildProductionSettingsStructureSignature(storage, fabricator);
+            string signature = StorageNetworkProductionSettingsSignatureBuilder.BuildProduction(storage, fabricator);
             if (!force && signature == productionSettingsSignature)
             {
                 UpdateProductionSettingsLive(storage, fabricator);
@@ -159,55 +159,6 @@ namespace StorageNetwork.UI
             productionOverviewView = null;
             productionInventoryView = null;
             productionAutomationView = null;
-        }
-
-        private static string BuildProductionSettingsStructureSignature(Storage storage, ComplexFabricator fabricator)
-        {
-            StorageNetworkMaterialRequester requester = storage != null ? storage.GetComponent<StorageNetworkMaterialRequester>() : null;
-            StorageNetworkStorageConnector connector = storage != null ? storage.GetComponent<StorageNetworkStorageConnector>() : null;
-            StorageNetworkEnergyGeneratorRequester energyRequester = storage != null ? storage.GetComponent<StorageNetworkEnergyGeneratorRequester>() : null;
-            StorageNetworkEnrollment enrollment = storage != null ? storage.GetComponent<StorageNetworkEnrollment>() : null;
-            string itemSignature = string.Join("|", GetProductionStorages(storage, fabricator)
-                .SelectMany(itemStorage => itemStorage.items.Where(item => item != null))
-                .GroupBy(GetStoredItemKey)
-                .OrderBy(group => group.Key)
-                .Select(group => group.Key));
-
-            return string.Join(
-                "~",
-                storage != null ? storage.GetInstanceID().ToString() : "null",
-                requester != null && requester.RequestEnabled ? "req1" : "req0",
-                requester != null ? requester.Mode.ToString() : "0",
-                requester != null ? requester.SourceStorageInstanceId.ToString() : "0",
-                requester != null && requester.LimitEnabled ? "lim1" : "lim0",
-                requester != null && requester.OutputStoreEnabled ? "out1" : "out0",
-                requester != null ? requester.OutputStoreModeValue.ToString() : "0",
-                requester != null ? requester.OutputStorageInstanceId.ToString() : "0",
-                connector != null && connector.OutputStoreEnabled ? "conn1" : "conn0",
-                energyRequester != null && energyRequester.RequestEnabled ? "energyReq1" : "energyReq0",
-                energyRequester != null ? energyRequester.Mode.ToString() : "0",
-                energyRequester != null ? energyRequester.SourceStorageInstanceId.ToString() : "0",
-                energyRequester != null && energyRequester.LimitEnabled ? "energyLim1" : "energyLim0",
-                requester != null && !string.IsNullOrEmpty(requester.LastStatus) ? "matStatus1" : "matStatus0",
-                requester != null && !string.IsNullOrEmpty(requester.LastOutputStatus) ? "reqOutStatus1" : "reqOutStatus0",
-                connector != null && !string.IsNullOrEmpty(connector.LastOutputStatus) ? "connOutStatus1" : "connOutStatus0",
-                energyRequester != null && !string.IsNullOrEmpty(energyRequester.LastStatus) ? "energyStatus1" : "energyStatus0",
-                itemSignature);
-        }
-
-        private static string BuildMinionSettingsStructureSignature(MinionIdentity minion, Storage storage)
-        {
-            string itemSignature = string.Join("|", GetProductionStorages(storage, null)
-                .SelectMany(itemStorage => itemStorage.items.Where(item => item != null))
-                .GroupBy(GetStoredItemKey)
-                .OrderBy(group => group.Key)
-                .Select(group => group.Key));
-
-            return string.Join(
-                "~",
-                minion != null ? minion.GetInstanceID().ToString() : "null",
-                Config.Instance.IsMinionAllowedRequestMaterialsFromNetwork(minion) ? "allow1" : "allow0",
-                itemSignature);
         }
 
         private void UpdateProductionSettingsLive(Storage storage, ComplexFabricator fabricator)
