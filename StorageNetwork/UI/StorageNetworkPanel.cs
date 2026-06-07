@@ -616,35 +616,6 @@ namespace StorageNetwork.UI
             tile.transform.SetAsLastSibling();
         }
 
-        private static bool HasEnabledNetworkAutomation(StorageInfo info)
-        {
-            if (info?.GameObject == null)
-            {
-                return false;
-            }
-
-            StorageNetworkMaterialRequester requester = info.GameObject.GetComponent<StorageNetworkMaterialRequester>();
-            if (requester != null && (requester.RequestEnabled || requester.OutputStoreEnabled))
-            {
-                return true;
-            }
-
-            StorageNetworkStorageConnector connector = info.GameObject.GetComponent<StorageNetworkStorageConnector>();
-            if (connector != null && connector.OutputStoreEnabled)
-            {
-                return true;
-            }
-
-            StorageNetworkEnrollment enrollment = info.GameObject.GetComponent<StorageNetworkEnrollment>();
-            StorageNetworkEnergyGeneratorRequester energyRequester = info.GameObject.GetComponent<StorageNetworkEnergyGeneratorRequester>();
-            if (energyRequester != null && enrollment != null && enrollment.IncludedInSceneNetwork && energyRequester.RequestEnabled)
-            {
-                return true;
-            }
-
-            return enrollment != null && enrollment.DirectGeyserOutputToNetwork;
-        }
-
         private void RefreshEmptyStorageList(bool forceRebuild)
         {
             if (forceRebuild || string.IsNullOrEmpty(lastListSignature))
