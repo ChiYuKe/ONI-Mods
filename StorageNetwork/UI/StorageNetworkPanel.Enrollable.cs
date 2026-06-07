@@ -49,7 +49,7 @@ namespace StorageNetwork.UI
                 .ToList();
             EnsureValidEnrollableWorldFilter(enrollments);
 
-            string signature = BuildEnrollableWindowSignature(enrollments);
+            string signature = StorageNetworkEnrollableWindowSignature.Build(enrollments, enrollableWorldFilterId, enrollableSearchText);
             if (signature != enrollableWindowSignature)
             {
                 enrollableWindowSignature = signature;
@@ -90,26 +90,6 @@ namespace StorageNetwork.UI
                     }
                 }
             }
-        }
-
-        private static string BuildEnrollableWindowSignature(List<StorageNetworkEnrollment> enrollments)
-        {
-            string worldSignature = instance != null ? instance.enrollableWorldFilterId.ToString() : string.Empty;
-            string searchSignature = instance != null ? instance.enrollableSearchText ?? string.Empty : string.Empty;
-            return worldSignature + ":" + searchSignature + "|" + string.Join("|", enrollments
-                .OrderBy(enrollment => enrollment != null ? enrollment.GetInstanceID() : 0)
-                .Select(enrollment =>
-                {
-                    Storage storage = enrollment != null ? enrollment.GetComponent<Storage>() : null;
-                    Studyable studyable = enrollment != null ? enrollment.GetComponent<Studyable>() : null;
-                    return string.Format("{0}:{1}:{2}:{3:0.###}:{4:0.###}:{5}",
-                        enrollment != null ? enrollment.GetInstanceID() : 0,
-                        enrollment != null ? enrollment.IncludedInSceneNetwork : false,
-                        enrollment != null ? enrollment.gameObject.GetProperName() : string.Empty,
-                        storage != null ? storage.MassStored() : 0f,
-                        storage != null ? storage.Capacity() : 0f,
-                        studyable != null && studyable.Studied);
-                }));
         }
 
         private RectTransform enrollableWindowContent;
