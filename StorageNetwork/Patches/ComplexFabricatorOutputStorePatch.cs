@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using HarmonyLib;
-using StorageNetwork.Components;
+using StorageNetwork.Gameplay;
 using UnityEngine;
 
 namespace StorageNetwork.Patches
@@ -12,10 +12,7 @@ namespace StorageNetwork.Patches
         {
             public static void Postfix(ComplexFabricator __instance, List<GameObject> __result)
             {
-                StorageNetworkMaterialRequester requester = __instance != null
-                    ? __instance.GetComponent<StorageNetworkMaterialRequester>()
-                    : null;
-                requester?.ForceStoreProducedOutputs(__result);
+                StorageNetworkProductionOutputHandler.ForceStoreProducedOutputs(__instance, __result);
             }
         }
     }
