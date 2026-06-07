@@ -376,6 +376,15 @@ namespace StorageNetwork
                 public static LocString ORDER_VALIDATION_READY_BODY = "库存、设备、材料均可执行。";
                 public static LocString ORDER_VALIDATION_OUTPUT = "预计可产出：{0}";
                 public static LocString ORDER_VALIDATION_ACTIVE_ORDERS = "{0} 活动订单：{1}";
+                public static LocString ORDER_DRAFT_MISSING_PRODUCT = "未选择可生产的成品或配方。";
+                public static LocString ORDER_DRAFT_AMOUNT_POSITIVE = "订单数量必须大于 0。";
+                public static LocString ORDER_DRAFT_NO_EQUIPMENT = "没有可用生产设备，无法提交。";
+                public static LocString ORDER_DRAFT_BLOCKED_REQUIREMENTS = "有 {0} 项材料既无库存也无可接入补产路线。";
+                public static LocString ORDER_DRAFT_DUPLICATE_MERGE = "检测到活动订单 #{0}，提交将合并数量而不是创建重复订单。";
+                public static LocString ORDER_DRAFT_AUTO_PRODUCE = "{0} 项材料缺口会自动补产。";
+                public static LocString ORDER_SUBMIT_NO_EQUIPMENT = "订单追踪：提交失败，没有可用生产设备";
+                public static LocString ORDER_SUBMIT_MERGED = "订单追踪：已合并到活动订单 #{0}，新增批次 {1}";
+                public static LocString ORDER_SUBMIT_CREATED = "订单追踪：已创建活动订单 #{0}，批次 {1}";
                 public static LocString ORDER_FOOTER_READY = "草案已通过，可提交调度。";
                 public static LocString ORDER_FOOTER_BLOCKED = "草案存在阻塞，请检查材料或设备。";
                 public static LocString ORDER_CONFIRM_MERGE = "合并订单";

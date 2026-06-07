@@ -256,14 +256,14 @@ namespace StorageNetwork.ProductionOrders
             if (product == null || route.Recipe == null)
             {
                 draft.RiskLevel = ProductionOrderRiskLevel.Blocked;
-                draft.ValidationMessages.Add("未选择可生产的成品或配方。");
+                draft.ValidationMessages.Add(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_DRAFT_MISSING_PRODUCT));
                 return draft;
             }
 
             if (requestedAmount <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
             {
                 draft.RiskLevel = ProductionOrderRiskLevel.Blocked;
-                draft.ValidationMessages.Add("订单数量必须大于 0。");
+                draft.ValidationMessages.Add(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_DRAFT_AMOUNT_POSITIVE));
                 return draft;
             }
 
@@ -273,13 +273,13 @@ namespace StorageNetwork.ProductionOrders
             if (draft.Plan.Assignments.Count == 0)
             {
                 draft.RiskLevel = ProductionOrderRiskLevel.Blocked;
-                draft.ValidationMessages.Add("没有可用生产设备，无法提交。");
+                draft.ValidationMessages.Add(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_DRAFT_NO_EQUIPMENT));
             }
 
             if (draft.BlockedRequirementCount > 0)
             {
                 draft.RiskLevel = ProductionOrderRiskLevel.Blocked;
-                draft.ValidationMessages.Add(string.Format("有 {0} 项材料既无库存也无可接入补产路线。", draft.BlockedRequirementCount));
+                draft.ValidationMessages.Add(string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_DRAFT_BLOCKED_REQUIREMENTS), draft.BlockedRequirementCount));
             }
             else if (draft.ProducedRequirementCount > 0 || draft.DuplicateOrder != null)
             {
@@ -292,17 +292,17 @@ namespace StorageNetwork.ProductionOrders
 
             if (draft.DuplicateOrder != null)
             {
-                draft.ValidationMessages.Add(string.Format("检测到活动订单 #{0}，提交将合并数量而不是创建重复订单。", draft.DuplicateOrder.DisplayId));
+                draft.ValidationMessages.Add(string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_DRAFT_DUPLICATE_MERGE), draft.DuplicateOrder.DisplayId));
             }
 
             if (draft.ProducedRequirementCount > 0)
             {
-                draft.ValidationMessages.Add(string.Format("{0} 项材料缺口会自动补产。", draft.ProducedRequirementCount));
+                draft.ValidationMessages.Add(string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_DRAFT_AUTO_PRODUCE), draft.ProducedRequirementCount));
             }
 
             if (draft.ValidationMessages.Count == 0)
             {
-                draft.ValidationMessages.Add("库存、设备、材料请求可执行。");
+                draft.ValidationMessages.Add(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_VALIDATION_READY_BODY));
             }
 
             return draft;
@@ -319,7 +319,7 @@ namespace StorageNetwork.ProductionOrders
 
             if (plan.Assignments.Count == 0)
             {
-                return ProductionOrderSubmitResult.Fail("订单追踪：提交失败，没有可用生产设备");
+                return ProductionOrderSubmitResult.Fail(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_SUBMIT_NO_EQUIPMENT));
             }
 
             ProductionOrderRecord duplicate = FindDuplicateOrder(product.ProductTag, route.Recipe, requestedAmount);
@@ -332,7 +332,7 @@ namespace StorageNetwork.ProductionOrders
                 ApplyProductionPlan(plan, duplicate.Key, materialLeases);
                 duplicate.Merge(requestedAmount, plan.OrderCount, reservedMaterials, queueAssignments, materialLeases, outputLeases, currentCycle, isAutomatic);
                 duplicate.ObserveActivity(currentCycle, duplicate.ProducedAtSubmit, CalculateOrderQueueLoad(duplicate));
-                return ProductionOrderSubmitResult.MergeSuccess(duplicate, plan, string.Format("订单追踪：已合并到活动订单 #{0}，新增批次 {1}", duplicate.DisplayId, plan.OrderCount));
+                return ProductionOrderSubmitResult.MergeSuccess(duplicate, plan, string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_SUBMIT_MERGED), duplicate.DisplayId, plan.OrderCount));
             }
 
             string orderKey = BuildOrderKey(product.ProductTag, route.Recipe, requestedAmount, currentCycle);
@@ -357,7 +357,7 @@ namespace StorageNetwork.ProductionOrders
                 isAutomatic);
             ActiveOrders[orderKey] = record;
             record.ObserveActivity(currentCycle, record.ProducedAtSubmit, CalculateOrderQueueLoad(record));
-            return ProductionOrderSubmitResult.Created(record, plan, string.Format("订单追踪：已创建活动订单 #{0}，批次 {1}", record.DisplayId, plan.OrderCount));
+            return ProductionOrderSubmitResult.Created(record, plan, string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_SUBMIT_CREATED), record.DisplayId, plan.OrderCount));
         }
 
         public float EstimatePlanSeconds(ProductionPlanNode node, out bool hasInfiniteQueue)

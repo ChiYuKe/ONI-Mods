@@ -995,6 +995,42 @@ msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_VALIDATION_ACTIVE_ORDER
 msgid "{0} 活动订单：{1}"
 msgstr "{0} active orders: {1}"
 
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_DRAFT_MISSING_PRODUCT"
+msgid "未选择可生产的成品或配方。"
+msgstr "No craftable product or recipe selected."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_DRAFT_AMOUNT_POSITIVE"
+msgid "订单数量必须大于 0。"
+msgstr "Order amount must be greater than 0."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_DRAFT_NO_EQUIPMENT"
+msgid "没有可用生产设备，无法提交。"
+msgstr "No available production equipment; cannot submit."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_DRAFT_BLOCKED_REQUIREMENTS"
+msgid "有 {0} 项材料既无库存也无可接入补产路线。"
+msgstr "{0} materials have no stock and no connected production route."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_DRAFT_DUPLICATE_MERGE"
+msgid "检测到活动订单 #{0}，提交将合并数量而不是创建重复订单。"
+msgstr "Active order #{0} found. Submitting will merge the amount instead of creating a duplicate order."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_DRAFT_AUTO_PRODUCE"
+msgid "{0} 项材料缺口会自动补产。"
+msgstr "{0} material shortages will be produced automatically."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_SUBMIT_NO_EQUIPMENT"
+msgid "订单追踪：提交失败，没有可用生产设备"
+msgstr "Order tracking: submission failed; no available production equipment."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_SUBMIT_MERGED"
+msgid "订单追踪：已合并到活动订单 #{0}，新增批次 {1}"
+msgstr "Order tracking: merged into active order #{0}; added {1} batches."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_SUBMIT_CREATED"
+msgid "订单追踪：已创建活动订单 #{0}，批次 {1}"
+msgstr "Order tracking: created active order #{0}; batches {1}."
+
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_FOOTER_READY"
 msgid "草案已通过，可提交调度。"
 msgstr "Draft is ready and can be submitted."
