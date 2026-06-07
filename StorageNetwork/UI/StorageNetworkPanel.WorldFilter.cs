@@ -274,7 +274,7 @@ namespace StorageNetwork.UI
 
         private static bool ContainsSearchText(string text, string query)
         {
-            return NormalizeSearchText(text).Contains(query);
+            return StorageNetworkTextFormatting.ContainsSearchText(text, query);
         }
 
         private static string NormalizeSearchText(string text)

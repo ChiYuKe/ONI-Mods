@@ -2,6 +2,11 @@ namespace StorageNetwork.UI
 {
     internal static class StorageNetworkTextFormatting
     {
+        public static bool ContainsSearchText(string text, string query)
+        {
+            return NormalizeSearchText(text).Contains(query);
+        }
+
         public static string NormalizeSearchText(string text)
         {
             return string.IsNullOrWhiteSpace(text) ? string.Empty : StripKleiLinkFormatting(text).Trim().ToLowerInvariant();
