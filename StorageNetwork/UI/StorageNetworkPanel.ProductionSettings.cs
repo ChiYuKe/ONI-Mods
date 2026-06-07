@@ -744,11 +744,6 @@ namespace StorageNetwork.UI
             return label;
         }
 
-        private static string GetProductionStateText(ComplexFabricator fabricator)
-        {
-            return StorageNetworkProductionSettingsText.GetProductionStateText(fabricator);
-        }
-
         private void AddProductionSettingsInfo(Storage storage, ComplexFabricator fabricator)
         {
             AddProductionSettingsText(storage.GetProperName(), 16, FontStyles.Bold, 34f);
@@ -862,7 +857,7 @@ namespace StorageNetwork.UI
                 : StorageNetworkProductionSettingsText.ColorText(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_STATUS_CRAFTING), "#3f7f4a");
             AddProductionSettingsText(statusText, 12, FontStyles.Normal, 22f);
             AddProductionSettingsText(
-                StorageNetworkProductionSettingsText.ColorText(string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_CURRENT_RECIPE), GetRecipeDisplayName(currentRecipe)), "#38485d"),
+                StorageNetworkProductionSettingsText.ColorText(string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_CURRENT_RECIPE), StorageNetworkProductionSettingsText.GetRecipeDisplayName(currentRecipe)), "#38485d"),
                 12,
                 FontStyles.Normal,
                 22f);
@@ -1665,16 +1660,6 @@ namespace StorageNetwork.UI
                 SetTextIfChanged(row.Mass, GameUtil.GetFormattedMass(group.Sum(GetStoredItemMass)));
                 SetStoredItemIcon(row.Icon, representative);
             }
-        }
-
-        private static string GetRecipeDisplayName(ComplexRecipe recipe)
-        {
-            if (recipe == null)
-            {
-                return string.Empty;
-            }
-
-            return recipe.GetUIName(false);
         }
 
         private static void SetTextIfChanged(TextMeshProUGUI text, string value)

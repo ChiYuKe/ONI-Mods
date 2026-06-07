@@ -76,6 +76,11 @@ namespace StorageNetwork.UI
                 : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.NONE);
         }
 
+        public static string GetRecipeDisplayName(ComplexRecipe recipe)
+        {
+            return recipe != null ? recipe.GetUIName(false) : string.Empty;
+        }
+
         public static string GetNetworkStateText(
             StorageNetworkMaterialRequester requester,
             StorageNetworkStorageConnector connector,
@@ -217,9 +222,5 @@ namespace StorageNetwork.UI
             return placeholderIndex >= 0 ? template.Substring(0, placeholderIndex) : template;
         }
 
-        private static string GetRecipeDisplayName(ComplexRecipe recipe)
-        {
-            return recipe != null ? recipe.GetUIName(false) : string.Empty;
-        }
     }
 }

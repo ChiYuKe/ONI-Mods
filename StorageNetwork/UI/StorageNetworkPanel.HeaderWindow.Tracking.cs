@@ -740,7 +740,7 @@ namespace StorageNetwork.UI
         private static string BuildBuildingDetailLine(ProductionOrderQueueAssignment assignment, float progress)
         {
             ComplexFabricator fabricator = assignment?.Fabricator;
-            return StorageNetworkOrderTrackingRules.BuildBuildingDetailLine(assignment, progress, fabricator != null ? GetProductionStateText(fabricator) : null);
+            return StorageNetworkOrderTrackingRules.BuildBuildingDetailLine(assignment, progress, fabricator != null ? StorageNetworkProductionSettingsText.GetProductionStateText(fabricator) : null);
         }
 
     }
