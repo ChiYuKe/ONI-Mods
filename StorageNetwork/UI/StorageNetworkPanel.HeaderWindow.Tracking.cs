@@ -21,9 +21,9 @@ namespace StorageNetwork.UI
                 ? productionOrderService.GetRecentOrdersForProduct(product.ProductTag, MaxDisplayedTrackingRecords)
                 : productionOrderService.GetRecentOrders(MaxDisplayedTrackingRecords);
             List<ProductionOrderRecord> records = sourceRecords
-                .Where(MatchesTrackingFilter)
+                .Where(record => StorageNetworkOrderTrackingRules.MatchesFilter(record, orderTrackingFilterMode, orderTrackingSearchText))
                 .ToList();
-            string signature = BuildOrderTrackingSignature(product, records);
+            string signature = StorageNetworkOrderTrackingRules.BuildListSignature(product, records, orderTrackingSearchText, orderTrackingFilterMode);
             if (signature == orderTrackingSignature)
             {
                 return;
@@ -32,7 +32,7 @@ namespace StorageNetwork.UI
             orderTrackingSignature = signature;
             EnsureOrderTrackingRows();
             orderTrackingRows.Begin();
-            int activeCount = records.Count(IsTrackingActive);
+            int activeCount = records.Count(StorageNetworkOrderTrackingRules.IsActive);
             UpdateTrackingHeaderRow(GetTrackingScopeTitle(product), activeCount, records.Count);
             if (records.Count == 0)
             {
@@ -49,79 +49,6 @@ namespace StorageNetwork.UI
 
             orderTrackingRows.Commit();
             ForceOrderLayout(orderTrackingContent);
-        }
-
-        private string BuildOrderTrackingSignature(ProductDisplayGroup product, List<ProductionOrderRecord> records)
-        {
-            string recordsSignature = string.Join("|", records.Select(record => string.Format(
-                "{0}:{1}:{2}:{3:0.###}:{4:0.###}:{5}:{6}:{7:0.###}:{8}",
-                record.Key,
-                record.DisplayId,
-                record.State,
-                record.ProducedAtSubmit,
-                record.RequestedAmount,
-                record.OrderCount,
-                record.MergeCount,
-                record.LastActivityCycle,
-                record.AbnormalReason ?? string.Empty)));
-
-            return string.Format("{0}|{1}|{2}|{3}", product?.ProductKey ?? string.Empty, orderTrackingSearchText ?? string.Empty, orderTrackingFilterMode, recordsSignature);
-        }
-
-        private bool MatchesTrackingFilter(ProductionOrderRecord record)
-        {
-            if (record == null)
-            {
-                return false;
-            }
-
-            switch (orderTrackingFilterMode)
-            {
-                case TrackingFilterMode.Current:
-                case TrackingFilterMode.All:
-                    break;
-                case TrackingFilterMode.Abnormal:
-                    if (record.State != ProductionOrderState.Abnormal)
-                    {
-                        return false;
-                    }
-                    break;
-                case TrackingFilterMode.Completed:
-                    if (record.State != ProductionOrderState.Completed)
-                    {
-                        return false;
-                    }
-                    break;
-                case TrackingFilterMode.Running:
-                    if (!IsTrackingActive(record))
-                    {
-                        return false;
-                    }
-                    break;
-            }
-
-            if (string.IsNullOrWhiteSpace(orderTrackingSearchText))
-            {
-                return true;
-            }
-
-            string needle = orderTrackingSearchText.Trim();
-            return ContainsIgnoreCase(record.DisplayId.ToString(), needle) ||
-                   ContainsIgnoreCase(record.ProductName, needle) ||
-                   ContainsIgnoreCase(record.AbnormalReason, needle) ||
-                   (record.QueueAssignments ?? new List<ProductionOrderQueueAssignment>()).Any(assignment =>
-                       assignment != null &&
-                       (ContainsIgnoreCase(assignment.Fabricator != null ? assignment.Fabricator.GetProperName() : null, needle) ||
-                        ContainsIgnoreCase(assignment.OutputName, needle) ||
-                        ContainsIgnoreCase(assignment.ConsumerName, needle) ||
-                        ContainsIgnoreCase(assignment.Recipe != null ? assignment.Recipe.GetUIName(false) : null, needle)));
-        }
-
-        private static bool ContainsIgnoreCase(string haystack, string needle)
-        {
-            return !string.IsNullOrEmpty(haystack) &&
-                   !string.IsNullOrEmpty(needle) &&
-                   haystack.IndexOf(needle, System.StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
         private string GetTrackingScopeTitle(ProductDisplayGroup product)
@@ -185,7 +112,7 @@ namespace StorageNetwork.UI
         private void AddTrackingCard(Transform parent, ProductionOrderRecord record)
         {
             bool abnormal = record.State == ProductionOrderState.Abnormal;
-            bool active = IsTrackingActive(record);
+            bool active = StorageNetworkOrderTrackingRules.IsActive(record);
             Color stateColor = GetOrderStateColor(record.State);
             GameObject card = CreateRoundedOrderImage("TrackingCard", parent, GetTrackingCardColor(record), "UISprite", "Background", "InputField");
             LayoutElement cardElement = card.AddComponent<LayoutElement>();
@@ -574,7 +501,7 @@ namespace StorageNetwork.UI
         private void UpdateTrackingCard(Transform parent, ProductionOrderRecord record)
         {
             string key = "order:" + (record.Key ?? record.DisplayId.ToString());
-            string signature = BuildTrackingCardSignature(record);
+            string signature = StorageNetworkOrderTrackingRules.BuildCardSignature(record);
             bool recreate = orderTrackingRows.TryGetMetadata(key, out string oldSignature) && oldSignature != signature;
             orderTrackingRows.Use(key, () =>
             {
@@ -582,25 +509,6 @@ namespace StorageNetwork.UI
                 return parent.GetChild(parent.childCount - 1).gameObject;
             }, recreate);
             orderTrackingRows.SetMetadata(key, signature);
-        }
-
-        private static string BuildTrackingCardSignature(ProductionOrderRecord record)
-        {
-            return string.Format(
-                "{0}:{1}:{2:0.###}:{3:0.###}:{4}:{5}:{6:0.###}:{7}:{8}",
-                record.DisplayId,
-                record.State,
-                record.ProducedAtSubmit,
-                record.RequestedAmount,
-                record.OrderCount,
-                record.MergeCount,
-                record.LastActivityCycle,
-                record.AbnormalReason ?? string.Empty,
-                string.Join(",", (record.QueueAssignments ?? new List<ProductionOrderQueueAssignment>())
-                    .Where(assignment => assignment != null)
-                    .Select(assignment => string.Format("{0}:{1}",
-                        assignment.Fabricator != null ? assignment.Fabricator.GetInstanceID() : 0,
-                        assignment.Primary))));
         }
 
         private void AddTrackingProgressRow(Transform parent, ProductionOrderRecord record, Color color)
@@ -826,13 +734,6 @@ namespace StorageNetwork.UI
             lastOrderStatus = productionOrderService.CancelOrder(orderKey, GetCurrentCycleTime());
             productionOrderService.Refresh();
             RebuildOrderDetails();
-        }
-
-        private static bool IsTrackingActive(ProductionOrderRecord order)
-        {
-            return order.State != ProductionOrderState.Completed &&
-                   order.State != ProductionOrderState.Abnormal &&
-                   order.State != ProductionOrderState.Cancelled;
         }
 
         private static string GetOrderStateLabel(ProductionOrderState state)

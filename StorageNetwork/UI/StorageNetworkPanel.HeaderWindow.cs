@@ -45,7 +45,7 @@ namespace StorageNetwork.UI
         private string keepRuleDraftProductKey;
         private float keepRuleDraftAmount;
 
-        private enum TrackingFilterMode
+        internal enum TrackingFilterMode
         {
             Current,
             All,
