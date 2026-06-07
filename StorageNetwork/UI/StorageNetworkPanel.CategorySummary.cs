@@ -11,7 +11,7 @@ namespace StorageNetwork.UI
 {
     public sealed partial class StorageNetworkPanel : KScreen, IInputHandler
     {
-        private readonly Dictionary<string, Queue<MassSample>> categorySummarySamples = new Dictionary<string, Queue<MassSample>>();
+        private readonly StorageNetworkCategorySummaryTrendSampler categorySummaryTrendSampler = new StorageNetworkCategorySummaryTrendSampler();
 
         private void CreateCategorySummaryButton(Transform parent)
         {
@@ -198,7 +198,7 @@ namespace StorageNetwork.UI
                 return compare != 0 ? compare : string.Compare(left.Name, right.Name, System.StringComparison.CurrentCulture);
             });
 
-            UpdateCategorySummarySamples(selectedCategoryKey, totals);
+            categorySummaryTrendSampler.Record(selectedCategoryKey, totals);
             string signature = StorageNetworkCategorySummarySignature.Build(selectedCategoryKey, storages, totals);
             if (signature == categorySummarySignature)
             {
@@ -219,7 +219,7 @@ namespace StorageNetwork.UI
 
             foreach (StorageNetworkCategorySummaryItemTotal total in totals)
             {
-                UpdateCategorySummaryItemRow(total, GetMassTrendPerCycle(selectedCategoryKey, total.Key));
+                UpdateCategorySummaryItemRow(total, categorySummaryTrendSampler.GetTrendPerCycle(selectedCategoryKey, total.Key));
             }
 
             categorySummaryRows.Commit();
@@ -340,68 +340,6 @@ namespace StorageNetwork.UI
         {
             Canvas.ForceUpdateCanvases();
             LayoutRebuilder.ForceRebuildLayoutImmediate(categorySummaryContent);
-        }
-
-        private void UpdateCategorySummarySamples(string categoryKey, IEnumerable<StorageNetworkCategorySummaryItemTotal> totals)
-        {
-            float currentCycle = GetCurrentCycleTime();
-            foreach (StorageNetworkCategorySummaryItemTotal total in totals)
-            {
-                string key = BuildSampleKey(categoryKey, total.Key);
-                if (!categorySummarySamples.TryGetValue(key, out Queue<MassSample> samples))
-                {
-                    samples = new Queue<MassSample>();
-                    categorySummarySamples.Add(key, samples);
-                }
-
-                samples.Enqueue(new MassSample(currentCycle, total.MassKg));
-                while (samples.Count > 1 && currentCycle - samples.Peek().CycleTime > 1f)
-                {
-                    samples.Dequeue();
-                }
-            }
-        }
-
-        private float? GetMassTrendPerCycle(string categoryKey, string itemKey)
-        {
-            if (!categorySummarySamples.TryGetValue(BuildSampleKey(categoryKey, itemKey), out Queue<MassSample> samples) ||
-                samples.Count < 2)
-            {
-                return null;
-            }
-
-            MassSample first = samples.Peek();
-            MassSample last = samples.Last();
-            float elapsedCycles = last.CycleTime - first.CycleTime;
-            if (elapsedCycles < 0.01f)
-            {
-                return null;
-            }
-
-            return (last.MassKg - first.MassKg) / elapsedCycles;
-        }
-
-        private static string BuildSampleKey(string categoryKey, string itemKey)
-        {
-            return (categoryKey ?? string.Empty) + "|" + (itemKey ?? string.Empty);
-        }
-
-        private static float GetCurrentCycleTime()
-        {
-            return GameClock.Instance != null ? GameClock.Instance.GetTimeInCycles() : Time.time / 600f;
-        }
-
-        private readonly struct MassSample
-        {
-            public MassSample(float cycleTime, float massKg)
-            {
-                CycleTime = cycleTime;
-                MassKg = massKg;
-            }
-
-            public float CycleTime { get; }
-
-            public float MassKg { get; }
         }
 
         private struct ItemTotalAccumulator

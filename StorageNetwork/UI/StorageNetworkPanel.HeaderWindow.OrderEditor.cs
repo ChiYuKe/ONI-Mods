@@ -700,7 +700,7 @@ namespace StorageNetwork.UI
 
             GameObject button = CreateGameButton("ConfirmOrder", footer.transform, draft.DuplicatePolicy == ProductionOrderDuplicatePolicy.MergeIntoExisting ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CONFIRM_MERGE) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CONFIRM), () =>
             {
-                ProductionOrderSubmitResult result = productionOrderService.SubmitOrder(product, route, requestedProductAmount, GetCurrentCycleTime());
+                ProductionOrderSubmitResult result = productionOrderService.SubmitOrder(product, route, requestedProductAmount, StorageNetworkCycleTime.GetCurrent());
                 lastOrderStatus = result.Message;
                 productionOrderService.Refresh();
                 orderDetailsSignature = null;

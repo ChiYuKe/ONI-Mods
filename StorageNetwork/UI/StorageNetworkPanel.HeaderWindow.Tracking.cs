@@ -668,7 +668,7 @@ namespace StorageNetwork.UI
 
         private void CancelTrackedOrder(string orderKey)
         {
-            lastOrderStatus = productionOrderService.CancelOrder(orderKey, GetCurrentCycleTime());
+            lastOrderStatus = productionOrderService.CancelOrder(orderKey, StorageNetworkCycleTime.GetCurrent());
             productionOrderService.Refresh();
             RebuildOrderDetails();
         }

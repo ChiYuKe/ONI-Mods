@@ -36,7 +36,7 @@ namespace StorageNetwork.UI
             layout.childForceExpandWidth = false;
             layout.childForceExpandHeight = false;
 
-            float currentCycle = GetCurrentCycleTime();
+            float currentCycle = StorageNetworkCycleTime.GetCurrent();
             float estimateSeconds = productionOrderService.EstimatePlanSeconds(draft.Plan, out bool infinite);
             string finish = infinite ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_UNKNOWN) : ProductionOrderFormatting.FormatCycle(currentCycle + estimateSeconds / 600f);
             AddMetricTile(row.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_METRIC_CURRENT_CYCLE), ProductionOrderFormatting.FormatCycle(currentCycle), NeutralBlue(), 86f);
