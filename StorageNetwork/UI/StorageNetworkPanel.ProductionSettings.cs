@@ -560,7 +560,7 @@ namespace StorageNetwork.UI
 
         private void AddInventoryCard(Storage storage, ComplexFabricator fabricator)
         {
-            List<GameObject> items = GetProductionStorages(storage, fabricator)
+            List<GameObject> items = StorageNetworkProductionStorageCollector.GetProductionStorages(storage, fabricator)
                 .SelectMany(itemStorage => itemStorage.items.Where(item => item != null))
                 .ToList();
             GameObject card = CreateProductionCard("InventoryCard", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_CONTENT_TITLE), Mathf.Clamp(52f + Mathf.Max(1, items.GroupBy(GetStoredItemKey).Count()) * 26f, 82f, 150f));
@@ -881,7 +881,7 @@ namespace StorageNetwork.UI
 
         private void AddProductionSettingsItems(Storage storage, ComplexFabricator fabricator)
         {
-            List<GameObject> items = GetProductionStorages(storage, fabricator)
+            List<GameObject> items = StorageNetworkProductionStorageCollector.GetProductionStorages(storage, fabricator)
                 .SelectMany(itemStorage => itemStorage.items.Where(item => item != null))
                 .ToList();
             if (items.Count == 0)
@@ -1689,7 +1689,7 @@ namespace StorageNetwork.UI
                 return;
             }
 
-            foreach (IGrouping<string, GameObject> group in GetProductionStorages(storage, fabricator)
+            foreach (IGrouping<string, GameObject> group in StorageNetworkProductionStorageCollector.GetProductionStorages(storage, fabricator)
                 .SelectMany(itemStorage => itemStorage.items.Where(item => item != null))
                 .GroupBy(GetStoredItemKey))
             {
@@ -1703,28 +1703,6 @@ namespace StorageNetwork.UI
                 SetTextIfChanged(row.Name, GetStoredItemName(representative));
                 SetTextIfChanged(row.Mass, GameUtil.GetFormattedMass(group.Sum(GetStoredItemMass)));
                 SetStoredItemIcon(row.Icon, representative);
-            }
-        }
-
-        private static IEnumerable<Storage> GetProductionStorages(Storage storage, ComplexFabricator fabricator)
-        {
-            HashSet<Storage> storages = new HashSet<Storage>();
-            AddProductionStorage(storages, storage);
-            if (fabricator != null)
-            {
-                AddProductionStorage(storages, fabricator.inStorage);
-                AddProductionStorage(storages, fabricator.buildStorage);
-                AddProductionStorage(storages, fabricator.outStorage);
-            }
-
-            return storages;
-        }
-
-        private static void AddProductionStorage(HashSet<Storage> storages, Storage storage)
-        {
-            if (storage != null)
-            {
-                storages.Add(storage);
             }
         }
 

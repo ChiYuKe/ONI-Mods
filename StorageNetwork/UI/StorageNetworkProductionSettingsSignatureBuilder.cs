@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.Linq;
 using StorageNetwork.Components;
 using UnityEngine;
@@ -47,33 +46,11 @@ namespace StorageNetwork.UI
 
         private static string BuildItemSignature(Storage storage, ComplexFabricator fabricator)
         {
-            return string.Join("|", GetProductionStorages(storage, fabricator)
+            return string.Join("|", StorageNetworkProductionStorageCollector.GetProductionStorages(storage, fabricator)
                 .SelectMany(itemStorage => itemStorage.items.Where(item => item != null))
                 .GroupBy(GetStoredItemKey)
                 .OrderBy(group => group.Key)
                 .Select(group => group.Key));
-        }
-
-        private static IEnumerable<Storage> GetProductionStorages(Storage storage, ComplexFabricator fabricator)
-        {
-            HashSet<Storage> storages = new HashSet<Storage>();
-            AddProductionStorage(storages, storage);
-            if (fabricator != null)
-            {
-                AddProductionStorage(storages, fabricator.inStorage);
-                AddProductionStorage(storages, fabricator.buildStorage);
-                AddProductionStorage(storages, fabricator.outStorage);
-            }
-
-            return storages;
-        }
-
-        private static void AddProductionStorage(HashSet<Storage> storages, Storage storage)
-        {
-            if (storage != null)
-            {
-                storages.Add(storage);
-            }
         }
 
         private static string GetStoredItemKey(GameObject item)
