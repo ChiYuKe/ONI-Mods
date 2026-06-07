@@ -167,9 +167,7 @@ namespace StorageNetwork.UI
 
         private static List<GameObject> FindStoredItemsInStorage(Storage storage, string itemKey)
         {
-            return storage?.items
-                .Where(item => item != null && GetStoredItemKey(item) == itemKey)
-                .ToList() ?? new List<GameObject>();
+            return StorageItemUtility.FindStoredItems(storage, itemKey);
         }
 
         private static IEnumerable<Storage> GetContentStorages(Storage storage)

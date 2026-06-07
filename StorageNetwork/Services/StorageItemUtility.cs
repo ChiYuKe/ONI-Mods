@@ -69,6 +69,28 @@ namespace StorageNetwork.Services
             return primaryElement != null ? primaryElement.ElementID.ToString() : item.name;
         }
 
+        /// <summary>
+        /// 查找指定 Storage 当前直接持有的匹配物品。
+        /// </summary>
+        public static List<GameObject> FindStoredItems(Storage storage, string itemKey)
+        {
+            List<GameObject> items = new List<GameObject>();
+            if (storage?.items == null)
+            {
+                return items;
+            }
+
+            foreach (GameObject item in storage.items)
+            {
+                if (item != null && GetStoredItemKey(item) == itemKey)
+                {
+                    items.Add(item);
+                }
+            }
+
+            return items;
+        }
+
         public static HashSet<Tag> GetStorageMatchTags(GameObject item)
         {
             HashSet<Tag> tags = new HashSet<Tag>();
