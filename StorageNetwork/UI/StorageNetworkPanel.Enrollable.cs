@@ -57,7 +57,7 @@ namespace StorageNetwork.UI
                 foreach (IGrouping<string, StorageNetworkEnrollment> categoryGroup in filteredEnrollments
                     .GroupBy(StorageNetworkPlanCategoryOrder.GetCategoryKey)
                     .OrderBy(group => StorageNetworkPlanCategoryOrder.GetSortOrder(group.Key))
-                    .ThenBy(group => GetPlanCategoryName(group.Key)))
+                    .ThenBy(group => StorageNetworkPlanCategoryOrder.GetDisplayName(group.Key)))
                 {
                     List<StorageNetworkEnrollment> categoryEnrollments = categoryGroup
                         .OrderBy(enrollment => enrollment.gameObject.GetProperName())
@@ -491,7 +491,7 @@ namespace StorageNetwork.UI
 
             return StorageNetworkTextFormatting.ContainsSearchText(enrollment.gameObject.GetProperName(), query) ||
                    StorageNetworkTextFormatting.ContainsSearchText(StorageNetworkWorldDisplay.GetObjectWorldName(enrollment.gameObject), query) ||
-                   StorageNetworkTextFormatting.ContainsSearchText(GetPlanCategoryName(StorageNetworkPlanCategoryOrder.GetCategoryKey(enrollment)), query) ||
+                   StorageNetworkTextFormatting.ContainsSearchText(StorageNetworkPlanCategoryOrder.GetDisplayName(StorageNetworkPlanCategoryOrder.GetCategoryKey(enrollment)), query) ||
                    StorageNetworkTextFormatting.ContainsSearchText(StorageNetworkGeyserText.GetEnrollmentDetails(enrollment), query);
         }
 
@@ -649,7 +649,7 @@ namespace StorageNetwork.UI
             layout.childForceExpandWidth = false;
             layout.childForceExpandHeight = true;
 
-            TextMeshProUGUI title = CreateText("CategoryName", header.transform, GetPlanCategoryName(categoryKey), 13, TextAlignmentOptions.MidlineLeft);
+            TextMeshProUGUI title = CreateText("CategoryName", header.transform, StorageNetworkPlanCategoryOrder.GetDisplayName(categoryKey), 13, TextAlignmentOptions.MidlineLeft);
             title.color = new Color(0.96f, 0.91f, 0.78f, 1f);
             title.fontStyle = FontStyles.Bold;
             title.textWrappingMode = TextWrappingModes.NoWrap;
@@ -712,27 +712,6 @@ namespace StorageNetwork.UI
         {
             worldId = StorageNetworkWorldUtility.GetObjectWorldId(gameObject);
             return worldId != byte.MaxValue && worldId >= 0;
-        }
-
-        private static string GetPlanCategoryName(string categoryKey)
-        {
-            if (categoryKey == "Geyser")
-            {
-                return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENROLLABLE_CATEGORY_GEYSER);
-            }
-
-            if (string.IsNullOrEmpty(categoryKey) || categoryKey == "Other")
-            {
-                return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENROLLABLE_CATEGORY_OTHER);
-            }
-
-            string key = "STRINGS.UI.BUILDCATEGORIES." + categoryKey.ToUpperInvariant() + ".NAME";
-            if (Strings.TryGet(key, out StringEntry entry) && entry != null && !string.IsNullOrEmpty(entry.String))
-            {
-                return StorageNetworkTextFormatting.StripKleiLinkFormatting(entry.String);
-            }
-
-            return categoryKey;
         }
 
     }

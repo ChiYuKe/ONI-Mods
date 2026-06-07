@@ -1,5 +1,6 @@
 using System.Linq;
 using StorageNetwork.Components;
+using static StorageNetwork.STRINGS;
 
 namespace StorageNetwork.UI
 {
@@ -62,6 +63,27 @@ namespace StorageNetwork.UI
             }
 
             return int.MaxValue;
+        }
+
+        public static string GetDisplayName(string categoryKey)
+        {
+            if (categoryKey == "Geyser")
+            {
+                return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENROLLABLE_CATEGORY_GEYSER);
+            }
+
+            if (string.IsNullOrEmpty(categoryKey) || categoryKey == "Other")
+            {
+                return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENROLLABLE_CATEGORY_OTHER);
+            }
+
+            string key = "STRINGS.UI.BUILDCATEGORIES." + categoryKey.ToUpperInvariant() + ".NAME";
+            if (Strings.TryGet(key, out StringEntry entry) && entry != null && !string.IsNullOrEmpty(entry.String))
+            {
+                return StorageNetworkTextFormatting.StripKleiLinkFormatting(entry.String);
+            }
+
+            return categoryKey;
         }
 
         private static string GetCategoryId(PlanScreen.PlanInfo planInfo)
