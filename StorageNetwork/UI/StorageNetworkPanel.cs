@@ -457,7 +457,7 @@ namespace StorageNetwork.UI
             selectedCategoryKey = StorageCategories.GetKey(storage);
             selectedItemStorage = storage;
             selectedItemKey = null;
-            expandedStorageTypes[GetStoragePrefabKey(storage)] = true;
+            expandedStorageTypes[StorageNetworkStorageDisplay.GetPrefabKey(storage)] = true;
             expandedStorages[storage] = true;
         }
 
@@ -695,7 +695,7 @@ namespace StorageNetwork.UI
                 return;
             }
 
-            foreach (IGrouping<string, StorageInfo> group in selectedGroup.Storages.GroupBy(GetStorageTypeKey).OrderBy(group => GetStorageTypeName(group.First())))
+            foreach (IGrouping<string, StorageInfo> group in selectedGroup.Storages.GroupBy(StorageNetworkStorageDisplay.GetTypeKey).OrderBy(group => StorageNetworkStorageDisplay.GetTypeName(group.First())))
             {
                 List<StorageInfo> typeStorages = group.ToList();
                 if (typeStorages.Count == 1)
@@ -716,7 +716,7 @@ namespace StorageNetwork.UI
             return StorageNetworkPanelListSignature.BuildStorageListSignature(
                 storages,
                 instance != null ? instance.mainSearchText : string.Empty,
-                GetStorageTypeKey,
+                StorageNetworkStorageDisplay.GetTypeKey,
                 StorageItemUtility.GetStoredItemKey,
                 StorageNetworkStorageRules.IsOfflineNetworkServer);
         }
@@ -873,3 +873,4 @@ namespace StorageNetwork.UI
         }
     }
 }
+

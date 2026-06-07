@@ -140,7 +140,7 @@ namespace StorageNetwork.UI
                 foreach (StorageInfo info in currentSnapshot.Storages)
                 {
                     Storage storage = info?.Storage;
-                    if (storage != null && GetStorageCategoryKey(info) == selectedCategoryKey)
+                    if (storage != null && StorageNetworkStorageDisplay.GetCategoryKey(info) == selectedCategoryKey)
                     {
                         storages.Add(storage);
                     }
@@ -179,7 +179,7 @@ namespace StorageNetwork.UI
                     }
                     else
                     {
-                        totalsByKey.Add(key, new ItemTotalAccumulator(key, GetStoredItemName(item), mass, item));
+                        totalsByKey.Add(key, new ItemTotalAccumulator(key, StorageNetworkStorageDisplay.GetStoredItemName(item), mass, item));
                     }
                 }
             }
@@ -288,7 +288,7 @@ namespace StorageNetwork.UI
                 return;
             }
 
-            SetStoredItemIcon(view.Icon, total.Representative);
+            StorageNetworkStorageDisplay.SetStoredItemIcon(view.Icon, total.Representative);
             view.Name.text = total.Name;
             view.Mass.text = GameUtil.GetFormattedMass(total.MassKg);
             view.Trend.text = StorageNetworkCategorySummaryTrend.Format(trendKgPerCycle);
@@ -381,3 +381,4 @@ namespace StorageNetwork.UI
         }
     }
 }
+

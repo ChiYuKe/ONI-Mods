@@ -209,7 +209,7 @@ namespace StorageNetwork.UI
 
             foreach (StorageInfo storageInfo in storages)
             {
-                string key = GetStorageCategoryKey(storageInfo);
+                string key = StorageNetworkStorageDisplay.GetCategoryKey(storageInfo);
                 StorageNetworkCategoryGroup group = EnsureCategoryGroup(groups, key);
 
                 group.Storages.Add(storageInfo);
@@ -237,8 +237,8 @@ namespace StorageNetwork.UI
             }
 
             if (StorageNetworkTextFormatting.ContainsSearchText(storageInfo.Name, query) ||
-                StorageNetworkTextFormatting.ContainsSearchText(GetStorageTypeName(storageInfo), query) ||
-                StorageNetworkTextFormatting.ContainsSearchText(StorageCategories.GetName(GetStorageCategoryKey(storageInfo)), query))
+                StorageNetworkTextFormatting.ContainsSearchText(StorageNetworkStorageDisplay.GetTypeName(storageInfo), query) ||
+                StorageNetworkTextFormatting.ContainsSearchText(StorageCategories.GetName(StorageNetworkStorageDisplay.GetCategoryKey(storageInfo)), query))
             {
                 return true;
             }
@@ -250,7 +250,7 @@ namespace StorageNetwork.UI
 
             foreach (GameObject item in storageInfo.StoredItems ?? Enumerable.Empty<GameObject>())
             {
-                if (StorageNetworkTextFormatting.ContainsSearchText(GetStoredItemName(item), query) ||
+                if (StorageNetworkTextFormatting.ContainsSearchText(StorageNetworkStorageDisplay.GetStoredItemName(item), query) ||
                     StorageNetworkTextFormatting.ContainsSearchText(StorageItemUtility.GetStoredItemKey(item), query))
                 {
                     return true;
@@ -283,99 +283,6 @@ namespace StorageNetwork.UI
             {
                 selectedCategoryKey = groups[0].Key;
             }
-        }
-
-        private static string GetStorageCategoryKey(Storage storage)
-        {
-            return StorageCategories.GetKey(storage);
-        }
-
-        private static string GetStorageCategoryKey(StorageInfo storageInfo)
-        {
-            if (storageInfo != null && storageInfo.Minion != null)
-            {
-                return StorageCategories.MinionKey;
-            }
-
-            return storageInfo != null && storageInfo.Geyser != null
-                ? StorageCategories.GeyserKey
-                : GetStorageCategoryKey(storageInfo?.Storage);
-        }
-
-        private static string GetStorageTypeKey(StorageInfo storageInfo)
-        {
-            if (storageInfo?.Minion != null)
-            {
-                return StorageCategories.MinionKey;
-            }
-
-            if (storageInfo?.Geyser != null)
-            {
-                return GetObjectPrefabKey(storageInfo.GameObject, GetStorageTypeName(storageInfo));
-            }
-
-            return GetStoragePrefabKey(storageInfo?.Storage, GetStorageTypeName(storageInfo));
-        }
-
-        private static string GetStoragePrefabKey(Storage storage, string fallback = null)
-        {
-            KPrefabID prefabId = storage?.GetComponent<KPrefabID>();
-            return prefabId != null ? prefabId.PrefabID().ToString() : (fallback ?? string.Empty);
-        }
-
-        private static string GetStorageTypeName(StorageInfo storageInfo)
-        {
-            if (storageInfo?.Minion != null)
-            {
-                return StorageCategories.GetName(StorageCategories.MinionKey);
-            }
-
-            GameObject gameObject = storageInfo?.GameObject;
-            return gameObject != null ? gameObject.GetProperName() : storageInfo.Name;
-        }
-
-        private static string GetObjectPrefabKey(GameObject gameObject, string fallback = null)
-        {
-            KPrefabID prefabId = gameObject != null ? gameObject.GetComponent<KPrefabID>() : null;
-            return prefabId != null ? prefabId.PrefabID().ToString() : (fallback ?? string.Empty);
-        }
-
-        private static string GetStoredItemName(GameObject item)
-        {
-            return item != null ? item.GetProperName() : string.Empty;
-        }
-
-        private static void SetStoredItemIcon(Image icon, GameObject item)
-        {
-            if (icon == null || item == null)
-            {
-                return;
-            }
-
-            Sprite sprite = null;
-            Color tint = Color.white;
-
-            KPrefabID prefabId = item.GetComponent<KPrefabID>();
-            if (prefabId != null)
-            {
-                var uiSprite = Def.GetUISprite(prefabId.PrefabID(), "ui", false);
-                sprite = uiSprite.first;
-                tint = uiSprite.second;
-            }
-
-            if (sprite == null)
-            {
-                PrimaryElement primaryElement = item.GetComponent<PrimaryElement>();
-                if (primaryElement != null)
-                {
-                    var uiSprite = Def.GetUISprite(primaryElement.ElementID.CreateTag(), "ui", false);
-                    sprite = uiSprite.first;
-                    tint = uiSprite.second;
-                }
-            }
-
-            icon.sprite = sprite;
-            icon.color = sprite != null ? tint : Color.clear;
         }
 
         private static void FocusStorage(Storage storage)
@@ -432,3 +339,4 @@ namespace StorageNetwork.UI
         }
     }
 }
+

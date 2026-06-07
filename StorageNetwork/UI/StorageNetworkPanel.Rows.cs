@@ -26,8 +26,8 @@ namespace StorageNetwork.UI
                 return;
             }
 
-            string typeKey = GetStorageTypeKey(storages[0]);
-            string typeName = GetStorageTypeName(storages[0]);
+            string typeKey = StorageNetworkStorageDisplay.GetTypeKey(storages[0]);
+            string typeName = StorageNetworkStorageDisplay.GetTypeName(storages[0]);
             bool expanded = expandedStorageTypes.TryGetValue(typeKey, out bool isExpanded) && isExpanded;
             bool isGeyserGroup = storages[0].Geyser != null;
             bool isMinionGroup = storages[0].Minion != null;
@@ -181,14 +181,14 @@ namespace StorageNetwork.UI
             }
             else
             {
-                foreach (IGrouping<string, GameObject> group in items.GroupBy(StorageItemUtility.GetStoredItemKey).OrderBy(group => GetStoredItemName(group.FirstOrDefault())))
+                foreach (IGrouping<string, GameObject> group in items.GroupBy(StorageItemUtility.GetStoredItemKey).OrderBy(group => StorageNetworkStorageDisplay.GetStoredItemName(group.FirstOrDefault())))
                 {
                     float mass = group.Sum(GetStoredItemMass);
                     CreateStoredItemRow(
                         storage,
                         details.transform,
                         group.Key,
-                        GetStoredItemName(group.FirstOrDefault()),
+                        StorageNetworkStorageDisplay.GetStoredItemName(group.FirstOrDefault()),
                         GameUtil.GetFormattedMass(mass),
                         FormatStoredItemTemperature(group),
                         group.FirstOrDefault());
@@ -371,7 +371,7 @@ namespace StorageNetwork.UI
             Image icon = iconObject.AddComponent<Image>();
             icon.raycastTarget = false;
             icon.preserveAspect = true;
-            SetStoredItemIcon(icon, representative);
+            StorageNetworkStorageDisplay.SetStoredItemIcon(icon, representative);
 
             TextMeshProUGUI itemText = CreateText(
                 "Text",
@@ -609,3 +609,4 @@ namespace StorageNetwork.UI
         }
     }
 }
+

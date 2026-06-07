@@ -79,7 +79,7 @@ namespace StorageNetwork.UI
             EnsureDragPreview();
             dragPreviewRoot.SetActive(true);
             dragPreviewText.text = itemName;
-            SetStoredItemIcon(dragPreviewIcon, representative);
+            StorageNetworkStorageDisplay.SetStoredItemIcon(dragPreviewIcon, representative);
             UpdateDragPreviewPosition(KInputManager.GetMousePos());
         }
 
@@ -393,3 +393,4 @@ namespace StorageNetwork.UI
         }
     }
 }
+

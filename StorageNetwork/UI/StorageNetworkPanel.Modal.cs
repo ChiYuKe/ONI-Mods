@@ -24,7 +24,7 @@ namespace StorageNetwork.UI
                 return;
             }
 
-            string itemName = GetStoredItemName(items[0]);
+            string itemName = StorageNetworkStorageDisplay.GetStoredItemName(items[0]);
             float availableMass = GetStoredItemsMass(items);
             ShowAmountDialog(
                 Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.DROP_AMOUNT_TITLE),
@@ -56,7 +56,7 @@ namespace StorageNetwork.UI
                 return;
             }
 
-            string itemName = GetStoredItemName(items[0]);
+            string itemName = StorageNetworkStorageDisplay.GetStoredItemName(items[0]);
             float sourceMass = GetStoredItemsMass(items);
 
             void ShowTransferAmountDialog(Storage destination)
@@ -570,3 +570,4 @@ namespace StorageNetwork.UI
         }
     }
 }
+

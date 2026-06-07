@@ -573,12 +573,12 @@ namespace StorageNetwork.UI
             }
 
             productionInventoryView = new ProductionInventoryCardView();
-            foreach (IGrouping<string, GameObject> group in items.GroupBy(StorageItemUtility.GetStoredItemKey).OrderBy(group => GetStoredItemName(group.FirstOrDefault())))
+            foreach (IGrouping<string, GameObject> group in items.GroupBy(StorageItemUtility.GetStoredItemKey).OrderBy(group => StorageNetworkStorageDisplay.GetStoredItemName(group.FirstOrDefault())))
             {
                 float mass = group.Sum(GetStoredItemMass);
                 ProductionInventoryRowView row = CreateProductionSettingsItemRow(
                     card.transform,
-                    GetStoredItemName(group.FirstOrDefault()),
+                    StorageNetworkStorageDisplay.GetStoredItemName(group.FirstOrDefault()),
                     GameUtil.GetFormattedMass(mass),
                     group.FirstOrDefault());
                 productionInventoryView.Rows[StorageItemUtility.GetStoredItemKey(group.FirstOrDefault())] = row;
@@ -886,11 +886,11 @@ namespace StorageNetwork.UI
                 return;
             }
 
-            foreach (IGrouping<string, GameObject> group in items.GroupBy(StorageItemUtility.GetStoredItemKey).OrderBy(group => GetStoredItemName(group.FirstOrDefault())))
+            foreach (IGrouping<string, GameObject> group in items.GroupBy(StorageItemUtility.GetStoredItemKey).OrderBy(group => StorageNetworkStorageDisplay.GetStoredItemName(group.FirstOrDefault())))
             {
                 float mass = group.Sum(GetStoredItemMass);
                 CreateProductionSettingsItemRow(
-                    GetStoredItemName(group.FirstOrDefault()),
+                    StorageNetworkStorageDisplay.GetStoredItemName(group.FirstOrDefault()),
                     GameUtil.GetFormattedMass(mass),
                     group.FirstOrDefault());
             }
@@ -1532,7 +1532,7 @@ namespace StorageNetwork.UI
             Image icon = iconObject.AddComponent<Image>();
             icon.raycastTarget = false;
             icon.preserveAspect = true;
-            SetStoredItemIcon(icon, representative);
+            StorageNetworkStorageDisplay.SetStoredItemIcon(icon, representative);
 
             TextMeshProUGUI name = CreateText("Name", row.transform, itemName, 11, TextAlignmentOptions.MidlineLeft);
             name.color = new Color(0.18f, 0.19f, 0.19f, 1f);
@@ -1570,9 +1570,9 @@ namespace StorageNetwork.UI
                 }
 
                 GameObject representative = group.FirstOrDefault();
-                SetTextIfChanged(row.Name, GetStoredItemName(representative));
+                SetTextIfChanged(row.Name, StorageNetworkStorageDisplay.GetStoredItemName(representative));
                 SetTextIfChanged(row.Mass, GameUtil.GetFormattedMass(group.Sum(GetStoredItemMass)));
-                SetStoredItemIcon(row.Icon, representative);
+                StorageNetworkStorageDisplay.SetStoredItemIcon(row.Icon, representative);
             }
         }
 
@@ -1640,3 +1640,4 @@ namespace StorageNetwork.UI
         }
     }
 }
+
