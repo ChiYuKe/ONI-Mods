@@ -1527,6 +1527,14 @@ msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_TOGGLE_OFF"
 msgid "关闭"
 msgstr "Off"
 
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_RESTART_DIALOG_TITLE"
+msgid "信息"
+msgstr "Information"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_RESTART_CONTINUE"
+msgid "继续"
+msgstr "Continue"
+
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_SCENE_SCAN_CACHE"
 msgid "场景扫描缓存秒数"
 msgstr "Scene Scan Cache Seconds"

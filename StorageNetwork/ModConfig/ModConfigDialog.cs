@@ -464,14 +464,14 @@ namespace StorageNetwork.ModConfig
             }
 
             dialog.PopupConfirmDialog(
-                "要使这些选项完全生效，可能需要重新启动游戏。",
+                Loc.Get(Loc.UI.STORAGE_NETWORK.CONFIG_RESTART_REQUIRED),
                 () => App.instance.Restart(),
                 () => { },
                 null,
                 null,
-                "信息",
-                "重启",
-                "继续");
+                Loc.Get(Loc.UI.STORAGE_NETWORK.CONFIG_RESTART_DIALOG_TITLE),
+                Loc.Get(Loc.UI.STORAGE_NETWORK.RESTART),
+                Loc.Get(Loc.UI.STORAGE_NETWORK.CONFIG_RESTART_CONTINUE));
             dialogObject.SetActive(true);
         }
 

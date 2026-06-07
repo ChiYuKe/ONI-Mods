@@ -12,7 +12,7 @@ namespace StorageNetwork.ModConfig
 
         public string ModTitlePrefix { get; set; }
         public string ButtonName { get; set; }
-        public string ButtonText { get; set; } = "选项";
+        public string ButtonText { get; set; } = StorageNetwork.STRINGS.Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OPTIONS_BUTTON);
         public string Tooltip { get; set; }
         public Vector2 ButtonSize { get; set; } = new Vector2(CompactButtonWidth, 0f);
         public System.Action OnClick { get; set; }

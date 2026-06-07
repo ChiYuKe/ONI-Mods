@@ -310,6 +310,8 @@ namespace StorageNetwork
                 public static LocString CONFIG_RESTART_REQUIRED = "要使这些选项生效，必须重新启动游戏。";
                 public static LocString CONFIG_TOGGLE_ON = "开启";
                 public static LocString CONFIG_TOGGLE_OFF = "关闭";
+                public static LocString CONFIG_RESTART_DIALOG_TITLE = "信息";
+                public static LocString CONFIG_RESTART_CONTINUE = "继续";
                 public static LocString CONFIG_SCENE_SCAN_CACHE = "场景扫描缓存秒数";
                 public static LocString CONFIG_SCENE_SCAN_CACHE_DESC = "数值越小刷新越快，但遍历储存建筑更频繁。";
                 public static LocString CONFIG_DEFAULT_MATERIAL_LIMIT = "材料请求默认限额 kg";

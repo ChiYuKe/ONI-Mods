@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
+using Loc = StorageNetwork.STRINGS;
 
 namespace StorageNetwork.ModConfig
 {
@@ -51,11 +52,11 @@ namespace StorageNetwork.ModConfig
             {
                 ModTitlePrefix = modTitlePrefix,
                 ButtonName = buttonName,
-                ButtonText = "选项",
-                Tooltip = StableText(tooltip, "调整模组数值"),
+                ButtonText = Loc.Get(Loc.UI.STORAGE_NETWORK.OPTIONS_BUTTON),
+                Tooltip = StableText(tooltip, Loc.Get(Loc.UI.STORAGE_NETWORK.CONFIG_TOOLTIP)),
                 OnClick = () => ShowDialog(
-                    StableText(dialogTitle, "模组配置"),
-                    StableText(hint, "保存后会写入配置文件。部分数值需要重进存档或重启游戏才会完全体现。"))
+                    StableText(dialogTitle, Loc.Get(Loc.UI.STORAGE_NETWORK.CONFIG_TITLE)),
+                    StableText(hint, Loc.Get(Loc.UI.STORAGE_NETWORK.CONFIG_HINT)))
             });
         }
 
@@ -75,8 +76,8 @@ namespace StorageNetwork.ModConfig
             {
                 ModConfigField field = new ModConfigField
                 {
-                    Label = binding.Option.Label,
-                    Description = binding.Option.Description,
+                    Label = ResolveText(binding.Option.LabelKey, binding.Option.Label),
+                    Description = ResolveText(binding.Option.DescriptionKey, binding.Option.Description),
                     IsBoolean = binding.IsBoolean
                 };
 
@@ -122,6 +123,17 @@ namespace StorageNetwork.ModConfig
             return string.IsNullOrEmpty(value) || value.StartsWith("MISSING", StringComparison.OrdinalIgnoreCase)
                 ? fallback
                 : value;
+        }
+
+        private static string ResolveText(string key, string fallback)
+        {
+            if (string.IsNullOrEmpty(key))
+            {
+                return fallback;
+            }
+
+            string value = Strings.Get(key);
+            return StableText(value, fallback);
         }
 
         private static List<OptionBinding> BuildBindings(T config)
