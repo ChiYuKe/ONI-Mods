@@ -173,6 +173,11 @@ namespace StorageNetwork
                 public static LocString SOURCE_MOD_NAME = "来源：{0}";
                 public static LocString SERVER_OFFLINE = "服务器已掉线";
                 public static LocString SERVER_OFFLINE_COUNT = "{0} 台服务器已掉线";
+                public static LocString HEALTH_CAPACITY = "容量";
+                public static LocString HEALTH_REMAINING = "剩余";
+                public static LocString HEALTH_ORDERS = "订单";
+                public static LocString HEALTH_WAITING = "待料";
+                public static LocString HEALTH_ABNORMAL = "异常";
                 public static LocString HEALTH_OFFLINE = "掉线";
 
                 public static LocString SUMMARY_BUTTON = "汇总";

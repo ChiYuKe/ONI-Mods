@@ -519,11 +519,11 @@ namespace StorageNetwork.UI
             int abnormalOrders = productionOrderService.Orders.Count(order => order != null && order.State == ProductionOrderState.Abnormal);
             int offlineServers = currentSnapshot.Storages.Count(IsOfflineNetworkServer);
 
-            AddHealthTile("容量", string.Format("{0:P0}", Mathf.Clamp01(fillRatio)), fillRatio >= 0.92f ? DangerColor() : fillRatio >= 0.80f ? WarningColor() : PositiveColor());
-            AddHealthTile("剩余", GameUtil.GetFormattedMass(remainingCapacity), remainingCapacity <= 1000f ? WarningColor() : NeutralBlue());
-            AddHealthTile("订单", activeOrders.ToString(), activeOrders > 0 ? NeutralBlue() : MutedTextColor());
-            AddHealthTile("待料", waitingOrders.ToString(), waitingOrders > 0 ? WarningColor() : PositiveColor());
-            AddHealthTile("异常", abnormalOrders.ToString(), abnormalOrders > 0 ? DangerColor() : PositiveColor());
+            AddHealthTile(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.HEALTH_CAPACITY), string.Format("{0:P0}", Mathf.Clamp01(fillRatio)), fillRatio >= 0.92f ? DangerColor() : fillRatio >= 0.80f ? WarningColor() : PositiveColor());
+            AddHealthTile(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.HEALTH_REMAINING), GameUtil.GetFormattedMass(remainingCapacity), remainingCapacity <= 1000f ? WarningColor() : NeutralBlue());
+            AddHealthTile(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.HEALTH_ORDERS), activeOrders.ToString(), activeOrders > 0 ? NeutralBlue() : MutedTextColor());
+            AddHealthTile(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.HEALTH_WAITING), waitingOrders.ToString(), waitingOrders > 0 ? WarningColor() : PositiveColor());
+            AddHealthTile(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.HEALTH_ABNORMAL), abnormalOrders.ToString(), abnormalOrders > 0 ? DangerColor() : PositiveColor());
             AddHealthTile(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.HEALTH_OFFLINE), offlineServers.ToString(), offlineServers > 0 ? DangerColor() : PositiveColor());
             EnsureMainSearchTile();
         }

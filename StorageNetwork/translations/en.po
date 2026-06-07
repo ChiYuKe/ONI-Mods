@@ -299,6 +299,26 @@ msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SERVER_OFFLINE_COUNT"
 msgid "{0} 台服务器已掉线"
 msgstr "{0} servers offline"
 
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.HEALTH_CAPACITY"
+msgid "容量"
+msgstr "Capacity"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.HEALTH_REMAINING"
+msgid "剩余"
+msgstr "Free"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.HEALTH_ORDERS"
+msgid "订单"
+msgstr "Orders"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.HEALTH_WAITING"
+msgid "待料"
+msgstr "Waiting"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.HEALTH_ABNORMAL"
+msgid "异常"
+msgstr "Abnormal"
+
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.HEALTH_OFFLINE"
 msgid "掉线"
 msgstr "Offline"
