@@ -1,5 +1,5 @@
 using HarmonyLib;
-using StorageNetwork.Components;
+using StorageNetwork.Services;
 
 namespace StorageNetwork.Patches
 {
@@ -10,7 +10,7 @@ namespace StorageNetwork.Patches
         {
             public static bool Prefix(Clustercraft __instance, bool automated)
             {
-                if (__instance == null || !RocketHasStorageNetworkRelay(__instance.ModuleInterface))
+                if (__instance == null || !StorageNetworkRocketRelayService.HasStorageNetworkRelay(__instance.ModuleInterface))
                 {
                     return true;
                 }
@@ -35,7 +35,7 @@ namespace StorageNetwork.Patches
         {
             public static void Postfix(ConditionHasNosecone __instance, ref ProcessCondition.Status __result)
             {
-                if (__result != ProcessCondition.Status.Failure || !RocketHasStorageNetworkRelay(__instance))
+                if (__result != ProcessCondition.Status.Failure || !StorageNetworkRocketRelayService.HasStorageNetworkRelay(__instance))
                 {
                     return;
                 }
@@ -49,7 +49,8 @@ namespace StorageNetwork.Patches
         {
             public static void Postfix(ConditionHasControlStation __instance, ref ProcessCondition.Status __result)
             {
-                if (__result != ProcessCondition.Status.Failure || !RocketHasStorageNetworkRelay(__instance, "module"))
+                if (__result != ProcessCondition.Status.Failure ||
+                    !StorageNetworkRocketRelayService.HasStorageNetworkRelayOnModuleField(__instance, "module"))
                 {
                     return;
                 }
@@ -63,7 +64,8 @@ namespace StorageNetwork.Patches
         {
             public static void Postfix(ConditionPilotOnBoard __instance, ref ProcessCondition.Status __result)
             {
-                if (__result != ProcessCondition.Status.Failure || !RocketHasStorageNetworkRelay(__instance, "rocketModule"))
+                if (__result != ProcessCondition.Status.Failure ||
+                    !StorageNetworkRocketRelayService.HasStorageNetworkRelayOnModuleField(__instance, "rocketModule"))
                 {
                     return;
                 }
@@ -72,54 +74,5 @@ namespace StorageNetwork.Patches
             }
         }
 
-        private static bool RocketHasStorageNetworkRelay(ConditionHasNosecone condition)
-        {
-            LaunchableRocketCluster launchable = Traverse.Create(condition)
-                .Field("launchable")
-                .GetValue<LaunchableRocketCluster>();
-            if (launchable?.parts == null)
-            {
-                return false;
-            }
-
-            foreach (Ref<RocketModuleCluster> partRef in launchable.parts)
-            {
-                RocketModuleCluster part = partRef?.Get();
-                if (part != null && part.GetComponent<StorageNetworkRelayModule>() != null)
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        private static bool RocketHasStorageNetworkRelay(object condition, string rocketModuleFieldName)
-        {
-            RocketModuleCluster module = Traverse.Create(condition)
-                .Field(rocketModuleFieldName)
-                .GetValue<RocketModuleCluster>();
-            CraftModuleInterface craftInterface = module != null ? module.CraftInterface : null;
-            return RocketHasStorageNetworkRelay(craftInterface);
-        }
-
-        private static bool RocketHasStorageNetworkRelay(CraftModuleInterface craftInterface)
-        {
-            if (craftInterface?.ClusterModules == null)
-            {
-                return false;
-            }
-
-            foreach (Ref<RocketModuleCluster> partRef in craftInterface.ClusterModules)
-            {
-                RocketModuleCluster part = partRef?.Get();
-                if (part != null && part.GetComponent<StorageNetworkRelayModule>() != null)
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
     }
 }
