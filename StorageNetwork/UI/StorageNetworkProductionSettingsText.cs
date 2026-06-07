@@ -45,6 +45,117 @@ namespace StorageNetwork.UI
             return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_MODE_AUTO);
         }
 
+        public static string GetProductionStateText(ComplexFabricator fabricator)
+        {
+            if (fabricator == null || fabricator.CurrentWorkingOrder == null)
+            {
+                return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_SHORT_IDLE);
+            }
+
+            return fabricator.WaitingForWorker
+                ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_SHORT_WAITING_WORKER)
+                : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_SHORT_CRAFTING);
+        }
+
+        public static Color GetProductionStateColor(ComplexFabricator fabricator)
+        {
+            if (fabricator == null || fabricator.CurrentWorkingOrder == null)
+            {
+                return new Color(0.38f, 0.42f, 0.36f, 1f);
+            }
+
+            return fabricator.WaitingForWorker
+                ? new Color(0.64f, 0.42f, 0.24f, 1f)
+                : new Color(0.26f, 0.52f, 0.34f, 1f);
+        }
+
+        public static string GetCurrentRecipeText(ComplexFabricator fabricator)
+        {
+            return fabricator != null && fabricator.CurrentWorkingOrder != null
+                ? GetRecipeDisplayName(fabricator.CurrentWorkingOrder)
+                : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.NONE);
+        }
+
+        public static string GetNetworkStateText(
+            StorageNetworkMaterialRequester requester,
+            StorageNetworkStorageConnector connector,
+            StorageNetworkEnergyGeneratorRequester energyRequester)
+        {
+            if (requester != null)
+            {
+                return requester.RequestEnabled
+                    ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.REQUEST_ON_SHORT)
+                    : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.REQUEST_OFF_SHORT);
+            }
+
+            if (connector != null)
+            {
+                return connector.OutputStoreEnabled
+                    ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_ON_SHORT)
+                    : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_OFF_SHORT);
+            }
+
+            if (energyRequester != null)
+            {
+                return energyRequester.RequestEnabled
+                    ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.REQUEST_ON_SHORT)
+                    : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.REQUEST_OFF_SHORT);
+            }
+
+            return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.NO_COMPONENT);
+        }
+
+        public static LocString GetProductionInputMetricLabel(ComplexFabricator fabricator, StorageNetworkEnergyGeneratorRequester energyRequester)
+        {
+            return energyRequester != null && fabricator == null
+                ? StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_METRIC_REQUIRED
+                : StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_METRIC_RECIPE;
+        }
+
+        public static bool IsNetworkAutomationEnabled(
+            StorageNetworkMaterialRequester requester,
+            StorageNetworkStorageConnector connector,
+            StorageNetworkEnergyGeneratorRequester energyRequester)
+        {
+            if (requester != null)
+            {
+                return requester.RequestEnabled || requester.OutputStoreEnabled;
+            }
+
+            if (connector != null)
+            {
+                return connector.OutputStoreEnabled;
+            }
+
+            if (energyRequester != null)
+            {
+                return energyRequester.RequestEnabled;
+            }
+
+            return false;
+        }
+
+        public static string GetEnergyGeneratorFuelText(EnergyGenerator generator)
+        {
+            if (generator == null || generator.formula.inputs == null || generator.formula.inputs.Length == 0)
+            {
+                return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.NONE);
+            }
+
+            System.Collections.Generic.List<string> names = new System.Collections.Generic.List<string>();
+            foreach (EnergyGenerator.InputItem input in generator.formula.inputs)
+            {
+                if (input.tag != Tag.Invalid)
+                {
+                    names.Add(input.tag.ProperName());
+                }
+            }
+
+            return names.Count > 0
+                ? string.Join(", ", names)
+                : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.NONE);
+        }
+
         public static string FormatStorageOptionDetails(Storage storage)
         {
             return string.Format(
@@ -104,6 +215,11 @@ namespace StorageNetwork.UI
         {
             int placeholderIndex = template.IndexOf('{');
             return placeholderIndex >= 0 ? template.Substring(0, placeholderIndex) : template;
+        }
+
+        private static string GetRecipeDisplayName(ComplexRecipe recipe)
+        {
+            return recipe != null ? recipe.GetUIName(false) : string.Empty;
         }
     }
 }

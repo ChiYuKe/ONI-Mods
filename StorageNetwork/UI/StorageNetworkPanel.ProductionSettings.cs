@@ -255,9 +255,9 @@ namespace StorageNetwork.UI
             {
                 BuildingName = title,
                 StorageValue = CreateMetricTile(metrics.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_METRIC_STORAGE), string.Empty, new Color(0.35f, 0.40f, 0.43f, 1f)),
-                StateValue = CreateMetricTile(metrics.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_METRIC_RUNNING), string.Empty, GetProductionStateColor(fabricator)),
-                RecipeValue = CreateMetricTile(metrics.transform, Get(GetProductionInputMetricLabel(fabricator, energyRequester)), string.Empty, new Color(0.39f, 0.42f, 0.45f, 1f)),
-                NetworkValue = CreateMetricTile(metrics.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_METRIC_NETWORK), string.Empty, IsNetworkAutomationEnabled(storage, requester, connector, energyRequester) ? new Color(0.28f, 0.48f, 0.34f, 1f) : new Color(0.50f, 0.42f, 0.34f, 1f))
+                StateValue = CreateMetricTile(metrics.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_METRIC_RUNNING), string.Empty, StorageNetworkProductionSettingsText.GetProductionStateColor(fabricator)),
+                RecipeValue = CreateMetricTile(metrics.transform, Get(StorageNetworkProductionSettingsText.GetProductionInputMetricLabel(fabricator, energyRequester)), string.Empty, new Color(0.39f, 0.42f, 0.45f, 1f)),
+                NetworkValue = CreateMetricTile(metrics.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_METRIC_NETWORK), string.Empty, StorageNetworkProductionSettingsText.IsNetworkAutomationEnabled(requester, connector, energyRequester) ? new Color(0.28f, 0.48f, 0.34f, 1f) : new Color(0.50f, 0.42f, 0.34f, 1f))
             };
         }
 
@@ -270,11 +270,11 @@ namespace StorageNetwork.UI
 
             SetTextIfChanged(productionOverviewView.BuildingName, storage.GetProperName());
             SetTextIfChanged(productionOverviewView.StorageValue, string.Format("{0} / {1}", GameUtil.GetFormattedMass(storage.MassStored()), GameUtil.GetFormattedMass(storage.Capacity())));
-            SetTextIfChanged(productionOverviewView.StateValue, GetProductionStateText(fabricator));
-            productionOverviewView.StateValue.color = GetProductionStateColor(fabricator);
-            SetTextIfChanged(productionOverviewView.RecipeValue, energyRequester != null && fabricator == null ? GetEnergyGeneratorFuelText(storage.GetComponent<EnergyGenerator>()) : GetCurrentRecipeText(fabricator));
-            SetTextIfChanged(productionOverviewView.NetworkValue, GetNetworkStateText(storage, requester, connector, energyRequester));
-            productionOverviewView.NetworkValue.color = IsNetworkAutomationEnabled(storage, requester, connector, energyRequester)
+            SetTextIfChanged(productionOverviewView.StateValue, StorageNetworkProductionSettingsText.GetProductionStateText(fabricator));
+            productionOverviewView.StateValue.color = StorageNetworkProductionSettingsText.GetProductionStateColor(fabricator);
+            SetTextIfChanged(productionOverviewView.RecipeValue, energyRequester != null && fabricator == null ? StorageNetworkProductionSettingsText.GetEnergyGeneratorFuelText(storage.GetComponent<EnergyGenerator>()) : StorageNetworkProductionSettingsText.GetCurrentRecipeText(fabricator));
+            SetTextIfChanged(productionOverviewView.NetworkValue, StorageNetworkProductionSettingsText.GetNetworkStateText(requester, connector, energyRequester));
+            productionOverviewView.NetworkValue.color = StorageNetworkProductionSettingsText.IsNetworkAutomationEnabled(requester, connector, energyRequester)
                 ? new Color(0.28f, 0.48f, 0.34f, 1f)
                 : new Color(0.50f, 0.42f, 0.34f, 1f);
         }
@@ -746,95 +746,7 @@ namespace StorageNetwork.UI
 
         private static string GetProductionStateText(ComplexFabricator fabricator)
         {
-            if (fabricator == null || fabricator.CurrentWorkingOrder == null)
-            {
-                return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_SHORT_IDLE);
-            }
-
-            return fabricator.WaitingForWorker ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_SHORT_WAITING_WORKER) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_SHORT_CRAFTING);
-        }
-
-        private static Color GetProductionStateColor(ComplexFabricator fabricator)
-        {
-            if (fabricator == null || fabricator.CurrentWorkingOrder == null)
-            {
-                return new Color(0.38f, 0.42f, 0.36f, 1f);
-            }
-
-            return fabricator.WaitingForWorker ? new Color(0.64f, 0.42f, 0.24f, 1f) : new Color(0.26f, 0.52f, 0.34f, 1f);
-        }
-
-        private static string GetCurrentRecipeText(ComplexFabricator fabricator)
-        {
-            return fabricator != null && fabricator.CurrentWorkingOrder != null
-                ? GetRecipeDisplayName(fabricator.CurrentWorkingOrder)
-                : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.NONE);
-        }
-
-        private static string GetNetworkStateText(Storage storage, StorageNetworkMaterialRequester requester, StorageNetworkStorageConnector connector, StorageNetworkEnergyGeneratorRequester energyRequester)
-        {
-            if (requester != null)
-            {
-                return requester.RequestEnabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.REQUEST_ON_SHORT) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.REQUEST_OFF_SHORT);
-            }
-
-            if (connector != null)
-            {
-                return connector.OutputStoreEnabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_ON_SHORT) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_OFF_SHORT);
-            }
-
-            if (energyRequester != null)
-            {
-                return energyRequester.RequestEnabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.REQUEST_ON_SHORT) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.REQUEST_OFF_SHORT);
-            }
-
-            return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.NO_COMPONENT);
-        }
-
-        private static LocString GetProductionInputMetricLabel(ComplexFabricator fabricator, StorageNetworkEnergyGeneratorRequester energyRequester)
-        {
-            return energyRequester != null && fabricator == null
-                ? StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_METRIC_REQUIRED
-                : StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_METRIC_RECIPE;
-        }
-
-        private static bool IsNetworkAutomationEnabled(Storage storage, StorageNetworkMaterialRequester requester, StorageNetworkStorageConnector connector, StorageNetworkEnergyGeneratorRequester energyRequester)
-        {
-            if (requester != null)
-            {
-                return requester.RequestEnabled || requester.OutputStoreEnabled;
-            }
-
-            if (connector != null)
-            {
-                return connector.OutputStoreEnabled;
-            }
-
-            if (energyRequester != null)
-            {
-                return energyRequester.RequestEnabled;
-            }
-
-            return false;
-        }
-
-        private static string GetEnergyGeneratorFuelText(EnergyGenerator generator)
-        {
-            if (generator == null || generator.formula.inputs == null || generator.formula.inputs.Length == 0)
-            {
-                return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.NONE);
-            }
-
-            List<string> names = new List<string>();
-            foreach (EnergyGenerator.InputItem input in generator.formula.inputs)
-            {
-                if (input.tag != Tag.Invalid)
-                {
-                    names.Add(input.tag.ProperName());
-                }
-            }
-
-            return names.Count > 0 ? string.Join(", ", names) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.NONE);
+            return StorageNetworkProductionSettingsText.GetProductionStateText(fabricator);
         }
 
         private void AddProductionSettingsInfo(Storage storage, ComplexFabricator fabricator)
