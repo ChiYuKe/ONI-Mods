@@ -324,7 +324,7 @@ namespace StorageNetwork.UI
                 requester.RequestEnabled = !requester.RequestEnabled;
                 UpdateProductionSettingsPanel(true);
             }, requester.RequestEnabled);
-            CreateProductionActionRow(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SOURCE_POLICY), GetMaterialRequestModeName(requester), () => ShowMaterialSourcePicker(ownerStorage, requester));
+            CreateProductionActionRow(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SOURCE_POLICY), StorageNetworkProductionSettingsText.GetMaterialRequestModeName(requester), () => ShowMaterialSourcePicker(ownerStorage, requester));
             CreateToggleActionRow(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_LIMIT_ENABLED), requester.LimitEnabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ACTION_CLOSE) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ON), () =>
             {
                 SetMaterialRequestLimitEnabled(requester, !requester.LimitEnabled);
@@ -359,7 +359,7 @@ namespace StorageNetwork.UI
                 requester.OutputStoreEnabled = !requester.OutputStoreEnabled;
                 UpdateProductionSettingsPanel(true);
             }, requester.OutputStoreEnabled);
-            CreateProductionActionRow(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_POLICY), GetOutputStoreModeName(requester), () => ShowOutputStorePicker(ownerStorage, requester));
+            CreateProductionActionRow(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_POLICY), StorageNetworkProductionSettingsText.GetOutputStoreModeName(requester), () => ShowOutputStorePicker(ownerStorage, requester));
             productionAutomationView ??= new ProductionAutomationCardsView();
             productionAutomationView.OutputDescription = CreateFinePrint(card.transform, requester.OutputStoreEnabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_AUTO_DESC) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_MANUAL_DESC));
             SetFinePrintPreferredHeight(productionAutomationView.OutputDescription, requester.OutputStoreEnabled ? 42f : 22f);
@@ -405,7 +405,7 @@ namespace StorageNetwork.UI
             CreateProductionActionRow(
                 card.transform,
                 Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SOURCE_POLICY),
-                GetEnergyGeneratorSourceModeName(requester),
+                StorageNetworkProductionSettingsText.GetEnergyGeneratorSourceModeName(requester),
                 () => ShowEnergyGeneratorSourcePicker(ownerStorage, requester));
             CreateToggleActionRow(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_LIMIT_ENABLED), requester.LimitEnabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ACTION_CLOSE) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ON), () =>
             {
@@ -862,7 +862,7 @@ namespace StorageNetwork.UI
                 });
 
             CreateProductionOptionFoldout(
-                string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_MODE), GetMaterialRequestModeName(requester)),
+                string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_MODE), StorageNetworkProductionSettingsText.GetMaterialRequestModeName(requester)),
                 row => ShowMaterialSourcePicker(storage, requester));
 
             CreateProductionToggleRow(
@@ -896,7 +896,7 @@ namespace StorageNetwork.UI
             if (!string.IsNullOrEmpty(requester.LastStatus))
             {
                 AddProductionSettingsText(
-                    ColorizeMaterialRequestStatus(string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_STATUS), requester.LastStatus)),
+                    StorageNetworkProductionSettingsText.ColorizeMaterialRequestStatus(string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_STATUS), requester.LastStatus)),
                     11,
                     FontStyles.Normal,
                     22f);
@@ -924,7 +924,7 @@ namespace StorageNetwork.UI
             }
 
             CreateProductionOptionFoldout(
-                string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_MODE), GetOutputStoreModeName(requester)),
+                string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_MODE), StorageNetworkProductionSettingsText.GetOutputStoreModeName(requester)),
                 row => ShowOutputStorePicker(ownerStorage, requester));
         }
 
@@ -932,29 +932,29 @@ namespace StorageNetwork.UI
         {
             if (fabricator == null)
             {
-                AddProductionSettingsText(ColorText(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_NO_RECIPE), "#6b6b63"), 12, FontStyles.Normal, 24f);
+                AddProductionSettingsText(StorageNetworkProductionSettingsText.ColorText(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_NO_RECIPE), "#6b6b63"), 12, FontStyles.Normal, 24f);
                 return;
             }
 
             ComplexRecipe currentRecipe = fabricator.CurrentWorkingOrder;
             if (currentRecipe == null)
             {
-                AddProductionSettingsText(ColorText(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_STATUS_IDLE), "#5f665d"), 12, FontStyles.Normal, 22f);
-                AddProductionSettingsText(ColorText(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_NO_RECIPE), "#6b6b63"), 12, FontStyles.Normal, 22f);
+                AddProductionSettingsText(StorageNetworkProductionSettingsText.ColorText(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_STATUS_IDLE), "#5f665d"), 12, FontStyles.Normal, 22f);
+                AddProductionSettingsText(StorageNetworkProductionSettingsText.ColorText(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_NO_RECIPE), "#6b6b63"), 12, FontStyles.Normal, 22f);
                 return;
             }
 
             string statusText = fabricator.WaitingForWorker
-                ? ColorText(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_STATUS_WAITING_WORKER), "#b5753c")
-                : ColorText(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_STATUS_CRAFTING), "#3f7f4a");
+                ? StorageNetworkProductionSettingsText.ColorText(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_STATUS_WAITING_WORKER), "#b5753c")
+                : StorageNetworkProductionSettingsText.ColorText(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_STATUS_CRAFTING), "#3f7f4a");
             AddProductionSettingsText(statusText, 12, FontStyles.Normal, 22f);
             AddProductionSettingsText(
-                ColorText(string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_CURRENT_RECIPE), GetRecipeDisplayName(currentRecipe)), "#38485d"),
+                StorageNetworkProductionSettingsText.ColorText(string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_CURRENT_RECIPE), GetRecipeDisplayName(currentRecipe)), "#38485d"),
                 12,
                 FontStyles.Normal,
                 22f);
             AddProductionSettingsText(
-                ColorText(string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_PROGRESS), Mathf.RoundToInt(Mathf.Clamp01(fabricator.OrderProgress) * 100f)), "#5a5f66"),
+                StorageNetworkProductionSettingsText.ColorText(string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_PROGRESS), Mathf.RoundToInt(Mathf.Clamp01(fabricator.OrderProgress) * 100f)), "#5a5f66"),
                 12,
                 FontStyles.Normal,
                 22f);
@@ -962,7 +962,7 @@ namespace StorageNetwork.UI
             IReadOnlyList<string> orderUsages = productionOrderService.GetActiveOrderUsagesForFabricator(fabricator, 2);
             foreach (string usage in orderUsages)
             {
-                AddProductionSettingsText(ColorText(string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_USAGE_PREFIX), usage), "#7a4a66"), 10, FontStyles.Normal, 20f);
+                AddProductionSettingsText(StorageNetworkProductionSettingsText.ColorText(string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_USAGE_PREFIX), usage), "#7a4a66"), 10, FontStyles.Normal, 20f);
             }
         }
 
@@ -994,36 +994,6 @@ namespace StorageNetwork.UI
             label.fontStyle = style;
             label.richText = true;
             label.gameObject.AddComponent<LayoutElement>().preferredHeight = height;
-        }
-
-        private static string ColorizeMaterialRequestStatus(string text)
-        {
-            if (string.IsNullOrEmpty(text))
-            {
-                return text;
-            }
-
-            if (text.Contains("缺少") || text.Contains("没有可用") || text.Contains("Missing") || text.Contains("no source"))
-            {
-                return ColorText(text, "#a64c3c");
-            }
-
-            if (text.Contains("限额") || text.Contains("limit"))
-            {
-                return ColorText(text, "#b5753c");
-            }
-
-            if (text.Contains("已请求") || text.Contains("已满足") || text.Contains("requested") || text.Contains("satisfied"))
-            {
-                return ColorText(text, "#3f7f4a");
-            }
-
-            return ColorText(text, "#5a5f66");
-        }
-
-        private static string ColorText(string text, string color)
-        {
-            return string.Format("<color={0}>{1}</color>", color, text);
         }
 
         private void CreateProductionToggleRow(string label, bool value, System.Action<bool> onChanged)
@@ -1109,7 +1079,7 @@ namespace StorageNetwork.UI
                 Storage captured = target;
                 options.Add(new ProductionPickerOption(
                     string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_SOURCE), captured.GetProperName()),
-                    FormatStorageOptionDetails(captured),
+                    StorageNetworkProductionSettingsText.FormatStorageOptionDetails(captured),
                     requester.CurrentMode == StorageNetworkMaterialRequester.RequestMode.SpecificStorage && requester.ResolveSourceStorage() == captured,
                     () =>
                     {
@@ -1143,7 +1113,7 @@ namespace StorageNetwork.UI
                 Storage captured = target;
                 options.Add(new ProductionPickerOption(
                     string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_SOURCE), captured.GetProperName()),
-                    FormatStorageOptionDetails(captured),
+                    StorageNetworkProductionSettingsText.FormatStorageOptionDetails(captured),
                     requester.CurrentMode == StorageNetworkMaterialRequester.RequestMode.SpecificStorage && requester.ResolveSourceStorage() == captured,
                     () =>
                     {
@@ -1177,7 +1147,7 @@ namespace StorageNetwork.UI
                 Storage captured = target;
                 options.Add(new ProductionPickerOption(
                     string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_TARGET), captured.GetProperName()),
-                    FormatStorageOptionDetails(captured),
+                    StorageNetworkProductionSettingsText.FormatStorageOptionDetails(captured),
                     requester.CurrentOutputStoreMode == StorageNetworkMaterialRequester.OutputStoreMode.SpecificStorage && requester.ResolveOutputStorage() == captured,
                     () =>
                     {
@@ -1354,45 +1324,6 @@ namespace StorageNetwork.UI
             hintText.gameObject.AddComponent<LayoutElement>().preferredHeight = 42f;
         }
 
-        private static string GetMaterialRequestModeName(StorageNetworkMaterialRequester requester)
-        {
-            if (requester.CurrentMode == StorageNetworkMaterialRequester.RequestMode.SpecificStorage)
-            {
-                Storage source = requester.ResolveSourceStorage();
-                return source != null
-                    ? string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_SOURCE), source.GetProperName())
-                    : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_MODE_SPECIFIC);
-            }
-
-            return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_MODE_SEARCH);
-        }
-
-        private static string GetEnergyGeneratorSourceModeName(StorageNetworkEnergyGeneratorRequester requester)
-        {
-            if (requester.CurrentMode == StorageNetworkMaterialRequester.RequestMode.SpecificStorage)
-            {
-                Storage source = requester.ResolveSourceStorage();
-                return source != null
-                    ? string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_SOURCE), source.GetProperName())
-                    : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_MODE_SPECIFIC);
-            }
-
-            return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_MODE_SEARCH);
-        }
-
-        private static string GetOutputStoreModeName(StorageNetworkMaterialRequester requester)
-        {
-            if (requester.CurrentOutputStoreMode == StorageNetworkMaterialRequester.OutputStoreMode.SpecificStorage)
-            {
-                Storage target = requester.ResolveOutputStorage();
-                return target != null
-                    ? string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_TARGET), target.GetProperName())
-                    : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_MODE_SPECIFIC);
-            }
-
-            return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_MODE_AUTO);
-        }
-
         private static List<Storage> GetNetworkStorageTargets(Storage ownerStorage)
         {
             return StorageNetworkStorageRules.GetNetworkStorageTargets(ownerStorage);
@@ -1406,15 +1337,6 @@ namespace StorageNetwork.UI
             }
 
             return storage.GetComponent<StorageNetworkStorageConnector>() ?? storage.gameObject.AddOrGet<StorageNetworkStorageConnector>();
-        }
-
-        private static string FormatStorageOptionDetails(Storage storage)
-        {
-            return string.Format(
-                Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_TARGET_DETAILS),
-                GameUtil.GetFormattedMass(storage.MassStored()),
-                GameUtil.GetFormattedMass(storage.Capacity()),
-                GameUtil.GetFormattedMass(Mathf.Max(0f, storage.RemainingCapacity())));
         }
 
         private void ShowMaterialRequestSourceSelection(Storage ownerStorage, StorageNetworkMaterialRequester requester)

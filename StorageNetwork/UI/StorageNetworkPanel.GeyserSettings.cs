@@ -209,7 +209,7 @@ namespace StorageNetwork.UI
                 Storage captured = target;
                 options.Add(new ProductionPickerOption(
                     string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_TARGET), captured.GetProperName()),
-                    FormatStorageOptionDetails(captured),
+                    StorageNetworkProductionSettingsText.FormatStorageOptionDetails(captured),
                     enrollment.CurrentGeyserOutputStoreMode == StorageNetworkMaterialRequester.OutputStoreMode.SpecificStorage && enrollment.ResolveGeyserOutputStorage() == captured,
                     () =>
                     {
