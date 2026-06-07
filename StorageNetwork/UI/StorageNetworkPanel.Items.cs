@@ -215,7 +215,7 @@ namespace StorageNetwork.UI
                 group.Storages.Add(storageInfo);
             }
 
-            return groups.Values.OrderBy(group => GetStorageCategoryOrder(group.Key));
+            return groups.Values.OrderBy(group => StorageCategories.GetOrder(group.Key));
         }
 
         private IEnumerable<StorageInfo> FilterStorageInfosBySearch(IEnumerable<StorageInfo> storages)
@@ -238,7 +238,7 @@ namespace StorageNetwork.UI
 
             if (StorageNetworkTextFormatting.ContainsSearchText(storageInfo.Name, query) ||
                 StorageNetworkTextFormatting.ContainsSearchText(GetStorageTypeName(storageInfo), query) ||
-                StorageNetworkTextFormatting.ContainsSearchText(GetStorageCategoryName(GetStorageCategoryKey(storageInfo)), query))
+                StorageNetworkTextFormatting.ContainsSearchText(StorageCategories.GetName(GetStorageCategoryKey(storageInfo)), query))
             {
                 return true;
             }
@@ -264,7 +264,7 @@ namespace StorageNetwork.UI
         {
             if (!groups.TryGetValue(key, out StorageNetworkCategoryGroup group))
             {
-                group = new StorageNetworkCategoryGroup(key, GetStorageCategoryName(key));
+                group = new StorageNetworkCategoryGroup(key, StorageCategories.GetName(key));
                 groups.Add(key, group);
             }
 
@@ -300,16 +300,6 @@ namespace StorageNetwork.UI
             return storageInfo != null && storageInfo.Geyser != null
                 ? StorageCategories.GeyserKey
                 : GetStorageCategoryKey(storageInfo?.Storage);
-        }
-
-        private static string GetStorageCategoryName(string key)
-        {
-            return StorageCategories.GetName(key);
-        }
-
-        private static int GetStorageCategoryOrder(string key)
-        {
-            return StorageCategories.GetOrder(key);
         }
 
         private static string GetStorageTypeKey(StorageInfo storageInfo)
