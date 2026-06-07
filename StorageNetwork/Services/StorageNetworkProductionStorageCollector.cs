@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace StorageNetwork.UI
+namespace StorageNetwork.Services
 {
     internal static class StorageNetworkProductionStorageCollector
     {

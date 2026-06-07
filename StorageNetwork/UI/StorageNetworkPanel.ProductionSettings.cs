@@ -3,6 +3,7 @@ using System.Linq;
 using StorageNetwork.Components;
 using StorageNetwork.Core;
 using StorageNetwork.Gameplay;
+using StorageNetwork.Services;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
