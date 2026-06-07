@@ -743,25 +743,7 @@ namespace StorageNetwork.UI
 
         private static bool TryGetBuildingWorldId(GameObject gameObject, out int worldId)
         {
-            worldId = byte.MaxValue;
-            if (gameObject == null)
-            {
-                return false;
-            }
-
-            worldId = gameObject.GetMyWorldId();
-            if (worldId != byte.MaxValue && worldId >= 0)
-            {
-                return true;
-            }
-
-            int cell = Grid.PosToCell(gameObject);
-            if (!Grid.IsValidCell(cell))
-            {
-                return false;
-            }
-
-            worldId = Grid.WorldIdx[cell];
+            worldId = StorageNetworkWorldUtility.GetObjectWorldId(gameObject);
             return worldId != byte.MaxValue && worldId >= 0;
         }
 
