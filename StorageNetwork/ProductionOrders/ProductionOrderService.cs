@@ -401,7 +401,7 @@ namespace StorageNetwork.ProductionOrders
                     ProductionOrderFormatting.GetTagDisplayName(requirement.Material),
                     GameUtil.GetFormattedMass(requirement.AvailableAmount),
                     GameUtil.GetFormattedMass(requirement.RequiredAmount),
-                    missing > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ? string.Format("  缺 {0}", GameUtil.GetFormattedMass(missing)) : string.Empty));
+                    missing > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ? "  " + string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_MISSING_PREFIX), GameUtil.GetFormattedMass(missing)) : string.Empty));
 
                 if (requirement.Child != null)
                 {
@@ -959,11 +959,11 @@ namespace StorageNetwork.ProductionOrders
 
             if (localAssignment.Primary)
             {
-                return string.Format("#{0} 执行 {1} x{2}", order.DisplayId, order.ProductName, localAssignment.OrderCount);
+                return string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_USAGE_PRIMARY), order.DisplayId, order.ProductName, localAssignment.OrderCount);
             }
 
             return string.Format(
-                "#{0} 为 {1} 提供 {2} x{3}",
+                Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_USAGE_SUPPLY),
                 order.DisplayId,
                 string.IsNullOrEmpty(localAssignment.ConsumerName) ? FormatPrimaryFabricators(order) : localAssignment.ConsumerName,
                 string.IsNullOrEmpty(localAssignment.OutputName) ? GetRecipeOutputName(localAssignment.Recipe, order.ProductTag) : localAssignment.OutputName,

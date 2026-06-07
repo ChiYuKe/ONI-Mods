@@ -1499,6 +1499,14 @@ msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_USAGE_PREFIX"
 msgid "订单用途：{0}"
 msgstr "Order usage: {0}"
 
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_USAGE_PRIMARY"
+msgid "#{0} 执行 {1} x{2}"
+msgstr "#{0} runs {1} x{2}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_USAGE_SUPPLY"
+msgid "#{0} 为 {1} 提供 {2} x{3}"
+msgstr "#{0} supplies {2} x{3} for {1}"
+
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.WORLD_MATERIAL_REQUEST_ON"
 msgid "材料请求：开启"
 msgstr "Material request: On"

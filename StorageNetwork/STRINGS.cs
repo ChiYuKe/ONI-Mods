@@ -505,6 +505,8 @@ namespace StorageNetwork
                 public static LocString OUTPUT_OFF_SHORT = "入网关";
                 public static LocString NO_COMPONENT = "无组件";
                 public static LocString ORDER_USAGE_PREFIX = "订单用途：{0}";
+                public static LocString ORDER_USAGE_PRIMARY = "#{0} 执行 {1} x{2}";
+                public static LocString ORDER_USAGE_SUPPLY = "#{0} 为 {1} 提供 {2} x{3}";
 
                 public static LocString WORLD_MATERIAL_REQUEST_ON = "材料请求：开启";
                 public static LocString WORLD_MATERIAL_REQUEST_OFF = "材料请求：关闭";
