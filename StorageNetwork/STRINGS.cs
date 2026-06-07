@@ -432,6 +432,7 @@ namespace StorageNetwork
                 public static LocString ORDER_STILL_MISSING = "仍缺料";
 
                 public static LocString TRACKING_NO_PRODUCT = "选择成品后显示活动订单。";
+                public static LocString TRACKING_ALL_PRODUCTS = "全部成品";
                 public static LocString TRACKING_EMPTY = "暂无活动订单。提交后会显示状态、数量、批次和合并记录。";
                 public static LocString TRACKING_ACTIVE_TITLE = "活动订单追踪";
                 public static LocString TRACKING_CREATED_CYCLE = "创建周期";
@@ -460,6 +461,11 @@ namespace StorageNetwork
                 public static LocString TRACKING_BUILDING_QUEUED = "排队中";
                 public static LocString TRACKING_BUILDING_MISSING = "建筑不存在";
                 public static LocString TRACKING_BUILDING_PROGRESS = "进度 {0:P0}";
+                public static LocString TRACKING_BUILDING_QUEUE = "{0} x{1}    队列 {2}";
+                public static LocString TRACKING_DETAIL_TARGET = "目标 {0}";
+                public static LocString TRACKING_DETAIL_SUPPLY = "供给 {0}";
+                public static LocString TRACKING_OUTPUT_RESERVED = "产出预留 {0}";
+                public static LocString TRACKING_MATERIAL_DISPATCH = "材料调拨 {0}";
 
                 public static LocString PRODUCTION_METRIC_STORAGE = "储存";
                 public static LocString PRODUCTION_METRIC_RUNNING = "运行";

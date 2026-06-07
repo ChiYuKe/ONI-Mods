@@ -1211,6 +1211,10 @@ msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_NO_PRODUCT"
 msgid "选择成品后显示活动订单。"
 msgstr "Select a product to show active orders."
 
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_ALL_PRODUCTS"
+msgid "全部成品"
+msgstr "All Products"
+
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_EMPTY"
 msgid "暂无活动订单。提交后会显示状态、数量、批次和合并记录。"
 msgstr "No active orders. Submitted orders will show status, amounts, batches, and merge history here."
@@ -1322,6 +1326,26 @@ msgstr "Building missing"
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_BUILDING_PROGRESS"
 msgid "进度 {0:P0}"
 msgstr "Progress {0:P0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_BUILDING_QUEUE"
+msgid "{0} x{1}    队列 {2}"
+msgstr "{0} x{1}    Queue {2}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_DETAIL_TARGET"
+msgid "目标 {0}"
+msgstr "Target {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_DETAIL_SUPPLY"
+msgid "供给 {0}"
+msgstr "Supply {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_OUTPUT_RESERVED"
+msgid "产出预留 {0}"
+msgstr "Output reserved {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_MATERIAL_DISPATCH"
+msgid "材料调拨 {0}"
+msgstr "Material dispatch {0}"
 
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_METRIC_STORAGE"
 msgid "储存"

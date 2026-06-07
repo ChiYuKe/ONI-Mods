@@ -201,6 +201,55 @@ namespace StorageNetwork.UI
             return string.IsNullOrEmpty(currentProductionState) ? GetBuildingStateLabel(assignment) : currentProductionState;
         }
 
+        public static string BuildBuildingQueueLine(ProductionOrderQueueAssignment assignment, string dispatchLabel, string autoDispatchLabel, string queuedText)
+        {
+            string assignmentLabel = assignment != null && assignment.Primary ? dispatchLabel : autoDispatchLabel;
+            int orderCount = assignment != null ? assignment.OrderCount : 0;
+            return string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_BUILDING_QUEUE), assignmentLabel, orderCount, queuedText);
+        }
+
+        public static string BuildMaterialDetailLine(ProductionOrderRecord record, ProductionOrderQueueAssignment assignment)
+        {
+            if (record == null)
+            {
+                return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_BUILDING_MISSING);
+            }
+
+            if (assignment != null && assignment.Primary)
+            {
+                return string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_DETAIL_TARGET), GameUtil.GetFormattedMass(record.RequestedAmount));
+            }
+
+            string supplyName = string.IsNullOrEmpty(assignment?.ConsumerName) ? record.ProductName : assignment.ConsumerName;
+            return string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_DETAIL_SUPPLY), supplyName);
+        }
+
+        public static string BuildLeaseSummary(ProductionOrderRecord record, ProductionOrderQueueAssignment assignment)
+        {
+            if (record == null || assignment == null)
+            {
+                return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_BUILDING_MISSING);
+            }
+
+            if (assignment.Primary)
+            {
+                int fabricatorId = assignment.Fabricator != null ? assignment.Fabricator.GetInstanceID() : 0;
+                float leased = (record.OutputLeases ?? new List<ProductionOrderOutputLease>())
+                    .Where(lease => lease != null && fabricatorId != 0 && lease.FabricatorInstanceId == fabricatorId)
+                    .Sum(lease => lease.Amount);
+                return leased > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT
+                    ? string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_OUTPUT_RESERVED), GameUtil.GetFormattedMass(leased))
+                    : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_MANUAL_DESC);
+            }
+
+            float materialLease = (record.MaterialLeases ?? new List<ProductionOrderMaterialLease>())
+                .Where(lease => lease != null && lease.ConsumerName == assignment.ConsumerName)
+                .Sum(lease => lease.Amount);
+            return materialLease > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT
+                ? string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_MATERIAL_DISPATCH), GameUtil.GetFormattedMass(materialLease))
+                : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_STATUS_WAITING_CONTENTS);
+        }
+
         public static BuildingStateKind GetBuildingStateKind(ProductionOrderQueueAssignment assignment)
         {
             ComplexFabricator fabricator = assignment?.Fabricator;

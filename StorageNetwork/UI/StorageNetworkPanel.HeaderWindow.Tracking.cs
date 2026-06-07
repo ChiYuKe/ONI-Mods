@@ -58,7 +58,7 @@ namespace StorageNetwork.UI
                 return product.ProductName;
             }
 
-            return "全部成品";
+            return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_ALL_PRODUCTS);
         }
 
         private void EnsureOrderTrackingRows()
@@ -399,7 +399,7 @@ namespace StorageNetwork.UI
 
             AddPlanLine(text.transform, fabricator.GetProperName(), 10, FontStyles.Bold, NeutralTextColor(), 17f);
             AddPlanLine(text.transform, string.Format("{0}  {1}", GetBuildingStateLabel(assignment), assignment.Recipe != null ? assignment.Recipe.GetUIName(false) : "?"), 8, FontStyles.Bold, stateColor, 15f);
-            AddPlanLine(text.transform, string.Format("{0} x{1}    队列 {2}", assignment.Primary ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_PRODUCT_DISPATCH) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_DISPATCH_AUTO), assignment.OrderCount, queuedText), 8, FontStyles.Normal, MutedTextColor(), 15f);
+            AddPlanLine(text.transform, StorageNetworkOrderTrackingRules.BuildBuildingQueueLine(assignment, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_PRODUCT_DISPATCH), Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_DISPATCH_AUTO), queuedText), 8, FontStyles.Normal, MutedTextColor(), 15f);
             AddPlanLine(text.transform, BuildBuildingDetailLine(assignment, progress), 8, FontStyles.Bold, stateColor, 15f);
         }
 
@@ -425,28 +425,8 @@ namespace StorageNetwork.UI
 
             string outputName = !string.IsNullOrEmpty(assignment.OutputName) ? assignment.OutputName : ProductionOrderFormatting.GetTagDisplayName(assignment.OutputTag);
             AddPlanLine(text.transform, outputName, 9, FontStyles.Bold, assignment.Primary ? PositiveColor() : WarningColor(), 16f);
-            AddPlanLine(text.transform, assignment.Primary ? string.Format("目标 {0}", GameUtil.GetFormattedMass(record.RequestedAmount)) : string.Format("供给 {0}", string.IsNullOrEmpty(assignment.ConsumerName) ? record.ProductName : assignment.ConsumerName), 8, FontStyles.Normal, NeutralTextColor(), 15f);
-            AddPlanLine(text.transform, BuildTrackingLeaseSummary(record, assignment), 8, FontStyles.Bold, MutedTextColor(), 28f);
-        }
-
-        private string BuildTrackingLeaseSummary(ProductionOrderRecord record, ProductionOrderQueueAssignment assignment)
-        {
-            if (assignment.Primary)
-            {
-                float leased = (record.OutputLeases ?? new List<ProductionOrderOutputLease>())
-                    .Where(lease => lease != null && lease.FabricatorInstanceId == assignment.Fabricator.GetInstanceID())
-                    .Sum(lease => lease.Amount);
-                return leased > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT
-                    ? string.Format("产出预留 {0}", GameUtil.GetFormattedMass(leased))
-                    : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_MANUAL_DESC);
-            }
-
-            float materialLease = (record.MaterialLeases ?? new List<ProductionOrderMaterialLease>())
-                .Where(lease => lease != null && lease.ConsumerName == assignment.ConsumerName)
-                .Sum(lease => lease.Amount);
-            return materialLease > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT
-                ? string.Format("材料调拨 {0}", GameUtil.GetFormattedMass(materialLease))
-                : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_STATUS_WAITING_CONTENTS);
+            AddPlanLine(text.transform, StorageNetworkOrderTrackingRules.BuildMaterialDetailLine(record, assignment), 8, FontStyles.Normal, NeutralTextColor(), 15f);
+            AddPlanLine(text.transform, StorageNetworkOrderTrackingRules.BuildLeaseSummary(record, assignment), 8, FontStyles.Bold, MutedTextColor(), 28f);
         }
 
         private void AddTrackingDetailInfoNode(Transform parent, Vector2 position, string text)
@@ -712,7 +692,7 @@ namespace StorageNetwork.UI
             }
         }
 
-        // 统一建筑运行状态颜色，订单树和详情树都走这里，避免同一状态在不同卡片上颜色不一致。
+        // Keeps building state colors consistent between the order tree and detail tree.
         private static Color GetBuildingStateColor(ProductionOrderQueueAssignment assignment)
         {
             switch (StorageNetworkOrderTrackingRules.GetBuildingStateKind(assignment))
