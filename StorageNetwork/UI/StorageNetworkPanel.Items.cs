@@ -251,7 +251,7 @@ namespace StorageNetwork.UI
             foreach (GameObject item in storageInfo.StoredItems ?? Enumerable.Empty<GameObject>())
             {
                 if (ContainsSearchText(GetStoredItemName(item), query) ||
-                    ContainsSearchText(GetStoredItemKey(item), query))
+                    ContainsSearchText(StorageItemUtility.GetStoredItemKey(item), query))
                 {
                     return true;
                 }
@@ -310,11 +310,6 @@ namespace StorageNetwork.UI
         private static int GetStorageCategoryOrder(string key)
         {
             return StorageCategories.GetOrder(key);
-        }
-
-        private static string GetStoredItemKey(GameObject item)
-        {
-            return StorageItemUtility.GetStoredItemKey(item);
         }
 
         private static string GetStorageTypeKey(StorageInfo storageInfo)

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using StorageNetwork.Core;
+using StorageNetwork.Services;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -169,7 +170,7 @@ namespace StorageNetwork.UI
                         continue;
                     }
 
-                    string key = GetStoredItemKey(item);
+                    string key = StorageItemUtility.GetStoredItemKey(item);
                     float mass = GetStoredItemMass(item);
                     if (totalsByKey.TryGetValue(key, out ItemTotalAccumulator accumulator))
                     {

@@ -564,7 +564,7 @@ namespace StorageNetwork.UI
             List<GameObject> items = StorageNetworkProductionStorageCollector.GetProductionStorages(storage, fabricator)
                 .SelectMany(itemStorage => itemStorage.items.Where(item => item != null))
                 .ToList();
-            GameObject card = CreateProductionCard("InventoryCard", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_CONTENT_TITLE), Mathf.Clamp(52f + Mathf.Max(1, items.GroupBy(GetStoredItemKey).Count()) * 26f, 82f, 150f));
+            GameObject card = CreateProductionCard("InventoryCard", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_CONTENT_TITLE), Mathf.Clamp(52f + Mathf.Max(1, items.GroupBy(StorageItemUtility.GetStoredItemKey).Count()) * 26f, 82f, 150f));
             if (items.Count == 0)
             {
                 CreateFinePrint(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.NO_STORAGE_CONTENT));
@@ -573,7 +573,7 @@ namespace StorageNetwork.UI
             }
 
             productionInventoryView = new ProductionInventoryCardView();
-            foreach (IGrouping<string, GameObject> group in items.GroupBy(GetStoredItemKey).OrderBy(group => GetStoredItemName(group.FirstOrDefault())))
+            foreach (IGrouping<string, GameObject> group in items.GroupBy(StorageItemUtility.GetStoredItemKey).OrderBy(group => GetStoredItemName(group.FirstOrDefault())))
             {
                 float mass = group.Sum(GetStoredItemMass);
                 ProductionInventoryRowView row = CreateProductionSettingsItemRow(
@@ -581,7 +581,7 @@ namespace StorageNetwork.UI
                     GetStoredItemName(group.FirstOrDefault()),
                     GameUtil.GetFormattedMass(mass),
                     group.FirstOrDefault());
-                productionInventoryView.Rows[GetStoredItemKey(group.FirstOrDefault())] = row;
+                productionInventoryView.Rows[StorageItemUtility.GetStoredItemKey(group.FirstOrDefault())] = row;
             }
         }
 
@@ -886,7 +886,7 @@ namespace StorageNetwork.UI
                 return;
             }
 
-            foreach (IGrouping<string, GameObject> group in items.GroupBy(GetStoredItemKey).OrderBy(group => GetStoredItemName(group.FirstOrDefault())))
+            foreach (IGrouping<string, GameObject> group in items.GroupBy(StorageItemUtility.GetStoredItemKey).OrderBy(group => GetStoredItemName(group.FirstOrDefault())))
             {
                 float mass = group.Sum(GetStoredItemMass);
                 CreateProductionSettingsItemRow(
@@ -1561,7 +1561,7 @@ namespace StorageNetwork.UI
 
             foreach (IGrouping<string, GameObject> group in StorageNetworkProductionStorageCollector.GetProductionStorages(storage, fabricator)
                 .SelectMany(itemStorage => itemStorage.items.Where(item => item != null))
-                .GroupBy(GetStoredItemKey))
+                .GroupBy(StorageItemUtility.GetStoredItemKey))
             {
                 string key = group.Key;
                 if (!productionInventoryView.Rows.TryGetValue(key, out ProductionInventoryRowView row))

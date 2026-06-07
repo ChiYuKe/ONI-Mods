@@ -4,6 +4,7 @@ using System.Globalization;
 using StorageNetwork.Components;
 using StorageNetwork.Core;
 using StorageNetwork.ProductionOrders;
+using StorageNetwork.Services;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -716,7 +717,7 @@ namespace StorageNetwork.UI
                 storages,
                 instance != null ? instance.mainSearchText : string.Empty,
                 GetStorageTypeKey,
-                GetStoredItemKey,
+                StorageItemUtility.GetStoredItemKey,
                 StorageNetworkStorageRules.IsOfflineNetworkServer);
         }
 

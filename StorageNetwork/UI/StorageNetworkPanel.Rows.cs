@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using StorageNetwork.Components;
 using StorageNetwork.Core;
+using StorageNetwork.Services;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -180,7 +181,7 @@ namespace StorageNetwork.UI
             }
             else
             {
-                foreach (IGrouping<string, GameObject> group in items.GroupBy(GetStoredItemKey).OrderBy(group => GetStoredItemName(group.FirstOrDefault())))
+                foreach (IGrouping<string, GameObject> group in items.GroupBy(StorageItemUtility.GetStoredItemKey).OrderBy(group => GetStoredItemName(group.FirstOrDefault())))
                 {
                     float mass = group.Sum(GetStoredItemMass);
                     CreateStoredItemRow(
