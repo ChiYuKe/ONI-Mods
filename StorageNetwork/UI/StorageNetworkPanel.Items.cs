@@ -174,26 +174,8 @@ namespace StorageNetwork.UI
 
         private static IEnumerable<Storage> GetContentStorages(Storage storage)
         {
-            HashSet<Storage> storages = new HashSet<Storage>();
-            AddContentStorage(storages, storage);
-
             ComplexFabricator fabricator = storage != null ? storage.GetComponent<ComplexFabricator>() : null;
-            if (fabricator != null)
-            {
-                AddContentStorage(storages, fabricator.inStorage);
-                AddContentStorage(storages, fabricator.buildStorage);
-                AddContentStorage(storages, fabricator.outStorage);
-            }
-
-            return storages;
-        }
-
-        private static void AddContentStorage(HashSet<Storage> storages, Storage storage)
-        {
-            if (storage != null)
-            {
-                storages.Add(storage);
-            }
+            return StorageNetworkProductionStorageCollector.GetProductionStorages(storage, fabricator);
         }
 
         private static Storage FindItemStorage(Storage ownerStorage, GameObject item)
