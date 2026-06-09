@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using StorageNetwork.API;
 using StorageNetwork.Components;
 
@@ -17,12 +18,24 @@ namespace StorageNetwork.Core
             return HasTag(storage, StorageNetworkTags.ModStorage);
         }
 
+        public static bool HasServerStorageTag(Storage storage)
+        {
+            return HasTag(storage, StorageNetworkTags.ServerStorage);
+        }
+
+        public static bool IsServerStorage(Storage storage)
+        {
+            return storage != null &&
+                   HasModStorageTag(storage) &&
+                   HasServerStorageTag(storage);
+        }
+
         /// <summary>
-        /// 判断模组服务器是否在线。没有 ModStorage 标签的普通储存不受这个规则影响。
+        /// 判断储存网络服务器是否在线。外部模组只打 ModStorage 时按普通储存处理，不套用服务器掉线规则。
         /// </summary>
         public static bool IsModStorageOnline(Storage storage)
         {
-            if (storage == null || !HasModStorageTag(storage))
+            if (storage == null || !HasModStorageTag(storage) || !HasServerStorageTag(storage))
             {
                 return true;
             }
@@ -46,6 +59,7 @@ namespace StorageNetwork.Core
         {
             return storage != null &&
                    HasModStorageTag(storage) &&
+                   HasServerStorageTag(storage) &&
                    !IsModStorageOnline(storage);
         }
 
@@ -55,6 +69,26 @@ namespace StorageNetwork.Core
         public static bool IsConnectedNetworkStorage(Storage storage)
         {
             return storage != null && IsModStorageOnline(storage);
+        }
+
+        public static bool IsNetworkPortStorage(Storage storage)
+        {
+            return storage?.GetComponent<StorageNetworkPort>() != null;
+        }
+
+        public static bool IsConfigurableMaterialPort(Storage storage)
+        {
+            return storage?.GetComponent<StorageNetworkPort>()?.IsSolidMaterialPort == true;
+        }
+
+        public static bool IsConfigurablePort(Storage storage)
+        {
+            return storage?.GetComponent<StorageNetworkPort>() != null;
+        }
+
+        public static bool CountsTowardNetworkCapacity(Storage storage)
+        {
+            return IsServerStorage(storage);
         }
 
         /// <summary>
@@ -94,7 +128,7 @@ namespace StorageNetwork.Core
 
             if (connector != null)
             {
-                return connector.OutputStoreEnabled;
+                return connector.IsOutputStoreEnabled();
             }
 
             if (energyRequester != null)
@@ -112,7 +146,9 @@ namespace StorageNetwork.Core
         {
             return storage != null &&
                    storage != ownerStorage &&
+                   IsServerStorage(storage) &&
                    IsConnectedNetworkStorage(storage) &&
+                   !IsNetworkPortStorage(storage) &&
                    !IsMinionStorage(storage) &&
                    !IsProductionStorage(storage);
         }
@@ -130,11 +166,18 @@ namespace StorageNetwork.Core
         /// </summary>
         public static List<Storage> GetNetworkStorageTargets(Storage ownerStorage)
         {
+            return GetNetworkStorageTargets(ownerStorage, null);
+        }
+
+        public static List<Storage> GetNetworkStorageTargets(Storage ownerStorage, IEnumerable<Tag> requiredFilters)
+        {
             List<Storage> targets = new List<Storage>();
             foreach (StorageInfo info in StorageSceneCollector.Collect().Storages)
             {
                 Storage storage = info?.Storage;
-                if (info?.Minion == null && IsNetworkStorageTarget(storage, ownerStorage))
+                if (info?.Minion == null &&
+                    IsNetworkStorageTarget(storage, ownerStorage) &&
+                    IsStorageCompatibleWithFilters(storage, requiredFilters))
                 {
                     targets.Add(storage);
                 }
@@ -145,6 +188,23 @@ namespace StorageNetwork.Core
                 right != null ? right.GetProperName() : string.Empty,
                 System.StringComparison.CurrentCulture));
             return targets;
+        }
+
+        public static bool IsStorageCompatibleWithFilters(Storage storage, IEnumerable<Tag> requiredFilters)
+        {
+            if (requiredFilters == null)
+            {
+                return true;
+            }
+
+            HashSet<Tag> required = new HashSet<Tag>(requiredFilters.Where(tag => tag != Tag.Invalid));
+            if (required.Count == 0)
+            {
+                return true;
+            }
+
+            return storage?.storageFilters != null &&
+                   storage.storageFilters.Any(filter => required.Contains(filter));
         }
 
         /// <summary>

@@ -177,7 +177,8 @@ namespace StorageNetwork.Components
             foreach (StorageInfo info in StorageSceneCollector.Collect().Storages)
             {
                 Storage candidate = info?.Storage;
-                if (GetStorageInstanceId(candidate) == SourceStorageInstanceId)
+                if (StorageNetworkStorageRules.IsServerStorage(candidate) &&
+                    GetStorageInstanceId(candidate) == SourceStorageInstanceId)
                 {
                     return candidate;
                 }

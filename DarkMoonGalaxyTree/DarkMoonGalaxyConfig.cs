@@ -31,34 +31,34 @@ namespace DarkMoonGalaxy
             SimHashes element = SimHashes.Creature;
             List<Tag> additionalTags = new List<Tag>() { GameTags.Plant };
             float defaultTemperature = 293f;
-            // 创建实体
+
             GameObject gameObject = EntityTemplates.CreatePlacedEntity(id, name, desc, mass, anim, initialAnim,
                 Grid.SceneLayer.BuildingFront, width, height, decor, noise, element, additionalTags, defaultTemperature);
 
             // 设置植物的初始属性
             EntityTemplates.ExtendEntityToBasicPlant(
-                 gameObject,                          // 要扩展的GameObject实体，通常是预制体
-                 temperature_lethal_low: 268.15f,    // 低温致死阈值（单位：开尔文），低于该温度植物死亡
-                 temperature_warning_low: 283.15f,   // 低温警告阈值，低于该温度植物进入警告状态
-                 temperature_warning_high: 303.15f,  // 高温警告阈值，高于该温度植物进入警告状态
-                 temperature_lethal_high: 398.15f,   // 高温致死阈值，高于该温度植物死亡
+                 gameObject,                         
+                 temperature_lethal_low: 268.15f,    //用的开尔文温度，植物致死低温
+                 temperature_warning_low: 283.15f,  
+                 temperature_warning_high: 303.15f, 
+                 temperature_lethal_high: 398.15f,  
                  safe_elements: new SimHashes[] { SimHashes.Oxygen, SimHashes.CarbonDioxide }, // 植物可安全存在的气体元素列表
-                 pressure_sensitive: true,            // 是否对气压敏感（真：植物对气压变化有反应）
-                 pressure_lethal_low: 0.1f,            // 低气压致死阈值（单位：kg/tile），低于该值植物死亡
-                 pressure_warning_low: 0.2f,          // 低气压警告阈值，低于该值植物进入警告状态
-                 crop_id: DarkMoonGalaxyFruitConfig.Id,      // 作物食物ID，null表示非作物植物；传入有效ID则扩展为作物
-                 can_drown: true,                   // 是否可被淹死（真：植物会因为淹没而死亡）
+                 pressure_sensitive: true,            // 是否对气压敏感（true：植物对气压变化有反应）
+                 pressure_lethal_low: 0.1f,           
+                 pressure_warning_low: 0.2f,         
+                 crop_id: DarkMoonGalaxyFruitConfig.Id,      // 农作物食物ID，null表示非作物植物；传入有效ID则扩展为作物
+                 can_drown: true,                  
                  can_tinker: true,                  // 是否允许通过“调整”（Tinker）来修改或互动
-                 require_solid_tile: true,          // 是否需要固体地面块才能种植
-                 should_grow_old: true,             // 是否会随着时间变老
-                 max_age: 2400f,                    // 最大寿命（单位：秒）
-                 min_radiation: 0f,                 // 最小辐射阈值，低于该值影响生长
-                 max_radiation: 2200f,              // 最大辐射阈值，高于该值影响生长或死亡
-                 baseTraitId: "BasicPlantTrait",   // 关联的基础特质ID，用于植物状态定义
+                 require_solid_tile: true,         
+                 should_grow_old: true,             
+                 max_age: 2400f,                    
+                 min_radiation: 0f,                 
+                 max_radiation: 2200f,            
+                 baseTraitId: "BasicPlantTrait",   
                  baseTraitName: UI.FormatAsLink(DarkMoonGalaxyConfig.Id, DarkMoonGalaxyConfig.Id.ToUpperInvariant())     // 关联的基础特质名称
             );
 
-            // 设置植物需求
+            // 植物需求
             EntityTemplates.ExtendPlantToIrrigated(gameObject,
             [
                 new ConsumeInfo
@@ -70,14 +70,14 @@ namespace DarkMoonGalaxy
             ]);
 
             // 挥发组件
-            Sublimates sublimates = gameObject.AddOrGet<Sublimates>(); 
-            sublimates.spawnFXHash = SpawnFXHashes.OxygenEmissionBubbles;
-            sublimates.info = new Sublimates.Info(0.03f, 0f, 0.8f, 0f, SimHashes.Oxygen, byte.MaxValue, 0);
+            //Sublimates sublimates = gameObject.AddOrGet<Sublimates>(); 
+            //sublimates.spawnFXHash = SpawnFXHashes.OxygenEmissionBubbles;
+            //sublimates.info = new Sublimates.Info(0.03f, 0f, 0.8f, 0f, SimHashes.Oxygen, byte.MaxValue, 0);
 
 
             gameObject.AddOrGet<Crop>(); // 作物组件
             gameObject.AddOrGet<Growing>(); // 植物生长组件
-            gameObject.AddOrGet<DarkMoonGalaxy>(); // 植物状态机
+            gameObject.AddOrGet<DarkMoonGalaxy>(); // 植物状态机，这里用的自己写的
             gameObject.AddOrGet<DirectlyEdiblePlant_Growth>(); // 提供了对植物成熟度的检测和食用接口
             gameObject.AddOrGet<BlightVulnerable>(); // 植物易受枯萎影响 ,如果没做枯萎动画那就移除掉吧
 
@@ -98,13 +98,13 @@ namespace DarkMoonGalaxy
                 gameObject,
                 hasDlcRestrictions, // 植物ID
                 SeedProducer.ProductionType.Harvest,
-                SeedId, // 种子ID
+                SeedId, 
                 STRINGS.SPECIES.DARKMOONGALAXYSEED.NAME,
                 STRINGS.SPECIES.DARKMOONGALAXYSEED.DESC, 
                 Assets.GetAnim("DarkMoonGalaxySeed_kanim"), 
                 "object",             // 初始动画
                 1,                    // 数量
-                new List<Tag>() { GameTags.CropSeed }, // 标签
+                new List<Tag>() { GameTags.CropSeed }, 
                 SingleEntityReceptacle.ReceptacleDirection.Top, // 可种植方向
                 default(Tag),        // 果实Tag
                 2,                   // 次级ID优先级

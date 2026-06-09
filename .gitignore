@@ -361,3 +361,9 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Local decompiled/reference Oxygen Not Included source dumps
+ONI源码/
+Managed/
+.tools/
+.tmp_video_frames/

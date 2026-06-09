@@ -2,6 +2,7 @@ using KSerialization;
 using StorageNetwork.Buildings;
 using StorageNetwork.Core;
 using StorageNetwork.Services;
+using UnityEngine;
 using static StorageNetwork.STRINGS;
 
 namespace StorageNetwork.Components
@@ -17,16 +18,29 @@ namespace StorageNetwork.Components
         [Serialize]
         public bool OutputStoreEnabled;
 
+        [Serialize]
+        public int OutputStoreModeValue;
+
+        [Serialize]
+        public int OutputStorageInstanceId = KPrefabID.InvalidInstanceID;
+
         private Storage storage;
         private string lastOutputStatus;
         private float outputRetryTimer;
 
         public string LastOutputStatus => lastOutputStatus;
 
+        public StorageNetworkMaterialRequester.OutputStoreMode CurrentOutputStoreMode
+        {
+            get => (StorageNetworkMaterialRequester.OutputStoreMode)Mathf.Clamp(OutputStoreModeValue, 0, 1);
+            set => OutputStoreModeValue = (int)value;
+        }
+
         protected override void OnSpawn()
         {
             base.OnSpawn();
             EnsureStorage();
+            OutputStoreEnabled = IsOutputStoreEnabled();
             ApplyServerStorageModifiers();
             StorageSceneRegistry.Register(gameObject);
         }
@@ -40,7 +54,7 @@ namespace StorageNetwork.Components
         public void Sim1000ms(float dt)
         {
             EnsureStorage();
-            if (!OutputStoreEnabled || storage == null)
+            if (!IsOutputStoreEnabled() || storage == null)
             {
                 lastOutputStatus = string.Empty;
                 outputRetryTimer = 0f;
@@ -62,9 +76,71 @@ namespace StorageNetwork.Components
 
             StorageTransferResult result = NetworkStorageTransferService.TransferStoredItemsToNetwork(
                 storage,
-                new[] { storage });
+                new[] { storage },
+                GetSpecificOutputTarget());
             lastOutputStatus = NetworkStorageTransferService.FormatOutputStatus(result, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_STATUS_WAITING_CONTENTS));
             outputRetryTimer = result.MovedKg > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ? 0f : EmptyRetrySeconds;
+        }
+
+        public bool IsOutputStoreEnabled()
+        {
+            EnsureStorage();
+            return OutputStoreEnabled ||
+                   Config.Instance.IsStorageOutputStoreToNetworkEnabled(storage);
+        }
+
+        public void SetOutputStoreEnabled(bool enabled)
+        {
+            EnsureStorage();
+            OutputStoreEnabled = enabled;
+            Config.Instance.SetStorageOutputStoreToNetworkEnabled(storage, enabled);
+            Config.Save();
+        }
+
+        public Storage ResolveOutputStorage()
+        {
+            if (OutputStorageInstanceId == KPrefabID.InvalidInstanceID)
+            {
+                return null;
+            }
+
+            foreach (StorageInfo info in StorageSceneCollector.Collect().Storages)
+            {
+                Storage candidate = info?.Storage;
+                if (StorageNetworkStorageRules.IsServerStorage(candidate) &&
+                    StorageNetworkStorageRules.IsStorageCompatibleWithFilters(candidate, storage?.storageFilters) &&
+                    GetStorageInstanceId(candidate) == OutputStorageInstanceId)
+                {
+                    return candidate;
+                }
+            }
+
+            return null;
+        }
+
+        public void SetOutputStorage(Storage target)
+        {
+            OutputStorageInstanceId = GetStorageInstanceId(target);
+            CurrentOutputStoreMode = StorageNetworkMaterialRequester.OutputStoreMode.SpecificStorage;
+        }
+
+        public void UseAutomaticOutputStorage()
+        {
+            CurrentOutputStoreMode = StorageNetworkMaterialRequester.OutputStoreMode.AutoNetwork;
+            OutputStorageInstanceId = KPrefabID.InvalidInstanceID;
+        }
+
+        private Storage GetSpecificOutputTarget()
+        {
+            return CurrentOutputStoreMode == StorageNetworkMaterialRequester.OutputStoreMode.SpecificStorage
+                ? ResolveOutputStorage()
+                : null;
+        }
+
+        private static int GetStorageInstanceId(Storage candidate)
+        {
+            KPrefabID prefabId = candidate != null ? candidate.GetComponent<KPrefabID>() : null;
+            return prefabId != null ? prefabId.InstanceID : KPrefabID.InvalidInstanceID;
         }
 
         /// <summary>

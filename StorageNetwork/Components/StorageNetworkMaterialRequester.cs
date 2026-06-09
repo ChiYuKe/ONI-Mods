@@ -188,7 +188,8 @@ namespace StorageNetwork.Components
             foreach (StorageInfo info in StorageSceneCollector.Collect().Storages)
             {
                 Storage storage = info?.Storage;
-                if (GetStorageInstanceId(storage) == SourceStorageInstanceId)
+                if (StorageNetworkStorageRules.IsServerStorage(storage) &&
+                    GetStorageInstanceId(storage) == SourceStorageInstanceId)
                 {
                     return storage;
                 }
@@ -215,7 +216,8 @@ namespace StorageNetwork.Components
                 }
 
                 Storage storage = info?.Storage;
-                if (GetStorageInstanceId(storage) == OutputStorageInstanceId)
+                if (StorageNetworkStorageRules.IsServerStorage(storage) &&
+                    GetStorageInstanceId(storage) == OutputStorageInstanceId)
                 {
                     return storage;
                 }
@@ -684,6 +686,7 @@ namespace StorageNetwork.Components
                    storage != fabricator.inStorage &&
                    storage != fabricator.buildStorage &&
                    storage != fabricator.outStorage &&
+                   StorageNetworkStorageRules.IsServerStorage(storage) &&
                    !StorageNetworkStorageRules.IsProductionStorage(storage) &&
                    storage.GetAmountAvailable(tag) > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT;
         }

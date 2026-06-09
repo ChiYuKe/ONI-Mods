@@ -14,11 +14,6 @@ using EternalDecay.Content.Core;
 public class Accepttheinheritance : Workable
 {
 
-
-
-
-
-
     protected override void OnPrefabInit()
     {
         base.OnPrefabInit();

@@ -1,0 +1,3 @@
+title: 新元素注册示例
+description: 演示如何通过 elements YAML 与 Substance 补丁注册一个自定义元素。
+staticID: NewElementRegistration

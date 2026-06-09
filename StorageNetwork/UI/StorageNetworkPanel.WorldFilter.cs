@@ -12,12 +12,25 @@ namespace StorageNetwork.UI
     {
         private StorageSceneSnapshot CollectMainSnapshot(bool force)
         {
-            if (mainWorldFilterId == AllEnrollableWorldsFilterId)
+            bool relayOnline = StorageSceneRegistry.IsCrossPlanetRelayOnline();
+            if (mainWorldFilterId == AllEnrollableWorldsFilterId && relayOnline)
             {
                 return FilterSnapshotToDiscoveredWorlds(StorageSceneCollector.Collect(force));
             }
 
-            return StorageSceneCollector.CollectForWorld(mainWorldFilterId, includeReachableWorlds: false);
+            int worldId = mainWorldFilterId;
+            int activeWorldId = GetActiveWorldFilterId();
+            if (worldId == AllEnrollableWorldsFilterId)
+            {
+                worldId = activeWorldId;
+            }
+
+            if (!relayOnline && worldId != activeWorldId)
+            {
+                return new StorageSceneSnapshot(new List<StorageInfo>(), 0f, 0f, false);
+            }
+
+            return StorageSceneCollector.CollectForWorld(worldId, includeReachableWorlds: false);
         }
 
         private static StorageSceneSnapshot FilterSnapshotToDiscoveredWorlds(StorageSceneSnapshot snapshot)
@@ -34,8 +47,11 @@ namespace StorageNetwork.UI
             float totalCapacityKg = 0f;
             foreach (StorageInfo info in storages)
             {
-                totalStoredKg += info.StoredKg;
-                totalCapacityKg += info.CapacityKg;
+                if (StorageNetworkStorageRules.CountsTowardNetworkCapacity(info.Storage))
+                {
+                    totalStoredKg += info.StoredKg;
+                    totalCapacityKg += info.CapacityKg;
+                }
             }
 
             return new StorageSceneSnapshot(storages, totalStoredKg, totalCapacityKg, snapshot.NetworkOnline);
@@ -187,45 +203,31 @@ namespace StorageNetwork.UI
 
         private void EnsureValidMainWorldFilter()
         {
+            int activeWorldId = GetActiveWorldFilterId();
             if (mainWorldFilterId == UnsetEnrollableWorldFilterId)
             {
-                int activeWorldId = GetActiveWorldFilterId();
                 mainWorldFilterId = activeWorldId != UnsetEnrollableWorldFilterId ? activeWorldId : AllEnrollableWorldsFilterId;
                 return;
             }
 
-            if (mainWorldFilterId == AllEnrollableWorldsFilterId || GetMainWorldIds().Contains(mainWorldFilterId))
+            if (mainWorldFilterId == AllEnrollableWorldsFilterId)
             {
                 return;
             }
 
-            int fallbackWorldId = GetActiveWorldFilterId();
-            mainWorldFilterId = fallbackWorldId != UnsetEnrollableWorldFilterId ? fallbackWorldId : AllEnrollableWorldsFilterId;
+            if (GetMainWorldIds().Contains(mainWorldFilterId))
+            {
+                return;
+            }
+
+            mainWorldFilterId = activeWorldId != UnsetEnrollableWorldFilterId ? activeWorldId : AllEnrollableWorldsFilterId;
         }
 
         private List<int> GetMainWorldIds()
         {
-            HashSet<int> worldIds = new HashSet<int>();
-            int activeWorldId = GetActiveWorldFilterId();
-            if (StorageNetworkWorldDisplay.IsWorldDiscovered(activeWorldId))
-            {
-                worldIds.Add(activeWorldId);
-            }
-
-            StorageSceneRegistry.EnsureSceneSeeded();
-            foreach (Storage storage in StorageSceneRegistry.GetStorages())
-            {
-                if (storage != null)
-                {
-                    int worldId = StorageNetworkWorldUtility.GetObjectWorldId(storage.gameObject);
-                    if (StorageNetworkWorldDisplay.IsWorldDiscovered(worldId))
-                    {
-                        worldIds.Add(worldId);
-                    }
-                }
-            }
-
-            return worldIds.OrderBy(StorageNetworkWorldDisplay.GetWorldName).ToList();
+            return GetEnrollableWorldIds(StorageSceneRegistry
+                .GetEnrollments()
+                .Where(enrollment => enrollment != null && enrollment.CanShowInEnrollableList()));
         }
 
         private static int GetActiveWorldFilterId()

@@ -1,0 +1,13 @@
+name: STRINGS.WORLDS.VERDANT_RIFT.NAME
+description: STRINGS.WORLDS.VERDANT_RIFT.DESCRIPTION
+coordinatePrefix: VRD-RFT
+clusterCategory: SpacedOutVanillaStyle
+difficulty: 1
+menuOrder: 20
+
+startWorldIndex: 0
+worldPlacements:
+- world: worlds/VerdantRift
+  allowedRings:
+    min: 0
+    max: 0

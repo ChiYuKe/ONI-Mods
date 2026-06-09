@@ -1,5 +1,6 @@
 ﻿using CykUtils;
 using EternalDecay.Content.Core;
+//using EternalDecay.Content.Utils;
 using HarmonyLib;
 using KMod;
 
@@ -14,12 +15,13 @@ namespace EternalDecay
                 base.OnLoad(harmony);
                 ModAssets.LoadAll();// 提前注册到游戏当中
                 EternalDecayInitializer.Initialize();
+                ABHelper.LoadABUI();
                 LogUtil.Log("MOD加载成功");
-               
 
-                
 
             }
+
+
 
 
             // 本地化补丁，初始化时注册并加载翻译字符串。//

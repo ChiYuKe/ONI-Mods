@@ -55,6 +55,7 @@ namespace MinionAge.Core
         }
         public static List<ObjectTimeRecord> objectTimeRecords = new List<ObjectTimeRecord>();
         private const float TimeThreshold = 600f;
+        private static float nextRecordCleanupTime;
 
         // 继承对象列表
         private List<GameObject> inheritedObjects = new List<GameObject>();
@@ -438,7 +439,16 @@ namespace MinionAge.Core
                 }
             }
 
-            // 清理过期的记录
+        }
+
+        public static void CleanupExpiredObjectTimeRecords()
+        {
+            if (Time.time < nextRecordCleanupTime)
+            {
+                return;
+            }
+
+            nextRecordCleanupTime = Time.time + 1f;
             for (int i = objectTimeRecords.Count - 1; i >= 0; i--)
             {
                 var record = objectTimeRecords[i];
@@ -459,8 +469,6 @@ namespace MinionAge.Core
                 }
             }
         }
-
-
 
         // 从效果列表中随机选择一个效果
         private string GetRandomDebuff()

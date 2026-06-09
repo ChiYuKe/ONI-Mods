@@ -520,21 +520,19 @@ namespace StorageNetwork.UI
 
         private static List<int> GetEnrollableWorldIds(IEnumerable<StorageNetworkEnrollment> enrollments)
         {
+            if (ClusterManager.Instance != null)
+            {
+                return ClusterManager.Instance.GetDiscoveredAsteroidIDsSorted()
+                    .Where(StorageNetworkWorldDisplay.IsWorldDiscovered)
+                    .OrderBy(StorageNetworkWorldDisplay.GetWorldName)
+                    .ToList();
+            }
+
             HashSet<int> worldIds = new HashSet<int>();
             int activeWorldId = GetActiveWorldFilterId();
             if (StorageNetworkWorldDisplay.IsWorldDiscovered(activeWorldId))
             {
                 worldIds.Add(activeWorldId);
-            }
-
-            foreach (StorageNetworkEnrollment enrollment in enrollments)
-            {
-                if (enrollment != null &&
-                    TryGetBuildingWorldId(enrollment.gameObject, out int worldId) &&
-                    StorageNetworkWorldDisplay.IsWorldDiscovered(worldId))
-                {
-                    worldIds.Add(worldId);
-                }
             }
 
             return worldIds

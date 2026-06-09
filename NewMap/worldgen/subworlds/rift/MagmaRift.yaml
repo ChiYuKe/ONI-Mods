@@ -1,0 +1,25 @@
+nameKey: STRINGS.SUBWORLDS.VERDANT_RIFT_MAGMA.NAME
+descriptionKey: STRINGS.SUBWORLDS.VERDANT_RIFT_MAGMA.DESCRIPTION
+utilityKey: STRINGS.SUBWORLDS.VERDANT_RIFT_MAGMA.UTILITY
+biomeNoise: noise/Generic
+temperatureRange: ExtremelyHot
+singleChildCount: true
+borderOverride: hardToDig
+borderOverridePriority: 10
+density:
+  min: 35
+  max: 45
+avoidRadius: 45.0
+pdWeight: 0.3
+sampleBehaviour: PoissonDisk
+biomes:
+  - name: biomes/Magma/MagmaVent
+    weight: 1
+tags:
+  - ErodePointToBorderWeak
+  - IgnoreCaveOverride
+  - NoGlobalFeatureSpawning
+features:
+  - type: features/rift/LavaCrown
+  - type: features/rift/MagmaHeart
+zoneType: MagmaCore

@@ -1,79 +1,57 @@
-﻿using KSerialization;
-using STRINGS;
+using KSerialization;
 using UnityEngine;
 
-
-
+#pragma warning disable CS0649
 public class AutomaticHarvestLogic : KMonoBehaviour, IActivationRangeTarget, ISim200ms
 {
+    public static readonly HashedString PORT_ID = "AutomaticHarvestLogicLogicPort";
+
     [MyCmpGet]
     private Storage storage;
 
     [MyCmpGet]
-    private Operational operational;
+    private LogicPorts logicPorts;
 
     [Serialize]
-    private int activateValue;
+    private int lowThresholdValue;
 
     [Serialize]
-    private int deactivateValue = 100;
+    private int highThresholdValue = 100;
 
     [Serialize]
     public bool activated;
 
-    [MyCmpGet]
-    private LogicPorts logicPorts;
+    private static readonly EventSystem.IntraObjectHandler<AutomaticHarvestLogic> OnCopySettingsDelegate =
+        new EventSystem.IntraObjectHandler<AutomaticHarvestLogic>((component, data) => component.OnCopySettings(data));
 
-    // 获取固体分配器组件
-    [MyCmpGet]
-    private SolidConduitDispenser dispenser;
+    private static readonly EventSystem.IntraObjectHandler<AutomaticHarvestLogic> UpdateLogicCircuitDelegate =
+        new EventSystem.IntraObjectHandler<AutomaticHarvestLogic>((component, data) => component.UpdateLogicCircuit(data));
 
-    [MyCmpAdd]
-    private CopyBuildingSettings copyBuildingSettings;
-
-    private MeterController logicMeter;
-
-    public static readonly HashedString PORT_ID = "AutomaticHarvestLogicLogicPort";
-
-    private static readonly EventSystem.IntraObjectHandler<AutomaticHarvestLogic> OnCopySettingsDelegate = new EventSystem.IntraObjectHandler<AutomaticHarvestLogic>(delegate (AutomaticHarvestLogic component, object data)
-    {
-        component.OnCopySettings(data);
-    });
-
-    private static readonly EventSystem.IntraObjectHandler<AutomaticHarvestLogic> OnLogicValueChangedDelegate = new EventSystem.IntraObjectHandler<AutomaticHarvestLogic>(delegate (AutomaticHarvestLogic component, object data)
-    {
-        component.OnLogicValueChanged(data);
-    });
-
-    private static readonly EventSystem.IntraObjectHandler<AutomaticHarvestLogic> UpdateLogicCircuitDelegate = new EventSystem.IntraObjectHandler<AutomaticHarvestLogic>(delegate (AutomaticHarvestLogic component, object data)
-    {
-        component.UpdateLogicCircuit(data);
-    });
-
-    public float PercentFull => storage.MassStored() / storage.Capacity();
-
-    public float ActivateValue
+    public float PercentFull
     {
         get
         {
-            return deactivateValue;
+            float capacity = storage.Capacity();
+            return capacity > 0f ? storage.MassStored() / capacity : 0f;
         }
+    }
+
+    public float ActivateValue
+    {
+        get => highThresholdValue;
         set
         {
-            deactivateValue = (int)value;
+            highThresholdValue = (int)value;
             UpdateLogicCircuit(null);
         }
     }
 
     public float DeactivateValue
     {
-        get
-        {
-            return activateValue;
-        }
+        get => lowThresholdValue;
         set
         {
-            activateValue = (int)value;
+            lowThresholdValue = (int)value;
             UpdateLogicCircuit(null);
         }
     }
@@ -94,17 +72,17 @@ public class AutomaticHarvestLogic : KMonoBehaviour, IActivationRangeTarget, ISi
 
     public string DeactivateSliderLabelText => AutomaticHarvest.STRINGS.BUILDINGS.AUTOMATICHARVESTCONFIG.SIDESCREEN_DEACTIVATE;
 
-    protected override void OnSpawn()
-    {
-        base.OnSpawn();
-        Subscribe(-801688580, OnLogicValueChangedDelegate);
-        Subscribe(-592767678, UpdateLogicCircuitDelegate);
-    }
-
     protected override void OnPrefabInit()
     {
         base.OnPrefabInit();
-        Subscribe(-905833192, OnCopySettingsDelegate);
+        Subscribe((int)GameHashes.CopySettings, OnCopySettingsDelegate);
+    }
+
+    protected override void OnSpawn()
+    {
+        base.OnSpawn();
+        Subscribe((int)GameHashes.OnStorageChange, UpdateLogicCircuitDelegate);
+        UpdateLogicCircuit(null);
     }
 
     public void Sim200ms(float dt)
@@ -114,53 +92,33 @@ public class AutomaticHarvestLogic : KMonoBehaviour, IActivationRangeTarget, ISi
 
     private void UpdateLogicCircuit(object data)
     {
-        float num = PercentFull * 100f;
+        float percentFull = PercentFull * 100f;
 
-        // 当前状态是激活（绿色信号）
         if (activated)
         {
-            // 只有降到低阈值 (activateValue) 时，才去激活 = false (红色信号)
-            if (num <= (float)activateValue) // 注意：这里使用了 activateValue
+            if (percentFull <= lowThresholdValue)
             {
                 activated = false;
             }
         }
-        // 当前状态是非激活（红色信号）
-        else if (num >= (float)deactivateValue) // 注意：这里使用了 deactivateValue
+        else if (percentFull >= highThresholdValue)
         {
-            // 只有升到高阈值 (deactivateValue) 时，才去激活 = true (绿色信号)
             activated = true;
         }
-
-
 
         logicPorts.SendSignal(PORT_ID, activated ? 1 : 0);
     }
 
-    private void OnLogicValueChanged(object data)
-    {
-        LogicValueChanged logicValueChanged = (LogicValueChanged)data;
-        if (logicValueChanged.portID == PORT_ID)
-        {
-            SetLogicMeter(LogicCircuitNetwork.IsBitActive(0, logicValueChanged.newValue));
-        }
-    }
-
     private void OnCopySettings(object data)
     {
-        AutomaticHarvestLogic component = ((GameObject)data).GetComponent<AutomaticHarvestLogic>();
-        if (component != null)
+        AutomaticHarvestLogic source = ((GameObject)data).GetComponent<AutomaticHarvestLogic>();
+        if (source == null)
         {
-            ActivateValue = component.ActivateValue;
-            DeactivateValue = component.DeactivateValue;
+            return;
         }
-    }
 
-    public void SetLogicMeter(bool on)
-    {
-        if (logicMeter != null)
-        {
-            logicMeter.SetPositionPercent(on ? 1f : 0f);
-        }
+        ActivateValue = source.ActivateValue;
+        DeactivateValue = source.DeactivateValue;
     }
 }
+#pragma warning restore CS0649

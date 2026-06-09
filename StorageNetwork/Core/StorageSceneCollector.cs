@@ -128,8 +128,11 @@ namespace StorageNetwork.Core
                     continue;
                 }
 
-                totalStoredKg += info.StoredKg;
-                totalCapacityKg += info.CapacityKg;
+                if (StorageNetworkStorageRules.CountsTowardNetworkCapacity(info.Storage))
+                {
+                    totalStoredKg += info.StoredKg;
+                    totalCapacityKg += info.CapacityKg;
+                }
             }
 
             return new StorageSceneSnapshot(collected, totalStoredKg, totalCapacityKg, networkOnline);

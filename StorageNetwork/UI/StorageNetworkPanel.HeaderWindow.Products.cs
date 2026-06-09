@@ -14,6 +14,13 @@ namespace StorageNetwork.UI
         {
             productRows ??= new StorageNetworkKeyedRowCache(productListContent);
             productRows.Begin();
+            if (IsOrderWorldFilterBlockedByRelay())
+            {
+                AddProductListText(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CROSS_WORLD_RELAY_OFFLINE));
+                productRows.Commit();
+                return;
+            }
+
             if (orderProducts.Count == 0)
             {
                 AddProductListText(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.RECIPE_WINDOW_EMPTY));

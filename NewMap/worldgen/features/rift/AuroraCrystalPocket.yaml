@@ -1,0 +1,38 @@
+tags:
+  - AllowExceedNodeBorders
+shape: Blob
+borders:
+  - 1
+  - 2
+blobSize:
+  min: 10
+  max: 18
+ElementChoiceGroups:
+  RoomCenterElements:
+    selectionMethod: WeightedResample
+    choices:
+      - element: AuroraCrystal
+        weight: 1
+        overrides:
+          massOverride: 200
+          temperatureOverride: 290
+  RoomBorderChoices0:
+    selectionMethod: WeightedResample
+    choices:
+      - element: Granite
+        weight: 2
+      - element: AuroraCrystal
+        weight: 1
+        overrides:
+          massOverride: 200
+          temperatureOverride: 290
+  RoomBorderChoices1:
+    selectionMethod: WeightedResample
+    choices:
+      - element: Diamond
+        weight: 1
+      - element: AuroraCrystal
+        weight: 2
+        overrides:
+          massOverride: 200
+          temperatureOverride: 290

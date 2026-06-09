@@ -37,6 +37,11 @@ namespace StorageNetwork.Gameplay
             {
                 ModUtil.AddBuildingToPlanScreen("Base", buildingId, StorageNetworkSubcategory);
             }
+
+            foreach (string buildingId in StorageNetworkPortSpecs.AllIds)
+            {
+                ModUtil.AddBuildingToPlanScreen("Base", buildingId, StorageNetworkSubcategory);
+            }
         }
     }
 }

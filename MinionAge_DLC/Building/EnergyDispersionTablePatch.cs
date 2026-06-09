@@ -23,7 +23,7 @@ namespace MinionAge_DLC
 
                 public static void Prefix()
                 {
-                    ModUtil.AddBuildingToPlanScreen("Base", EnergyDispersionTableConifg.ID, "Tiles");
+                    ModUtil.AddBuildingToPlanScreen("Base", EnergyDispersionTableConifg.ID, "Tiles"); 
                     Db.Get().Techs.Get("HighTempForging").unlockedItemIDs.Add(EnergyDispersionTableConifg.ID);
                     KModStringUtils.Add_New_BuildStrings(EnergyDispersionTableConifg.ID, STRINGS.BUILDINGS.ENERGYDISPERSIONTABLECONIFG.NAME, STRINGS.BUILDINGS.ENERGYDISPERSIONTABLECONIFG.DESC, STRINGS.BUILDINGS.ENERGYDISPERSIONTABLECONIFG.EFFECT);
                 }

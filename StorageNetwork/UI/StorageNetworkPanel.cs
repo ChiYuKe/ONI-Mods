@@ -76,6 +76,7 @@ namespace StorageNetwork.UI
         private const float StructureRefreshSeconds = 5f;
         private const string EmptyListSignature = "empty";
         private const string CoreOfflineListSignature = "core_offline";
+        private const string CrossWorldRelayOfflineListSignature = "cross_world_relay_offline";
         private static readonly bool DebugLogging = false;
 
         private enum StoragePanelRefreshMode
@@ -477,6 +478,12 @@ namespace StorageNetwork.UI
             currentSnapshot = CollectMainSnapshot(checkStructure);
             UpdateStorageSummaryText();
 
+            if (IsMainWorldFilterBlockedByRelay())
+            {
+                RefreshCrossWorldRelayOfflineStorageList(forceRebuild);
+                return;
+            }
+
             if (!currentSnapshot.NetworkOnline)
             {
                 RefreshCoreOfflineStorageList(forceRebuild);
@@ -648,9 +655,34 @@ namespace StorageNetwork.UI
             }
         }
 
+        private void RefreshCrossWorldRelayOfflineStorageList(bool forceRebuild)
+        {
+            if (forceRebuild || lastListSignature != CrossWorldRelayOfflineListSignature)
+            {
+                lastListSignature = CrossWorldRelayOfflineListSignature;
+                ClearCategories();
+                ClearList();
+                CreateInfoRow(
+                    Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CROSS_WORLD_RELAY_OFFLINE),
+                    string.Empty);
+                LiveUpdateStoragePanels();
+            }
+        }
+
+        private bool IsMainWorldFilterBlockedByRelay()
+        {
+            int activeWorldId = GetActiveWorldFilterId();
+            return mainWorldFilterId != AllEnrollableWorldsFilterId &&
+                   mainWorldFilterId != activeWorldId &&
+                   !StorageSceneRegistry.IsCrossPlanetRelayOnline();
+        }
+
         private bool ShouldRebuildStorageList(bool forceRebuild, bool checkStructure)
         {
-            if (forceRebuild || string.IsNullOrEmpty(lastListSignature) || lastListSignature == EmptyListSignature)
+            if (forceRebuild ||
+                string.IsNullOrEmpty(lastListSignature) ||
+                lastListSignature == EmptyListSignature ||
+                lastListSignature == CrossWorldRelayOfflineListSignature)
             {
                 return true;
             }

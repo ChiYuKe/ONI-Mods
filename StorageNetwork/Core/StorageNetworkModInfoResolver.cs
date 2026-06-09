@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -10,14 +11,16 @@ namespace StorageNetwork.Core
     {
         private static readonly Assembly StorageNetworkAssembly = typeof(StorageNetworkModInfoResolver).Assembly;
         private static Dictionary<Assembly, string> modNamesByAssembly;
+        private static Dictionary<string, string> modNamesByPrefabId;
 
         public static void ResetRuntimeState()
         {
             modNamesByAssembly = null;
+            modNamesByPrefabId = null;
         }
 
         /// <summary>
-        /// Infers a building's source mod from component assemblies, skipping StorageNetwork itself.
+        /// Infers a building's source mod from runtime components first, then from its IBuildingConfig assembly.
         /// </summary>
         public static string GetSourceModName(Storage storage)
         {
@@ -51,7 +54,78 @@ namespace StorageNetwork.Core
                 }
             }
 
-            return string.Empty;
+            return GetSourceModNameFromBuildingConfig(storage, modNames);
+        }
+
+        private static string GetSourceModNameFromBuildingConfig(Storage storage, Dictionary<Assembly, string> modNames)
+        {
+            string prefabId = GetStoragePrefabId(storage);
+            if (string.IsNullOrEmpty(prefabId))
+            {
+                return string.Empty;
+            }
+
+            Dictionary<string, string> prefabModNames = GetModNamesByPrefabId(modNames);
+            return prefabModNames.TryGetValue(prefabId, out string modName) ? modName : string.Empty;
+        }
+
+        private static string GetStoragePrefabId(Storage storage)
+        {
+            BuildingComplete building = storage != null ? storage.GetComponent<BuildingComplete>() : null;
+            if (building != null && building.Def != null && !string.IsNullOrEmpty(building.Def.PrefabID))
+            {
+                return building.Def.PrefabID;
+            }
+
+            KPrefabID prefabId = storage != null ? storage.GetComponent<KPrefabID>() : null;
+            return prefabId != null ? prefabId.PrefabTag.Name : string.Empty;
+        }
+
+        private static Dictionary<string, string> GetModNamesByPrefabId(Dictionary<Assembly, string> modNames)
+        {
+            if (modNamesByPrefabId != null)
+            {
+                return modNamesByPrefabId;
+            }
+
+            modNamesByPrefabId = new Dictionary<string, string>();
+            BuildingConfigManager manager = BuildingConfigManager.Instance;
+            if (manager == null || modNames == null || modNames.Count == 0)
+            {
+                return modNamesByPrefabId;
+            }
+
+            FieldInfo configTableField = typeof(BuildingConfigManager).GetField("configTable", BindingFlags.Instance | BindingFlags.NonPublic);
+            IDictionary configTable = configTableField != null ? configTableField.GetValue(manager) as IDictionary : null;
+            if (configTable == null)
+            {
+                return modNamesByPrefabId;
+            }
+
+            foreach (DictionaryEntry entry in configTable)
+            {
+                object config = entry.Key;
+                BuildingDef buildingDef = entry.Value as BuildingDef;
+                if (config == null || buildingDef == null || string.IsNullOrEmpty(buildingDef.PrefabID))
+                {
+                    continue;
+                }
+
+                Assembly assembly = config.GetType().Assembly;
+                if (assembly == StorageNetworkAssembly)
+                {
+                    continue;
+                }
+
+                if (assembly != null &&
+                    modNames.TryGetValue(assembly, out string modName) &&
+                    !modNamesByPrefabId.ContainsKey(buildingDef.PrefabID))
+                {
+                    modNamesByPrefabId[buildingDef.PrefabID] = modName;
+                }
+            }
+
+            return modNamesByPrefabId;
         }
 
         private static Dictionary<Assembly, string> GetModNamesByAssembly()

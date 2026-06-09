@@ -1,0 +1,35 @@
+tags:
+  - AllowExceedNodeBorders
+shape: TallThin
+borders:
+  - 2
+  - 2
+blobSize:
+  min: 12
+  max: 20
+ElementChoiceGroups:
+  RoomCenterElements:
+    selectionMethod: WeightedResample
+    choices:
+      - element: Vacuum
+        weight: 1
+  RoomBorderChoices0:
+    selectionMethod: WeightedResample
+    choices:
+      - element: Katairite
+        weight: 3
+      - element: Diamond
+        weight: 1
+      - element: IronOre
+        weight: 1
+  RoomBorderChoices1:
+    selectionMethod: WeightedResample
+    choices:
+      - element: IronOre
+        weight: 2
+      - element: Cuprite
+        weight: 2
+      - element: GoldAmalgam
+        weight: 1
+      - element: Diamond
+        weight: 0.5

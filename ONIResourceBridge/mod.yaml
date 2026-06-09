@@ -1,0 +1,3 @@
+title: ONI Resource Bridge
+description: Exposes loaded Oxygen Not Included animation resources to KAnimGUI through a localhost-only bridge.
+staticID: ONIResourceBridge

@@ -11,6 +11,14 @@ namespace EternalDecay.Content.Configs
 
         public class UI
         {
+            public class AGESCREEN
+            {
+                public static LocString TITLE = "复制人面板";
+                public static LocString BUTTONTEXT = "关闭窗口";
+
+            }
+
+
 
             public class INHERITANCEINFORMATION
             {
@@ -73,6 +81,13 @@ namespace EternalDecay.Content.Configs
                     public static LocString DESC = "虽然不能用了但还能吃";
 
                 }
+                public class TOZI
+                {
+                    public static LocString NAME = "骰子";
+                    public static LocString DESC = "能吃";
+
+                }
+
             }
         }
 

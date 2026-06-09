@@ -1,151 +1,161 @@
-using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Reflection;
-using HarmonyLib;
+using StorageNetwork.Core;
 using UnityEngine;
 
 namespace StorageNetwork.Services
 {
     internal static class ConstructionNetworkMaterialService
     {
-        public static void TransferConstructionMaterials(FetchList2 fetchList)
+        private static readonly HashSet<int> ActiveNetworkPickups = new HashSet<int>();
+
+        public static Pickupable FindNetworkConstructionMaterial(FetchChore fetchChore, ChoreConsumerState consumerState)
         {
-            Storage destination = GetFetchListDestination(fetchList);
+            if (fetchChore == null || fetchChore.choreType != Db.Get().ChoreTypes.BuildFetch)
+            {
+                return null;
+            }
+
+            Storage destination = fetchChore.destination;
             if (destination == null || destination.GetComponent<Constructable>() == null)
             {
-                return;
+                return null;
             }
 
-            foreach (object order in GetFetchOrders(fetchList))
+            int worldId = StorageTargetSelector.GetObjectWorldId(destination.gameObject);
+            if (!StorageSceneRegistry.HasOnlineCoreInWorld(worldId))
             {
-                List<Tag> tags = GetOrderTags(order);
-                if (tags.Count == 0)
+                return null;
+            }
+
+            StorageSceneSnapshot snapshot = StorageSceneCollector.CollectForWorld(worldId);
+            Pickupable best = null;
+            int bestCost = int.MaxValue;
+            foreach (StorageInfo info in snapshot.Storages)
+            {
+                Storage source = info?.Storage;
+                if (!IsUsableNetworkSource(source))
                 {
                     continue;
                 }
 
-                float missing = GetOrderAmount(order) - GetAmountAvailable(destination, tags);
-                if (missing <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+                Pickupable candidate = FindBestPickupable(source, fetchChore, destination, consumerState, ref bestCost);
+                if (candidate != null)
+                {
+                    best = candidate;
+                }
+            }
+
+            return best;
+        }
+
+        public static bool IsNetworkConstructionPickup(Pickupable pickupable)
+        {
+            int instanceId = GetPickupableInstanceId(pickupable);
+            return instanceId != KPrefabID.InvalidInstanceID && ActiveNetworkPickups.Contains(instanceId);
+        }
+
+        public static bool IsNetworkConstructionPickupAllowed(Pickupable pickupable, GameObject fetcher)
+        {
+            if (!IsNetworkConstructionSource(pickupable))
+            {
+                return true;
+            }
+
+            MinionIdentity minion = fetcher != null ? fetcher.GetComponent<MinionIdentity>() : null;
+            return Config.Instance.IsMinionAllowedRequestMaterialsFromNetwork(minion);
+        }
+
+        public static void PrepareNetworkConstructionPickup(Pickupable pickupable)
+        {
+            Storage source = pickupable != null ? pickupable.storage : null;
+            if (IsUsableNetworkSource(source))
+            {
+                int instanceId = GetPickupableInstanceId(pickupable);
+                if (instanceId != KPrefabID.InvalidInstanceID)
+                {
+                    ActiveNetworkPickups.Add(instanceId);
+                }
+
+                pickupable.KPrefabID?.RemoveTag(GameTags.StoredPrivate);
+            }
+        }
+
+        public static void RestoreNetworkConstructionPickup(Pickupable pickupable)
+        {
+            int instanceId = GetPickupableInstanceId(pickupable);
+            if (instanceId == KPrefabID.InvalidInstanceID || !ActiveNetworkPickups.Contains(instanceId))
+            {
+                return;
+            }
+
+            ActiveNetworkPickups.Remove(instanceId);
+            RestorePrivateTagIfStillInNetworkStorage(pickupable);
+        }
+
+        private static Pickupable FindBestPickupable(
+            Storage source,
+            FetchChore fetchChore,
+            Storage destination,
+            ChoreConsumerState consumerState,
+            ref int bestCost)
+        {
+            if (source?.items == null)
+            {
+                return null;
+            }
+
+            Pickupable best = null;
+            foreach (GameObject item in source.items)
+            {
+                Pickupable pickupable = item != null ? item.GetComponent<Pickupable>() : null;
+                if (pickupable == null || !FetchManager.IsFetchablePickup(pickupable, fetchChore, destination))
                 {
                     continue;
                 }
 
-                NetworkStorageTransferService.TransferFromNetworkToStorage(tags, missing, destination);
-            }
-        }
-
-        private static Storage GetFetchListDestination(FetchList2 fetchList)
-        {
-            return GetMemberValue<Storage>(fetchList, "Destination", "destination", "Storage", "storage");
-        }
-
-        private static IEnumerable<object> GetFetchOrders(FetchList2 fetchList)
-        {
-            IEnumerable orders = GetMemberValue<IEnumerable>(fetchList, "FetchOrders", "fetchOrders", "orders", "Orders");
-            if (orders == null)
-            {
-                yield break;
-            }
-
-            foreach (object order in orders)
-            {
-                if (order != null)
+                int cost = 0;
+                if (consumerState?.consumer != null && !consumerState.consumer.GetNavigationCost(pickupable, out cost))
                 {
-                    yield return order;
-                }
-            }
-        }
-
-        private static List<Tag> GetOrderTags(object order)
-        {
-            List<Tag> tags = new List<Tag>();
-            AddTags(tags, GetMemberValue<object>(order, "Tags", "tags", "MatchTags", "matchTags"));
-            AddTags(tags, GetMemberValue<object>(order, "Tag", "tag", "MatchTag", "matchTag", "MatchID", "matchID"));
-            return tags;
-        }
-
-        private static float GetOrderAmount(object order)
-        {
-            return GetMemberValue<float>(order, "TotalAmount", "totalAmount", "Amount", "amount", "OriginalAmount", "originalAmount");
-        }
-
-        private static float GetAmountAvailable(Storage storage, IEnumerable<Tag> tags)
-        {
-            float available = 0f;
-            foreach (Tag tag in tags)
-            {
-                available = Mathf.Max(available, storage.GetAmountAvailable(tag));
-            }
-
-            return available;
-        }
-
-        private static void AddTags(List<Tag> tags, object value)
-        {
-            if (value == null)
-            {
-                return;
-            }
-
-            if (value is Tag tag)
-            {
-                AddTag(tags, tag);
-                return;
-            }
-
-            if (value is IEnumerable enumerable)
-            {
-                foreach (object item in enumerable)
-                {
-                    if (item is Tag itemTag)
-                    {
-                        AddTag(tags, itemTag);
-                    }
-                }
-            }
-        }
-
-        private static void AddTag(List<Tag> tags, Tag tag)
-        {
-            if (tag != Tag.Invalid && !tags.Contains(tag))
-            {
-                tags.Add(tag);
-            }
-        }
-
-        private static T GetMemberValue<T>(object instance, params string[] names)
-        {
-            if (instance == null)
-            {
-                return default;
-            }
-
-            Type type = instance.GetType();
-            foreach (string name in names)
-            {
-                FieldInfo field = AccessTools.Field(type, name);
-                if (field != null)
-                {
-                    object value = field.GetValue(instance);
-                    if (value is T typedFieldValue)
-                    {
-                        return typedFieldValue;
-                    }
+                    continue;
                 }
 
-                PropertyInfo property = AccessTools.Property(type, name);
-                if (property != null)
+                if (consumerState?.consumer == null || cost < bestCost)
                 {
-                    object value = property.GetValue(instance, null);
-                    if (value is T typedPropertyValue)
-                    {
-                        return typedPropertyValue;
-                    }
+                    best = pickupable;
+                    bestCost = cost;
                 }
             }
 
-            return default;
+            return best;
+        }
+
+        private static bool IsUsableNetworkSource(Storage source)
+        {
+            return source != null &&
+                   StorageNetworkStorageRules.IsServerStorage(source) &&
+                   StorageNetworkStorageRules.IsConnectedNetworkStorage(source) &&
+                   !StorageNetworkStorageRules.IsMinionStorage(source) &&
+                   !StorageNetworkStorageRules.IsProductionStorage(source);
+        }
+
+        private static bool IsNetworkConstructionSource(Pickupable pickupable)
+        {
+            return IsUsableNetworkSource(pickupable != null ? pickupable.storage : null);
+        }
+
+        private static void RestorePrivateTagIfStillInNetworkStorage(Pickupable pickupable)
+        {
+            Storage storage = pickupable != null ? pickupable.storage : null;
+            if (storage != null && IsUsableNetworkSource(storage) && !storage.allowItemRemoval)
+            {
+                pickupable.KPrefabID?.AddTag(GameTags.StoredPrivate, false);
+            }
+        }
+
+        private static int GetPickupableInstanceId(Pickupable pickupable)
+        {
+            KPrefabID prefabId = pickupable != null ? pickupable.KPrefabID : null;
+            return prefabId != null ? prefabId.InstanceID : KPrefabID.InvalidInstanceID;
         }
     }
 }

@@ -42,7 +42,7 @@ namespace EternalDecay.Content.Comps.DebuffCom
             SpawnRandomProjectiles(minion.gameObject.transform.GetPosition() + new Vector3(0f, 1f, 0f));
 
             // 播放声音
-            AudioUtil.PlaySound(ModAssets.Sounds.WW, CameraController.Instance.GetVerticallyScaledPosition(minion.gameObject.transform.GetPosition()), 1f);
+            // AudioUtil.PlaySound(ModAssets.Sounds.WW, CameraController.Instance.GetVerticallyScaledPosition(minion.gameObject.transform.GetPosition()), 1f);
         }
 
 

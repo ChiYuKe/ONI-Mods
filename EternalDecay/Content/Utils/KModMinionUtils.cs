@@ -205,7 +205,7 @@ namespace CykUtils
             Debug.Log($"- 默认速度 (defaultSpeed): {navigator.defaultSpeed}");
             Debug.Log($"- 导航网格名称 (NavGridName): {navigator.NavGridName}");
             Debug.Log($"- 更新探测器 (updateProber): {navigator.updateProber}");
-            Debug.Log($"- 最大探测半径 (maxProbingRadius): {navigator.maxProbingRadius}");
+            // Debug.Log($"- 最大探测半径 (maxProbingRadius): {navigator.maxProbingRadius}");
 
             // 打印 distanceTravelledByNavType 字典的内容
             Debug.Log("distanceTravelledByNavType:");

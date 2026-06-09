@@ -51,6 +51,17 @@ namespace StorageNetwork.UI
             EnsureLimitWhenEnabled(enabled, value => requester.LimitKg = value, requester.LimitKg);
         }
 
+        public static void SetEnabled(StorageNetworkPortRequester requester, bool enabled)
+        {
+            if (requester == null)
+            {
+                return;
+            }
+
+            requester.LimitEnabled = enabled;
+            EnsureLimitWhenEnabled(enabled, value => requester.LimitKg = value, requester.LimitKg);
+        }
+
         private static void EnsureLimitWhenEnabled(bool enabled, System.Action<float> setLimit, float limitKg)
         {
             if (enabled && limitKg <= 0f)

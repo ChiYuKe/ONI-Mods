@@ -105,6 +105,7 @@ namespace StorageNetwork.UI
             StorageNetworkEnrollment enrollment = storage.GetComponent<StorageNetworkEnrollment>();
             bool isMinionStorage = storageInfo.Minion != null;
             bool showSettingsButton = StorageNetworkStorageRules.IsProductionStorage(storage, enrollment) ||
+                                      StorageNetworkStorageRules.IsConfigurablePort(storage) ||
                                       StorageNetworkStorageRules.HasSettingsButtonTag(storage) ||
                                       isMinionStorage ||
                                       ShowDeprecatedStorageSettingsButton;

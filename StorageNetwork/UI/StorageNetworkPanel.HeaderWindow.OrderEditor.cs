@@ -12,6 +12,24 @@ namespace StorageNetwork.UI
     {
         private void RebuildOrderDetails()
         {
+            if (IsOrderWorldFilterBlockedByRelay())
+            {
+                string relayOfflineSignature = "relay_offline";
+                if (orderDetailsSignature == relayOfflineSignature)
+                {
+                    RebuildOrderTracking(null);
+                    return;
+                }
+
+                orderDetailsSignature = relayOfflineSignature;
+                DeactivateOrderInputs();
+                ClearChildren(orderDetailsContent);
+                AddInfoText(orderDetailsContent, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CROSS_WORLD_RELAY_OFFLINE), 96f);
+                RebuildOrderTracking(null);
+                ForceOrderLayout(orderDetailsContent);
+                return;
+            }
+
             ProductDisplayGroup product = GetSelectedProduct();
             if (product == null || product.Routes.Count == 0)
             {

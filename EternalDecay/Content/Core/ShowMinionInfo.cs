@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using CykUtils;
 using EternalDecay.Content.Comps.KUI;
 using EternalDecay.Content.Configs;
 using Klei.AI;
@@ -62,6 +63,9 @@ namespace EternalDecay.Content.Core
             var screenGO = new GameObject("InheritanceInfo");
             var rectTransform = screenGO.AddComponent<RectTransform>();
             rectTransform.sizeDelta = new Vector2(300f, 500f);
+
+
+
 
             KScreen kscreen = screenGO.AddComponent<InheritanceInformation>();
             GameObject panel = InheritanceInformation.Createpanel(attrList, skillList,traitList);

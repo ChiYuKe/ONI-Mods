@@ -33,11 +33,38 @@ namespace StorageNetwork.UI
             return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_MODE_SEARCH);
         }
 
+        public static string GetPortRequestSourceModeName(StorageNetworkPortRequester requester)
+        {
+            if (requester.CurrentMode == StorageNetworkMaterialRequester.RequestMode.SpecificStorage)
+            {
+                Storage source = requester.ResolveSourceStorage();
+                return source != null
+                    ? string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_SOURCE), source.GetProperName())
+                    : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_MODE_SPECIFIC);
+            }
+
+            return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_MODE_SEARCH);
+        }
+
+
         public static string GetOutputStoreModeName(StorageNetworkMaterialRequester requester)
         {
             if (requester.CurrentOutputStoreMode == StorageNetworkMaterialRequester.OutputStoreMode.SpecificStorage)
             {
                 Storage target = requester.ResolveOutputStorage();
+                return target != null
+                    ? string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_TARGET), target.GetProperName())
+                    : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_MODE_SPECIFIC);
+            }
+
+            return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_MODE_AUTO);
+        }
+
+        public static string GetOutputStoreModeName(StorageNetworkStorageConnector connector)
+        {
+            if (connector.CurrentOutputStoreMode == StorageNetworkMaterialRequester.OutputStoreMode.SpecificStorage)
+            {
+                Storage target = connector.ResolveOutputStorage();
                 return target != null
                     ? string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_TARGET), target.GetProperName())
                     : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_MODE_SPECIFIC);
@@ -96,7 +123,7 @@ namespace StorageNetwork.UI
 
             if (connector != null)
             {
-                return connector.OutputStoreEnabled
+                return connector.IsOutputStoreEnabled()
                     ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_ON_SHORT)
                     : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_OFF_SHORT);
             }

@@ -12,9 +12,10 @@ namespace DebugUI
         private bool drawAllHitBoxes = true;
         private bool drawSelectedBox = true;
         private bool includeSimCell;
+        private KAnimControllerBase animViewerController;
         private const float TopPanelHeight = 330f;
         private const float HitsPanelHeight = 150f;
-        private const float SelectedSummaryHeight = 118f;
+        private const float SelectedSummaryHeight = 210f;
 
         public DebugUIEntityCaptureTool()
         {
@@ -126,8 +127,14 @@ namespace DebugUI
             if (selectedObject.IsNullOrDestroyed())
             {
                 selectedObject = null;
+                animViewerController = null;
                 ImGui.Text("<Nothing Selected / 未选中>");
                 return;
+            }
+
+            if (!animViewerController.IsNullOrDestroyed() && animViewerController.gameObject != selectedObject)
+            {
+                animViewerController = null;
             }
 
             DrawSelectedBoundingBox();
@@ -166,10 +173,14 @@ namespace DebugUI
             ImGui.BeginChild("EntityComponentsPane / 实体组件面板", new Vector2(0f, childHeight), true);
             ImGui.Text("Components / 组件");
             ImGui.Separator();
+            DrawAnimationTools(selectedObject);
+            ImGui.Separator();
             DrawComponents(selectedObject);
             ImGui.EndChild();
 
             ImGui.Columns(1);
+
+            DrawAnimViewerWindow();
         }
 
         private void DrawSelectedBoundingBox()
@@ -189,6 +200,7 @@ namespace DebugUI
             DrawField("Instance ID / 实例 ID", selectedObject.GetInstanceID().ToString());
             DrawField("Active / 启用", selectedObject.activeSelf + " / InHierarchy: " + selectedObject.activeInHierarchy);
             DrawTransformInfo(selectedObject.transform);
+            DrawAnimationInfo(selectedObject);
         }
 
         private static void DrawTransformInfo(Transform transform)
@@ -199,6 +211,34 @@ namespace DebugUI
             DrawField("Scale / 缩放", FormatVector3(transform.localScale));
             int cell = Grid.PosToCell(transform.position);
             DrawField("Cell / 格子", Grid.IsValidCell(cell) ? cell.ToString() : "<Invalid / 无效>");
+        }
+
+        private static void DrawAnimationInfo(GameObject go)
+        {
+            KAnimControllerBase[] controllers = go.GetComponents<KAnimControllerBase>();
+            if (controllers == null || controllers.Length == 0)
+            {
+                DrawField("Anim / 动画", "<No KAnimController / 无动画控制器>");
+                return;
+            }
+
+            for (int i = 0; i < controllers.Length; i++)
+            {
+                KAnimControllerBase controller = controllers[i];
+                if (controller == null)
+                {
+                    continue;
+                }
+
+                KAnim.Anim currentAnim = controller.GetCurrentAnim();
+                string prefix = controllers.Length == 1 ? "Anim / 动画" : "Anim " + (i + 1) + " / 动画 " + (i + 1);
+                DrawField(prefix, currentAnim == null ? "<None / 无>" : currentAnim.name);
+                DrawField("Anim File / 动画文件", GetCurrentAnimFileName(controller, currentAnim));
+                DrawField("Frame / 帧", FormatFrame(controller, currentAnim));
+                DrawField("Mode / 模式", KAnimControllerBase.GetModeString(controller.GetMode()));
+                DrawField("Time / 时间", FormatAnimTime(controller, currentAnim));
+                DrawField("Files / 文件列表", FormatAnimFiles(controller.AnimFiles));
+            }
         }
 
         private static void DrawComponents(GameObject go)
@@ -241,6 +281,213 @@ namespace DebugUI
                     ImGui.EndTooltip();
                 }
             }
+        }
+
+        private void DrawAnimationTools(GameObject go)
+        {
+            KAnimControllerBase[] controllers = go.GetComponents<KAnimControllerBase>();
+            if (controllers == null || controllers.Length == 0)
+            {
+                ImGui.TextDisabled("Anim Viewer / 动画查看: <No KAnimController / 无动画控制器>");
+                return;
+            }
+
+            ImGui.Text("Anim Viewer / 动画查看");
+            for (int i = 0; i < controllers.Length; i++)
+            {
+                KAnimControllerBase controller = controllers[i];
+                if (controller == null)
+                {
+                    continue;
+                }
+
+                string currentName = controller.GetCurrentAnim() == null ? "<None / 无>" : controller.GetCurrentAnim().name;
+                if (ImGui.Button("View Anims / 查看动画##entity_anim_view_" + controller.GetInstanceID()))
+                {
+                    animViewerController = controller;
+                }
+                ImGui.SameLine();
+                ImGui.Text(controller.GetType().Name + " | " + currentName);
+            }
+        }
+
+        private void DrawAnimViewerWindow()
+        {
+            if (animViewerController.IsNullOrDestroyed())
+            {
+                return;
+            }
+
+            ImGui.SetNextWindowSize(new Vector2(520f, 620f), ImGuiCond.FirstUseEver);
+            bool open = true;
+            if (!ImGui.Begin("Anim Viewer / 动画查看##DebugUIEntityAnimViewer", ref open))
+            {
+                ImGui.End();
+                if (!open)
+                {
+                    animViewerController = null;
+                }
+                return;
+            }
+
+            if (!open)
+            {
+                animViewerController = null;
+                ImGui.End();
+                return;
+            }
+
+            DrawAnimViewerContent(animViewerController);
+            ImGui.End();
+        }
+
+        private void DrawAnimViewerContent(KAnimControllerBase controller)
+        {
+            GameObject go = controller.gameObject;
+            KAnim.Anim currentAnim = controller.GetCurrentAnim();
+            DrawField("Object / 对象", go.IsNullOrDestroyed() ? "<Destroyed / 已销毁>" : GetPath(go.transform));
+            DrawField("Controller / 控制器", controller.GetType().FullName);
+            DrawField("Current / 当前动画", currentAnim == null ? "<None / 无>" : currentAnim.name);
+            DrawField("Frame / 帧", FormatFrame(controller, currentAnim));
+            DrawField("Mode / 模式", KAnimControllerBase.GetModeString(controller.GetMode()));
+            DrawField("Time / 时间", FormatAnimTime(controller, currentAnim));
+
+            ImGui.Separator();
+            if (ImGui.Button("Stop / 停止"))
+            {
+                controller.Stop();
+            }
+            ImGui.SameLine();
+            if (ImGui.Button("Restart / 重播") && currentAnim != null)
+            {
+                controller.Play(currentAnim.name, controller.GetMode(), controller.GetPlaySpeed(), 0f);
+            }
+
+            ImGui.Separator();
+            DrawAnimFileList(controller);
+        }
+
+        private void DrawAnimFileList(KAnimControllerBase controller)
+        {
+            KAnimFile[] files = controller.AnimFiles;
+            if (files == null || files.Length == 0)
+            {
+                ImGui.TextDisabled("<No AnimFiles / 无动画文件>");
+                return;
+            }
+
+            ImGui.BeginChild("DebugUIEntity_AnimList", new Vector2(0f, 0f), true);
+            for (int i = 0; i < files.Length; i++)
+            {
+                KAnimFile file = files[i];
+                if (file == null)
+                {
+                    ImGui.TextDisabled("<Null AnimFile / 空动画文件>");
+                    continue;
+                }
+
+                KAnimFileData data = file.GetData();
+                string fileName = data == null ? file.name : data.name;
+                int animCount = data == null ? 0 : data.animCount;
+                if (ImGui.TreeNodeEx(fileName + " (" + animCount + ")##anim_file_" + i, ImGuiTreeNodeFlags.DefaultOpen))
+                {
+                    DrawAnimFileTextures(file, i);
+
+                    if (data == null)
+                    {
+                        ImGui.TextDisabled("<No Anim Data / 无动画数据>");
+                    }
+                    else
+                    {
+                        for (int j = 0; j < data.animCount; j++)
+                        {
+                            KAnim.Anim anim = data.GetAnim(j);
+                            if (anim == null)
+                            {
+                                continue;
+                            }
+
+                            bool isCurrent = controller.GetCurrentAnim() == anim || (controller.GetCurrentAnim() != null && controller.GetCurrentAnim().name == anim.name);
+                            if (ImGui.Selectable(anim.name + FormatAnimMeta(anim) + "##anim_item_" + i + "_" + j, isCurrent))
+                            {
+                                controller.Play(anim.name, KAnim.PlayMode.Loop, 1f, 0f);
+                            }
+                            if (ImGui.BeginPopupContextItem("AnimActions / 动画操作##anim_popup_" + i + "_" + j))
+                            {
+                                if (ImGui.MenuItem("Play Loop / 循环播放"))
+                                {
+                                    controller.Play(anim.name, KAnim.PlayMode.Loop, 1f, 0f);
+                                }
+                                if (ImGui.MenuItem("Play Once / 播放一次"))
+                                {
+                                    controller.Play(anim.name, KAnim.PlayMode.Once, 1f, 0f);
+                                }
+                                if (ImGui.MenuItem("Copy Name / 复制名称"))
+                                {
+                                    GUIUtility.systemCopyBuffer = anim.name;
+                                }
+                                ImGui.EndPopup();
+                            }
+                            if (ImGui.IsItemHovered())
+                            {
+                                ImGui.BeginTooltip();
+                                ImGui.Text("Click: Play Loop / 左键: 循环播放");
+                                ImGui.Text("Right Click: More / 右键: 更多操作");
+                                ImGui.Text("Frames / 帧数: " + anim.numFrames);
+                                ImGui.Text("FPS: " + anim.frameRate.ToString("0.##"));
+                                ImGui.Text("Time / 时长: " + anim.totalTime.ToString("0.###") + "s");
+                                ImGui.EndTooltip();
+                            }
+                        }
+                    }
+                    ImGui.TreePop();
+                }
+            }
+            ImGui.EndChild();
+        }
+
+        private static void DrawAnimFileTextures(KAnimFile file, int fileIndex)
+        {
+            if (file == null)
+            {
+                return;
+            }
+
+            if (file.textureList == null || file.textureList.Count == 0)
+            {
+                ImGui.TextDisabled("Textures / 纹理: <None / 无>");
+                return;
+            }
+
+            if (!ImGui.TreeNodeEx("Textures / 纹理 (" + file.textureList.Count + ")##anim_textures_" + fileIndex, ImGuiTreeNodeFlags.DefaultOpen))
+            {
+                return;
+            }
+
+            for (int i = 0; i < file.textureList.Count; i++)
+            {
+                Texture2D texture = file.textureList[i];
+                if (texture == null)
+                {
+                    ImGui.BulletText("<Null Texture / 空纹理>");
+                    continue;
+                }
+
+                if (ImGui.Button("View / 查看##anim_texture_view_" + fileIndex + "_" + i))
+                {
+                    DevToolUtil.Open(DebugUITextureViewerTool.ForTexture(texture));
+                }
+                ImGui.SameLine();
+                if (ImGui.Button("Export / 导出##anim_texture_export_" + fileIndex + "_" + i))
+                {
+                    string path = DebugUIComponentEditorTool.ExportTextureRegion(texture, new Rect(0f, 0f, texture.width, texture.height), "kanim_texture_" + texture.name);
+                    Debug.Log("[DebugUI] Exported KAnim texture: " + path);
+                }
+                ImGui.SameLine();
+                ImGui.Text(texture.name + "  " + texture.width + "x" + texture.height);
+            }
+
+            ImGui.TreePop();
         }
 
         private void DrawHierarchy(Transform current, Transform selected)
@@ -327,6 +574,7 @@ namespace DebugUI
 
             int cell = Grid.PosToCell(go.transform.position);
             builder.AppendLine("Cell / 格子: " + (Grid.IsValidCell(cell) ? cell.ToString() : "<Invalid / 无效>"));
+            AppendAnimationInfo(builder, go);
 
             builder.AppendLine("Components / 组件:");
             Component[] components = go.GetComponents<Component>();
@@ -336,6 +584,35 @@ namespace DebugUI
             }
 
             return builder.ToString();
+        }
+
+        private static void AppendAnimationInfo(StringBuilder builder, GameObject go)
+        {
+            KAnimControllerBase[] controllers = go.GetComponents<KAnimControllerBase>();
+            builder.AppendLine("Animation / 动画:");
+            if (controllers == null || controllers.Length == 0)
+            {
+                builder.AppendLine("- <No KAnimController / 无动画控制器>");
+                return;
+            }
+
+            for (int i = 0; i < controllers.Length; i++)
+            {
+                KAnimControllerBase controller = controllers[i];
+                if (controller == null)
+                {
+                    continue;
+                }
+
+                KAnim.Anim currentAnim = controller.GetCurrentAnim();
+                builder.AppendLine("- Controller / 控制器: " + controller.GetType().FullName);
+                builder.AppendLine("  Current / 当前: " + (currentAnim == null ? "<None / 无>" : currentAnim.name));
+                builder.AppendLine("  Anim File / 动画文件: " + GetCurrentAnimFileName(controller, currentAnim));
+                builder.AppendLine("  Frame / 帧: " + FormatFrame(controller, currentAnim));
+                builder.AppendLine("  Mode / 模式: " + KAnimControllerBase.GetModeString(controller.GetMode()));
+                builder.AppendLine("  Time / 时间: " + FormatAnimTime(controller, currentAnim));
+                builder.AppendLine("  Files / 文件列表: " + FormatAnimFiles(controller.AnimFiles));
+            }
         }
 
         private static string GetPath(Transform transform)
@@ -369,6 +646,68 @@ namespace DebugUI
         private static string FormatVector3(Vector3 value)
         {
             return string.Format("({0:0.##}, {1:0.##}, {2:0.##})", value.x, value.y, value.z);
+        }
+
+        private static string GetCurrentAnimFileName(KAnimControllerBase controller, KAnim.Anim currentAnim)
+        {
+            if (currentAnim != null && currentAnim.animFile != null)
+            {
+                return currentAnim.animFile.name;
+            }
+
+            KAnimFile[] files = controller.AnimFiles;
+            if (files != null && files.Length > 0 && files[0] != null)
+            {
+                return files[0].name;
+            }
+
+            return "<None / 无>";
+        }
+
+        private static string FormatFrame(KAnimControllerBase controller, KAnim.Anim currentAnim)
+        {
+            if (currentAnim == null)
+            {
+                return controller.currentFrame.ToString();
+            }
+
+            return string.Format("{0}/{1}", controller.currentFrame, currentAnim.numFrames);
+        }
+
+        private static string FormatAnimTime(KAnimControllerBase controller, KAnim.Anim currentAnim)
+        {
+            if (currentAnim == null)
+            {
+                return controller.GetElapsedTime().ToString("0.###") + "s";
+            }
+
+            return string.Format("{0:0.###}s / {1:0.###}s", controller.GetElapsedTime(), currentAnim.totalTime);
+        }
+
+        private static string FormatAnimFiles(KAnimFile[] files)
+        {
+            if (files == null || files.Length == 0)
+            {
+                return "<None / 无>";
+            }
+
+            StringBuilder builder = new StringBuilder();
+            for (int i = 0; i < files.Length; i++)
+            {
+                if (i > 0)
+                {
+                    builder.Append(", ");
+                }
+
+                builder.Append(files[i] == null ? "<null>" : files[i].name);
+            }
+
+            return builder.ToString();
+        }
+
+        private static string FormatAnimMeta(KAnim.Anim anim)
+        {
+            return string.Format("  [{0}f, {1:0.##}fps, {2:0.###}s]", anim.numFrames, anim.frameRate, anim.totalTime);
         }
     }
 }

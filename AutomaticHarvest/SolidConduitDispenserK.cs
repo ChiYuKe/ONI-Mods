@@ -7,7 +7,7 @@ using static AutomaticHarvest.Reservoir;
 
 namespace AutomaticHarvest
 {
-
+#pragma warning disable CS0649
     public class SolidConduitDispenserK : KMonoBehaviour, ISaveLoadable, IConduitDispenser
     {
         [SerializeField]
@@ -25,16 +25,13 @@ namespace AutomaticHarvest
         [SerializeField]
         public bool solidOnly;
 
-        private static readonly Operational.Flag outputConduitFlag = new Operational.Flag("output_conduit", Operational.Flag.Type.Functional);
+        private static readonly Operational.Flag OutputConduitFlag = new Operational.Flag("output_conduit", Operational.Flag.Type.Functional);
 
         [MyCmpReq]
         private Operational operational;
 
         [MyCmpGet]
         private Reservoir reservoir;
-
-        [MyCmpReq]
-        AutomaticHarvestLogic IConduitDispenser;
 
         [MyCmpReq]
         AutomaticHarvestK automaticHarvestK;
@@ -102,7 +99,7 @@ namespace AutomaticHarvest
         private void OnConduitConnectionChanged(object data)
         {
             dispensing = dispensing && IsConnected;
-            Trigger(-2094018600, (object)BoxedBools.Box(IsConnected));
+            Trigger(-2094018600, BoxedBools.Box(true));
         }
 
 
@@ -153,10 +150,10 @@ namespace AutomaticHarvest
             this.isEnabled = true;
             switch (automaticHarvestK.anim_au)
             {
-                case AutomaticHarvestK.Anim_Au.on:
+                case AutomaticHarvestK.Anim_Au.On:
                     reservoir.RefreshHstatusLight(HstatusLight.Green);
                     break;
-                case AutomaticHarvestK.Anim_Au.off:
+                case AutomaticHarvestK.Anim_Au.Off:
                     reservoir.RefreshHstatusLight(HstatusLight.Red);
                     break;
                 default:
@@ -204,7 +201,7 @@ namespace AutomaticHarvest
                 dispensing = false;
                 return;
             }
-            operational.SetFlag(outputConduitFlag, IsConnected);
+            operational.SetFlag(OutputConduitFlag, true);
             if (operational.IsOperational || alwaysDispense)
             {
                 SolidConduitFlow conduitFlow = GetConduitFlow();
@@ -316,4 +313,5 @@ namespace AutomaticHarvest
             return component.GetUtilityOutputCell();
         }
     }
+#pragma warning restore CS0649
 }

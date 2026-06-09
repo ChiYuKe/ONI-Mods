@@ -1,0 +1,40 @@
+tags:
+  - AllowExceedNodeBorders
+shape: TallThin
+borders:
+  - 3
+  - 3
+blobSize:
+  min: 24
+  max: 38
+ElementChoiceGroups:
+  RoomCenterElements:
+    selectionMethod: WeightedResample
+    choices:
+      - element: Vacuum
+        weight: 4
+      - element: Oxygen
+        weight: 1
+        overrides:
+          massOverride: 0.25
+          temperatureOverride: 275
+  RoomBorderChoices0:
+    selectionMethod: WeightedResample
+    choices:
+      - element: Katairite
+        weight: 4
+      - element: Diamond
+        weight: 2
+      - element: IronOre
+        weight: 1
+  RoomBorderChoices1:
+    selectionMethod: WeightedResample
+    choices:
+      - element: Wolframite
+        weight: 2
+      - element: Cuprite
+        weight: 2
+      - element: GoldAmalgam
+        weight: 1
+      - element: Granite
+        weight: 1

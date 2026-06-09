@@ -119,7 +119,7 @@ namespace EternalDecay.Content.Comps
         {
             List<Descriptor> list = new List<Descriptor>();
             Descriptor descriptor = default(Descriptor);
-            descriptor.SetupDescriptor(UI.BUILDINGEFFECTS.ASSIGNEDDUPLICANT, UI.BUILDINGEFFECTS.TOOLTIPS.ASSIGNEDDUPLICANT, Descriptor.DescriptorType.Requirement);
+            descriptor.SetupDescriptor(STRINGS.UI.BUILDINGEFFECTS.ASSIGNEDDUPLICANT, UI.BUILDINGEFFECTS.TOOLTIPS.ASSIGNEDDUPLICANT, Descriptor.DescriptorType.Requirement);
             list.Add(descriptor);
             return list;
         }

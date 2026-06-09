@@ -17,15 +17,13 @@ namespace StorageNetwork.ProductionOrders
         private static readonly FieldInfo RecipeQueueCountsField = typeof(ComplexFabricator).GetField("recipeQueueCounts", BindingFlags.Instance | BindingFlags.NonPublic);
         private static string loadedStorePath;
 
+        private readonly ProductionNetworkInventoryCache networkInventory = new ProductionNetworkInventoryCache();
         private List<RecipeDisplayInfo> craftableRecipes = new List<RecipeDisplayInfo>();
-        private Dictionary<Tag, float> networkAmountCache = new Dictionary<Tag, float>();
-        private List<Storage> networkSourceStorageCache = new List<Storage>();
-        private readonly HashSet<Storage> networkSourceStorageSet = new HashSet<Storage>();
         private string ignoredReservationOrderKey;
 
         public IReadOnlyCollection<ProductionOrderRecord> Orders => ActiveOrders.Values;
 
-        public List<Storage> NetworkSourceStorages => networkSourceStorageCache;
+        public List<Storage> NetworkSourceStorages => networkInventory.SourceStorages;
 
         public void LoadOrdersForDisplay()
         {
@@ -35,7 +33,7 @@ namespace StorageNetwork.ProductionOrders
         public void Refresh()
         {
             EnsureOrdersLoaded();
-            RefreshNetworkStorageCache();
+            networkInventory.Refresh();
             craftableRecipes = ProductionRecipeCatalog.GetCraftableRecipeDisplayInfos();
             UpdateProductionOrderStates();
             PurgeExpiredFinishedOrders();
@@ -59,7 +57,7 @@ namespace StorageNetwork.ProductionOrders
 
         public float GetNetworkRawAmount(Tag tag)
         {
-            return networkAmountCache.TryGetValue(tag, out float amount) ? amount : 0f;
+            return networkInventory.GetRawAmount(tag);
         }
 
         public static float RequestLeasedMaterial(ComplexFabricator fabricator, ComplexRecipe recipe, Tag tag, float amount, Storage target)
@@ -121,7 +119,7 @@ namespace StorageNetwork.ProductionOrders
                         break;
                     }
 
-                    Storage source = FindNetworkStorageByInstanceIdStatic(lease.SourceStorageInstanceId);
+                    Storage source = ProductionNetworkInventoryCache.FindStorageByInstanceIdFromScene(lease.SourceStorageInstanceId);
                     if (source == null || source == target || StorageNetworkStorageRules.IsProductionStorage(source))
                     {
                         continue;
@@ -410,70 +408,6 @@ namespace StorageNetwork.ProductionOrders
             }
 
             return lines;
-        }
-
-        private void RefreshNetworkStorageCache()
-        {
-            networkSourceStorageCache.Clear();
-            networkSourceStorageSet.Clear();
-            foreach (StorageInfo info in StorageSceneCollector.Collect().Storages)
-            {
-                if (info?.ContentStorages == null)
-                {
-                    continue;
-                }
-
-                foreach (Storage storage in info.ContentStorages)
-                {
-                    if (storage != null && networkSourceStorageSet.Add(storage))
-                    {
-                        networkSourceStorageCache.Add(storage);
-                    }
-                }
-            }
-
-            networkAmountCache.Clear();
-            foreach (Storage storage in networkSourceStorageCache)
-            {
-                if (storage == null || StorageNetworkStorageRules.IsProductionStorage(storage) || storage.items == null)
-                {
-                    continue;
-                }
-
-                foreach (GameObject item in storage.items)
-                {
-                    if (item != null)
-                    {
-                        AddNetworkItemAmount(item);
-                    }
-                }
-            }
-        }
-
-        private void AddNetworkItemAmount(GameObject item)
-        {
-            PrimaryElement primaryElement = item != null ? item.GetComponent<PrimaryElement>() : null;
-            if (primaryElement == null)
-            {
-                return;
-            }
-
-            AddNetworkAmount(StorageItemUtility.GetStorageTransferTag(item), primaryElement.Mass);
-            Tag elementTag = primaryElement.ElementID.CreateTag();
-            if (elementTag != Tag.Invalid && elementTag != StorageItemUtility.GetStorageTransferTag(item))
-            {
-                AddNetworkAmount(elementTag, primaryElement.Mass);
-            }
-        }
-
-        private void AddNetworkAmount(Tag tag, float amount)
-        {
-            if (tag == Tag.Invalid || amount <= 0f)
-            {
-                return;
-            }
-
-            networkAmountCache[tag] = networkAmountCache.TryGetValue(tag, out float existing) ? existing + amount : amount;
         }
 
         private ProductionPlanNode BuildProductionPlan(ComplexRecipe recipe, List<ComplexFabricator> fabricators, Tag productTag, float requestedAmount, int depth, HashSet<string> recipePath, HashSet<ComplexFabricator> reservedFabricators)
@@ -792,7 +726,7 @@ namespace StorageNetwork.ProductionOrders
             {
                 float remaining = pair.Value;
                 sources.Clear();
-                foreach (Storage storage in networkSourceStorageCache)
+                foreach (Storage storage in networkInventory.SourceStorages)
                 {
                     if (storage != null && !StorageNetworkStorageRules.IsProductionStorage(storage))
                     {
@@ -814,7 +748,7 @@ namespace StorageNetwork.ProductionOrders
                         continue;
                     }
 
-                    leases.Add(new ProductionOrderMaterialLease(pair.Key, amount, GetComponentInstanceId(storage), string.Empty));
+                    leases.Add(new ProductionOrderMaterialLease(pair.Key, amount, ProductionNetworkInventoryCache.GetComponentInstanceId(storage), string.Empty));
                     remaining -= amount;
                 }
             }
@@ -832,7 +766,7 @@ namespace StorageNetwork.ProductionOrders
             foreach (ProductionOrderQueueAssignment assignment in primaryAssignments)
             {
                 float amount = totalCount > 0 ? requestedAmount * assignment.OrderCount / totalCount : requestedAmount;
-                leases.Add(new ProductionOrderOutputLease(productTag, amount, GetComponentInstanceId(assignment.Fabricator), assignment.Fabricator.GetProperName()));
+                leases.Add(new ProductionOrderOutputLease(productTag, amount, ProductionNetworkInventoryCache.GetComponentInstanceId(assignment.Fabricator), assignment.Fabricator.GetProperName()));
             }
 
             return leases;
@@ -1113,22 +1047,22 @@ namespace StorageNetwork.ProductionOrders
 
         private static void CancelOrderQueues(ProductionOrderRecord order)
         {
-            foreach (ProductionOrderQueueAssignment assignment in order.QueueAssignments)
+            foreach (QueueCancellationTarget target in BuildQueueCancellationTargets(order))
             {
-                if (assignment.Fabricator == null || assignment.Recipe == null || assignment.OrderCount <= 0)
+                if (target.Fabricator == null || target.Recipe == null || target.OwnedCount <= 0)
                 {
                     continue;
                 }
 
-                int queued = assignment.Fabricator.GetRecipeQueueCount(assignment.Recipe);
+                int queued = target.Fabricator.GetRecipeQueueCount(target.Recipe);
                 if (queued == ComplexFabricator.QUEUE_INFINITE)
                 {
                     queued = ComplexFabricator.MAX_QUEUE_SIZE;
                 }
 
-                bool cancelCurrentWorkingOrder = ShouldCancelCurrentWorkingOrder(order, assignment);
-                int protectedQueued = GetProtectedQueueCount(order, assignment);
-                int activeOwnedCount = Mathf.Max(0, assignment.OrderCount) + (cancelCurrentWorkingOrder ? 1 : 0);
+                bool cancelCurrentWorkingOrder = ShouldCancelCurrentWorkingOrder(order, target);
+                int protectedQueued = GetProtectedQueueCount(order, target);
+                int activeOwnedCount = Mathf.Max(0, target.OwnedCount) + (cancelCurrentWorkingOrder ? 1 : 0);
                 int removableQueued = Mathf.Max(0, queued - protectedQueued);
                 int cancelCount = Mathf.Min(removableQueued + (cancelCurrentWorkingOrder ? 1 : 0), activeOwnedCount);
                 if (cancelCount <= 0)
@@ -1138,12 +1072,35 @@ namespace StorageNetwork.ProductionOrders
 
                 if (cancelCurrentWorkingOrder)
                 {
-                    assignment.Fabricator.SetRecipeQueueCount(assignment.Recipe, 0);
+                    target.Fabricator.SetRecipeQueueCount(target.Recipe, 0);
                 }
 
                 int finalQueued = Mathf.Max(protectedQueued, queued - Mathf.Max(0, cancelCount - (cancelCurrentWorkingOrder ? 1 : 0)));
-                assignment.Fabricator.SetRecipeQueueCount(assignment.Recipe, finalQueued);
+                target.Fabricator.SetRecipeQueueCount(target.Recipe, finalQueued);
             }
+        }
+
+        private static List<QueueCancellationTarget> BuildQueueCancellationTargets(ProductionOrderRecord order)
+        {
+            Dictionary<string, QueueCancellationTarget> targets = new Dictionary<string, QueueCancellationTarget>();
+            foreach (ProductionOrderQueueAssignment assignment in order.QueueAssignments)
+            {
+                if (assignment?.Fabricator == null || assignment.Recipe == null)
+                {
+                    continue;
+                }
+
+                string key = BuildQueueKey(assignment.Fabricator, assignment.Recipe);
+                if (!targets.TryGetValue(key, out QueueCancellationTarget target))
+                {
+                    target = new QueueCancellationTarget(assignment.Fabricator, assignment.Recipe);
+                    targets[key] = target;
+                }
+
+                target.OwnedCount += GetRemainingQueueCount(order, assignment);
+            }
+
+            return targets.Values.ToList();
         }
 
         private void UpdateOrderProducedAmount(ProductionOrderRecord order)
@@ -1178,11 +1135,11 @@ namespace StorageNetwork.ProductionOrders
             return amount;
         }
 
-        private static bool ShouldCancelCurrentWorkingOrder(ProductionOrderRecord cancelledOrder, ProductionOrderQueueAssignment cancelledAssignment)
+        private static bool ShouldCancelCurrentWorkingOrder(ProductionOrderRecord cancelledOrder, QueueCancellationTarget cancelledTarget)
         {
-            if (cancelledAssignment.Fabricator == null ||
-                cancelledAssignment.Recipe == null ||
-                cancelledAssignment.Fabricator.CurrentWorkingOrder != cancelledAssignment.Recipe)
+            if (cancelledTarget.Fabricator == null ||
+                cancelledTarget.Recipe == null ||
+                cancelledTarget.Fabricator.CurrentWorkingOrder != cancelledTarget.Recipe)
             {
                 return false;
             }
@@ -1191,7 +1148,7 @@ namespace StorageNetwork.ProductionOrders
                 IsOrderActive(order) &&
                 order.Key != cancelledOrder.Key &&
                 IsOrderAheadOf(order, cancelledOrder) &&
-                order.QueueAssignments.Any(assignment => IsSameQueue(assignment, cancelledAssignment) && GetRemainingQueueCount(order, assignment) > 0));
+                order.QueueAssignments.Any(assignment => IsSameQueue(assignment, cancelledTarget) && GetRemainingQueueCount(order, assignment) > 0));
         }
 
         private static bool IsOrderAheadOf(ProductionOrderRecord candidate, ProductionOrderRecord order)
@@ -1205,7 +1162,7 @@ namespace StorageNetwork.ProductionOrders
                    candidate.DisplayId < order.DisplayId;
         }
 
-        private static int GetProtectedQueueCount(ProductionOrderRecord cancelledOrder, ProductionOrderQueueAssignment cancelledAssignment)
+        private static int GetProtectedQueueCount(ProductionOrderRecord cancelledOrder, QueueCancellationTarget cancelledTarget)
         {
             int protectedCount = 0;
             foreach (ProductionOrderRecord order in ActiveOrders.Values)
@@ -1217,7 +1174,7 @@ namespace StorageNetwork.ProductionOrders
 
                 foreach (ProductionOrderQueueAssignment assignment in order.QueueAssignments)
                 {
-                    if (IsSameQueue(assignment, cancelledAssignment))
+                    if (IsSameQueue(assignment, cancelledTarget))
                     {
                         protectedCount += GetRemainingQueueCount(order, assignment);
                     }
@@ -1261,6 +1218,19 @@ namespace StorageNetwork.ProductionOrders
                    right != null &&
                    left.Fabricator == right.Fabricator &&
                    left.Recipe == right.Recipe;
+        }
+
+        private static bool IsSameQueue(ProductionOrderQueueAssignment assignment, QueueCancellationTarget target)
+        {
+            return assignment != null &&
+                   target != null &&
+                   assignment.Fabricator == target.Fabricator &&
+                   assignment.Recipe == target.Recipe;
+        }
+
+        private static string BuildQueueKey(ComplexFabricator fabricator, ComplexRecipe recipe)
+        {
+            return string.Format("{0}|{1}", fabricator.GetInstanceID(), recipe.id);
         }
 
         private float GetProducedAmountForOrder(Tag productTag)
@@ -1550,11 +1520,11 @@ namespace StorageNetwork.ProductionOrders
                         continue;
                     }
 
-                    AddTransferSource(sources, seen, FindNetworkStorageByInstanceId(lease.SourceStorageInstanceId), target, tag);
+                    AddTransferSource(sources, seen, networkInventory.FindStorageByInstanceId(lease.SourceStorageInstanceId), target, tag);
                 }
             }
 
-            foreach (Storage storage in networkSourceStorageCache)
+            foreach (Storage storage in networkInventory.SourceStorages)
             {
                 AddTransferSource(sources, seen, storage, target, tag);
             }
@@ -1725,46 +1695,6 @@ namespace StorageNetwork.ProductionOrders
             return string.Format("{0}|{1}|{2}|{3}", productTag, recipeKey, amountBucket, cycleBucket);
         }
 
-        private static int GetComponentInstanceId(Component component)
-        {
-            KPrefabID prefabId = component != null ? component.GetComponent<KPrefabID>() : null;
-            return prefabId != null ? prefabId.InstanceID : KPrefabID.InvalidInstanceID;
-        }
-
-        private Storage FindNetworkStorageByInstanceId(int instanceId)
-        {
-            return instanceId == KPrefabID.InvalidInstanceID
-                ? null
-                : networkSourceStorageCache.FirstOrDefault(storage => GetComponentInstanceId(storage) == instanceId);
-        }
-
-        private static Storage FindNetworkStorageByInstanceIdStatic(int instanceId)
-        {
-            if (instanceId == KPrefabID.InvalidInstanceID)
-            {
-                return null;
-            }
-
-            HashSet<Storage> visited = new HashSet<Storage>();
-            foreach (StorageInfo info in StorageSceneCollector.Collect().Storages)
-            {
-                if (info?.ContentStorages == null)
-                {
-                    continue;
-                }
-
-                foreach (Storage storage in info.ContentStorages)
-                {
-                    if (storage != null && visited.Add(storage) && GetComponentInstanceId(storage) == instanceId)
-                    {
-                        return storage;
-                    }
-                }
-            }
-
-            return null;
-        }
-
         private static void EnsureOrdersLoaded()
         {
             string storePath = ProductionOrderPersistence.GetStorePath();
@@ -1885,5 +1815,20 @@ namespace StorageNetwork.ProductionOrders
             requester.OutputStoreModeValue = outputStoreModeValue;
             requester.OutputStorageInstanceId = outputStorageInstanceId;
         }
+    }
+
+    internal sealed class QueueCancellationTarget
+    {
+        public QueueCancellationTarget(ComplexFabricator fabricator, ComplexRecipe recipe)
+        {
+            Fabricator = fabricator;
+            Recipe = recipe;
+        }
+
+        public ComplexFabricator Fabricator { get; }
+
+        public ComplexRecipe Recipe { get; }
+
+        public int OwnedCount { get; set; }
     }
 }

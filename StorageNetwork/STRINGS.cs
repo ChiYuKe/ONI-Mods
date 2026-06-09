@@ -34,6 +34,62 @@ namespace StorageNetwork
                     public static LocString EFFECT = "此建筑仅用于保护旧存档中的材料，可能会在将来的模组更新中被移除。请尽快取出或转移箱子中的材料，并拆除该箱子。";
                 }
 
+                public class STORAGENETWORKSOLIDINPUTPORT
+                {
+                    public static LocString NAME = "材料入网端口";
+                    public static LocString DESC = "将固体运输轨道连接到储存网络的输入端口。";
+                    public static LocString EFFECT = "用于接收运输轨道上的固体材料，并作为后续入网逻辑的连接建筑。";
+                }
+
+                public class STORAGENETWORKSOLIDOUTPUTPORT
+                {
+                    public static LocString NAME = "材料出网端口";
+                    public static LocString DESC = "将储存网络连接到固体运输轨道的输出端口。";
+                    public static LocString EFFECT = "用于向运输轨道输出固体材料，并作为后续出网逻辑的连接建筑。";
+                }
+
+                public class STORAGENETWORKLIQUIDINPUTPORT
+                {
+                    public static LocString NAME = "液体入网端口";
+                    public static LocString DESC = "将液体管道连接到储存网络的输入端口。";
+                    public static LocString EFFECT = "用于接收管道中的液体，并作为后续入网逻辑的连接建筑。";
+                }
+
+                public class STORAGENETWORKLIQUIDOUTPUTPORT
+                {
+                    public static LocString NAME = "液体出网端口";
+                    public static LocString DESC = "将储存网络连接到液体管道的输出端口。";
+                    public static LocString EFFECT = "用于向管道输出液体，并作为后续出网逻辑的连接建筑。";
+                }
+
+                public class STORAGENETWORKGASINPUTPORT
+                {
+                    public static LocString NAME = "气体入网端口";
+                    public static LocString DESC = "将气体管道连接到储存网络的输入端口。";
+                    public static LocString EFFECT = "用于接收管道中的气体，并作为后续入网逻辑的连接建筑。";
+                }
+
+                public class STORAGENETWORKGASOUTPUTPORT
+                {
+                    public static LocString NAME = "气体出网端口";
+                    public static LocString DESC = "将储存网络连接到气体管道的输出端口。";
+                    public static LocString EFFECT = "用于向管道输出气体，并作为后续出网逻辑的连接建筑。";
+                }
+
+                public class STORAGENETWORKPOWERINPUTPORT
+                {
+                    public static LocString NAME = "电力入网端口";
+                    public static LocString DESC = "将电路连接到储存网络的电力输入端口。";
+                    public static LocString EFFECT = "用于接入电力网络，并作为后续电力入网逻辑的连接建筑。";
+                }
+
+                public class STORAGENETWORKPOWEROUTPUTPORT
+                {
+                    public static LocString NAME = "电力出网端口";
+                    public static LocString DESC = "将储存网络连接到电路的电力输出端口。";
+                    public static LocString EFFECT = "用于向电路输出电力，并作为后续电力出网逻辑的连接建筑。";
+                }
+
                 public class STORAGENETWORKSMALLLIQUIDSERVER
                 {
                     public static LocString NAME = "小型液体服务器";
@@ -120,6 +176,12 @@ namespace StorageNetwork
                     public static LocString DESC = "解锁储存网络核心。";
                 }
 
+                public class STORAGENETWORKPORTS
+                {
+                    public static LocString NAME = "网络端口";
+                    public static LocString DESC = "解锁材料、液体、气体和电力的储存网络入网与出网端口。";
+                }
+
                 public class STORAGENETWORKSMALLSTORAGE
                 {
                     public static LocString NAME = "小型储存";
@@ -158,6 +220,7 @@ namespace StorageNetwork
                 public static LocString EMPTY_DETAILS = "会收集储存网络核心、服务器，以及手动加入的原版储物箱。";
                 public static LocString CORE_OFFLINE_TITLE = "储存网络未启动";
                 public static LocString CORE_OFFLINE_DETAILS = "当前场景需要建造并供电至少一个储存网络核心，网络面板和材料调度才会启用。";
+                public static LocString CROSS_WORLD_RELAY_OFFLINE = "未发射储存网络中继器，无法与其他星球进行网络互通";
                 public static LocString NO_STORAGE_CONTENT = "没有储存内容";
                 public static LocString STORAGE_SETTINGS = "设置";
                 public static LocString CATEGORY_COUNT = "<b>{0}</b>\n<size=10>{1} 个</size>";
@@ -271,6 +334,22 @@ namespace StorageNetwork
                 public static LocString PRODUCTION_NO_RECIPE = "当前没有正在制作的配方";
                 public static LocString MATERIAL_REQUEST_TITLE = "材料请求";
                 public static LocString MATERIAL_REQUEST_ENABLED = "向网络请求材料";
+                public static LocString PORT_OUTPUT_AMOUNT = "输出量";
+                public static LocString PORT_OUTPUT_AMOUNT_VALUE = "{0}/次";
+                public static LocString PORT_OUTPUT_AMOUNT_TOOLTIP = "输出端口会尽量按 {0} 形成管道或轨道输出包。";
+                public static LocString MATERIAL_PORT_SETTINGS_TITLE = "端口设置";
+                public static LocString MATERIAL_PORT_INPUT_STATUS = "材料输入端口";
+                public static LocString MATERIAL_PORT_OUTPUT_STATUS = "材料输出端口";
+                public static LocString LIQUID_PORT_INPUT_STATUS = "液体输入端口";
+                public static LocString LIQUID_PORT_OUTPUT_STATUS = "液体输出端口";
+                public static LocString GAS_PORT_INPUT_STATUS = "气体输入端口";
+                public static LocString GAS_PORT_OUTPUT_STATUS = "气体输出端口";
+                public static LocString POWER_PORT_INPUT_STATUS = "电力输入端口";
+                public static LocString POWER_PORT_OUTPUT_STATUS = "电力输出端口";
+                public static LocString MATERIAL_PORT_DIRECTION = "端口方向";
+                public static LocString MATERIAL_PORT_DIRECTION_INPUT = "输入网络";
+                public static LocString MATERIAL_PORT_DIRECTION_OUTPUT = "输出网络";
+                public static LocString MATERIAL_PORT_MANUAL_OPERATION_ALLOWED = "允许人力操作";
                 public static LocString MINION_MATERIAL_REQUEST_ENABLED = "允许复制人从网络中请求材料";
                 public static LocString MINION_MATERIAL_REQUEST_DESC = "开启后，复制人建造时可从储存网络调拨所需材料。";
                 public static LocString ALL_MINION_SETTINGS_TITLE = "全部复制人设置";
@@ -280,10 +359,10 @@ namespace StorageNetwork
                 public static LocString ALL_MINION_DISABLE = "全部关闭";
                 public static LocString MATERIAL_REQUEST_MODE = "请求方式：{0}";
                 public static LocString MATERIAL_REQUEST_MODE_SEARCH = "从服务器中寻找材料";
-                public static LocString MATERIAL_REQUEST_MODE_SPECIFIC = "指定网络中某个箱子提供材料";
-                public static LocString MATERIAL_REQUEST_SOURCE = "指定箱子：{0}";
+                public static LocString MATERIAL_REQUEST_MODE_SPECIFIC = "指定网络中某个服务器提供材料";
+                public static LocString MATERIAL_REQUEST_SOURCE = "指定服务器：{0}";
                 public static LocString MATERIAL_REQUEST_SOURCE_NONE = "未指定";
-                public static LocString MATERIAL_REQUEST_SELECT_SOURCE = "选择箱子";
+                public static LocString MATERIAL_REQUEST_SELECT_SOURCE = "选择服务器";
                 public static LocString MATERIAL_REQUEST_LIMIT_ENABLED = "启用请求限额";
                 public static LocString MATERIAL_REQUEST_LIMIT = "限额：{0} / {1}";
                 public static LocString MATERIAL_REQUEST_SET_LIMIT = "设置限额";
@@ -291,19 +370,19 @@ namespace StorageNetwork
                 public static LocString MATERIAL_REQUEST_RESET = "重置已请求";
                 public static LocString MATERIAL_REQUEST_STATUS_ITEM = "材料提供由储存网络供给";
                 public static LocString MATERIAL_REQUEST_STATUS_TOOLTIP = "这个建筑会从储存网络中请求当前生产需要的材料。\n{0}";
-                public static LocString MATERIAL_REQUEST_AUTO_DESC = "自动从已接入网络的箱子中寻找材料，优先使用库存最多的来源。";
+                public static LocString MATERIAL_REQUEST_AUTO_DESC = "自动从已接入网络的服务器中寻找材料，优先使用库存最多的来源。";
                 public static LocString ENERGY_GENERATOR_SOURCE_DESC = "发电设施会从已接入网络的服务器中自动寻找可用燃料。";
                 public static LocString OUTPUT_STORE_TITLE = "成品入网";
                 public static LocString OUTPUT_STORE_ENABLED = "加工完成后自动存入网络";
                 public static LocString STORAGE_OUTPUT_STORE_TITLE = "内容物入网";
                 public static LocString STORAGE_OUTPUT_STORE_ENABLED = "允许把内容物输入网络";
-                public static LocString STORAGE_OUTPUT_STORE_DESC = "开启后，这个储存建筑会把当前内容物自动转移到储存网络中的匹配箱子。";
+                public static LocString STORAGE_OUTPUT_STORE_DESC = "开启后，这个储存建筑会把当前内容物自动转移到储存网络中的匹配服务器。";
                 public static LocString OUTPUT_STORE_MODE = "存放方式：{0}";
-                public static LocString OUTPUT_STORE_MODE_AUTO = "自动寻找匹配箱子";
-                public static LocString OUTPUT_STORE_MODE_SPECIFIC = "指定网络中某个箱子存放";
-                public static LocString OUTPUT_STORE_AUTO_DESC = "自动寻找已接入网络的匹配箱子，优先堆到已有同类物品的箱子；容量不足时会按剩余空间分批存入。";
+                public static LocString OUTPUT_STORE_MODE_AUTO = "自动寻找匹配服务器";
+                public static LocString OUTPUT_STORE_MODE_SPECIFIC = "指定网络中某个服务器存放";
+                public static LocString OUTPUT_STORE_AUTO_DESC = "自动寻找已接入网络的匹配服务器，优先堆到已有同类物品的服务器；容量不足时会按剩余空间分批存入。";
                 public static LocString OUTPUT_STORE_STATUS = "入网状态：{0}";
-                public static LocString OUTPUT_STORE_TARGET = "目标箱子：{0}";
+                public static LocString OUTPUT_STORE_TARGET = "目标服务器：{0}";
                 public static LocString OUTPUT_STORE_TARGET_DETAILS = "当前 {0} / {1}    剩余 {2}";
                 public static LocString PICKER_OPTION_COUNT = "可选网络服务器：{0} 个";
                 public static LocString PICKER_POLICY_HINT = "自动策略会在已接入网络的服务器中寻找合适目标；指定服务器后，只从该服务器取料或向该服务器存放。";

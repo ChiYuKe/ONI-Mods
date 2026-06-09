@@ -17,14 +17,33 @@ namespace StorageNetwork.Research
         private const float TitleHeight = 72f;
         private const float NodeWidth = 250f;
         private const float NodeHeight = 110f;
+        private const float BranchOffsetY = 260f;
+
+        private const string CoreTechId = "StorageNetworkResearchCore";
+        private const string PortsTechId = "StorageNetworkResearchPorts";
+        private const string SmallStorageTechId = "StorageNetworkResearchSmallStorage";
+        private const string MediumStorageTechId = "StorageNetworkResearchMediumStorage";
+        private const string LargeStorageTechId = "StorageNetworkResearchLargeStorage";
+        private const string RelayTechId = "StorageNetworkResearchRelay";
 
         private static readonly StorageNetworkTechSpec[] TechSpecs =
         {
-            new StorageNetworkTechSpec("StorageNetworkResearchCore", "STORAGENETWORKRESEARCHCORE", StorageNetworkResearchText.Core, new[] { StorageNetworkCoreConfig.ID }, 35f, 0f, 0f),
-            new StorageNetworkTechSpec("StorageNetworkResearchSmallStorage", "STORAGENETWORKRESEARCHSMALLSTORAGE", StorageNetworkResearchText.SmallStorage, new[] { SmallSolidServerConfig.ID, SmallLiquidServerConfig.ID, SmallGasServerConfig.ID }, 50f, 0f, 0f),
-            new StorageNetworkTechSpec("StorageNetworkResearchMediumStorage", "STORAGENETWORKRESEARCHMEDIUMSTORAGE", StorageNetworkResearchText.MediumStorage, new[] { MediumSolidServerConfig.ID, MediumLiquidServerConfig.ID, MediumGasServerConfig.ID }, 50f, 30f, 0f),
-            new StorageNetworkTechSpec("StorageNetworkResearchLargeStorage", "STORAGENETWORKRESEARCHLARGESTORAGE", StorageNetworkResearchText.LargeStorage, new[] { LargeSolidServerConfig.ID, LargeLiquidServerConfig.ID, LargeGasServerConfig.ID }, 70f, 50f, 0f),
-            new StorageNetworkTechSpec("StorageNetworkResearchRelay", "STORAGENETWORKRESEARCHRELAY", StorageNetworkResearchText.Relay, new[] { StorageNetworkRelayModuleConfig.ID }, 70f, 100f, 200f)
+            new StorageNetworkTechSpec(CoreTechId, "STORAGENETWORKRESEARCHCORE", null, 0, 0, new[] { StorageNetworkCoreConfig.ID }, 35f, 0f, 0f),
+            new StorageNetworkTechSpec(PortsTechId, "STORAGENETWORKRESEARCHPORTS", CoreTechId, 1, 1, new[]
+            {
+                StorageNetworkSolidInputPortConfig.ID,
+                StorageNetworkSolidOutputPortConfig.ID,
+                StorageNetworkLiquidInputPortConfig.ID,
+                StorageNetworkLiquidOutputPortConfig.ID,
+                StorageNetworkGasInputPortConfig.ID,
+                StorageNetworkGasOutputPortConfig.ID,
+                StorageNetworkPowerInputPortConfig.ID,
+                StorageNetworkPowerOutputPortConfig.ID
+            }, 50f, 0f, 0f),
+            new StorageNetworkTechSpec(SmallStorageTechId, "STORAGENETWORKRESEARCHSMALLSTORAGE", CoreTechId, 1, 0, new[] { SmallSolidServerConfig.ID, SmallLiquidServerConfig.ID, SmallGasServerConfig.ID }, 50f, 0f, 0f),
+            new StorageNetworkTechSpec(MediumStorageTechId, "STORAGENETWORKRESEARCHMEDIUMSTORAGE", SmallStorageTechId, 2, 0, new[] { MediumSolidServerConfig.ID, MediumLiquidServerConfig.ID, MediumGasServerConfig.ID }, 50f, 30f, 0f),
+            new StorageNetworkTechSpec(LargeStorageTechId, "STORAGENETWORKRESEARCHLARGESTORAGE", MediumStorageTechId, 3, 0, new[] { LargeSolidServerConfig.ID, LargeLiquidServerConfig.ID, LargeGasServerConfig.ID }, 70f, 50f, 0f),
+            new StorageNetworkTechSpec(RelayTechId, "STORAGENETWORKRESEARCHRELAY", LargeStorageTechId, 4, 0, new[] { StorageNetworkRelayModuleConfig.ID }, 70f, 100f, 200f)
         };
 
         public static void Install(Database.Techs techs)
@@ -38,8 +57,8 @@ namespace StorageNetwork.Research
             for (int i = 0; i < TechSpecs.Length; i++)
             {
                 Tech tech = GetOrCreateTech(techs, TechSpecs[i]);
-                LinkStorageNetworkTechs(techs, tech, i);
-                PlaceNode(techs, tech, titleCenter, i);
+                LinkStorageNetworkTechs(techs, tech, TechSpecs[i]);
+                PlaceNode(techs, tech, titleCenter, TechSpecs[i]);
             }
 
             LinkNodeEdges(techs);
@@ -79,6 +98,11 @@ namespace StorageNetwork.Research
         private static void RemoveOldStorageNetworkUnlocks(Database.Techs techs)
         {
             HashSet<string> storageNetworkIds = new HashSet<string>(StorageNetworkStorageBuildingSpecs.UnlockIds);
+            foreach (string portId in StorageNetworkPortSpecs.AllIds)
+            {
+                storageNetworkIds.Add(portId);
+            }
+
             foreach (Tech tech in techs.resources)
             {
                 tech.unlockedItemIDs.RemoveAll(storageNetworkIds.Contains);
@@ -105,7 +129,7 @@ namespace StorageNetwork.Research
             tech.unlockedItemIDs.AddRange(spec.BuildingIds);
         }
 
-        private static void LinkStorageNetworkTechs(Database.Techs techs, Tech tech, int index)
+        private static void LinkStorageNetworkTechs(Database.Techs techs, Tech tech, StorageNetworkTechSpec spec)
         {
             tech.requiredTech.Clear();
             foreach (Tech candidate in techs.resources)
@@ -113,13 +137,13 @@ namespace StorageNetwork.Research
                 candidate.unlockedTech.Remove(tech);
             }
 
-            if (index > 0)
+            if (!string.IsNullOrEmpty(spec.ParentTechId))
             {
-                Tech previous = techs.TryGet(TechSpecs[index - 1].TechId);
-                if (previous != null)
+                Tech parent = techs.TryGet(spec.ParentTechId);
+                if (parent != null)
                 {
-                    tech.requiredTech.Add(previous);
-                    previous.unlockedTech.Add(tech);
+                    tech.requiredTech.Add(parent);
+                    parent.unlockedTech.Add(tech);
                 }
             }
 
@@ -141,14 +165,14 @@ namespace StorageNetwork.Research
                 CreateTitleNode(titleCenter));
         }
 
-        private static void PlaceNode(Database.Techs techs, Tech tech, Vector2 titleCenter, int index)
+        private static void PlaceNode(Database.Techs techs, Tech tech, Vector2 titleCenter, StorageNetworkTechSpec spec)
         {
             if (tech.FoundNode)
             {
                 return;
             }
 
-            Vector2 center = GetNodeCenter(techs, titleCenter, index);
+            Vector2 center = GetNodeCenter(techs, titleCenter, spec);
             ResourceTreeNode node = CreateNode(tech.Id, center);
 
             tech.SetNode(node, TreeTitleId);
@@ -156,20 +180,34 @@ namespace StorageNetwork.Research
 
         private static void LinkNodeEdges(Database.Techs techs)
         {
-            for (int i = 0; i < TechSpecs.Length - 1; i++)
+            foreach (StorageNetworkTechSpec spec in TechSpecs)
             {
-                Tech current = techs.TryGet(TechSpecs[i].TechId);
-                Tech next = techs.TryGet(TechSpecs[i + 1].TechId);
-                if (current == null || next == null || !current.FoundNode || !next.FoundNode)
+                Tech current = techs.TryGet(spec.TechId);
+                if (current == null || !current.FoundNode)
                 {
                     continue;
                 }
 
                 current.edges.Clear();
-                current.edges.Add(new ResourceTreeNode.Edge(
-                    CreateEdgePoint(current.Id, current.center),
-                    CreateEdgePoint(next.Id, next.center),
-                    ResourceTreeNode.Edge.EdgeType.PolyLineEdge));
+
+                foreach (StorageNetworkTechSpec childSpec in TechSpecs)
+                {
+                    if (childSpec.ParentTechId != spec.TechId)
+                    {
+                        continue;
+                    }
+
+                    Tech child = techs.TryGet(childSpec.TechId);
+                    if (child == null || !child.FoundNode)
+                    {
+                        continue;
+                    }
+
+                    current.edges.Add(new ResourceTreeNode.Edge(
+                        CreateEdgePoint(current.Id, current.center),
+                        CreateEdgePoint(child.Id, child.center),
+                        ResourceTreeNode.Edge.EdgeType.PolyLineEdge));
+                }
             }
         }
 
@@ -184,11 +222,11 @@ namespace StorageNetwork.Research
             return new Vector2(-25f, 7000f);
         }
 
-        private static Vector2 GetNodeCenter(Database.Techs techs, Vector2 titleCenter, int index)
+        private static Vector2 GetNodeCenter(Database.Techs techs, Vector2 titleCenter, StorageNetworkTechSpec spec)
         {
             float x = GetAutomationStartX(techs);
             float spacing = GetAutomationColumnSpacing(techs);
-            return new Vector2(x + index * spacing, titleCenter.y - NodeOffsetY);
+            return new Vector2(x + spec.Column * spacing, titleCenter.y - NodeOffsetY - spec.Row * BranchOffsetY);
         }
 
         // 对齐自动化行最左侧卡片，避免不同 DLC 研究树里固定节点不在同一列。
@@ -284,11 +322,13 @@ namespace StorageNetwork.Research
 
         private sealed class StorageNetworkTechSpec
         {
-            public StorageNetworkTechSpec(string techId, string stringId, StorageNetworkResearchText text, string[] buildingIds, float basicCost, float advancedCost, float orbitalCost)
+            public StorageNetworkTechSpec(string techId, string stringId, string parentTechId, int column, int row, string[] buildingIds, float basicCost, float advancedCost, float orbitalCost)
             {
                 TechId = techId;
                 StringId = stringId;
-                Text = text;
+                ParentTechId = parentTechId;
+                Column = column;
+                Row = row;
                 BuildingIds = buildingIds;
                 BasicCost = basicCost;
                 AdvancedCost = advancedCost;
@@ -297,7 +337,9 @@ namespace StorageNetwork.Research
 
             public string TechId { get; }
             public string StringId { get; }
-            public StorageNetworkResearchText Text { get; }
+            public string ParentTechId { get; }
+            public int Column { get; }
+            public int Row { get; }
             public string[] BuildingIds { get; }
             public float BasicCost { get; }
             public float AdvancedCost { get; }
@@ -311,6 +353,8 @@ namespace StorageNetwork.Research
                     {
                         case "STORAGENETWORKRESEARCHCORE":
                             return Loc.RESEARCH.TECHS.STORAGENETWORKCORE.NAME;
+                        case "STORAGENETWORKRESEARCHPORTS":
+                            return Loc.RESEARCH.TECHS.STORAGENETWORKPORTS.NAME;
                         case "STORAGENETWORKRESEARCHSMALLSTORAGE":
                             return Loc.RESEARCH.TECHS.STORAGENETWORKSMALLSTORAGE.NAME;
                         case "STORAGENETWORKRESEARCHMEDIUMSTORAGE":
@@ -331,6 +375,8 @@ namespace StorageNetwork.Research
                     {
                         case "STORAGENETWORKRESEARCHCORE":
                             return Loc.RESEARCH.TECHS.STORAGENETWORKCORE.DESC;
+                        case "STORAGENETWORKRESEARCHPORTS":
+                            return Loc.RESEARCH.TECHS.STORAGENETWORKPORTS.DESC;
                         case "STORAGENETWORKRESEARCHSMALLSTORAGE":
                             return Loc.RESEARCH.TECHS.STORAGENETWORKSMALLSTORAGE.DESC;
                         case "STORAGENETWORKRESEARCHMEDIUMSTORAGE":
@@ -354,13 +400,5 @@ namespace StorageNetwork.Research
             }
         }
 
-        private enum StorageNetworkResearchText
-        {
-            Core,
-            SmallStorage,
-            MediumStorage,
-            LargeStorage,
-            Relay
-        }
     }
 }

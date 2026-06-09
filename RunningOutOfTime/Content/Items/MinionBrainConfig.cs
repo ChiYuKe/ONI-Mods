@@ -45,7 +45,7 @@ namespace RunningOutOfTime.Content.Items
 
             gameObject.AddOrGet<MinionBrain>();
             gameObject.AddOrGet<MinionBrainResume>();
-            // gameObject.AddOrGet<Accepttheinheritance>();
+            gameObject.AddOrGet<AcceptInheritance>();
 
             gameObject.AddOrGet<Modifiers>();
             gameObject.AddOrGet<Traits>();

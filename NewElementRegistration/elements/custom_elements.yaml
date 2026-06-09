@@ -1,0 +1,27 @@
+---
+elements:
+  - elementId: AuroraCrystal
+    specificHeatCapacity: 0.5
+    thermalConductivity: 1.2
+    solidSurfaceAreaMultiplier: 1
+    liquidSurfaceAreaMultiplier: 1
+    gasSurfaceAreaMultiplier: 1
+    strength: 0.8
+    highTemp: 1200
+    highTempTransitionTarget: Magma
+    defaultTemperature: 290
+    defaultMass: 200
+    maxMass: 500
+    hardness: 20
+    molarMass: 50
+    lightAbsorptionFactor: 1
+    radiationAbsorptionFactor: 0.5
+    radiationPer1000Mass: 0
+    materialCategory: BuildableRaw
+    tags:
+    - BuildableRaw
+    buildMenuSort: 2
+    isDisabled: false
+    state: Solid
+    localizationID: STRINGS.ELEMENTS.AURORACRYSTAL.NAME
+    dlcId: ""

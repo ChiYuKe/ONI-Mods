@@ -1,17 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
-using static STRINGS.MISC.STATUSITEMS.HEALTHSTATUS;
 
 namespace AutomaticHarvest
 {
+#pragma warning disable CS0649
     public class Reservoir : KMonoBehaviour
     {
-        private MeterController fillMeter; // 储存容量进度
-        private MeterController lightMeter; // 状态灯
+        private MeterController fillMeter;
+        private MeterController lightMeter;
+
+        [MyCmpGet]
+        private Storage storage;
 
         public enum HstatusLight
         {
@@ -20,17 +18,9 @@ namespace AutomaticHarvest
             Green
         }
 
-        [MyCmpGet]
-        private Storage storage;
+        private static readonly EventSystem.IntraObjectHandler<Reservoir> OnStorageChangeDelegate =
+            new EventSystem.IntraObjectHandler<Reservoir>((component, data) => component.OnStorageChange(data));
 
-        private static readonly EventSystem.IntraObjectHandler<Reservoir> OnStorageChangeDelegate = new EventSystem.IntraObjectHandler<Reservoir>(delegate (Reservoir component, object data)
-        {
-            component.OnStorageChange(data);
-        });
-
-        /// <summary>
-        /// 游戏对象生成时调用，初始化进度条和订阅事件
-        /// </summary>
         protected override void OnSpawn()
         {
             base.OnSpawn();
@@ -41,17 +31,14 @@ namespace AutomaticHarvest
                 "meter",
                 Meter.Offset.Infront,
                 Grid.SceneLayer.NoLayer,
-                "meter_fill", "meter_OL");
+                "meter_fill",
+                "meter_OL");
 
-            Subscribe(-1697596308, OnStorageChangeDelegate);
+            Subscribe((int)GameHashes.OnStorageChange, OnStorageChangeDelegate);
             OnStorageChange(null);
         }
 
-        /// <summary>
-        /// 刷新状态灯显示
-        /// </summary>
-        /// <param name="hstatus">状态灯颜色</param>
-        public void RefreshHstatusLight(HstatusLight hstatus)
+        public void RefreshHstatusLight(HstatusLight status)
         {
             if (lightMeter == null)
             {
@@ -61,11 +48,11 @@ namespace AutomaticHarvest
                     "status_light",
                     Meter.Offset.Infront,
                     Grid.SceneLayer.NoLayer,
-                    "meter_fill", "meter_OL");
+                    "meter_fill",
+                    "meter_OL");
             }
 
-            // 将枚举转换为对应帧数（0=红, 1=黄, 2=绿）
-            float frame = hstatus switch
+            float frame = status switch
             {
                 HstatusLight.Red => 0f,
                 HstatusLight.Yellow => 1f,
@@ -76,13 +63,11 @@ namespace AutomaticHarvest
             lightMeter.SetPositionPercent(frame / 3f);
         }
 
-        /// <summary>
-        /// 存储变化事件回调，更新进度条显示
-        /// </summary>
-        /// <param name="data">事件数据（未使用）</param>
         private void OnStorageChange(object data)
         {
-            fillMeter.SetPositionPercent(Mathf.Clamp01(storage.MassStored() / storage.capacityKg));
+            float percentFull = storage.capacityKg > 0f ? storage.MassStored() / storage.capacityKg : 0f;
+            fillMeter.SetPositionPercent(Mathf.Clamp01(percentFull));
         }
     }
+#pragma warning restore CS0649
 }

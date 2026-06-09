@@ -10,7 +10,7 @@ namespace EternalDecay.Content.Configs
     {
         public class AGE
         {
-            public static float MINION_AGE_THRESHOLD = 2f; // 复制人年龄阈值（单位：周期）
+            public static float MINION_AGE_THRESHOLD = 10f; // 复制人年龄阈值（单位：周期）
             public static float AGE_80PERCENT_THRESHOLD = 0.8f; // 年龄80%阈值
 
         }

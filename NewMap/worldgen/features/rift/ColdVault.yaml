@@ -1,0 +1,48 @@
+tags:
+  - AllowExceedNodeBorders
+forceBiome: biomes/Frozen/Wet
+biomeTags:
+  - ColdWheat
+  - ColdWheatSeed
+  - ColdBreather
+shape: Circle
+borders:
+  - 2
+  - 2
+blobSize:
+  min: 8
+  max: 13
+ElementChoiceGroups:
+  RoomCenterElements:
+    selectionMethod: WeightedResample
+    choices:
+      - element: Oxygen
+        weight: 1
+        overrides:
+          temperatureOverride: 235
+          massOverride: 1
+      - element: CarbonDioxide
+        weight: 1
+        overrides:
+          temperatureOverride: 230
+          massOverride: 1
+      - element: Ice
+        weight: 0.5
+        overrides:
+          temperatureOverride: 235
+  RoomBorderChoices0:
+    selectionMethod: WeightedResample
+    choices:
+      - element: Ice
+        weight: 2
+      - element: DirtyIce
+        weight: 1
+  RoomBorderChoices1:
+    selectionMethod: WeightedResample
+    choices:
+      - element: Granite
+        weight: 1
+      - element: Snow
+        weight: 1
+      - element: Ice
+        weight: 1

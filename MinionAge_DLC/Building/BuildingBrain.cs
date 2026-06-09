@@ -169,7 +169,7 @@ public class BuildingBrain : Workable
 
 
 
-    protected override void OnStartWork(Worker worker)
+    protected override void OnStartWork(WorkerBase worker)
     {
         base.OnStartWork(worker);
         this.notification = new Notification("记忆传承", NotificationType.Good, (List<Notification> notificationList, object data) => "这些复制人受到了传承" + notificationList.ReduceMessages(false), null, false, 0f, null, null, null, true, false, false);
@@ -177,12 +177,12 @@ public class BuildingBrain : Workable
         this.DeSelectBuilding();
 
     }
-    protected override bool OnWorkTick(Worker worker, float dt)
+    protected override bool OnWorkTick(WorkerBase worker, float dt)
 	{
 		return base.OnWorkTick(worker, dt);
 	}
 
-	protected override void OnAbortWork(Worker worker)
+	protected override void OnAbortWork(WorkerBase worker)
 	{
 		base.OnAbortWork(worker);
 		if (this.chore != null)
@@ -192,7 +192,7 @@ public class BuildingBrain : Workable
 		this.notifier.Remove(this.notification);
 	}
 
-	protected override void OnStopWork(Worker worker)
+	protected override void OnStopWork(WorkerBase worker)
 	{
 		base.OnStopWork(worker);
 		if (this.chore != null)
@@ -202,7 +202,7 @@ public class BuildingBrain : Workable
 		this.notifier.Remove(this.notification);
 	}
 
-	protected override void OnCompleteWork(Worker worker)
+	protected override void OnCompleteWork(WorkerBase worker)
 	{
 		base.OnCompleteWork(worker);
 	

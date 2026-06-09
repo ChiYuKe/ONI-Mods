@@ -34,9 +34,9 @@ namespace RunningOutOfTime.Content.Items
             if (notgenerated)
             {
                 Util.KDestroyGameObject(gameObject);
-                GameUtil.KInstantiate(Assets.GetPrefab("KMinionBrainBadFx"), transform.position, Grid.SceneLayer.FXFront, null, 0).SetActive(true);
+                // GameUtil.KInstantiate(Assets.GetPrefab("KMinionBrainBadFx"), transform.position, Grid.SceneLayer.FXFront, null, 0).SetActive(true);
 
-                GameObject prefab = Assets.GetPrefab(new Tag("KmodMiniBrainBad"));
+                GameObject prefab = Assets.GetPrefab("KmodMiniBrainBad");
                 GameObject newMinion = GameUtil.KInstantiate(prefab, transform.position + new Vector3(0f, 1f, 0f), Grid.SceneLayer.Ore, null, 0);
                 newMinion.SetActive(true);
             }

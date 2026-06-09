@@ -1,0 +1,53 @@
+name: STRINGS.WORLDS.VERDANT_RIFT_SPACED.NAME
+description: STRINGS.WORLDS.VERDANT_RIFT_SPACED.DESCRIPTION
+requiredDlcIds: [EXPANSION1_ID]
+coordinatePrefix: VRD-SO
+menuOrder: 20
+clusterCategory: SpacedOutStyle
+
+startWorldIndex: 0
+numRings: 12
+worldPlacements:
+- world: worlds/VerdantRift
+  buffer: 2
+  locationType: StartWorld
+  allowedRings:
+    min: 0
+    max: 0
+- world: expansion1::worlds/IdealLandingSite
+  buffer: 2
+  locationType: InnerCluster
+  allowedRings:
+    min: 3
+    max: 3
+- world: expansion1::worlds/WarpOilySwamp
+  buffer: 4
+  locationType: InnerCluster
+  allowedRings:
+    min: 5
+    max: 5
+- world: expansion1::worlds/TundraMoonlet
+  buffer: 4
+  allowedRings:
+    min: 6
+    max: 8
+- world: expansion1::worlds/MarshyMoonlet
+  buffer: 4
+  allowedRings:
+    min: 5
+    max: 7
+- world: expansion1::worlds/MooMoonlet
+  buffer: 3
+  allowedRings:
+    min: 6
+    max: 8
+- world: expansion1::worlds/WaterMoonlet
+  buffer: 4
+  allowedRings:
+    min: 6
+    max: 8
+- world: expansion1::worlds/NiobiumMoonlet
+  buffer: 3
+  allowedRings:
+    min: 7
+    max: 10

@@ -46,6 +46,7 @@ namespace MinionAge.Core
             // 更新缓存
             if (currentTime >= lastCacheUpdateTime + cacheUpdateInterval)
             {
+                Ownable.CleanupExpiredObjectTimeRecords();
                 UpdateMinionCache();
                 lastCacheUpdateTime = currentTime;
             }

@@ -43,6 +43,102 @@ msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKSCENESTORAGEBOX.
 msgid "此建筑仅用于保护旧存档中的材料，可能会在将来的模组更新中被移除。请尽快取出或转移箱子中的材料，并拆除该箱子。"
 msgstr "This building only protects materials in old saves and may be removed in a future mod update. Remove or transfer its stored materials as soon as possible, then deconstruct the box."
 
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKSOLIDINPUTPORT.NAME"
+msgid "材料入网端口"
+msgstr "Material Network Input Port"
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKSOLIDINPUTPORT.DESC"
+msgid "将固体运输轨道连接到储存网络的输入端口。"
+msgstr "An input port that connects solid conveyor rails to the Storage Network."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKSOLIDINPUTPORT.EFFECT"
+msgid "用于接收运输轨道上的固体材料，并作为后续入网逻辑的连接建筑。"
+msgstr "Receives solid materials from conveyor rails and acts as the connection building for future network input logic."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKSOLIDOUTPUTPORT.NAME"
+msgid "材料出网端口"
+msgstr "Material Network Output Port"
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKSOLIDOUTPUTPORT.DESC"
+msgid "将储存网络连接到固体运输轨道的输出端口。"
+msgstr "An output port that connects the Storage Network to solid conveyor rails."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKSOLIDOUTPUTPORT.EFFECT"
+msgid "用于向运输轨道输出固体材料，并作为后续出网逻辑的连接建筑。"
+msgstr "Outputs solid materials to conveyor rails and acts as the connection building for future network output logic."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKLIQUIDINPUTPORT.NAME"
+msgid "液体入网端口"
+msgstr "Liquid Network Input Port"
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKLIQUIDINPUTPORT.DESC"
+msgid "将液体管道连接到储存网络的输入端口。"
+msgstr "An input port that connects liquid pipes to the Storage Network."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKLIQUIDINPUTPORT.EFFECT"
+msgid "用于接收管道中的液体，并作为后续入网逻辑的连接建筑。"
+msgstr "Receives liquids from pipes and acts as the connection building for future network input logic."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKLIQUIDOUTPUTPORT.NAME"
+msgid "液体出网端口"
+msgstr "Liquid Network Output Port"
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKLIQUIDOUTPUTPORT.DESC"
+msgid "将储存网络连接到液体管道的输出端口。"
+msgstr "An output port that connects the Storage Network to liquid pipes."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKLIQUIDOUTPUTPORT.EFFECT"
+msgid "用于向管道输出液体，并作为后续出网逻辑的连接建筑。"
+msgstr "Outputs liquids to pipes and acts as the connection building for future network output logic."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKGASINPUTPORT.NAME"
+msgid "气体入网端口"
+msgstr "Gas Network Input Port"
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKGASINPUTPORT.DESC"
+msgid "将气体管道连接到储存网络的输入端口。"
+msgstr "An input port that connects gas pipes to the Storage Network."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKGASINPUTPORT.EFFECT"
+msgid "用于接收管道中的气体，并作为后续入网逻辑的连接建筑。"
+msgstr "Receives gases from pipes and acts as the connection building for future network input logic."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKGASOUTPUTPORT.NAME"
+msgid "气体出网端口"
+msgstr "Gas Network Output Port"
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKGASOUTPUTPORT.DESC"
+msgid "将储存网络连接到气体管道的输出端口。"
+msgstr "An output port that connects the Storage Network to gas pipes."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKGASOUTPUTPORT.EFFECT"
+msgid "用于向管道输出气体，并作为后续出网逻辑的连接建筑。"
+msgstr "Outputs gases to pipes and acts as the connection building for future network output logic."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKPOWERINPUTPORT.NAME"
+msgid "电力入网端口"
+msgstr "Power Network Input Port"
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKPOWERINPUTPORT.DESC"
+msgid "将电路连接到储存网络的电力输入端口。"
+msgstr "A power input port that connects circuits to the Storage Network."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKPOWERINPUTPORT.EFFECT"
+msgid "用于接入电力网络，并作为后续电力入网逻辑的连接建筑。"
+msgstr "Connects to an electrical circuit and acts as the connection building for future power input logic."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKPOWEROUTPUTPORT.NAME"
+msgid "电力出网端口"
+msgstr "Power Network Output Port"
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKPOWEROUTPUTPORT.DESC"
+msgid "将储存网络连接到电路的电力输出端口。"
+msgstr "A power output port that connects the Storage Network to circuits."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKPOWEROUTPUTPORT.EFFECT"
+msgid "用于向电路输出电力，并作为后续电力出网逻辑的连接建筑。"
+msgstr "Outputs power to an electrical circuit and acts as the connection building for future power output logic."
+
 msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKSMALLLIQUIDSERVER.NAME"
 msgid "小型液体服务器"
 msgstr "Small Liquid Server"
@@ -167,6 +263,14 @@ msgctxt "StorageNetwork.STRINGS.RESEARCH.TECHS.STORAGENETWORKCORE.DESC"
 msgid "解锁储存网络核心。"
 msgstr "Unlocks the Storage Network Core."
 
+msgctxt "StorageNetwork.STRINGS.RESEARCH.TECHS.STORAGENETWORKPORTS.NAME"
+msgid "网络端口"
+msgstr "Network Ports"
+
+msgctxt "StorageNetwork.STRINGS.RESEARCH.TECHS.STORAGENETWORKPORTS.DESC"
+msgid "解锁材料、液体、气体和电力的储存网络入网与出网端口。"
+msgstr "Unlocks Storage Network input and output ports for materials, liquids, gases, and power."
+
 msgctxt "StorageNetwork.STRINGS.RESEARCH.TECHS.STORAGENETWORKSMALLSTORAGE.NAME"
 msgid "小型储存"
 msgstr "Small Storage"
@@ -234,6 +338,10 @@ msgstr "Storage Network offline"
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CORE_OFFLINE_DETAILS"
 msgid "当前场景需要建造并供电至少一个储存网络核心，网络面板和材料调度才会启用。"
 msgstr "Build and power at least one Storage Network Core in the current scene to enable the panel and material scheduling."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CROSS_WORLD_RELAY_OFFLINE"
+msgid "未发射储存网络中继器，无法与其他星球进行网络互通"
+msgstr "No Storage Network Relay has been launched, so the network cannot connect to other planetoids."
 
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.NO_STORAGE_CONTENT"
 msgid "没有储存内容"
@@ -667,6 +775,18 @@ msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_ENABLED"
 msgid "向网络请求材料"
 msgstr "Request materials from network"
 
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PORT_OUTPUT_AMOUNT"
+msgid "输出量"
+msgstr "Output amount"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PORT_OUTPUT_AMOUNT_VALUE"
+msgid "{0}/次"
+msgstr "{0}/batch"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PORT_OUTPUT_AMOUNT_TOOLTIP"
+msgid "输出端口会尽量按 {0} 形成管道或轨道输出包。"
+msgstr "The output port tries to form conduit or rail output packets of {0}."
+
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MINION_MATERIAL_REQUEST_ENABLED"
 msgid "允许复制人从网络中请求材料"
 msgstr "Allow duplicants to request materials from the network"
@@ -684,11 +804,11 @@ msgid "从网络箱子中寻找合适材料"
 msgstr "Find suitable materials in network storage"
 
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_MODE_SPECIFIC"
-msgid "指定网络中某个箱子提供材料"
+msgid "指定网络中某个服务器提供材料"
 msgstr "Use a specific network storage building"
 
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_SOURCE"
-msgid "指定箱子：{0}"
+msgid "指定服务器：{0}"
 msgstr "Specific storage: {0}"
 
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_SOURCE_NONE"
@@ -696,7 +816,7 @@ msgid "未指定"
 msgstr "None"
 
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_SELECT_SOURCE"
-msgid "选择箱子"
+msgid "选择服务器"
 msgstr "Select Storage"
 
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_LIMIT_ENABLED"
@@ -728,7 +848,7 @@ msgid "这个建筑会从储存网络中请求当前生产需要的材料。\n{0
 msgstr "This building requests materials needed for production from the Storage Network.\n{0}"
 
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_AUTO_DESC"
-msgid "自动从已接入网络的箱子中寻找材料，优先使用库存最多的来源。"
+msgid "自动从已接入网络的服务器中寻找材料，优先使用库存最多的来源。"
 msgstr "Automatically finds materials in connected network storage, preferring sources with the most stock."
 
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_TITLE"
@@ -748,7 +868,7 @@ msgid "允许把内容物输入网络"
 msgstr "Allow contents to enter network"
 
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STORAGE_OUTPUT_STORE_DESC"
-msgid "开启后，这个储存建筑会把当前内容物自动转移到储存网络中的匹配箱子。"
+msgid "开启后，这个储存建筑会把当前内容物自动转移到储存网络中的匹配服务器。"
 msgstr "When enabled, this storage building automatically transfers its contents to matching storage in the network."
 
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_MODE"
@@ -756,15 +876,15 @@ msgid "存放方式：{0}"
 msgstr "Storage mode: {0}"
 
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_MODE_AUTO"
-msgid "自动寻找匹配箱子"
+msgid "自动寻找匹配服务器"
 msgstr "Find matching storage automatically"
 
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_MODE_SPECIFIC"
-msgid "指定网络中某个箱子存放"
+msgid "指定网络中某个服务器存放"
 msgstr "Store in a specific network storage building"
 
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_AUTO_DESC"
-msgid "自动寻找已接入网络的匹配箱子，优先堆到已有同类物品的箱子；容量不足时会按剩余空间分批存入。"
+msgid "自动寻找已接入网络的匹配服务器，优先堆到已有同类物品的服务器；容量不足时会按剩余空间分批存入。"
 msgstr "Automatically finds matching connected storage, preferring storage that already contains the same item; if capacity is limited, items are transferred in batches."
 
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_STATUS"
@@ -772,7 +892,7 @@ msgid "入网状态：{0}"
 msgstr "Network status: {0}"
 
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_TARGET"
-msgid "目标箱子：{0}"
+msgid "目标服务器：{0}"
 msgstr "Target storage: {0}"
 
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_TARGET_DETAILS"
@@ -1846,3 +1966,4 @@ msgstr "Completed"
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_FILTER_ABNORMAL"
 msgid "异常"
 msgstr "Abnormal"
+

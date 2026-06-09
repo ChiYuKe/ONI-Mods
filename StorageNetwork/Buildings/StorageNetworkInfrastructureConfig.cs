@@ -53,6 +53,7 @@ namespace StorageNetwork.Buildings
             if (ProvidesStorage)
             {
                 prefabId?.AddTag(StorageSceneTags.ModStorage);
+                prefabId?.AddTag(StorageSceneTags.ServerStorage);
                 prefabId?.AddTag(StorageSceneTags.ShowSettingsButton);
 
                 Storage storage = go.AddOrGet<Storage>();
@@ -293,7 +294,7 @@ namespace StorageNetwork.Buildings
         public static readonly StorageNetworkStorageBuildingSpec SmallSolid = CreateServer(
             SmallSolidServerConfig.ID,
             1,
-            2,
+            3,
             SmallSolidServerAnim,
             25000f,
             60f,
@@ -303,7 +304,7 @@ namespace StorageNetwork.Buildings
         public static readonly StorageNetworkStorageBuildingSpec SmallLiquid = CreateServer(
             SmallLiquidServerConfig.ID,
             1,
-            2,
+            3,
             SmallLiquidServerAnim,
             25000f,
             60f,
@@ -313,7 +314,7 @@ namespace StorageNetwork.Buildings
         public static readonly StorageNetworkStorageBuildingSpec SmallGas = CreateServer(
             SmallGasServerConfig.ID,
             1,
-            2,
+            3,
             SmallGasServerAnim,
             25000f,
             60f,
@@ -355,7 +356,7 @@ namespace StorageNetwork.Buildings
             2,
             4,
             LargeSolidServerAnim,
-            250000f,
+            2500000f,
             240f,
             STORAGEFILTERS.STORAGE_LOCKERS_STANDARD,
             BUILDINGS.CONSTRUCTION_MASS_KG.TIER5);
@@ -365,7 +366,7 @@ namespace StorageNetwork.Buildings
             2,
             4,
             LargeLiquidServerAnim,
-            250000f,
+            2500000f,
             240f,
             STORAGEFILTERS.LIQUIDS,
             BUILDINGS.CONSTRUCTION_MASS_KG.TIER5);
@@ -375,7 +376,7 @@ namespace StorageNetwork.Buildings
             2,
             4,
             LargeGasServerAnim,
-            250000f,
+            2500000f,
             240f,
             STORAGEFILTERS.GASES,
             BUILDINGS.CONSTRUCTION_MASS_KG.TIER5);

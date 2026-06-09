@@ -1,0 +1,28 @@
+nameKey: STRINGS.SUBWORLDS.VERDANT_RIFT_VACUUM.NAME
+descriptionKey: STRINGS.SUBWORLDS.VERDANT_RIFT_VACUUM.DESCRIPTION
+utilityKey: STRINGS.SUBWORLDS.VERDANT_RIFT_VACUUM.UTILITY
+biomeNoise: noise/Sandstone
+temperatureRange: Room
+tags:
+  - IgnoreCaveOverride
+  - NoGlobalFeatureSpawning
+density:
+  min: 8
+  max: 12
+avoidRadius: 14.0
+doAvoidPoints: false
+dontRelaxChildren: true
+sampleBehaviour: PoissonDisk
+biomes:
+  - name: biomes/Sedimentary/Basic
+    weight: 1
+    tags:
+      - Hatch
+      - HatchBuried
+features:
+  - type: features/rift/AuroraCrystalPocket
+  - type: features/rift/CrystalAbyss
+  - type: features/rift/MirrorLake
+  - type: features/rift/VacuumSpine
+  - type: features/rift/ColdVault
+zoneType: Sandstone

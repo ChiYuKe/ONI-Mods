@@ -5,10 +5,12 @@ namespace StorageNetwork.Core
     public static class StorageSceneTags
     {
         public const string ModStorageTagName = StorageNetworkTags.ModStorageTagName;
+        public const string ServerStorageTagName = StorageNetworkTags.ServerStorageTagName;
         public const string ShowSettingsButtonTagName = StorageNetworkTags.ShowSettingsButtonTagName;
         public const string SceneStorageBoxTagName = "StorageNetwork_SceneStorageBox";
 
         public static readonly Tag ModStorage = StorageNetworkTags.ModStorage;
+        public static readonly Tag ServerStorage = StorageNetworkTags.ServerStorage;
         public static readonly Tag ShowSettingsButton = StorageNetworkTags.ShowSettingsButton;
         public static readonly Tag SceneStorageBox = new Tag(SceneStorageBoxTagName);
     }

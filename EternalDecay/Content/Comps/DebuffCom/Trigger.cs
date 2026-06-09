@@ -1,10 +1,13 @@
 ﻿
 namespace EternalDecay.Content.Comps.DebuffCom
 {
-    public class Trigger : KMonoBehaviour
+    public class Trigger : KMonoBehaviour, ISim1000ms
     {
         private KPrefabID prefabID;
         private BreakStuff breakstuff; // 用于触发事件的实例
+        private bool timersActive;
+        private float elapsedSeconds;
+        private int tickSeconds;
 
         // 当对象生成时初始化
         protected override void OnPrefabInit()
@@ -24,69 +27,71 @@ namespace EternalDecay.Content.Comps.DebuffCom
             {
  
                 // Debug.Log("当前初始化对象为" + gameObject.name);
-                StartTimers();
+                timersActive = true;
 
             }
 
         }
 
-        // 启动所有定时器
-        private void StartTimers()
+        public void Sim1000ms(float dt)
         {
-            InvokeRepeating(nameof(Sim2000ms), 2f, 2f);
-            InvokeRepeating(nameof(Sim4000ms), 4f, 4f);
-            InvokeRepeating(nameof(Sim6000ms), 6f, 6f);
-            InvokeRepeating(nameof(Sim8000ms), 8f, 8f);
+            if (!timersActive)
+            {
+                return;
+            }
+
+            elapsedSeconds += dt;
+            while (elapsedSeconds >= 1f)
+            {
+                elapsedSeconds -= 1f;
+                Sim1000msTick();
+            }
         }
 
-        // 2秒定时器逻辑
+        private void Sim1000msTick()
+        {
+            tickSeconds++;
+            if (tickSeconds % 2 == 0)
+            {
+                Sim2000ms();
+            }
+
+            if (tickSeconds % 4 == 0)
+            {
+                Sim4000ms();
+            }
+
+            if (tickSeconds % 6 == 0)
+            {
+                Sim6000ms();
+            }
+
+            if (tickSeconds % 8 == 0)
+            {
+                Sim8000ms();
+                tickSeconds = 0;
+            }
+        }
+
         private void Sim2000ms()
         {
             AbyssophobiaDebuff.TriggerScan(gameObject);
-
-            breakstuff.TriggerScan(gameObject);  
-            // 添加具体逻辑
+            // breakstuff.TriggerScan(gameObject);
         }
 
-        // 4秒定时器逻辑
         private void Sim4000ms()
         {
-            // Debug.Log("当前对象为"+ gameObject.name);
-            SpecializationHeatWanderer.TriggerScan(gameObject, 2); // 触发扫描，检测半径为 2
-
-           
-            
+            SpecializationHeatWanderer.TriggerScan(gameObject, 2);
         }
 
-        // 6秒定时器逻辑
         private void Sim6000ms()
         {
             SpecializationCoolWanderer.TriggerScan(gameObject, 2);
-
-            // 添加具体逻辑
         }
 
-        // 8秒定时器逻辑
         private void Sim8000ms()
         {
             SpecializationScorchingMetalSharer.TriggerScan(gameObject);
-            // 添加具体逻辑
-        }
-
-        // 对象销毁时清理定时器
-        protected override void OnCleanUp()
-        {
-            base.OnCleanUp();
-            CancelAllTimers(); // 取消所有定时器
-        }
-
-        // 取消所有定时器
-        private void CancelAllTimers()
-        {
-            CancelInvoke(nameof(Sim2000ms));
-            CancelInvoke(nameof(Sim4000ms));
-            CancelInvoke(nameof(Sim6000ms));
-            CancelInvoke(nameof(Sim8000ms));
         }
     }
 }

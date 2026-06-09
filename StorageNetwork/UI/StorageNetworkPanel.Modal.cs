@@ -108,7 +108,9 @@ namespace StorageNetwork.UI
             }
 
             StorageNetworkEnrollment enrollment = storage.GetComponent<StorageNetworkEnrollment>();
-            if (StorageNetworkStorageRules.IsProductionStorage(storage, enrollment) || StorageNetworkStorageRules.HasSettingsButtonTag(storage))
+            if (StorageNetworkStorageRules.IsProductionStorage(storage, enrollment) ||
+                StorageNetworkStorageRules.IsConfigurablePort(storage) ||
+                StorageNetworkStorageRules.HasSettingsButtonTag(storage))
             {
                 CloseModal();
                 ShowProductionSettingsPanel(storage);

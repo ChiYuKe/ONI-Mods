@@ -34,6 +34,9 @@ namespace StorageNetwork
         public List<int> MinionsAllowedRequestMaterialsFromNetwork { get; set; }
 
         [JsonProperty]
+        public List<int> StoragesEnabledOutputStoreToNetwork { get; set; }
+
+        [JsonProperty]
         public Dictionary<string, StorageNetworkWindowLayout> WindowLayouts { get; set; }
 
         [ModConfigOption(
@@ -125,6 +128,7 @@ namespace StorageNetwork
             SceneScanCacheSeconds = 0.25f;
             DefaultMaterialRequestLimitKg = 1000f;
             MinionsAllowedRequestMaterialsFromNetwork = new List<int>();
+            StoragesEnabledOutputStoreToNetwork = new List<int>();
             WindowLayouts = new Dictionary<string, StorageNetworkWindowLayout>();
             MaterialRequestSuccessCooldownSeconds = 2f;
             MaterialRequestRetryCooldownSeconds = 5f;
@@ -204,11 +208,48 @@ namespace StorageNetwork
                    MinionsAllowedRequestMaterialsFromNetwork.Count > 0;
         }
 
+        public bool IsStorageOutputStoreToNetworkEnabled(Storage storage)
+        {
+            int instanceId = GetStorageInstanceId(storage);
+            return instanceId != KPrefabID.InvalidInstanceID &&
+                   StoragesEnabledOutputStoreToNetwork != null &&
+                   StoragesEnabledOutputStoreToNetwork.Contains(instanceId);
+        }
+
+        public void SetStorageOutputStoreToNetworkEnabled(Storage storage, bool enabled)
+        {
+            int instanceId = GetStorageInstanceId(storage);
+            if (instanceId == KPrefabID.InvalidInstanceID)
+            {
+                return;
+            }
+
+            if (StoragesEnabledOutputStoreToNetwork == null)
+            {
+                StoragesEnabledOutputStoreToNetwork = new List<int>();
+            }
+
+            bool currentlyEnabled = StoragesEnabledOutputStoreToNetwork.Contains(instanceId);
+            if (enabled && !currentlyEnabled)
+            {
+                StoragesEnabledOutputStoreToNetwork.Add(instanceId);
+            }
+            else if (!enabled && currentlyEnabled)
+            {
+                StoragesEnabledOutputStoreToNetwork.Remove(instanceId);
+            }
+        }
+
         private void Normalize()
         {
             if (MinionsAllowedRequestMaterialsFromNetwork == null)
             {
                 MinionsAllowedRequestMaterialsFromNetwork = new List<int>();
+            }
+
+            if (StoragesEnabledOutputStoreToNetwork == null)
+            {
+                StoragesEnabledOutputStoreToNetwork = new List<int>();
             }
 
             SceneScanCacheSeconds = Clamp(SceneScanCacheSeconds, 0.05f, 5f);
@@ -235,6 +276,12 @@ namespace StorageNetwork
         private static int GetMinionInstanceId(MinionIdentity minion)
         {
             KPrefabID prefabId = minion != null ? minion.GetComponent<KPrefabID>() : null;
+            return prefabId != null ? prefabId.InstanceID : KPrefabID.InvalidInstanceID;
+        }
+
+        private static int GetStorageInstanceId(Storage storage)
+        {
+            KPrefabID prefabId = storage != null ? storage.GetComponent<KPrefabID>() : null;
             return prefabId != null ? prefabId.InstanceID : KPrefabID.InvalidInstanceID;
         }
 

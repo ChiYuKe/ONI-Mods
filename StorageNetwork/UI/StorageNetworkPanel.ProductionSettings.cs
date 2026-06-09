@@ -117,6 +117,36 @@ namespace StorageNetwork.UI
                 return;
             }
 
+            StorageNetworkPort port = storage.GetComponent<StorageNetworkPort>();
+            if (StorageNetworkStorageRules.IsConfigurablePort(storage))
+            {
+                string portSignature = StorageNetworkProductionSettingsSignatureBuilder.BuildPort(storage, port);
+                if (!force && portSignature == productionSettingsSignature)
+                {
+                    SetProductionSettingsTitle(storage);
+                    UpdateProductionInventoryCard(storage, null);
+                    return;
+                }
+
+                productionSettingsSignature = portSignature;
+                ClearProductionSettingsContent();
+                SetProductionSettingsTitle(storage);
+                KeepProductionSettingsPanelOnScreen();
+                AddMaterialPortSettingsCard(storage, port);
+                if (port != null && port.IsInput && port.Kind != StorageNetworkPortKind.PowerInput)
+                {
+                    AddStorageOutputCard(storage, storage.gameObject.AddOrGet<StorageNetworkStorageConnector>());
+                }
+                else if (port != null && !port.IsInput && port.Kind != StorageNetworkPortKind.PowerOutput)
+                {
+                    AddPortMaterialRequestCard(storage, storage.gameObject.AddOrGet<StorageNetworkPortRequester>());
+                }
+
+                AddInventoryCard(storage, null);
+                LayoutRebuilder.MarkLayoutForRebuild(productionSettingsContent);
+                return;
+            }
+
             ComplexFabricator fabricator = storage.GetComponent<ComplexFabricator>();
             string signature = StorageNetworkProductionSettingsSignatureBuilder.BuildProduction(storage, fabricator);
             if (!force && signature == productionSettingsSignature)
@@ -228,6 +258,101 @@ namespace StorageNetwork.UI
                 },
                 enabled);
             CreateFinePrint(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MINION_MATERIAL_REQUEST_DESC));
+        }
+
+        private void AddMaterialPortSettingsCard(Storage storage, StorageNetworkPort port)
+        {
+            GameObject card = CreateProductionCard("MaterialPortSettingsCard", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_PORT_SETTINGS_TITLE), 0f);
+            bool isInput = port != null && port.IsInput;
+            bool showManualOperation = port != null && port.Kind == StorageNetworkPortKind.SolidInput;
+            MakeProductionCardAutoHeight(card, showManualOperation ? 132f : 104f);
+            CreateStatusStrip(
+                card.transform,
+                GetPortStatusText(port),
+                GetPortStatusColor(port));
+            CreateProductionReadOnlyRow(
+                card.transform,
+                Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_PORT_DIRECTION),
+                isInput
+                    ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_PORT_DIRECTION_INPUT)
+                    : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_PORT_DIRECTION_OUTPUT));
+
+            if (!showManualOperation)
+            {
+                return;
+            }
+
+            Automatable automatable = storage.GetComponent<Automatable>();
+            bool manualAllowed = automatable == null || !automatable.GetAutomationOnly();
+            CreateToggleActionRow(
+                card.transform,
+                Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_PORT_MANUAL_OPERATION_ALLOWED),
+                manualAllowed ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ACTION_CLOSE) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ON),
+                () =>
+                {
+                    if (automatable != null)
+                    {
+                        automatable.SetAutomationOnly(manualAllowed);
+                    }
+
+                    UpdateProductionSettingsPanel(true);
+                },
+                manualAllowed);
+        }
+
+        private static string GetPortStatusText(StorageNetworkPort port)
+        {
+            if (port == null)
+            {
+                return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_PORT_OUTPUT_STATUS);
+            }
+
+            switch (port.Kind)
+            {
+                case StorageNetworkPortKind.SolidInput:
+                    return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_PORT_INPUT_STATUS);
+                case StorageNetworkPortKind.SolidOutput:
+                    return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_PORT_OUTPUT_STATUS);
+                case StorageNetworkPortKind.LiquidInput:
+                    return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LIQUID_PORT_INPUT_STATUS);
+                case StorageNetworkPortKind.LiquidOutput:
+                    return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LIQUID_PORT_OUTPUT_STATUS);
+                case StorageNetworkPortKind.GasInput:
+                    return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GAS_PORT_INPUT_STATUS);
+                case StorageNetworkPortKind.GasOutput:
+                    return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GAS_PORT_OUTPUT_STATUS);
+                case StorageNetworkPortKind.PowerInput:
+                    return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.POWER_PORT_INPUT_STATUS);
+                case StorageNetworkPortKind.PowerOutput:
+                    return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.POWER_PORT_OUTPUT_STATUS);
+                default:
+                    return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_PORT_OUTPUT_STATUS);
+            }
+        }
+
+        private static Color GetPortStatusColor(StorageNetworkPort port)
+        {
+            if (port == null)
+            {
+                return new Color(0.58f, 0.44f, 0.22f, 1f);
+            }
+
+            switch (port.Kind)
+            {
+                case StorageNetworkPortKind.LiquidInput:
+                case StorageNetworkPortKind.LiquidOutput:
+                    return new Color(0.34f, 0.50f, 0.68f, 1f);
+                case StorageNetworkPortKind.PowerInput:
+                case StorageNetworkPortKind.PowerOutput:
+                    return new Color(0.62f, 0.32f, 0.56f, 1f);
+                case StorageNetworkPortKind.GasInput:
+                case StorageNetworkPortKind.GasOutput:
+                    return new Color(0.549f, 0.741f, 0.333f, 1f);
+                case StorageNetworkPortKind.SolidInput:
+                case StorageNetworkPortKind.SolidOutput:
+                default:
+                    return new Color(0.67f, 0.49f, 0.20f, 1f);
+            }
         }
 
         private void AddProductionOverviewCard(Storage storage, ComplexFabricator fabricator, StorageNetworkMaterialRequester requester, StorageNetworkStorageConnector connector, StorageNetworkEnergyGeneratorRequester energyRequester)
@@ -374,20 +499,62 @@ namespace StorageNetwork.UI
 
         private void AddStorageOutputCard(Storage ownerStorage, StorageNetworkStorageConnector connector)
         {
+            bool outputStoreEnabled = connector.IsOutputStoreEnabled();
             GameObject card = CreateProductionCard("StorageOutputCard", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STORAGE_OUTPUT_STORE_TITLE), 0f);
-            MakeProductionCardAutoHeight(card, string.IsNullOrEmpty(connector.LastOutputStatus) ? 132f : 156f);
-            CreateStatusStrip(card.transform, connector.OutputStoreEnabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_AUTO_STATUS) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_MANUAL_STATUS), connector.OutputStoreEnabled ? new Color(0.28f, 0.48f, 0.34f, 1f) : new Color(0.48f, 0.45f, 0.36f, 1f));
-            CreateToggleActionRow(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STORAGE_OUTPUT_STORE_ENABLED), connector.OutputStoreEnabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ACTION_CLOSE) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ON), () =>
+            MakeProductionCardAutoHeight(card, string.IsNullOrEmpty(connector.LastOutputStatus) ? 170f : 194f);
+            CreateStatusStrip(card.transform, outputStoreEnabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_AUTO_STATUS) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_MANUAL_STATUS), outputStoreEnabled ? new Color(0.28f, 0.48f, 0.34f, 1f) : new Color(0.48f, 0.45f, 0.36f, 1f));
+            CreateToggleActionRow(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STORAGE_OUTPUT_STORE_ENABLED), outputStoreEnabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ACTION_CLOSE) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ON), () =>
             {
-                connector.OutputStoreEnabled = !connector.OutputStoreEnabled;
+                connector.SetOutputStoreEnabled(!outputStoreEnabled);
                 UpdateProductionSettingsPanel(true);
-            }, connector.OutputStoreEnabled);
+            }, outputStoreEnabled);
+            CreateProductionActionRow(
+                card.transform,
+                Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_POLICY),
+                StorageNetworkProductionSettingsText.GetOutputStoreModeName(connector),
+                () => ShowStorageConnectorOutputStorePicker(ownerStorage, connector));
             productionAutomationView ??= new ProductionAutomationCardsView();
             productionAutomationView.OutputDescription = CreateFinePrint(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STORAGE_OUTPUT_STORE_DESC));
-            if (connector.OutputStoreEnabled && !string.IsNullOrEmpty(connector.LastOutputStatus))
+            if (outputStoreEnabled && !string.IsNullOrEmpty(connector.LastOutputStatus))
             {
                 productionAutomationView.OutputStatus = CreateFinePrint(card.transform, string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_STATUS), connector.LastOutputStatus));
                 SetFinePrintPreferredHeight(productionAutomationView.OutputStatus, 22f);
+            }
+        }
+
+        private void AddPortMaterialRequestCard(Storage ownerStorage, StorageNetworkPortRequester requester)
+        {
+            GameObject card = CreateProductionCard("PortMaterialRequestCard", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_TITLE), 0f);
+            MakeProductionCardAutoHeight(card, string.IsNullOrEmpty(requester.LastStatus) ? (requester.LimitEnabled ? 176f : 136f) : (requester.LimitEnabled ? 204f : 164f));
+            CreateEnabledStatusStrip(card.transform, requester.RequestEnabled);
+            CreateToggleActionRow(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_ENABLED), requester.RequestEnabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ACTION_CLOSE) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ON), () =>
+            {
+                requester.RequestEnabled = !requester.RequestEnabled;
+                UpdateProductionSettingsPanel(true);
+            }, requester.RequestEnabled);
+            CreateProductionActionRow(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SOURCE_POLICY), StorageNetworkProductionSettingsText.GetPortRequestSourceModeName(requester), () => ShowPortSourcePicker(ownerStorage, requester));
+            CreateToggleActionRow(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_LIMIT_ENABLED), requester.LimitEnabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ACTION_CLOSE) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ON), () =>
+            {
+                StorageNetworkMaterialLimitRules.SetEnabled(requester, !requester.LimitEnabled);
+                UpdateProductionSettingsPanel(true);
+            }, requester.LimitEnabled);
+            if (requester.LimitEnabled)
+            {
+                CreateProductionActionRow(
+                    card.transform,
+                    string.Format(
+                        Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_LIMIT),
+                        GameUtil.GetFormattedMass(Mathf.Max(0f, requester.GetRequestedAmountForDisplay())),
+                        GameUtil.GetFormattedMass(Mathf.Max(0f, requester.LimitKg))),
+                    Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_SET_LIMIT),
+                    () => ShowPortRequestLimitDialog(requester));
+            }
+
+            if (!string.IsNullOrEmpty(requester.LastStatus))
+            {
+                productionAutomationView ??= new ProductionAutomationCardsView();
+                productionAutomationView.MaterialStatus = CreateFinePrint(card.transform, string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_STATUS), requester.LastStatus));
+                SetFinePrintPreferredHeight(productionAutomationView.MaterialStatus, 22f);
             }
         }
 
@@ -1035,6 +1202,40 @@ namespace StorageNetwork.UI
             ShowProductionPicker(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_SELECT_SOURCE), options);
         }
 
+        private void ShowPortSourcePicker(Storage ownerStorage, StorageNetworkPortRequester requester)
+        {
+            List<ProductionPickerOption> options = new List<ProductionPickerOption>
+            {
+                new ProductionPickerOption(
+                    Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_MODE_SEARCH),
+                    Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_AUTO_DESC),
+                    requester.CurrentMode == StorageNetworkMaterialRequester.RequestMode.SearchNetwork,
+                    () =>
+                    {
+                        requester.UseAutomaticMaterialSource();
+                        CloseProductionPicker();
+                        UpdateProductionSettingsPanel(true);
+                    })
+            };
+
+            foreach (Storage target in GetNetworkStorageTargets(ownerStorage))
+            {
+                Storage captured = target;
+                options.Add(new ProductionPickerOption(
+                    string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_SOURCE), captured.GetProperName()),
+                    StorageNetworkProductionSettingsText.FormatStorageOptionDetails(captured),
+                    requester.CurrentMode == StorageNetworkMaterialRequester.RequestMode.SpecificStorage && requester.ResolveSourceStorage() == captured,
+                    () =>
+                    {
+                        requester.SetSourceStorage(captured);
+                        CloseProductionPicker();
+                        UpdateProductionSettingsPanel(true);
+                    }));
+            }
+
+            ShowProductionPicker(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_SELECT_SOURCE), options);
+        }
+
         private void ShowOutputStorePicker(Storage ownerStorage, StorageNetworkMaterialRequester requester)
         {
             List<ProductionPickerOption> options = new List<ProductionPickerOption>
@@ -1061,6 +1262,40 @@ namespace StorageNetwork.UI
                     () =>
                     {
                         requester.SetOutputStorage(captured);
+                        CloseProductionPicker();
+                        UpdateProductionSettingsPanel(true);
+                    }));
+            }
+
+            ShowProductionPicker(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_MODE_SPECIFIC), options);
+        }
+
+        private void ShowStorageConnectorOutputStorePicker(Storage ownerStorage, StorageNetworkStorageConnector connector)
+        {
+            List<ProductionPickerOption> options = new List<ProductionPickerOption>
+            {
+                new ProductionPickerOption(
+                Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_MODE_AUTO),
+                Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_AUTO_DESC),
+                connector.CurrentOutputStoreMode == StorageNetworkMaterialRequester.OutputStoreMode.AutoNetwork,
+                () =>
+                {
+                    connector.UseAutomaticOutputStorage();
+                    CloseProductionPicker();
+                    UpdateProductionSettingsPanel(true);
+                })
+            };
+
+            foreach (Storage target in GetNetworkStorageTargets(ownerStorage))
+            {
+                Storage captured = target;
+                options.Add(new ProductionPickerOption(
+                    string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_TARGET), captured.GetProperName()),
+                    StorageNetworkProductionSettingsText.FormatStorageOptionDetails(captured),
+                    connector.CurrentOutputStoreMode == StorageNetworkMaterialRequester.OutputStoreMode.SpecificStorage && connector.ResolveOutputStorage() == captured,
+                    () =>
+                    {
+                        connector.SetOutputStorage(captured);
                         CloseProductionPicker();
                         UpdateProductionSettingsPanel(true);
                     }));
@@ -1235,7 +1470,18 @@ namespace StorageNetwork.UI
 
         private static List<Storage> GetNetworkStorageTargets(Storage ownerStorage)
         {
-            return StorageNetworkStorageRules.GetNetworkStorageTargets(ownerStorage);
+            return StorageNetworkStorageRules.GetNetworkStorageTargets(ownerStorage, GetPortTargetFilters(ownerStorage));
+        }
+
+        private static IEnumerable<Tag> GetPortTargetFilters(Storage ownerStorage)
+        {
+            StorageNetworkPort port = ownerStorage != null ? ownerStorage.GetComponent<StorageNetworkPort>() : null;
+            if (port == null || port.Kind == StorageNetworkPortKind.PowerInput || port.Kind == StorageNetworkPortKind.PowerOutput)
+            {
+                return null;
+            }
+
+            return ownerStorage.storageFilters;
         }
 
         private void ShowMaterialRequestSourceSelection(Storage ownerStorage, StorageNetworkMaterialRequester requester)
@@ -1277,6 +1523,24 @@ namespace StorageNetwork.UI
         }
 
         private void ShowEnergyGeneratorMaterialRequestLimitDialog(StorageNetworkEnergyGeneratorRequester requester)
+        {
+            if (requester == null)
+            {
+                return;
+            }
+
+            ShowMaterialLimitDialog(
+                () => requester.GetRequestedAmountForDisplay(),
+                () => requester.LimitKg,
+                () => requester.ResetRequestedAmount(),
+                value =>
+                {
+                    requester.LimitKg = value;
+                    requester.LimitEnabled = true;
+                });
+        }
+
+        private void ShowPortRequestLimitDialog(StorageNetworkPortRequester requester)
         {
             if (requester == null)
             {
@@ -1584,60 +1848,5 @@ namespace StorageNetwork.UI
             }
         }
 
-        private sealed class ProductionOverviewCardView
-        {
-            public TextMeshProUGUI BuildingName { get; set; }
-
-            public TextMeshProUGUI StorageValue { get; set; }
-
-            public TextMeshProUGUI StateValue { get; set; }
-
-            public TextMeshProUGUI RecipeValue { get; set; }
-
-            public TextMeshProUGUI NetworkValue { get; set; }
-        }
-
-        private sealed class ProductionInventoryCardView
-        {
-            public Dictionary<string, ProductionInventoryRowView> Rows { get; } = new Dictionary<string, ProductionInventoryRowView>();
-        }
-
-        private sealed class ProductionAutomationCardsView
-        {
-            public TextMeshProUGUI MaterialStatus { get; set; }
-
-            public TextMeshProUGUI OutputDescription { get; set; }
-
-            public TextMeshProUGUI OutputStatus { get; set; }
-        }
-
-        private sealed class ProductionInventoryRowView
-        {
-            public TextMeshProUGUI Name { get; set; }
-
-            public TextMeshProUGUI Mass { get; set; }
-
-            public Image Icon { get; set; }
-        }
-
-        private sealed class ProductionPickerOption
-        {
-            public ProductionPickerOption(string title, string details, bool selected, System.Action onClick)
-            {
-                Title = title;
-                Details = details;
-                Selected = selected;
-                OnClick = onClick;
-            }
-
-            public string Title { get; }
-
-            public string Details { get; }
-
-            public bool Selected { get; }
-
-            public System.Action OnClick { get; }
-        }
     }
 }
-

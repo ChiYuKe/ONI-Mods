@@ -23,7 +23,9 @@ namespace StorageNetwork.UI
                 requester != null && requester.OutputStoreEnabled ? "out1" : "out0",
                 requester != null ? requester.OutputStoreModeValue.ToString() : "0",
                 requester != null ? requester.OutputStorageInstanceId.ToString() : "0",
-                connector != null && connector.OutputStoreEnabled ? "conn1" : "conn0",
+                connector != null && connector.IsOutputStoreEnabled() ? "conn1" : "conn0",
+                connector != null ? connector.OutputStoreModeValue.ToString() : "0",
+                connector != null ? connector.OutputStorageInstanceId.ToString() : "0",
                 energyRequester != null && energyRequester.RequestEnabled ? "energyReq1" : "energyReq0",
                 energyRequester != null ? energyRequester.Mode.ToString() : "0",
                 energyRequester != null ? energyRequester.SourceStorageInstanceId.ToString() : "0",
@@ -39,8 +41,33 @@ namespace StorageNetwork.UI
         {
             return string.Join(
                 "~",
-                minion != null ? minion.GetInstanceID().ToString() : "null",
+                GetMinionConfigInstanceId(minion),
                 Config.Instance.IsMinionAllowedRequestMaterialsFromNetwork(minion) ? "allow1" : "allow0",
+                BuildItemSignature(storage, null));
+        }
+
+        public static string BuildPort(Storage storage, StorageNetworkPort port)
+        {
+            Automatable automatable = storage != null ? storage.GetComponent<Automatable>() : null;
+            StorageNetworkStorageConnector connector = storage != null ? storage.GetComponent<StorageNetworkStorageConnector>() : null;
+            StorageNetworkPortRequester requester = storage != null ? storage.GetComponent<StorageNetworkPortRequester>() : null;
+            return string.Join(
+                "~",
+                storage != null ? storage.GetInstanceID().ToString() : "null",
+                port != null ? port.Kind.ToString() : "none",
+                automatable != null && !automatable.GetAutomationOnly() ? "manual1" : "manual0",
+                connector != null && connector.IsOutputStoreEnabled() ? "conn1" : "conn0",
+                connector != null ? connector.OutputStoreModeValue.ToString() : "0",
+                connector != null ? connector.OutputStorageInstanceId.ToString() : "0",
+                connector != null && !string.IsNullOrEmpty(connector.LastOutputStatus) ? "connStatus1" : "connStatus0",
+                requester != null && requester.RequestEnabled ? "portReq1" : "portReq0",
+                requester != null ? requester.Mode.ToString() : "0",
+                requester != null ? requester.SourceStorageInstanceId.ToString() : "0",
+                requester != null && requester.LimitEnabled ? "portLim1" : "portLim0",
+                requester != null ? requester.LimitKg.ToString("0.###") : "0",
+                requester != null ? requester.RequestedKg.ToString("0.###") : "0",
+                requester != null ? requester.GetOutputAmountKg().ToString("0.###") : "0",
+                requester != null && !string.IsNullOrEmpty(requester.LastStatus) ? "portStatus1" : "portStatus0",
                 BuildItemSignature(storage, null));
         }
 
@@ -51,6 +78,12 @@ namespace StorageNetwork.UI
                 .GroupBy(StorageItemUtility.GetStoredItemKey)
                 .OrderBy(group => group.Key)
                 .Select(group => group.Key));
+        }
+
+        private static string GetMinionConfigInstanceId(MinionIdentity minion)
+        {
+            KPrefabID prefabId = minion != null ? minion.GetComponent<KPrefabID>() : null;
+            return prefabId != null ? prefabId.InstanceID.ToString() : "null";
         }
     }
 }

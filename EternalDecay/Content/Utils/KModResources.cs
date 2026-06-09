@@ -22,7 +22,7 @@ namespace CykUtils
 
             Texture2D tex = bundle.LoadAsset<Texture2D>(name);
             if (tex == null)
-                Debug.LogError($"Texture2D 资源不存在: {name} (Bundle: {bundleName})");
+                LogUtil.LogError($"Texture2D 资源不存在: {name} (Bundle: {bundleName})");
 
             return tex;
         }
@@ -68,14 +68,14 @@ namespace CykUtils
 
             if (!File.Exists(bundlePath))
             {
-                Debug.LogError($"AssetBundle 文件不存在: {bundlePath}");
+                LogUtil.LogError($"AssetBundle 文件不存在: {bundlePath}");
                 return null;
             }
 
             bundle = AssetBundle.LoadFromFile(bundlePath);
             if (bundle == null)
             {
-                Debug.LogError($"AssetBundle 加载失败: {bundlePath}");
+                LogUtil.LogError($"AssetBundle 加载失败: {bundlePath}");
                 return null;
             }
 

@@ -71,7 +71,7 @@ namespace StorageNetwork.UI
             CloseOrderWorldDropdown();
             bool relayOnline = StorageSceneRegistry.IsCrossPlanetRelayOnline();
             List<int> worldIds = GetOrderWorldIds(relayOnline);
-            int optionCount = worldIds.Count + (relayOnline ? 1 : 0);
+            int optionCount = worldIds.Count + 1;
             float height = Mathf.Min(20f + Mathf.Max(1, optionCount) * 30f, 250f);
 
             Transform dropdownParent = orderWorldFilterContent != null && orderWorldFilterContent.parent != null
@@ -109,10 +109,7 @@ namespace StorageNetwork.UI
             layout.childForceExpandHeight = false;
             content.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
-            if (relayOnline)
-            {
-                CreateOrderWorldDropdownOption(content.transform, AllEnrollableWorldsFilterId, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENROLLABLE_WORLD_ALL));
-            }
+            CreateOrderWorldDropdownOption(content.transform, AllEnrollableWorldsFilterId, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENROLLABLE_WORLD_ALL));
 
             foreach (int worldId in worldIds)
             {
@@ -174,12 +171,6 @@ namespace StorageNetwork.UI
 
             if (orderWorldFilterId == AllEnrollableWorldsFilterId)
             {
-                if (relayOnline)
-                {
-                    return;
-                }
-
-                orderWorldFilterId = activeWorldId != UnsetEnrollableWorldFilterId ? activeWorldId : AllEnrollableWorldsFilterId;
                 return;
             }
 
@@ -241,38 +232,26 @@ namespace StorageNetwork.UI
 
             if (orderWorldFilterId == AllEnrollableWorldsFilterId)
             {
-                return relayOnline;
+                return relayOnline || worldId == GetActiveWorldFilterId();
             }
 
-            return worldId == orderWorldFilterId;
+            return worldId == orderWorldFilterId &&
+                   (relayOnline || worldId == GetActiveWorldFilterId());
         }
 
         private List<int> GetOrderWorldIds(bool relayOnline)
         {
-            HashSet<int> worldIds = new HashSet<int>();
+            return GetEnrollableWorldIds(StorageSceneRegistry
+                .GetEnrollments()
+                .Where(enrollment => enrollment != null && enrollment.CanShowInEnrollableList()));
+        }
+
+        private bool IsOrderWorldFilterBlockedByRelay()
+        {
             int activeWorldId = GetActiveWorldFilterId();
-            if (StorageNetworkWorldDisplay.IsWorldDiscovered(activeWorldId))
-            {
-                worldIds.Add(activeWorldId);
-            }
-
-            if (relayOnline)
-            {
-                foreach (RecipeDisplayInfo recipe in craftableRecipes)
-                {
-                    foreach (int worldId in recipe.WorldIds)
-                    {
-                        if (StorageNetworkWorldDisplay.IsWorldDiscovered(worldId))
-                        {
-                            worldIds.Add(worldId);
-                        }
-                    }
-                }
-            }
-
-            return worldIds
-                .OrderBy(StorageNetworkWorldDisplay.GetWorldName)
-                .ToList();
+            return orderWorldFilterId != AllEnrollableWorldsFilterId &&
+                   orderWorldFilterId != activeWorldId &&
+                   !StorageSceneRegistry.IsCrossPlanetRelayOnline();
         }
     }
 }
