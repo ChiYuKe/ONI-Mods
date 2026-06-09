@@ -96,24 +96,6 @@ namespace StorageNetwork.Core
                 }
             }
 
-            foreach (MinionIdentity minion in global::Components.LiveMinionIdentities)
-            {
-                if (minion == null || minion.gameObject == null || minion.gameObject.HasTag(GameTags.Dead))
-                {
-                    continue;
-                }
-
-                if (!crossPlanetRelayOnline && worldId >= 0 && minion.GetMyWorldId() != worldId)
-                {
-                    continue;
-                }
-
-                if (minion.GetComponent<Storage>() != null)
-                {
-                    collected.Add(new StorageInfo(minion));
-                }
-            }
-
             collected.Sort((left, right) => string.Compare(left?.Name, right?.Name, System.StringComparison.CurrentCulture));
         }
 

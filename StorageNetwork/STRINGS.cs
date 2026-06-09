@@ -350,13 +350,6 @@ namespace StorageNetwork
                 public static LocString MATERIAL_PORT_DIRECTION_INPUT = "输入网络";
                 public static LocString MATERIAL_PORT_DIRECTION_OUTPUT = "输出网络";
                 public static LocString MATERIAL_PORT_MANUAL_OPERATION_ALLOWED = "允许人力操作";
-                public static LocString MINION_MATERIAL_REQUEST_ENABLED = "允许复制人从网络中请求材料";
-                public static LocString MINION_MATERIAL_REQUEST_DESC = "开启后，复制人建造时可从储存网络调拨所需材料。";
-                public static LocString ALL_MINION_SETTINGS_TITLE = "全部复制人设置";
-                public static LocString ALL_MINION_SETTINGS_SUMMARY = "当前允许：{0} / {1}";
-                public static LocString ALL_MINION_SETTINGS_DESC = "批量控制当前列表中的复制人是否可以在建造时从储存网络请求材料。";
-                public static LocString ALL_MINION_ENABLE = "全部开启";
-                public static LocString ALL_MINION_DISABLE = "全部关闭";
                 public static LocString MATERIAL_REQUEST_MODE = "请求方式：{0}";
                 public static LocString MATERIAL_REQUEST_MODE_SEARCH = "从服务器中寻找材料";
                 public static LocString MATERIAL_REQUEST_MODE_SPECIFIC = "指定网络中某个服务器提供材料";

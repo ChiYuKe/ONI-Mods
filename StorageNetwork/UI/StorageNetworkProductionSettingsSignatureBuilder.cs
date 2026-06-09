@@ -37,15 +37,6 @@ namespace StorageNetwork.UI
                 itemSignature);
         }
 
-        public static string BuildMinion(MinionIdentity minion, Storage storage)
-        {
-            return string.Join(
-                "~",
-                GetMinionConfigInstanceId(minion),
-                Config.Instance.IsMinionAllowedRequestMaterialsFromNetwork(minion) ? "allow1" : "allow0",
-                BuildItemSignature(storage, null));
-        }
-
         public static string BuildPort(Storage storage, StorageNetworkPort port)
         {
             Automatable automatable = storage != null ? storage.GetComponent<Automatable>() : null;
@@ -80,10 +71,5 @@ namespace StorageNetwork.UI
                 .Select(group => group.Key));
         }
 
-        private static string GetMinionConfigInstanceId(MinionIdentity minion)
-        {
-            KPrefabID prefabId = minion != null ? minion.GetComponent<KPrefabID>() : null;
-            return prefabId != null ? prefabId.InstanceID.ToString() : "null";
-        }
     }
 }

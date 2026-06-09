@@ -21,7 +21,6 @@ namespace StorageNetwork.UI
             CloseModal();
             geyserSettingsGeyser = geyser;
             productionSettingsStorage = null;
-            productionSettingsMinion = null;
             productionSettingsSignature = null;
             EnsureProductionSettingsPanel();
             productionSettingsRoot.SetActive(true);

@@ -17,31 +17,12 @@ namespace StorageNetwork.UI
         {
             bool sameStorage = productionSettingsStorage == storage;
             productionSettingsStorage = storage;
-            productionSettingsMinion = null;
             geyserSettingsGeyser = null;
             geyserSettingsSignature = null;
             EnsureProductionSettingsPanel();
             productionSettingsRoot.SetActive(true);
             KeepProductionSettingsPanelOnScreen();
             UpdateProductionSettingsPanel(!sameStorage);
-        }
-
-        private void ShowMinionSettingsPanel(MinionIdentity minion, Storage storage)
-        {
-            if (minion == null || storage == null)
-            {
-                return;
-            }
-
-            bool sameMinion = productionSettingsMinion == minion;
-            productionSettingsMinion = minion;
-            productionSettingsStorage = storage;
-            geyserSettingsGeyser = null;
-            geyserSettingsSignature = null;
-            EnsureProductionSettingsPanel();
-            productionSettingsRoot.SetActive(true);
-            KeepProductionSettingsPanelOnScreen();
-            UpdateProductionSettingsPanel(!sameMinion);
         }
 
         private void CloseProductionSettingsPanel()
@@ -52,7 +33,6 @@ namespace StorageNetwork.UI
                 productionSettingsRoot.SetActive(false);
             }
 
-            productionSettingsMinion = null;
             geyserSettingsGeyser = null;
             geyserSettingsSignature = null;
         }
@@ -95,25 +75,6 @@ namespace StorageNetwork.UI
             if (storage == null)
             {
                 CloseProductionSettingsPanel();
-                return;
-            }
-
-            if (productionSettingsMinion != null)
-            {
-                string minionSignature = StorageNetworkProductionSettingsSignatureBuilder.BuildMinion(productionSettingsMinion, storage);
-                if (!force && minionSignature == productionSettingsSignature)
-                {
-                    SetMinionSettingsTitle(productionSettingsMinion, storage);
-                    return;
-                }
-
-                productionSettingsSignature = minionSignature;
-                ClearProductionSettingsContent();
-                SetMinionSettingsTitle(productionSettingsMinion, storage);
-                KeepProductionSettingsPanelOnScreen();
-                AddMinionMaterialRequestCard(productionSettingsMinion, storage);
-                AddInventoryCard(storage, null);
-                LayoutRebuilder.MarkLayoutForRebuild(productionSettingsContent);
                 return;
             }
 
@@ -221,43 +182,6 @@ namespace StorageNetwork.UI
                     GameUtil.GetFormattedMass(storage.Capacity()),
                     GameUtil.GetFormattedMass(Mathf.Max(0f, storage.RemainingCapacity())));
             }
-        }
-
-        private void SetMinionSettingsTitle(MinionIdentity minion, Storage storage)
-        {
-            TextMeshProUGUI title = productionSettingsRoot.GetComponentsInChildren<TextMeshProUGUI>(true)
-                .FirstOrDefault(text => text.name == "ProductionSettingsTitle");
-            if (title != null)
-            {
-                title.text = string.Format(
-                    "{0}\n{1}",
-                    minion != null ? minion.GetProperName() : storage.GetProperName(),
-                    string.Format(
-                        Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STORAGE_DETAILS),
-                        GameUtil.GetFormattedMass(storage.MassStored()),
-                        GameUtil.GetFormattedMass(storage.Capacity()),
-                        GameUtil.GetFormattedMass(Mathf.Max(0f, storage.RemainingCapacity()))));
-            }
-        }
-
-        private void AddMinionMaterialRequestCard(MinionIdentity minion, Storage storage)
-        {
-            GameObject card = CreateProductionCard("MinionMaterialRequestCard", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_TITLE), 0f);
-            MakeProductionCardAutoHeight(card, 126f);
-            bool enabled = Config.Instance.IsMinionAllowedRequestMaterialsFromNetwork(minion);
-            CreateEnabledStatusStrip(card.transform, enabled);
-            CreateToggleActionRow(
-                card.transform,
-                Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MINION_MATERIAL_REQUEST_ENABLED),
-                enabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ACTION_CLOSE) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ON),
-                () =>
-                {
-                    Config.Instance.SetMinionAllowedRequestMaterialsFromNetwork(minion, !enabled);
-                    Config.Save();
-                    UpdateProductionSettingsPanel(true);
-                },
-                enabled);
-            CreateFinePrint(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MINION_MATERIAL_REQUEST_DESC));
         }
 
         private void AddMaterialPortSettingsCard(Storage storage, StorageNetworkPort port)

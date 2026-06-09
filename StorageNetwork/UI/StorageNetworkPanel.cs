@@ -48,7 +48,6 @@ namespace StorageNetwork.UI
         private GameObject productionSettingsRoot;
         private RectTransform productionSettingsContent;
         private Storage productionSettingsStorage;
-        private MinionIdentity productionSettingsMinion;
         private bool productionSettingsPositionInitialized;
         private GameObject geyserSettingsRoot;
         private RectTransform geyserSettingsContent;
@@ -223,7 +222,17 @@ namespace StorageNetwork.UI
             if (mainWorldFilterId == UnsetEnrollableWorldFilterId)
             {
                 int activeWorldId = GetActiveWorldFilterId();
-                mainWorldFilterId = activeWorldId != UnsetEnrollableWorldFilterId ? activeWorldId : AllEnrollableWorldsFilterId;
+                int savedWorldId = Config.Instance.MainWorldFilterId;
+                if (savedWorldId != UnsetEnrollableWorldFilterId &&
+                    Config.Instance.MainWorldFilterContextWorldId == activeWorldId)
+                {
+                    mainWorldFilterId = savedWorldId;
+                }
+                else
+                {
+                    mainWorldFilterId = activeWorldId != UnsetEnrollableWorldFilterId ? activeWorldId : AllEnrollableWorldsFilterId;
+                    SaveMainWorldFilter();
+                }
             }
 
             currentSnapshot = null;

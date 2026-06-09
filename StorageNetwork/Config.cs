@@ -31,13 +31,16 @@ namespace StorageNetwork
         public float DefaultMaterialRequestLimitKg { get; set; }
 
         [JsonProperty]
-        public List<int> MinionsAllowedRequestMaterialsFromNetwork { get; set; }
-
-        [JsonProperty]
         public List<int> StoragesEnabledOutputStoreToNetwork { get; set; }
 
         [JsonProperty]
         public Dictionary<string, StorageNetworkWindowLayout> WindowLayouts { get; set; }
+
+        [JsonProperty]
+        public int MainWorldFilterId { get; set; }
+
+        [JsonProperty]
+        public int MainWorldFilterContextWorldId { get; set; }
 
         [ModConfigOption(
             "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_REQUEST_SUCCESS_COOLDOWN",
@@ -127,9 +130,10 @@ namespace StorageNetwork
         {
             SceneScanCacheSeconds = 0.25f;
             DefaultMaterialRequestLimitKg = 1000f;
-            MinionsAllowedRequestMaterialsFromNetwork = new List<int>();
             StoragesEnabledOutputStoreToNetwork = new List<int>();
             WindowLayouts = new Dictionary<string, StorageNetworkWindowLayout>();
+            MainWorldFilterId = -2;
+            MainWorldFilterContextWorldId = -2;
             MaterialRequestSuccessCooldownSeconds = 2f;
             MaterialRequestRetryCooldownSeconds = 5f;
             InfiniteQueueRequestBatchCount = 2;
@@ -163,49 +167,6 @@ namespace StorageNetwork
                 STRINGS.Get(STRINGS.UI.STORAGE_NETWORK.CONFIG_TOOLTIP),
                 STRINGS.Get(STRINGS.UI.STORAGE_NETWORK.CONFIG_TITLE),
                 STRINGS.Get(STRINGS.UI.STORAGE_NETWORK.CONFIG_HINT));
-        }
-
-        public bool IsMinionAllowedRequestMaterialsFromNetwork(MinionIdentity minion)
-        {
-            int instanceId = GetMinionInstanceId(minion);
-            return instanceId != KPrefabID.InvalidInstanceID &&
-                   MinionsAllowedRequestMaterialsFromNetwork != null &&
-                   MinionsAllowedRequestMaterialsFromNetwork.Contains(instanceId);
-        }
-
-        public void SetMinionAllowedRequestMaterialsFromNetwork(MinionIdentity minion, bool allowed)
-        {
-            int instanceId = GetMinionInstanceId(minion);
-            if (instanceId == KPrefabID.InvalidInstanceID)
-            {
-                return;
-            }
-
-            if (MinionsAllowedRequestMaterialsFromNetwork == null)
-            {
-                MinionsAllowedRequestMaterialsFromNetwork = new List<int>();
-            }
-
-            if (WindowLayouts == null)
-            {
-                WindowLayouts = new Dictionary<string, StorageNetworkWindowLayout>();
-            }
-
-            bool currentlyAllowed = MinionsAllowedRequestMaterialsFromNetwork.Contains(instanceId);
-            if (allowed && !currentlyAllowed)
-            {
-                MinionsAllowedRequestMaterialsFromNetwork.Add(instanceId);
-            }
-            else if (!allowed && currentlyAllowed)
-            {
-                MinionsAllowedRequestMaterialsFromNetwork.Remove(instanceId);
-            }
-        }
-
-        public bool HasAnyMinionAllowedRequestMaterialsFromNetwork()
-        {
-            return MinionsAllowedRequestMaterialsFromNetwork != null &&
-                   MinionsAllowedRequestMaterialsFromNetwork.Count > 0;
         }
 
         public bool IsStorageOutputStoreToNetworkEnabled(Storage storage)
@@ -242,11 +203,6 @@ namespace StorageNetwork
 
         private void Normalize()
         {
-            if (MinionsAllowedRequestMaterialsFromNetwork == null)
-            {
-                MinionsAllowedRequestMaterialsFromNetwork = new List<int>();
-            }
-
             if (StoragesEnabledOutputStoreToNetwork == null)
             {
                 StoragesEnabledOutputStoreToNetwork = new List<int>();
@@ -261,6 +217,15 @@ namespace StorageNetwork
             ProductionPlanMaxDepth = Math.Max(1, Math.Min(10, ProductionPlanMaxDepth));
             AbnormalOrderTimeoutCycles = Clamp(AbnormalOrderTimeoutCycles, 0.05f, 10f);
             FinishedOrderRecordLifetimeCycles = Clamp(FinishedOrderRecordLifetimeCycles, 0.05f, 20f);
+            if (MainWorldFilterId < -2)
+            {
+                MainWorldFilterId = -2;
+            }
+
+            if (MainWorldFilterContextWorldId < -2)
+            {
+                MainWorldFilterContextWorldId = -2;
+            }
         }
 
         private static float Clamp(float value, float min, float max)
@@ -271,12 +236,6 @@ namespace StorageNetwork
             }
 
             return Math.Max(min, Math.Min(max, value));
-        }
-
-        private static int GetMinionInstanceId(MinionIdentity minion)
-        {
-            KPrefabID prefabId = minion != null ? minion.GetComponent<KPrefabID>() : null;
-            return prefabId != null ? prefabId.InstanceID : KPrefabID.InvalidInstanceID;
         }
 
         private static int GetStorageInstanceId(Storage storage)

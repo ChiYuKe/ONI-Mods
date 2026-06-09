@@ -134,51 +134,6 @@ namespace StorageNetwork.UI
             AddModalButton(footer.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CLOSE), 90f, CloseModal);
         }
 
-        private void ShowAllMinionSettingsDialog(IEnumerable<StorageInfo> storages)
-        {
-            List<MinionIdentity> minions = storages?
-                .Select(info => info?.Minion)
-                .Where(minion => minion != null)
-                .Distinct()
-                .OrderBy(minion => minion.GetProperName())
-                .ToList() ?? new List<MinionIdentity>();
-
-            if (minions.Count == 0)
-            {
-                return;
-            }
-
-            int enabledCount = minions.Count(minion => Config.Instance.IsMinionAllowedRequestMaterialsFromNetwork(minion));
-            CloseModal();
-            modalRoot = CreateModalFrame(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ALL_MINION_SETTINGS_TITLE), 460f, 230f, out GameObject body);
-            AddModalText(body.transform, string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ALL_MINION_SETTINGS_SUMMARY), enabledCount, minions.Count), 13, FontStyles.Bold);
-            AddModalText(body.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ALL_MINION_SETTINGS_DESC), 12, FontStyles.Normal);
-
-            GameObject actionRow = AddHorizontalRow(body.transform, 8f);
-            AddFooterSpacer(actionRow.transform);
-            AddModalButton(actionRow.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ALL_MINION_ENABLE), 120f, () => SetAllMinionMaterialRequests(minions, true));
-            AddModalButton(actionRow.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ALL_MINION_DISABLE), 120f, () => SetAllMinionMaterialRequests(minions, false));
-
-            GameObject footer = AddHorizontalRow(body.transform, 6f);
-            AddFooterSpacer(footer.transform);
-            AddModalButton(footer.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CANCEL), 90f, CloseModal);
-        }
-
-        private void SetAllMinionMaterialRequests(IEnumerable<MinionIdentity> minions, bool allowed)
-        {
-            foreach (MinionIdentity minion in minions)
-            {
-                Config.Instance.SetMinionAllowedRequestMaterialsFromNetwork(minion, allowed);
-            }
-
-            Config.Save();
-            CloseModal();
-            productionSettingsSignature = null;
-            lastListSignature = null;
-            UpdateProductionSettingsPanel(true);
-            RefreshStoragePanel(StoragePanelRefreshMode.Structure);
-        }
-
         private void ShowGeyserSettingsDialog(Geyser geyser)
         {
             ShowGeyserSettingsPanel(geyser);

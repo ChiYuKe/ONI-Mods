@@ -170,6 +170,7 @@ namespace StorageNetwork.UI
             GameObject row = CreateStyledButton("MainWorldFilterOption", parent, text, () =>
             {
                 mainWorldFilterId = worldId;
+                SaveMainWorldFilter();
                 CloseMainWorldDropdown();
                 selectedItemStorage = null;
                 selectedItemKey = null;
@@ -207,6 +208,7 @@ namespace StorageNetwork.UI
             if (mainWorldFilterId == UnsetEnrollableWorldFilterId)
             {
                 mainWorldFilterId = activeWorldId != UnsetEnrollableWorldFilterId ? activeWorldId : AllEnrollableWorldsFilterId;
+                SaveMainWorldFilter();
                 return;
             }
 
@@ -221,6 +223,21 @@ namespace StorageNetwork.UI
             }
 
             mainWorldFilterId = activeWorldId != UnsetEnrollableWorldFilterId ? activeWorldId : AllEnrollableWorldsFilterId;
+            SaveMainWorldFilter();
+        }
+
+        private void SaveMainWorldFilter()
+        {
+            int activeWorldId = GetActiveWorldFilterId();
+            if (Config.Instance.MainWorldFilterId == mainWorldFilterId &&
+                Config.Instance.MainWorldFilterContextWorldId == activeWorldId)
+            {
+                return;
+            }
+
+            Config.Instance.MainWorldFilterId = mainWorldFilterId;
+            Config.Instance.MainWorldFilterContextWorldId = activeWorldId;
+            Config.Save();
         }
 
         private List<int> GetMainWorldIds()
