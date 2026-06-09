@@ -71,6 +71,8 @@ namespace StorageNetwork.Components
 
         private void EnsurePortAutomationComponents()
         {
+            gameObject.AddOrGet<StorageNetworkPortStatusSilencer>();
+
             if (Kind == StorageNetworkPortKind.SolidInput)
             {
                 gameObject.AddOrGet<StorageNetworkPortManualFetch>();

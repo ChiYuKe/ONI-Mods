@@ -42,6 +42,18 @@ namespace StorageNetwork
         [JsonProperty]
         public int MainWorldFilterContextWorldId { get; set; }
 
+        [JsonProperty]
+        public int EnrollableWorldFilterId { get; set; }
+
+        [JsonProperty]
+        public int EnrollableWorldFilterContextWorldId { get; set; }
+
+        [JsonProperty]
+        public int OrderWorldFilterId { get; set; }
+
+        [JsonProperty]
+        public int OrderWorldFilterContextWorldId { get; set; }
+
         [ModConfigOption(
             "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_REQUEST_SUCCESS_COOLDOWN",
             "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_REQUEST_SUCCESS_COOLDOWN_DESC",
@@ -134,6 +146,10 @@ namespace StorageNetwork
             WindowLayouts = new Dictionary<string, StorageNetworkWindowLayout>();
             MainWorldFilterId = -2;
             MainWorldFilterContextWorldId = -2;
+            EnrollableWorldFilterId = -2;
+            EnrollableWorldFilterContextWorldId = -2;
+            OrderWorldFilterId = -2;
+            OrderWorldFilterContextWorldId = -2;
             MaterialRequestSuccessCooldownSeconds = 2f;
             MaterialRequestRetryCooldownSeconds = 5f;
             InfiniteQueueRequestBatchCount = 2;
@@ -225,6 +241,26 @@ namespace StorageNetwork
             if (MainWorldFilterContextWorldId < -2)
             {
                 MainWorldFilterContextWorldId = -2;
+            }
+
+            if (EnrollableWorldFilterId < -2)
+            {
+                EnrollableWorldFilterId = -2;
+            }
+
+            if (EnrollableWorldFilterContextWorldId < -2)
+            {
+                EnrollableWorldFilterContextWorldId = -2;
+            }
+
+            if (OrderWorldFilterId < -2)
+            {
+                OrderWorldFilterId = -2;
+            }
+
+            if (OrderWorldFilterContextWorldId < -2)
+            {
+                OrderWorldFilterContextWorldId = -2;
             }
         }
 

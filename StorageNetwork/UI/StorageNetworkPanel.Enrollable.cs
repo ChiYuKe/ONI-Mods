@@ -17,11 +17,6 @@ namespace StorageNetwork.UI
         private void ShowEnrollableBuildingsDialog()
         {
             EnsureEnrollableWindow();
-            if (!enrollableWindowRoot.activeSelf)
-            {
-                int activeWorldId = GetActiveWorldFilterId();
-                enrollableWorldFilterId = activeWorldId != UnsetEnrollableWorldFilterId ? activeWorldId : AllEnrollableWorldsFilterId;
-            }
 
             List<StorageNetworkEnrollment> enrollments = StorageSceneRegistry
                 .GetEnrollments()
@@ -353,6 +348,7 @@ namespace StorageNetwork.UI
             GameObject row = CreateStyledButton("WorldFilterOption", parent, text, () =>
             {
                 enrollableWorldFilterId = worldId;
+                SaveEnrollableWorldFilter();
                 CloseEnrollableWorldDropdown();
                 enrollableWindowSignature = null;
                 ShowEnrollableBuildingsDialog();
@@ -497,10 +493,21 @@ namespace StorageNetwork.UI
 
         private void EnsureValidEnrollableWorldFilter(List<StorageNetworkEnrollment> enrollments)
         {
+            int activeWorldId = GetActiveWorldFilterId();
             if (enrollableWorldFilterId == UnsetEnrollableWorldFilterId)
             {
-                int initialWorldId = GetActiveWorldFilterId();
-                enrollableWorldFilterId = initialWorldId != UnsetEnrollableWorldFilterId ? initialWorldId : AllEnrollableWorldsFilterId;
+                int savedWorldId = Config.Instance.EnrollableWorldFilterId;
+                if (savedWorldId != UnsetEnrollableWorldFilterId &&
+                    Config.Instance.EnrollableWorldFilterContextWorldId == activeWorldId)
+                {
+                    enrollableWorldFilterId = savedWorldId;
+                }
+                else
+                {
+                    enrollableWorldFilterId = activeWorldId != UnsetEnrollableWorldFilterId ? activeWorldId : AllEnrollableWorldsFilterId;
+                    SaveEnrollableWorldFilter();
+                }
+
                 return;
             }
 
@@ -514,8 +521,22 @@ namespace StorageNetwork.UI
                 return;
             }
 
-            int activeWorldId = GetActiveWorldFilterId();
             enrollableWorldFilterId = activeWorldId != UnsetEnrollableWorldFilterId ? activeWorldId : AllEnrollableWorldsFilterId;
+            SaveEnrollableWorldFilter();
+        }
+
+        private void SaveEnrollableWorldFilter()
+        {
+            int activeWorldId = GetActiveWorldFilterId();
+            if (Config.Instance.EnrollableWorldFilterId == enrollableWorldFilterId &&
+                Config.Instance.EnrollableWorldFilterContextWorldId == activeWorldId)
+            {
+                return;
+            }
+
+            Config.Instance.EnrollableWorldFilterId = enrollableWorldFilterId;
+            Config.Instance.EnrollableWorldFilterContextWorldId = activeWorldId;
+            Config.Save();
         }
 
         private static List<int> GetEnrollableWorldIds(IEnumerable<StorageNetworkEnrollment> enrollments)

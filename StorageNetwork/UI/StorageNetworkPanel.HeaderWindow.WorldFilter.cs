@@ -129,6 +129,7 @@ namespace StorageNetwork.UI
             GameObject row = CreateStyledButton("OrderWorldFilterOption", parent, text, () =>
             {
                 orderWorldFilterId = worldId;
+                SaveOrderWorldFilter();
                 CloseOrderWorldDropdown();
                 orderDetailsSignature = null;
                 orderTrackingSignature = null;
@@ -165,7 +166,18 @@ namespace StorageNetwork.UI
             int activeWorldId = GetActiveWorldFilterId();
             if (orderWorldFilterId == UnsetEnrollableWorldFilterId)
             {
-                orderWorldFilterId = activeWorldId != UnsetEnrollableWorldFilterId ? activeWorldId : AllEnrollableWorldsFilterId;
+                int savedWorldId = Config.Instance.OrderWorldFilterId;
+                if (savedWorldId != UnsetEnrollableWorldFilterId &&
+                    Config.Instance.OrderWorldFilterContextWorldId == activeWorldId)
+                {
+                    orderWorldFilterId = savedWorldId;
+                }
+                else
+                {
+                    orderWorldFilterId = activeWorldId != UnsetEnrollableWorldFilterId ? activeWorldId : AllEnrollableWorldsFilterId;
+                    SaveOrderWorldFilter();
+                }
+
                 return;
             }
 
@@ -180,6 +192,21 @@ namespace StorageNetwork.UI
             }
 
             orderWorldFilterId = activeWorldId != UnsetEnrollableWorldFilterId ? activeWorldId : AllEnrollableWorldsFilterId;
+            SaveOrderWorldFilter();
+        }
+
+        private void SaveOrderWorldFilter()
+        {
+            int activeWorldId = GetActiveWorldFilterId();
+            if (Config.Instance.OrderWorldFilterId == orderWorldFilterId &&
+                Config.Instance.OrderWorldFilterContextWorldId == activeWorldId)
+            {
+                return;
+            }
+
+            Config.Instance.OrderWorldFilterId = orderWorldFilterId;
+            Config.Instance.OrderWorldFilterContextWorldId = activeWorldId;
+            Config.Save();
         }
 
         private List<ProductDisplayGroup> GetFilteredOrderProductGroups()

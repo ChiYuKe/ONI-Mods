@@ -83,12 +83,14 @@ namespace StorageNetwork.Buildings
             storage.showCapacityAsMainStatus = false;
 
             go.AddOrGet<StorageNetworkPort>().Configure(Spec.Kind);
+            go.AddOrGet<StorageNetworkPortStatusSilencer>();
             go.AddOrGet<UserNameable>();
             if (Spec.Kind == StorageNetworkPortKind.SolidInput)
             {
                 Automatable automatable = go.AddOrGet<Automatable>();
                 automatable.SetAutomationOnly(false);
                 go.AddOrGet<StorageNetworkPortManualFetch>();
+                ConfigureSolidInputConsumer(go, storage, Spec);
             }
 
             if (!Spec.PowerPort && Spec.Direction == StorageNetworkPortDirection.Input)
@@ -160,6 +162,15 @@ namespace StorageNetwork.Buildings
         {
             return spec.Kind != StorageNetworkPortKind.LiquidOutput &&
                    spec.Kind != StorageNetworkPortKind.GasOutput;
+        }
+
+        private static void ConfigureSolidInputConsumer(GameObject go, Storage storage, StorageNetworkPortSpec spec)
+        {
+            SolidConduitConsumer consumer = go.AddOrGet<SolidConduitConsumer>();
+            consumer.storage = storage;
+            consumer.capacityTag = GameTags.Any;
+            consumer.capacityKG = spec.CapacityKg;
+            consumer.alwaysConsume = true;
         }
 
         private static void ConfigureOutputDispenser(GameObject go, Storage storage, StorageNetworkPortSpec spec)
