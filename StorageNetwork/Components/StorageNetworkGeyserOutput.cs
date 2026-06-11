@@ -35,8 +35,7 @@ namespace StorageNetwork.Components
                 ? enrollment.ResolveGeyserOutputStorage()
                 : null;
             int sourceWorldId = GetOutputWorldId();
-            StorageSceneSnapshot snapshot = specificTarget == null ? StorageSceneCollector.CollectForWorld(sourceWorldId) : null;
-            List<Storage> targets = NetworkStorageTransferService.FindElementOutputTargets(output.elementHash, null, specificTarget, snapshot, sourceWorldId);
+            List<Storage> targets = NetworkStorageTransferService.FindElementOutputTargets(output.elementHash, null, specificTarget, null, sourceWorldId);
             float overflow = StoreElementInNetwork(output.elementHash, mass, temperature, output.addedDiseaseIdx, diseaseCount, targets);
             if (overflow > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
             {

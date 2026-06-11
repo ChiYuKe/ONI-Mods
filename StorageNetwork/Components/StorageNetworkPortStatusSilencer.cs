@@ -92,7 +92,9 @@ namespace StorageNetwork.Components
                    item == buildingStatusItems.LiquidPipeEmpty ||
                    item == buildingStatusItems.ConduitBlockedMultiples ||
                    item == buildingStatusItems.SolidConduitBlockedMultiples ||
-                   item == buildingStatusItems.NoStorageFilterSet;
+                   item == buildingStatusItems.NoStorageFilterSet ||
+                   item == buildingStatusItems.NoWireConnected ||
+                   item == buildingStatusItems.NeedPower;
         }
     }
 }

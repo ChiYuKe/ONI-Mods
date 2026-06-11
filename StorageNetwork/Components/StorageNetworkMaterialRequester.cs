@@ -663,21 +663,28 @@ namespace StorageNetwork.Components
                 yield break;
             }
 
-            List<Storage> sources = new List<Storage>();
-            foreach (StorageInfo info in StorageSceneCollector.Collect().Storages)
+            int worldId = StorageTargetSelector.GetObjectWorldId(gameObject);
+            foreach (Storage storage in StorageNetworkSourceIndexService.GetSourceStorages(worldId, true, new[] { tag }, BuildSourceExclusions()))
             {
-                Storage storage = info?.Storage;
-                if (info?.Minion == null && IsUsableSource(storage, tag))
+                if (IsUsableSource(storage, tag))
                 {
-                    sources.Add(storage);
+                    yield return storage;
+                }
+            }
+        }
+
+        private HashSet<Storage> BuildSourceExclusions()
+        {
+            HashSet<Storage> excluded = new HashSet<Storage>();
+            foreach (Storage storage in GetFabricatorStorages())
+            {
+                if (storage != null)
+                {
+                    excluded.Add(storage);
                 }
             }
 
-            sources.Sort((left, right) => right.GetAmountAvailable(tag).CompareTo(left.GetAmountAvailable(tag)));
-            foreach (Storage storage in sources)
-            {
-                yield return storage;
-            }
+            return excluded;
         }
 
         private bool IsUsableSource(Storage storage, Tag tag)

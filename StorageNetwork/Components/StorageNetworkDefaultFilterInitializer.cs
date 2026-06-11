@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
-using KSerialization;
+using StorageNetwork.Services;
 
 namespace StorageNetwork.Components
 {
@@ -9,30 +9,60 @@ namespace StorageNetwork.Components
     /// </summary>
     public sealed class StorageNetworkDefaultFilterInitializer : KMonoBehaviour
     {
-        [Serialize]
-        private bool initialized;
-
         [MyCmpGet]
         private Storage storage = null;
 
         [MyCmpGet]
         private TreeFilterable filterable = null;
 
+        [MyCmpGet]
+        private StorageNetworkFilterState filterState = null;
+
         protected override void OnSpawn()
         {
             base.OnSpawn();
-            if (initialized || storage == null || filterable == null)
+            filterState ??= StorageNetworkFilterState.Ensure(filterable) ?? gameObject.AddOrGet<StorageNetworkFilterState>();
+            if (storage == null || filterable == null || filterState == null)
             {
+                return;
+            }
+
+            StorageNetworkFilterConfigurator.Configure(filterable);
+            if (filterState.DefaultInitialized || filterState.UserConfigured)
+            {
+                return;
+            }
+
+            if (HasExistingFilterSelection(filterable))
+            {
+                filterState.MarkDefaultInitialized();
+                return;
+            }
+
+            StorageNetworkPort port = GetComponent<StorageNetworkPort>();
+            if (port != null && !port.IsInput)
+            {
+                filterState.MarkDefaultInitialized();
                 return;
             }
 
             HashSet<Tag> defaultTags = BuildDefaultTags(storage.storageFilters);
             if (defaultTags.Count > 0)
             {
-                filterable.UpdateFilters(defaultTags);
+                using (StorageNetworkFilterState.SuppressUserConfigurationTracking())
+                {
+                    filterable.UpdateFilters(defaultTags);
+                }
             }
 
-            initialized = true;
+            filterState.MarkDefaultInitialized();
+        }
+
+        private static bool HasExistingFilterSelection(TreeFilterable filterable)
+        {
+            return filterable != null &&
+                   filterable.AcceptedTags != null &&
+                   filterable.AcceptedTags.Any(tag => tag != Tag.Invalid);
         }
 
         private static HashSet<Tag> BuildDefaultTags(IEnumerable<Tag> storageFilters)
@@ -50,13 +80,23 @@ namespace StorageNetwork.Components
                     continue;
                 }
 
-                tags.Add(filter);
                 if (DiscoveredResources.Instance == null)
                 {
+                    tags.Add(filter);
                     continue;
                 }
 
-                foreach (Tag discoveredTag in DiscoveredResources.Instance.GetDiscoveredResourcesFromTag(filter).Where(tag => tag != Tag.Invalid))
+                List<Tag> discoveredTags = DiscoveredResources.Instance
+                    .GetDiscoveredResourcesFromTag(filter)
+                    .Where(tag => tag != Tag.Invalid)
+                    .ToList();
+                if (discoveredTags.Count == 0)
+                {
+                    tags.Add(filter);
+                    continue;
+                }
+
+                foreach (Tag discoveredTag in discoveredTags)
                 {
                     tags.Add(discoveredTag);
                 }

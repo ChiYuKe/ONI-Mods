@@ -39,7 +39,12 @@ namespace StorageNetwork.Components
         private StorageNetworkPort port;
         private TreeFilterable filterable;
         private float requestCooldown;
+        private float nextRequestCheckSeconds;
+        private string cachedFilterSignature;
+        private HashSet<Tag> cachedRequestedTags;
         private string lastStatus;
+        private const float RequestCheckIntervalSeconds = 1f;
+        private const float SuccessfulRequestIntervalSeconds = 0.2f;
 
         public string LastStatus => lastStatus;
 
@@ -67,6 +72,7 @@ namespace StorageNetwork.Components
             {
                 lastStatus = string.Empty;
                 requestCooldown = 0f;
+                nextRequestCheckSeconds = 0f;
                 return;
             }
 
@@ -76,6 +82,13 @@ namespace StorageNetwork.Components
                 return;
             }
 
+            if (nextRequestCheckSeconds > 0f)
+            {
+                nextRequestCheckSeconds -= dt;
+                return;
+            }
+
+            StorageNetworkPerformanceCounters.RecordPortRequestAttempt();
             HashSet<Tag> tags = GetRequestedTags();
             if (tags.Count == 0)
             {
@@ -89,6 +102,7 @@ namespace StorageNetwork.Components
             if (remainingPacketAmount <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
             {
                 lastStatus = Loc.Get(Loc.UI.STORAGE_NETWORK.MATERIAL_STATUS_SATISFIED);
+                nextRequestCheckSeconds = RequestCheckIntervalSeconds;
                 return;
             }
 
@@ -107,7 +121,7 @@ namespace StorageNetwork.Components
             {
                 RequestedKg += moved;
                 lastStatus = string.Format(Loc.Get(Loc.UI.STORAGE_NETWORK.MATERIAL_STATUS_REQUESTED), GameUtil.GetFormattedMass(moved), GetRequestName(tags));
-                requestCooldown = 0f;
+                nextRequestCheckSeconds = SuccessfulRequestIntervalSeconds;
                 return;
             }
 
@@ -156,6 +170,13 @@ namespace StorageNetwork.Components
         public void ResetRequestedAmount()
         {
             RequestedKg = 0f;
+        }
+
+        public void InvalidateRequestCache()
+        {
+            cachedFilterSignature = null;
+            cachedRequestedTags = null;
+            nextRequestCheckSeconds = 0f;
         }
 
         public float GetOutputAmountKg()
@@ -237,7 +258,7 @@ namespace StorageNetwork.Components
 
         private void EnsureComponents()
         {
-            storage ??= GetComponent<Storage>();
+            storage ??= StorageNetworkPortPickupBufferStorage.FindMainStorage(gameObject);
             port ??= GetComponent<StorageNetworkPort>();
             filterable ??= GetComponent<TreeFilterable>();
         }
@@ -283,9 +304,17 @@ namespace StorageNetwork.Components
 
         private HashSet<Tag> GetRequestedTags()
         {
+            string signature = BuildFilterSignature();
+            if (cachedRequestedTags != null && cachedFilterSignature == signature)
+            {
+                return new HashSet<Tag>(cachedRequestedTags);
+            }
+
             HashSet<Tag> tags = new HashSet<Tag>();
             if (filterable == null || filterable.AcceptedTags == null || filterable.AcceptedTags.Count == 0)
             {
+                cachedFilterSignature = signature;
+                cachedRequestedTags = tags;
                 return tags;
             }
 
@@ -294,7 +323,19 @@ namespace StorageNetwork.Components
                 AddTagOrDiscoveredChildren(tags, tag);
             }
 
+            cachedFilterSignature = signature;
+            cachedRequestedTags = new HashSet<Tag>(tags);
             return tags;
+        }
+
+        private string BuildFilterSignature()
+        {
+            if (filterable == null || filterable.AcceptedTags == null || filterable.AcceptedTags.Count == 0)
+            {
+                return string.Empty;
+            }
+
+            return string.Join("|", filterable.AcceptedTags.Where(tag => tag != Tag.Invalid).Select(tag => tag.Name).OrderBy(name => name));
         }
 
         private static void AddTagOrDiscoveredChildren(HashSet<Tag> tags, Tag tag)

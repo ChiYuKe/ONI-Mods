@@ -1,5 +1,7 @@
 using KSerialization;
 using StorageNetwork.Buildings;
+using StorageNetwork.Core;
+using StorageNetwork.Services;
 
 namespace StorageNetwork.Components
 {
@@ -40,6 +42,13 @@ namespace StorageNetwork.Components
             base.OnSpawn();
             kind = InferKindFromPrefabId(kind);
             EnsurePortAutomationComponents();
+            StorageSceneRegistry.Register(gameObject);
+        }
+
+        protected override void OnCleanUp()
+        {
+            StorageSceneRegistry.Unregister(gameObject);
+            base.OnCleanUp();
         }
 
         private StorageNetworkPortKind InferKindFromPrefabId(StorageNetworkPortKind fallback)
@@ -72,6 +81,10 @@ namespace StorageNetwork.Components
         private void EnsurePortAutomationComponents()
         {
             gameObject.AddOrGet<StorageNetworkPortStatusSilencer>();
+            gameObject.AddOrGet<StorageNetworkPortStatusReporter>();
+            ConfigurePortFilter();
+            ConfigureManualOperation();
+            ConfigurePortStorage();
 
             if (Kind == StorageNetworkPortKind.SolidInput)
             {
@@ -86,6 +99,76 @@ namespace StorageNetwork.Components
             {
                 gameObject.AddOrGet<StorageNetworkPortRequester>();
             }
+        }
+
+        private void ConfigurePortFilter()
+        {
+            TreeFilterable filterable = GetComponent<TreeFilterable>();
+            if (filterable == null)
+            {
+                return;
+            }
+
+            StorageNetworkFilterConfigurator.Configure(filterable);
+        }
+
+        private void ConfigurePortStorage()
+        {
+            Storage storage = StorageNetworkPortPickupBufferStorage.FindMainStorage(gameObject);
+            if (storage == null)
+            {
+                return;
+            }
+
+            storage.allowItemRemoval = false;
+            storage.fetchCategory = Storage.FetchCategory.Building;
+            StorageNetworkPortPickupState.SyncStoredItems(storage, false);
+
+            StorageNetworkPortPickupBufferStorage pickupBuffer = GetComponent<StorageNetworkPortPickupBufferStorage>();
+            if (Kind == StorageNetworkPortKind.SolidOutput)
+            {
+                pickupBuffer = gameObject.AddOrGet<StorageNetworkPortPickupBufferStorage>();
+            }
+
+            pickupBuffer?.OnManualOperationChanged(IsManualDuplicantOperationAllowed());
+            StorageNetworkFetchBridgeCache.ClearPortLookups();
+            StorageSceneRegistry.RefreshSolidOutputPickupBuffer(gameObject);
+        }
+
+        private void ConfigureManualOperation()
+        {
+            if (!SupportsManualDuplicantOperation)
+            {
+                return;
+            }
+
+            gameObject.AddOrGet<Automatable>();
+        }
+
+        public bool SupportsManualDuplicantOperation => Kind == StorageNetworkPortKind.SolidInput ||
+                                                        Kind == StorageNetworkPortKind.SolidOutput;
+
+        public bool IsManualDuplicantOperationAllowed()
+        {
+            if (!SupportsManualDuplicantOperation)
+            {
+                return false;
+            }
+
+            Automatable automatable = GetComponent<Automatable>();
+            return automatable == null || !automatable.GetAutomationOnly();
+        }
+
+        public void SetManualDuplicantOperationAllowed(bool allowed)
+        {
+            if (!SupportsManualDuplicantOperation)
+            {
+                return;
+            }
+
+            Automatable automatable = gameObject.AddOrGet<Automatable>();
+            automatable.SetAutomationOnly(!allowed);
+            ConfigurePortStorage();
         }
     }
 }
