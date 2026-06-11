@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using StorageNetwork.Components;
 using StorageNetwork.Core;
+using StorageNetwork.Services;
 using TUNING;
 using UnityEngine;
 
@@ -84,11 +85,16 @@ namespace StorageNetwork.Buildings
 
             go.AddOrGet<StorageNetworkPort>().Configure(Spec.Kind);
             go.AddOrGet<StorageNetworkPortStatusSilencer>();
+            go.AddOrGet<StorageNetworkPortStatusReporter>();
             go.AddOrGet<UserNameable>();
-            if (Spec.Kind == StorageNetworkPortKind.SolidInput)
+            if (Spec.Kind == StorageNetworkPortKind.SolidInput || Spec.Kind == StorageNetworkPortKind.SolidOutput)
             {
                 Automatable automatable = go.AddOrGet<Automatable>();
                 automatable.SetAutomationOnly(false);
+            }
+
+            if (Spec.Kind == StorageNetworkPortKind.SolidInput)
+            {
                 go.AddOrGet<StorageNetworkPortManualFetch>();
                 ConfigureSolidInputConsumer(go, storage, Spec);
             }
@@ -101,11 +107,15 @@ namespace StorageNetwork.Buildings
             {
                 go.AddOrGet<StorageNetworkPortRequester>();
                 ConfigureOutputDispenser(go, storage, Spec);
+                if (Spec.Kind == StorageNetworkPortKind.SolidOutput)
+                {
+                    StorageNetworkPortPickupBufferStorage.ConfigurePrefab(go, Spec.CapacityKg);
+                }
             }
 
             if (ShouldShowFilterUI(Spec))
             {
-                go.AddOrGet<TreeFilterable>();
+                StorageNetworkFilterConfigurator.Configure(go.AddOrGet<TreeFilterable>());
                 if (ShouldInitializeDefaultFilters(Spec))
                 {
                     go.AddOrGet<StorageNetworkDefaultFilterInitializer>();
@@ -160,7 +170,8 @@ namespace StorageNetwork.Buildings
 
         private static bool ShouldInitializeDefaultFilters(StorageNetworkPortSpec spec)
         {
-            return spec.Kind != StorageNetworkPortKind.LiquidOutput &&
+            return spec.Direction == StorageNetworkPortDirection.Input &&
+                   spec.Kind != StorageNetworkPortKind.LiquidOutput &&
                    spec.Kind != StorageNetworkPortKind.GasOutput;
         }
 
@@ -295,7 +306,8 @@ namespace StorageNetwork.Buildings
             StorageNetworkPortDirection.Output,
             SolidOutputPortAnimFile,
             OverlayModes.SolidConveyor.ID,
-            ConduitType.Solid);
+            ConduitType.Solid,
+            2000f);
 
         public static readonly StorageNetworkPortSpec LiquidInput = Create(
             StorageNetworkLiquidInputPortConfig.ID,

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using StorageNetwork.Components;
 using StorageNetwork.Core;
+using StorageNetwork.Services;
 using TUNING;
 using UnityEngine;
 
@@ -64,12 +65,12 @@ namespace StorageNetwork.Buildings
                 storage.storageFilters = spec.Filters;
                 storage.storageFullMargin = STORAGE.STORAGE_LOCKER_FILLED_MARGIN;
                 storage.fetchCategory = FetchCategory;
-                storage.showCapacityStatusItem = true;
-                storage.showCapacityAsMainStatus = true;
+                storage.showCapacityStatusItem = false;
+                storage.showCapacityAsMainStatus = false;
                 storage.SetDefaultStoredItemModifiers(Storage.StandardInsulatedStorage);
 
                 go.AddOrGet<StorageNetworkStorageConnector>();
-                go.AddOrGet<TreeFilterable>();
+                StorageNetworkFilterConfigurator.Configure(go.AddOrGet<TreeFilterable>());
                 go.AddOrGet<StorageNetworkDefaultFilterInitializer>();
             }
             else
