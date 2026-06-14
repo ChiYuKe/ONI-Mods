@@ -71,21 +71,23 @@ namespace StorageNetwork.ProductionOrders
             }
 
             HashSet<Storage> visited = new HashSet<Storage>();
-            foreach (StorageInfo info in StorageSceneCollector.Collect().Storages)
+            int activeWorldId = ClusterManager.Instance != null ? ClusterManager.Instance.activeWorldId : -1;
+            foreach (Storage storage in StorageSceneCollector.CollectLightweightForWorld(activeWorldId).Storages)
             {
-                if (info?.ContentStorages == null || !StorageNetworkStorageRules.IsServerStorage(info.Storage))
+                if (storage == null ||
+                    !StorageNetworkStorageRules.IsServerStorage(storage) ||
+                    !visited.Add(storage))
                 {
                     continue;
                 }
 
-                foreach (Storage storage in info.ContentStorages)
+                foreach (Storage contentStorage in StorageNetworkProductionStorageCollector.GetProductionStorages(storage, storage.GetComponent<ComplexFabricator>()))
                 {
-                    if (storage != null &&
-                        StorageNetworkStorageRules.IsServerStorage(storage) &&
-                        visited.Add(storage) &&
-                        GetComponentInstanceId(storage) == instanceId)
+                    if (contentStorage != null &&
+                        StorageNetworkStorageRules.IsServerStorage(contentStorage) &&
+                        GetComponentInstanceId(contentStorage) == instanceId)
                     {
-                        return storage;
+                        return contentStorage;
                     }
                 }
             }
