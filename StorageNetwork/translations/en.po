@@ -2039,3 +2039,627 @@ msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_FILTER_ABNORMAL"
 msgid "异常"
 msgstr "Abnormal"
 
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PORT_NETWORK_SETTINGS_BUTTON"
+msgid "储存网络设置"
+msgstr "Storage Network Settings"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PORT_NETWORK_SETTINGS_TOOLTIP"
+msgid "打开储存网络窗口，并进入该端口的设置界面。"
+msgstr "Open the Storage Network window and jump to this port's settings."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CATEGORY_ENERGY_GENERATOR"
+msgid "发电设施"
+msgstr "Power Generators"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CATEGORY_MINION"
+msgid "复制人"
+msgstr "Duplicants"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.HEALTH_POWER_STORED"
+msgid "储电"
+msgstr "Power Stored"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.HEALTH_POWER_LEAK"
+msgid "泄露"
+msgstr "Leakage"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.VIRTUAL_POWER_ITEM_NAME"
+msgid "虚拟电力"
+msgstr "Virtual Power"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.VIRTUAL_POWER_ITEM_DETAILS"
+msgid "容量：{0}    泄露：{1}"
+msgstr "Capacity: {0}    Leakage: {1}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.VIRTUAL_POWER_ITEM_TOOLTIP"
+msgid "电池服务器中的虚拟电力，不是可搬运的实体物品。"
+msgstr "Virtual power stored in battery servers. This is not a physical item that can be carried."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CHANGE_TARGET"
+msgid "更换目标"
+msgstr "Change Target"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.POWER_PORT_STORAGE_DETAILS"
+msgid "储电缓存：{0} / {1}\n剩余容量：{2}"
+msgstr "Power buffer: {0} / {1}\nFree capacity: {2}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.POWER_PORT_BATTERY_TITLE"
+msgid "端口电池"
+msgstr "Port Battery"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.POWER_PORT_BATTERY_NAME"
+msgid "本地电量"
+msgstr "Local Charge"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.COLD_STORAGE_COOLING_TITLE"
+msgid "冷库降温"
+msgstr "Cold Storage Cooling"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.COLD_STORAGE_COOLING_SIDE_SCREEN_TITLE"
+msgid "冷库降温"
+msgstr "Cold Storage Cooling"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.COLD_STORAGE_COOLING_CURRENT"
+msgid "目标温度"
+msgstr "Target Temperature"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.COLD_STORAGE_COOLING_AMOUNT"
+msgid "目标温度"
+msgstr "Target Temperature"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.COLD_STORAGE_COOLING_DEFAULT"
+msgid "默认值"
+msgstr "Default"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.COLD_STORAGE_COOLING_VALUE"
+msgid "目标温度：{0}"
+msgstr "Target temperature: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.COLD_STORAGE_COOLING_DESC"
+msgid "调整冷库服务器把内容物冷却到的目标温度；储存网络窗口与详情侧屏使用同一数值。"
+msgstr "Adjust the target temperature that cold storage servers cool their contents to. The Storage Network window and details side screen share this value."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_PORT_SETTINGS_TITLE"
+msgid "端口设置"
+msgstr "Port Settings"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_PORT_INPUT_STATUS"
+msgid "材料输入端口"
+msgstr "Material Input Port"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_PORT_OUTPUT_STATUS"
+msgid "材料输出端口"
+msgstr "Material Output Port"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LIQUID_PORT_INPUT_STATUS"
+msgid "液体输入端口"
+msgstr "Liquid Input Port"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LIQUID_PORT_OUTPUT_STATUS"
+msgid "液体输出端口"
+msgstr "Liquid Output Port"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GAS_PORT_INPUT_STATUS"
+msgid "气体输入端口"
+msgstr "Gas Input Port"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GAS_PORT_OUTPUT_STATUS"
+msgid "气体输出端口"
+msgstr "Gas Output Port"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.POWER_PORT_INPUT_STATUS"
+msgid "电力输入端口"
+msgstr "Power Input Port"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.POWER_PORT_OUTPUT_STATUS"
+msgid "电力输出端口"
+msgstr "Power Output Port"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_PORT_DIRECTION"
+msgid "端口方向"
+msgstr "Port Direction"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_PORT_DIRECTION_INPUT"
+msgid "输入网络"
+msgstr "Input to Network"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_PORT_DIRECTION_OUTPUT"
+msgid "输出网络"
+msgstr "Output from Network"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_PORT_MANUAL_OPERATION_ALLOWED"
+msgid "允许人力操作"
+msgstr "Allow Duplicant Operation"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PORT_STATUS_ITEM_NAME"
+msgid "储存网络端口"
+msgstr "Storage Network Port"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PORT_STATUS_ITEM_TOOLTIP"
+msgid "{0}"
+msgstr "{0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PORT_STATUS_ONLINE"
+msgid "网络：在线"
+msgstr "Network: Online"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PORT_STATUS_OFFLINE"
+msgid "网络：离线（当前星球没有在线核心）"
+msgstr "Network: Offline (no online core on this planetoid)"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PORT_STATUS_SHORT_ONLINE"
+msgid "在线"
+msgstr "Online"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PORT_STATUS_SHORT_OFFLINE"
+msgid "离线"
+msgstr "Offline"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PORT_STATUS_DIRECTION"
+msgid "方向：{0}"
+msgstr "Direction: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PORT_STATUS_CACHE"
+msgid "端口缓存：{0} / {1}"
+msgstr "Port cache: {0} / {1}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PORT_STATUS_REMAINING"
+msgid "剩余容量：{0}"
+msgstr "Free capacity: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PORT_STATUS_FILTERS"
+msgid "筛选：{0}"
+msgstr "Filter: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PORT_STATUS_FILTERS_EMPTY"
+msgid "未选择物品"
+msgstr "No item selected"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PORT_STATUS_FILTERS_ANY"
+msgid "不限制"
+msgstr "Any"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PORT_STATUS_MANUAL"
+msgid "人力操作：{0}"
+msgstr "Duplicant operation: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PORT_STATUS_MANUAL_ALLOWED"
+msgid "允许"
+msgstr "Allowed"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PORT_STATUS_MANUAL_FORBIDDEN"
+msgid "禁止"
+msgstr "Forbidden"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PORT_STATUS_INPUT_ENABLED"
+msgid "内容物入网：{0}"
+msgstr "Store contents: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PORT_STATUS_OUTPUT_ENABLED"
+msgid "请求输出：{0}"
+msgstr "Request output: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PORT_STATUS_INPUT_SUMMARY"
+msgid "内容物入网：{0}  {1}"
+msgstr "Store contents: {0}  {1}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PORT_STATUS_OUTPUT_SUMMARY"
+msgid "请求输出：{0}  {1}"
+msgstr "Request output: {0}  {1}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PORT_STATUS_POLICY"
+msgid "存放策略：{0}"
+msgstr "Storage policy: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PORT_STATUS_SOURCE_POLICY"
+msgid "来源策略：{0}"
+msgstr "Source policy: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PORT_STATUS_REQUEST"
+msgid "网络调度：{0}"
+msgstr "Network dispatch: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PORT_STATUS_BUFFER"
+msgid "复制人取货缓冲：{0}"
+msgstr "Duplicant pickup buffer: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PORT_STATUS_OUTPUT_AMOUNT"
+msgid "输出包目标：{0}"
+msgstr "Output packet target: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.INPUT_PORT_STORE_TITLE"
+msgid "内容物入网"
+msgstr "Store Contents"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.INPUT_PORT_STORE_ENABLED"
+msgid "向网络输入"
+msgstr "Input to Network"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.INPUT_PORT_STORE_DESC"
+msgid "开启后，端口会把自身缓存中的内容物自动存入储存网络中的匹配服务器。"
+msgstr "When enabled, the port automatically stores its buffered contents in matching Storage Network servers."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.INPUT_PORT_STORE_STATUS"
+msgid "入网状态：{0}"
+msgstr "Input status: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_PORT_REQUEST_TITLE"
+msgid "内容物出网"
+msgstr "Request Contents"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_PORT_REQUEST_ENABLED"
+msgid "向管道输出"
+msgstr "Output to Pipe"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_PORT_REQUEST_DESC"
+msgid "开启后，端口会从储存网络中的匹配服务器请求液体，并输出到连接的液体管道。"
+msgstr "When enabled, the port requests liquids from matching Storage Network servers and outputs them to the connected liquid pipe."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_PORT_REQUEST_STATUS"
+msgid "出网状态：{0}"
+msgstr "Output status: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_PORT_SOURCE_POLICY"
+msgid "来源策略"
+msgstr "Source Policy"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_PORT_FILTER"
+msgid "输出筛选"
+msgstr "Output Filter"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_PORT_FILTER_ANY"
+msgid "任意液体"
+msgstr "Any Liquid"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_PORT_FILTER_SELECT"
+msgid "选择输出液体"
+msgstr "Select Liquid Output"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_PORT_FILTER_DESC"
+msgid "选择当前网络服务器中已有的液体；端口只会向管道输出所选液体。"
+msgstr "Select a liquid currently available in network servers. The port only outputs the selected liquid to the pipe."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_PORT_FILTER_EMPTY"
+msgid "当前网络服务器中没有可输出液体"
+msgstr "No liquids are available to output from the current network servers."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_OUTPUT_PORT_REQUEST_TITLE"
+msgid "材料出网"
+msgstr "Material Output"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_OUTPUT_PORT_REQUEST_ENABLED"
+msgid "向轨道输出"
+msgstr "Output to Rail"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_OUTPUT_PORT_REQUEST_DESC"
+msgid "开启后，端口会从储存网络中的匹配服务器请求材料，并输出到连接的运输轨道。"
+msgstr "When enabled, the port requests materials from matching Storage Network servers and outputs them to the connected conveyor rail."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_OUTPUT_PORT_REQUEST_STATUS"
+msgid "出网状态：{0}"
+msgstr "Output status: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_OUTPUT_PORT_FILTER_ANY"
+msgid "任意材料"
+msgstr "Any Material"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_OUTPUT_PORT_FILTER_SELECT"
+msgid "选择输出材料"
+msgstr "Select Material Output"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_OUTPUT_PORT_FILTER_DESC"
+msgid "选择当前网络服务器中已有的材料；端口只会向运输轨道输出所选材料。"
+msgstr "Select a material currently available in network servers. The port only outputs the selected material to the conveyor rail."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_OUTPUT_PORT_FILTER_EMPTY"
+msgid "当前网络服务器中没有可输出材料"
+msgstr "No materials are available to output from the current network servers."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_OUTPUT_PORT_MANUAL_ALLOWED_TOOLTIP"
+msgid "允许复制人从材料出网端口缓存中取货。"
+msgstr "Allow Duplicants to pick up items from the material output port buffer."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_OUTPUT_PORT_MANUAL_FORBIDDEN_TOOLTIP"
+msgid "禁止复制人从材料出网端口缓存中取货。"
+msgstr "Prevent Duplicants from picking up items from the material output port buffer."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_PORT_LIMIT_ENABLED"
+msgid "启用输出限额"
+msgstr "Enable Output Limit"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_PORT_LIMIT"
+msgid "输出限额：{0} / {1}"
+msgstr "Output limit: {0} / {1}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_PORT_SET_LIMIT"
+msgid "设置限额"
+msgstr "Set Limit"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_PORT_REQUEST_RATE"
+msgid "请求速率"
+msgstr "Request Rate"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_PORT_OUTPUT_RATE"
+msgid "输出速率"
+msgstr "Output Rate"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_PORT_REQUEST_RATE_VALUE"
+msgid "{0}/秒"
+msgstr "{0}/s"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_PORT_SET_REQUEST_RATE"
+msgid "设置请求速率"
+msgstr "Set Request Rate"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.POWER_INPUT_PORT_STORE_TITLE"
+msgid "电力入网"
+msgstr "Power Input"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.POWER_INPUT_PORT_STORE_ENABLED"
+msgid "向网络输入"
+msgstr "Input to Network"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.POWER_INPUT_PORT_STORE_DESC"
+msgid "开启后，端口会把连接电路中的外部电力存入储存网络中的电池服务器。"
+msgstr "When enabled, the port stores external power from the connected circuit in Storage Network battery servers."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.POWER_INPUT_PORT_STORE_AUTO_DESC"
+msgid "自动存入已接入网络且仍有容量的电池服务器。"
+msgstr "Automatically stores power in connected battery servers that still have capacity."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.POWER_OUTPUT_PORT_REQUEST_TITLE"
+msgid "电力出网"
+msgstr "Power Output"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.POWER_OUTPUT_PORT_REQUEST_ENABLED"
+msgid "向电路输出"
+msgstr "Output to Circuit"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.POWER_OUTPUT_PORT_REQUEST_DESC"
+msgid "开启后，端口会从储存网络中的电池服务器取电，并输出到连接的电路。"
+msgstr "When enabled, the port draws power from Storage Network battery servers and outputs it to the connected circuit."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.POWER_OUTPUT_PORT_SOURCE_AUTO_DESC"
+msgid "自动从已接入网络的电池服务器中取电。"
+msgstr "Automatically draws power from connected network battery servers."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.POWER_OUTPUT_PORT_LIMIT"
+msgid "输出限额：{0} / {1}"
+msgstr "Output limit: {0} / {1}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.POWER_OUTPUT_PORT_SET_LIMIT"
+msgid "设置输出限额"
+msgstr "Set Output Limit"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.POWER_OUTPUT_PORT_LIMIT_LABEL"
+msgid "电力限额"
+msgstr "Power Limit"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.POWER_PORT_RATE"
+msgid "电力速率"
+msgstr "Power Rate"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.POWER_PORT_INPUT_RATE"
+msgid "输入速率"
+msgstr "Input Rate"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.POWER_PORT_OUTPUT_RATE"
+msgid "输出速率"
+msgstr "Output Rate"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.POWER_PORT_RATE_VALUE"
+msgid "{0:0.#} W"
+msgstr "{0:0.#} W"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.POWER_PORT_SET_RATE"
+msgid "设置电力速率"
+msgstr "Set Power Rate"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.POWER_INPUT_PORT_RATE_TOOLTIP"
+msgid "设置电力入网端口从外部电路存入网络的最大速率：{0}"
+msgstr "Set the maximum rate at which the power input port stores power from the external circuit into the network: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.POWER_OUTPUT_PORT_RATE_TOOLTIP"
+msgid "设置电力出网端口向外部电路输出的最大速率：{0}"
+msgstr "Set the maximum rate at which the power output port sends power to the external circuit: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.POWER_INPUT_PORT_STATUS_ITEM"
+msgid "电力入网端口：{0}"
+msgstr "Power Input Port: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.POWER_INPUT_PORT_STATUS_TOOLTIP"
+msgid "向网络输入：{0}\n网络：{1}\n存放策略：{2}\n输入速率：{3}\n端口缓存：{4} / {5}\n入网状态：{6}"
+msgstr "Input to network: {0}\nNetwork: {1}\nStorage policy: {2}\nInput rate: {3}\nPort buffer: {4} / {5}\nInput status: {6}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.POWER_OUTPUT_PORT_STATUS_ITEM"
+msgid "电力出网端口：{0}"
+msgstr "Power Output Port: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.POWER_OUTPUT_PORT_STATUS_TOOLTIP"
+msgid "向电路输出：{0}\n网络：{1}\n来源策略：{2}\n输出限额：{3}\n输出速率：{4}\n端口缓存：{5} / {6}\n出网状态：{7}"
+msgstr "Output to circuit: {0}\nNetwork: {1}\nSource policy: {2}\nOutput limit: {3}\nOutput rate: {4}\nPort buffer: {5} / {6}\nOutput status: {7}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.POWER_STATUS_WAITING_EXTERNAL"
+msgid "等待外部供电"
+msgstr "Waiting for external power"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.POWER_STATUS_NO_CAPACITY"
+msgid "电池服务器已满"
+msgstr "Battery servers are full"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.POWER_STATUS_NO_STORED"
+msgid "网络电力不足"
+msgstr "Not enough network power"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.POWER_STATUS_STORED"
+msgid "当前输入 {0}"
+msgstr "Currently inputting {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.POWER_STATUS_OUTPUT"
+msgid "已输出 {0}"
+msgstr "Output {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.POWER_STATUS_BUFFER_FULL"
+msgid "端口电池已满"
+msgstr "Port battery is full"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.POWER_STATUS_CHARGED"
+msgid "当前充入 {0}"
+msgstr "Currently charging {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.POWER_STATUS_REFILLED"
+msgid "已从网络取电 {0}"
+msgstr "Refilled {0} from network"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SOLID_INPUT_PORT_STATUS_ITEM"
+msgid "固体入网端口：{0}"
+msgstr "Solid Input Port: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SOLID_INPUT_PORT_STATUS_TOOLTIP"
+msgid "向网络输入：{0}\n网络：{1}\n存放策略：{2}\n端口缓存：{3} / {4}\n入网状态：{5}"
+msgstr "Input to network: {0}\nNetwork: {1}\nStorage policy: {2}\nPort buffer: {3} / {4}\nInput status: {5}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SOLID_OUTPUT_PORT_STATUS_ITEM"
+msgid "固体出网端口：{0}"
+msgstr "Solid Output Port: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SOLID_OUTPUT_PORT_STATUS_TOOLTIP"
+msgid "向轨道输出：{0}\n网络：{1}\n来源策略：{2}\n输出筛选：{3}\n输出限额：{4}\n请求速率：{5}\n端口缓存：{6} / {7}\n出网状态：{8}\n人力操作：{9}"
+msgstr "Output to rail: {0}\nNetwork: {1}\nSource policy: {2}\nOutput filter: {3}\nOutput limit: {4}\nRequest rate: {5}\nPort buffer: {6} / {7}\nOutput status: {8}\nDuplicant operation: {9}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LIQUID_INPUT_PORT_STATUS_ITEM"
+msgid "液体入网端口：{0}"
+msgstr "Liquid Input Port: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LIQUID_INPUT_PORT_STATUS_TOOLTIP"
+msgid "向网络输入：{0}\n网络：{1}\n存放策略：{2}\n端口缓存：{3} / {4}\n入网状态：{5}"
+msgstr "Input to network: {0}\nNetwork: {1}\nStorage policy: {2}\nPort buffer: {3} / {4}\nInput status: {5}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LIQUID_OUTPUT_PORT_STATUS_ITEM"
+msgid "液体出网端口：{0}"
+msgstr "Liquid Output Port: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LIQUID_OUTPUT_PORT_STATUS_TOOLTIP"
+msgid "向管道输出：{0}\n网络：{1}\n来源策略：{2}\n输出筛选：{3}\n输出限额：{4}\n请求速率：{5}\n端口缓存：{6} / {7}\n出网状态：{8}"
+msgstr "Output to pipe: {0}\nNetwork: {1}\nSource policy: {2}\nOutput filter: {3}\nOutput limit: {4}\nRequest rate: {5}\nPort buffer: {6} / {7}\nOutput status: {8}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GAS_INPUT_PORT_STORE_TITLE"
+msgid "气体入网"
+msgstr "Gas Input"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GAS_INPUT_PORT_STORE_ENABLED"
+msgid "向网络输入"
+msgstr "Input to Network"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GAS_INPUT_PORT_STORE_DESC"
+msgid "开启后，端口会把气体管道输入的气体存入储存网络中的匹配服务器。"
+msgstr "When enabled, the port stores gas received from gas pipes in matching Storage Network servers."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GAS_INPUT_PORT_STORE_STATUS"
+msgid "入网状态：{0}"
+msgstr "Input status: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GAS_OUTPUT_PORT_REQUEST_TITLE"
+msgid "气体出网"
+msgstr "Gas Output"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GAS_OUTPUT_PORT_REQUEST_ENABLED"
+msgid "向管道输出"
+msgstr "Output to Pipe"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GAS_OUTPUT_PORT_REQUEST_DESC"
+msgid "开启后，端口会从储存网络中的匹配服务器请求气体，并输出到连接的气体管道。"
+msgstr "When enabled, the port requests gas from matching Storage Network servers and outputs it to the connected gas pipe."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GAS_OUTPUT_PORT_REQUEST_STATUS"
+msgid "出网状态：{0}"
+msgstr "Output status: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GAS_OUTPUT_PORT_FILTER_ANY"
+msgid "任意气体"
+msgstr "Any Gas"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GAS_OUTPUT_PORT_FILTER_SELECT"
+msgid "选择输出气体"
+msgstr "Select Gas Output"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GAS_OUTPUT_PORT_FILTER_DESC"
+msgid "选择当前网络服务器中已有的气体；端口只会向管道输出所选气体。"
+msgstr "Select a gas currently available in network servers. The port only outputs the selected gas to the pipe."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GAS_OUTPUT_PORT_FILTER_EMPTY"
+msgid "当前网络服务器中没有可输出气体"
+msgstr "No gases are available to output from the current network servers."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GAS_INPUT_PORT_STATUS_ITEM"
+msgid "气体入网端口：{0}"
+msgstr "Gas Input Port: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GAS_INPUT_PORT_STATUS_TOOLTIP"
+msgid "向网络输入：{0}\n网络：{1}\n存放策略：{2}\n端口缓存：{3} / {4}\n入网状态：{5}"
+msgstr "Input to network: {0}\nNetwork: {1}\nStorage policy: {2}\nPort buffer: {3} / {4}\nInput status: {5}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GAS_OUTPUT_PORT_STATUS_ITEM"
+msgid "气体出网端口：{0}"
+msgstr "Gas Output Port: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GAS_OUTPUT_PORT_STATUS_TOOLTIP"
+msgid "向管道输出：{0}\n网络：{1}\n来源策略：{2}\n输出筛选：{3}\n输出限额：{4}\n请求速率：{5}\n端口缓存：{6} / {7}\n出网状态：{8}"
+msgstr "Output to pipe: {0}\nNetwork: {1}\nSource policy: {2}\nOutput filter: {3}\nOutput limit: {4}\nRequest rate: {5}\nPort buffer: {6} / {7}\nOutput status: {8}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GAS_OUTPUT_SIDE_SCREEN_TITLE"
+msgid "气体输出筛选"
+msgstr "Gas Output Filter"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENERGY_GENERATOR_SOURCE_DESC"
+msgid "发电设施会从已接入网络的服务器中自动寻找可用燃料。"
+msgstr "Power generators automatically look for usable fuel in connected network servers."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PICKER_OPTION_COUNT"
+msgid "可选网络服务器：{0} 个"
+msgstr "Available network servers: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PICKER_POLICY_HINT"
+msgid "自动策略会在已接入网络的服务器中寻找合适目标；指定服务器后，只从该服务器取料或向该服务器存放。"
+msgstr "Automatic policy finds a suitable target among connected network servers. When a server is specified, items are only taken from or stored in that server."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CORE_SIDE_SCREEN_WORLD_LABEL"
+msgid "星球"
+msgstr "Planetoid"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CORE_SIDE_SCREEN_STATUS_LABEL"
+msgid "状态"
+msgstr "Status"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CORE_SIDE_SCREEN_STORED_LABEL"
+msgid "容量"
+msgstr "Stored"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CORE_SIDE_SCREEN_REMAINING_LABEL"
+msgid "剩余"
+msgstr "Free"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CORE_SIDE_SCREEN_SERVERS_LABEL"
+msgid "服务器"
+msgstr "Servers"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CORE_SIDE_SCREEN_STORAGES_LABEL"
+msgid "接入储存"
+msgstr "Connected Storage"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CORE_SIDE_SCREEN_RELAY_LABEL"
+msgid "中继"
+msgstr "Relay"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LIQUID_OUTPUT_SIDE_SCREEN_TITLE"
+msgid "液体输出筛选"
+msgstr "Liquid Output Filter"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LIQUID_OUTPUT_SIDE_SCREEN_CURRENT"
+msgid "当前输出：{0}"
+msgstr "Current output: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LIQUID_OUTPUT_SIDE_SCREEN_HINT"
+msgid "快速选择液体出网端口要输出的液体。列表来自当前网络服务器中已有的液体，切换后会替换端口缓存并立即尝试输出。"
+msgstr "Quickly choose which liquid the liquid output port should output. The list comes from liquids currently stored in network servers; switching replaces the port buffer and immediately attempts output."
+
