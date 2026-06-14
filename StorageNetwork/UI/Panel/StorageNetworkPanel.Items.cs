@@ -1,0 +1,312 @@
+using System.Text;
+using System.Linq;
+using System.Collections.Generic;
+using System.Globalization;
+using StorageNetwork.Components;
+using StorageNetwork.Core;
+using StorageNetwork.Services;
+using TMPro;
+using UnityEngine;
+using UnityEngine.UI;
+
+namespace StorageNetwork.UI
+{
+    public sealed partial class StorageNetworkPanel : KScreen, IInputHandler
+    {
+
+
+        private void DropSelectedItem(Storage storage, string itemKey, float requestedMass)
+        {
+            List<GameObject> items = FindStoredItems(storage, itemKey);
+            if (storage == null || items.Count == 0)
+            {
+                selectedItemStorage = null;
+                selectedItemKey = null;
+                RefreshStoragePanel(StoragePanelRefreshMode.Structure);
+                return;
+            }
+
+            Tag dropTag = GetStoredItemTag(items[0]);
+            float mass = Mathf.Min(requestedMass, GetStoredItemsMass(items));
+
+            bool dropped = false;
+            float remainingToDrop = mass;
+            foreach (Storage sourceStorage in GetContentStorages(storage))
+            {
+                if (!dropTag.IsValid || remainingToDrop <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+                {
+                    break;
+                }
+
+                float sourceMass = GetStoredItemsMass(FindStoredItemsInStorage(sourceStorage, itemKey));
+                float dropMass = Mathf.Min(remainingToDrop, sourceMass);
+                if (dropMass <= 0f)
+                {
+                    continue;
+                }
+
+                bool sourceDropped = sourceStorage.DropSome(dropTag, dropMass, false, false, default(Vector3), true, true);
+                dropped |= sourceDropped;
+                if (sourceDropped)
+                {
+                    remainingToDrop -= dropMass;
+                }
+            }
+
+            if (!dropped)
+            {
+                foreach (GameObject item in items.ToList())
+                {
+                    Storage sourceStorage = FindItemStorage(storage, item);
+                    GameObject droppedItem = sourceStorage != null ? sourceStorage.Drop(item, true) : null;
+                    if (droppedItem != null)
+                    {
+                        droppedItem.transform.SetPosition(storage.transform.GetPosition());
+                    }
+                }
+            }
+
+            selectedItemStorage = null;
+            selectedItemKey = null;
+            lastListSignature = null;
+            RefreshStoragePanel(StoragePanelRefreshMode.Structure);
+        }
+
+        private void TransferSelectedItem(Storage source, string itemKey, Storage destination, float requestedMass)
+        {
+            List<GameObject> items = FindStoredItems(source, itemKey);
+            if (source == null || destination == null || items.Count == 0)
+            {
+                RefreshStoragePanel(StoragePanelRefreshMode.Structure);
+                return;
+            }
+
+            Tag tag = GetStoredItemTag(items[0]);
+            float maxTransfer = Mathf.Min(GetStoredItemsMass(items), Mathf.Max(0f, destination.RemainingCapacity()));
+            float remaining = Mathf.Clamp(requestedMass, 0f, maxTransfer);
+            float transferred = 0f;
+
+            foreach (Storage sourceStorage in GetContentStorages(source))
+            {
+                while (tag.IsValid && remaining > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+                {
+                    float sourceMass = GetStoredItemsMass(FindStoredItemsInStorage(sourceStorage, itemKey));
+                    if (sourceMass <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+                    {
+                        break;
+                    }
+
+                    float moved = sourceStorage.Transfer(destination, tag, Mathf.Min(remaining, sourceMass), block_events: false, hide_popups: true);
+                    if (moved <= 0f)
+                    {
+                        break;
+                    }
+
+                    transferred += moved;
+                    remaining -= moved;
+                }
+
+                if (remaining <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+                {
+                    break;
+                }
+            }
+
+            selectedItemStorage = null;
+            selectedItemKey = null;
+            lastListSignature = null;
+            RefreshStoragePanel(StoragePanelRefreshMode.Structure);
+        }
+
+        private static float GetStoredItemsMass(IEnumerable<GameObject> items)
+        {
+            return StorageItemUtility.GetMass(items);
+        }
+
+        private static float GetStoredItemMass(GameObject item)
+        {
+            return StorageItemUtility.GetMass(item);
+        }
+
+        private static List<GameObject> FindStoredItems(Storage storage, string itemKey)
+        {
+            return GetContentStorages(storage)
+                .SelectMany(contentStorage => FindStoredItemsInStorage(contentStorage, itemKey))
+                .ToList();
+        }
+
+        private static List<GameObject> FindStoredItemsInStorage(Storage storage, string itemKey)
+        {
+            return StorageItemUtility.FindStoredItems(storage, itemKey);
+        }
+
+        private static IEnumerable<Storage> GetContentStorages(Storage storage)
+        {
+            ComplexFabricator fabricator = storage != null ? storage.GetComponent<ComplexFabricator>() : null;
+            return StorageNetworkProductionStorageCollector.GetProductionStorages(storage, fabricator);
+        }
+
+        private static Storage FindItemStorage(Storage ownerStorage, GameObject item)
+        {
+            return GetContentStorages(ownerStorage)
+                .FirstOrDefault(storage => storage.items.Contains(item));
+        }
+
+        private static Tag GetStoredItemTag(GameObject item)
+        {
+            if (item == null)
+            {
+                return Tag.Invalid;
+            }
+
+            KPrefabID prefabId = item.GetComponent<KPrefabID>();
+            if (prefabId != null)
+            {
+                return prefabId.PrefabID();
+            }
+
+            PrimaryElement primaryElement = item.GetComponent<PrimaryElement>();
+            return primaryElement != null ? primaryElement.ElementID.CreateTag() : Tag.Invalid;
+        }
+
+        private IEnumerable<StorageNetworkCategoryGroup> BuildCategoryGroups(IEnumerable<StorageInfo> storages)
+        {
+            Dictionary<string, StorageNetworkCategoryGroup> groups = new Dictionary<string, StorageNetworkCategoryGroup>();
+            if (string.IsNullOrEmpty(StorageNetworkTextFormatting.NormalizeSearchText(mainSearchText)))
+            {
+                EnsureCategoryGroup(groups, StorageCategories.ModStorageKey);
+            }
+
+            foreach (StorageInfo storageInfo in storages)
+            {
+                string key = StorageNetworkStorageDisplay.GetCategoryKey(storageInfo);
+                StorageNetworkCategoryGroup group = EnsureCategoryGroup(groups, key);
+
+                group.Storages.Add(storageInfo);
+            }
+
+            return groups.Values.OrderBy(group => StorageCategories.GetOrder(group.Key));
+        }
+
+        private IEnumerable<StorageInfo> FilterStorageInfosBySearch(IEnumerable<StorageInfo> storages)
+        {
+            string query = StorageNetworkTextFormatting.NormalizeSearchText(mainSearchText);
+            if (string.IsNullOrEmpty(query))
+            {
+                return storages ?? Enumerable.Empty<StorageInfo>();
+            }
+
+            return (storages ?? Enumerable.Empty<StorageInfo>()).Where(storageInfo => MatchesMainSearch(storageInfo, query));
+        }
+
+        private static bool MatchesMainSearch(StorageInfo storageInfo, string query)
+        {
+            if (storageInfo == null)
+            {
+                return false;
+            }
+
+            if (StorageNetworkTextFormatting.ContainsSearchText(storageInfo.Name, query) ||
+                StorageNetworkTextFormatting.ContainsSearchText(StorageNetworkStorageDisplay.GetTypeName(storageInfo), query) ||
+                StorageNetworkTextFormatting.ContainsSearchText(StorageCategories.GetName(StorageNetworkStorageDisplay.GetCategoryKey(storageInfo)), query))
+            {
+                return true;
+            }
+
+            if (storageInfo.Geyser != null && StorageNetworkTextFormatting.ContainsSearchText(StorageNetworkGeyserText.GetStorageListDetails(storageInfo.Geyser), query))
+            {
+                return true;
+            }
+
+            foreach (GameObject item in storageInfo.StoredItems ?? Enumerable.Empty<GameObject>())
+            {
+                if (StorageNetworkTextFormatting.ContainsSearchText(StorageNetworkStorageDisplay.GetStoredItemName(item), query) ||
+                    StorageNetworkTextFormatting.ContainsSearchText(StorageItemUtility.GetStoredItemKey(item), query))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static StorageNetworkCategoryGroup EnsureCategoryGroup(Dictionary<string, StorageNetworkCategoryGroup> groups, string key)
+        {
+            if (!groups.TryGetValue(key, out StorageNetworkCategoryGroup group))
+            {
+                group = new StorageNetworkCategoryGroup(key, StorageCategories.GetName(key));
+                groups.Add(key, group);
+            }
+
+            return group;
+        }
+
+        private void EnsureSelectedCategory(List<StorageNetworkCategoryGroup> groups)
+        {
+            if (groups.Count == 0)
+            {
+                selectedCategoryKey = null;
+                return;
+            }
+
+            if (string.IsNullOrEmpty(selectedCategoryKey) || groups.All(group => group.Key != selectedCategoryKey))
+            {
+                selectedCategoryKey = groups[0].Key;
+            }
+        }
+
+        private static void FocusStorage(Storage storage)
+        {
+            FocusStorage(storage, 0f);
+        }
+
+        private static void FocusStorage(Storage storage, float screenOffsetRightPixels)
+        {
+            FocusObject(storage != null ? storage.gameObject : null, screenOffsetRightPixels);
+        }
+
+        private static void FocusObject(GameObject gameObject, float screenOffsetRightPixels)
+        {
+            if (gameObject == null || SelectTool.Instance == null)
+            {
+                return;
+            }
+
+            KSelectable selectable = gameObject.GetComponent<KSelectable>();
+            if (selectable != null)
+            {
+                SelectTool.Instance.SelectAndFocus(GetOffsetFocusPosition(gameObject.transform.position, screenOffsetRightPixels), selectable, Vector3.zero);
+            }
+        }
+
+        private static Vector3 GetOffsetFocusPosition(Vector3 targetPosition, float screenOffsetRightPixels)
+        {
+            if (screenOffsetRightPixels <= 0f || Camera.main == null || Screen.width <= 0)
+            {
+                return targetPosition;
+            }
+
+            float worldUnitsPerPixel = Camera.main.orthographic
+                ? Camera.main.orthographicSize * 2f / Mathf.Max(1f, Screen.height)
+                : 1f / Mathf.Max(1f, Screen.height);
+            targetPosition.x -= screenOffsetRightPixels * worldUnitsPerPixel;
+            return targetPosition;
+        }
+
+        private sealed class StorageNetworkCategoryGroup
+        {
+            public StorageNetworkCategoryGroup(string key, string name)
+            {
+                Key = key;
+                Name = name;
+            }
+
+            public string Key { get; }
+
+            public string Name { get; }
+
+            public List<StorageInfo> Storages { get; } = new List<StorageInfo>();
+        }
+    }
+}
+

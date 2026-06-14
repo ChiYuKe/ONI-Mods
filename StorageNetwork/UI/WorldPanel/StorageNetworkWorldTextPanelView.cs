@@ -14,7 +14,6 @@ namespace StorageNetwork.UI.WorldPanel
         private const float Height = 96f;
         private const float WorldScale = 0.025f;
         private const float VerticalOffset = 0.35f;
-        private static readonly bool DebugLogging = false;
 
         private RectTransform rootRect;
         private TextMeshProUGUI titleText;
@@ -39,7 +38,6 @@ namespace StorageNetwork.UI.WorldPanel
             Transform parent = GameScreenManager.Instance?.worldSpaceCanvas?.transform;
             if (parent == null)
             {
-                LogDebug("[StorageNetworkWorldTextPanel] worldSpaceCanvas is null; panel create deferred.");
                 return false;
             }
 
@@ -68,7 +66,6 @@ namespace StorageNetwork.UI.WorldPanel
             lineThreeText = CreateText("LineThree", root.transform, 9, FontStyles.Normal, new Color(0.78f, 0.84f, 0.90f, 1f), 28f);
 
             SetVisible(false);
-            LogDebug("[StorageNetworkWorldTextPanel] Panel created under worldSpaceCanvas.");
             return true;
         }
 
@@ -125,36 +122,6 @@ namespace StorageNetwork.UI.WorldPanel
                 lineOneText = null;
                 lineTwoText = null;
                 lineThreeText = null;
-            }
-        }
-
-        /// <summary>
-        /// 输出面板坐标诊断日志，用于玩家反馈“看不到/位置不对”时定位。
-        /// </summary>
-        public void LogDiagnostic(GameObject target)
-        {
-            if (rootRect == null || target == null)
-            {
-                return;
-            }
-
-            Debug.Log(string.Format(
-                "[StorageNetworkWorldTextPanel] visible={0}, target={1}, panelPos={2}, targetPos={3}, localScale={4}, lossyScale={5}, size={6}, parent={7}",
-                rootRect.gameObject.activeSelf,
-                target.name,
-                rootRect.transform.position,
-                target.transform.position,
-                rootRect.transform.localScale,
-                rootRect.transform.lossyScale,
-                rootRect.sizeDelta,
-                rootRect.transform.parent != null ? rootRect.transform.parent.name : "<null>"));
-        }
-
-        private static void LogDebug(string message)
-        {
-            if (DebugLogging)
-            {
-                Debug.Log(message);
             }
         }
 

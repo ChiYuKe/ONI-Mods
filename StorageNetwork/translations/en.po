@@ -163,6 +163,30 @@ msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKSMALLGASSERVER.E
 msgid "储存气体物品，并显示在储存网络窗口中。"
 msgstr "Stores gases and appears in the Storage Network window."
 
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKSMALLBATTERYSERVER.NAME"
+msgid "小型电池服务器"
+msgstr "Small Battery Server"
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKSMALLBATTERYSERVER.DESC"
+msgid "用于接入储存网络的小型电力储存服务器。"
+msgstr "A small power storage server for the Storage Network."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKSMALLBATTERYSERVER.EFFECT"
+msgid "储存电能，并显示在储存网络窗口中。"
+msgstr "Stores electrical energy and appears in the Storage Network window."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKSMALLCOLDSTORAGESERVER.NAME"
+msgid "小型冷库服务器"
+msgstr "Small Cold Storage Server"
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKSMALLCOLDSTORAGESERVER.DESC"
+msgid "用于接入储存网络的小型冷藏储存服务器。"
+msgstr "A small refrigerated storage server for the Storage Network."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKSMALLCOLDSTORAGESERVER.EFFECT"
+msgid "储存食物和食材，并显示在储存网络窗口中。"
+msgstr "Stores food and ingredients and appears in the Storage Network window."
+
 msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKMEDIUMSOLIDSERVER.NAME"
 msgid "中型固体服务器"
 msgstr "Medium Solid Server"
@@ -199,6 +223,30 @@ msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKMEDIUMGASSERVER.
 msgid "储存更多气体物品，并显示在储存网络窗口中。"
 msgstr "Stores more gases and appears in the Storage Network window."
 
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKMEDIUMBATTERYSERVER.NAME"
+msgid "中型电池服务器"
+msgstr "Medium Battery Server"
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKMEDIUMBATTERYSERVER.DESC"
+msgid "用于接入储存网络的中型电力储存服务器。"
+msgstr "A medium power storage server for the Storage Network."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKMEDIUMBATTERYSERVER.EFFECT"
+msgid "储存更多电能，并显示在储存网络窗口中。"
+msgstr "Stores more electrical energy and appears in the Storage Network window."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKMEDIUMCOLDSTORAGESERVER.NAME"
+msgid "中型冷库服务器"
+msgstr "Medium Cold Storage Server"
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKMEDIUMCOLDSTORAGESERVER.DESC"
+msgid "用于接入储存网络的中型冷藏储存服务器。"
+msgstr "A medium refrigerated storage server for the Storage Network."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKMEDIUMCOLDSTORAGESERVER.EFFECT"
+msgid "储存更多食物和食材，并显示在储存网络窗口中。"
+msgstr "Stores more food and ingredients and appears in the Storage Network window."
+
 msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKLARGESOLIDSERVER.NAME"
 msgid "大型固体服务器"
 msgstr "Large Solid Server"
@@ -234,6 +282,30 @@ msgstr "A large gas storage server for the Storage Network."
 msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKLARGEGASSERVER.EFFECT"
 msgid "储存大量气体物品，并显示在储存网络窗口中。"
 msgstr "Stores a large amount of gases and appears in the Storage Network window."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKLARGEBATTERYSERVER.NAME"
+msgid "大型电池服务器"
+msgstr "Large Battery Server"
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKLARGEBATTERYSERVER.DESC"
+msgid "用于接入储存网络的大型电力储存服务器。"
+msgstr "A large power storage server for the Storage Network."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKLARGEBATTERYSERVER.EFFECT"
+msgid "储存大量电能，并显示在储存网络窗口中。"
+msgstr "Stores a large amount of electrical energy and appears in the Storage Network window."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKLARGECOLDSTORAGESERVER.NAME"
+msgid "大型冷库服务器"
+msgstr "Large Cold Storage Server"
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKLARGECOLDSTORAGESERVER.DESC"
+msgid "用于接入储存网络的大型冷藏储存服务器。"
+msgstr "A large refrigerated storage server for the Storage Network."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKLARGECOLDSTORAGESERVER.EFFECT"
+msgid "储存大量食物和食材，并显示在储存网络窗口中。"
+msgstr "Stores a large amount of food and ingredients and appears in the Storage Network window."
 
 msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKRELAYMODULE.NAME"
 msgid "储存网络中继器"
@@ -276,24 +348,24 @@ msgid "小型储存"
 msgstr "Small Storage"
 
 msgctxt "StorageNetwork.STRINGS.RESEARCH.TECHS.STORAGENETWORKSMALLSTORAGE.DESC"
-msgid "解锁小型固体、液体、气体服务器。"
-msgstr "Unlocks small solid, liquid, and gas servers."
+msgid "解锁小型固体、液体、气体、电池和冷库服务器。"
+msgstr "Unlocks small solid, liquid, gas, battery, and cold storage servers."
 
 msgctxt "StorageNetwork.STRINGS.RESEARCH.TECHS.STORAGENETWORKMEDIUMSTORAGE.NAME"
 msgid "中级储存"
 msgstr "Medium Storage"
 
 msgctxt "StorageNetwork.STRINGS.RESEARCH.TECHS.STORAGENETWORKMEDIUMSTORAGE.DESC"
-msgid "解锁中型固体、液体、气体服务器。"
-msgstr "Unlocks medium solid, liquid, and gas servers."
+msgid "解锁中型固体、液体、气体、电池和冷库服务器。"
+msgstr "Unlocks medium solid, liquid, gas, battery, and cold storage servers."
 
 msgctxt "StorageNetwork.STRINGS.RESEARCH.TECHS.STORAGENETWORKLARGESTORAGE.NAME"
 msgid "高级储存"
 msgstr "Advanced Storage"
 
 msgctxt "StorageNetwork.STRINGS.RESEARCH.TECHS.STORAGENETWORKLARGESTORAGE.DESC"
-msgid "解锁大型固体、液体、气体服务器。"
-msgstr "Unlocks large solid, liquid, and gas servers."
+msgid "解锁大型固体、液体、气体、电池和冷库服务器。"
+msgstr "Unlocks large solid, liquid, gas, battery, and cold storage servers."
 
 msgctxt "StorageNetwork.STRINGS.RESEARCH.TECHS.STORAGENETWORKRELAY.NAME"
 msgid "储存网络中继器"
@@ -402,6 +474,14 @@ msgstr "Production Buildings"
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CATEGORY_MOD_STORAGE"
 msgid "模组建筑"
 msgstr "Mod Storage"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CATEGORY_INPUT_PORT"
+msgid "输入端口"
+msgstr "Input Ports"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CATEGORY_OUTPUT_PORT"
+msgid "输出端口"
+msgstr "Output Ports"
 
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CATEGORY_GEYSER"
 msgid "泉"

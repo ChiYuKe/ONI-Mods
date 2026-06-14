@@ -9,10 +9,13 @@ namespace StorageNetwork.ModConfig
     {
         private const float CompactButtonWidth = 52f;
         private const int PLibOptionsButtonIndex = 4;
+        internal const string DefaultButtonTextKey = "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OPTIONS_BUTTON";
+        internal const string DefaultButtonTextFallback = "选项";
 
         public string ModTitlePrefix { get; set; }
         public string ButtonName { get; set; }
-        public string ButtonText { get; set; } = StorageNetwork.STRINGS.Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OPTIONS_BUTTON);
+        public string ButtonText { get; set; }
+        public string ButtonTextKey { get; set; } = DefaultButtonTextKey;
         public string Tooltip { get; set; }
         public Vector2 ButtonSize { get; set; } = new Vector2(CompactButtonWidth, 0f);
         public System.Action OnClick { get; set; }
@@ -104,7 +107,7 @@ namespace StorageNetwork.ModConfig
             LocText label = buttonObject.GetComponentInChildren<LocText>();
             if (label != null)
             {
-                label.text = definition.ButtonText;
+                label.text = ResolveButtonText(definition);
             }
 
             ToolTip tooltip = buttonObject.GetComponent<ToolTip>() ?? buttonObject.AddComponent<ToolTip>();
@@ -126,6 +129,21 @@ namespace StorageNetwork.ModConfig
 
             buttonObject.transform.SetSiblingIndex(Mathf.Clamp(definition.SiblingIndex, 0, buttonObject.transform.parent.childCount - 1));
             buttonObject.SetActive(true);
+        }
+
+        private static string ResolveButtonText(ModsScreenOptionsButtonDefinition definition)
+        {
+            string text = !string.IsNullOrEmpty(definition.ButtonTextKey)
+                ? Strings.Get(definition.ButtonTextKey)
+                : definition.ButtonText;
+            if (string.IsNullOrEmpty(text) || text.StartsWith("MISSING", System.StringComparison.OrdinalIgnoreCase))
+            {
+                text = definition.ButtonText;
+            }
+
+            return string.IsNullOrEmpty(text) || text.StartsWith("MISSING", System.StringComparison.OrdinalIgnoreCase)
+                ? ModsScreenOptionsButtonDefinition.DefaultButtonTextFallback
+                : text;
         }
 
         private static void ApplyCompactLayout(GameObject buttonObject, float width, float height)

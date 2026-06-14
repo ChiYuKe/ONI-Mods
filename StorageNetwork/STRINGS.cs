@@ -104,6 +104,20 @@ namespace StorageNetwork
                     public static LocString EFFECT = "储存气体物品，并显示在储存网络窗口中。";
                 }
 
+                public class STORAGENETWORKSMALLBATTERYSERVER
+                {
+                    public static LocString NAME = "小型电池服务器";
+                    public static LocString DESC = "用于接入储存网络的小型电力储存服务器。";
+                    public static LocString EFFECT = "储存电能，并显示在储存网络窗口中。";
+                }
+
+                public class STORAGENETWORKSMALLCOLDSTORAGESERVER
+                {
+                    public static LocString NAME = "小型冷库服务器";
+                    public static LocString DESC = "用于接入储存网络的小型冷藏储存服务器。";
+                    public static LocString EFFECT = "储存食物和食材，并显示在储存网络窗口中。";
+                }
+
                 public class STORAGENETWORKMEDIUMSOLIDSERVER
                 {
                     public static LocString NAME = "中型固体服务器";
@@ -125,6 +139,20 @@ namespace StorageNetwork
                     public static LocString EFFECT = "储存更多气体物品，并显示在储存网络窗口中。";
                 }
 
+                public class STORAGENETWORKMEDIUMBATTERYSERVER
+                {
+                    public static LocString NAME = "中型电池服务器";
+                    public static LocString DESC = "用于接入储存网络的中型电力储存服务器。";
+                    public static LocString EFFECT = "储存更多电能，并显示在储存网络窗口中。";
+                }
+
+                public class STORAGENETWORKMEDIUMCOLDSTORAGESERVER
+                {
+                    public static LocString NAME = "中型冷库服务器";
+                    public static LocString DESC = "用于接入储存网络的中型冷藏储存服务器。";
+                    public static LocString EFFECT = "储存更多食物和食材，并显示在储存网络窗口中。";
+                }
+
                 public class STORAGENETWORKLARGESOLIDSERVER
                 {
                     public static LocString NAME = "大型固体服务器";
@@ -144,6 +172,20 @@ namespace StorageNetwork
                     public static LocString NAME = "大型气体服务器";
                     public static LocString DESC = "用于接入储存网络的大型气体储存服务器。";
                     public static LocString EFFECT = "储存大量气体物品，并显示在储存网络窗口中。";
+                }
+
+                public class STORAGENETWORKLARGEBATTERYSERVER
+                {
+                    public static LocString NAME = "大型电池服务器";
+                    public static LocString DESC = "用于接入储存网络的大型电力储存服务器。";
+                    public static LocString EFFECT = "储存大量电能，并显示在储存网络窗口中。";
+                }
+
+                public class STORAGENETWORKLARGECOLDSTORAGESERVER
+                {
+                    public static LocString NAME = "大型冷库服务器";
+                    public static LocString DESC = "用于接入储存网络的大型冷藏储存服务器。";
+                    public static LocString EFFECT = "储存大量食物和食材，并显示在储存网络窗口中。";
                 }
 
                 public class STORAGENETWORKRELAYMODULE
@@ -185,19 +227,19 @@ namespace StorageNetwork
                 public class STORAGENETWORKSMALLSTORAGE
                 {
                     public static LocString NAME = "小型储存";
-                    public static LocString DESC = "解锁小型固体、液体、气体服务器。";
+                    public static LocString DESC = "解锁小型固体、液体、气体、电池和冷库服务器。";
                 }
 
                 public class STORAGENETWORKMEDIUMSTORAGE
                 {
                     public static LocString NAME = "中级储存";
-                    public static LocString DESC = "解锁中型固体、液体、气体服务器。";
+                    public static LocString DESC = "解锁中型固体、液体、气体、电池和冷库服务器。";
                 }
 
                 public class STORAGENETWORKLARGESTORAGE
                 {
                     public static LocString NAME = "高级储存";
-                    public static LocString DESC = "解锁大型固体、液体、气体服务器。";
+                    public static LocString DESC = "解锁大型固体、液体、气体、电池和冷库服务器。";
                 }
 
                 public class STORAGENETWORKRELAY
@@ -223,6 +265,8 @@ namespace StorageNetwork
                 public static LocString CROSS_WORLD_RELAY_OFFLINE = "未发射储存网络中继器，无法与其他星球进行网络互通";
                 public static LocString NO_STORAGE_CONTENT = "没有储存内容";
                 public static LocString STORAGE_SETTINGS = "设置";
+                public static LocString PORT_NETWORK_SETTINGS_BUTTON = "储存网络设置";
+                public static LocString PORT_NETWORK_SETTINGS_TOOLTIP = "打开储存网络窗口，并进入该端口的设置界面。";
                 public static LocString CATEGORY_COUNT = "<b>{0}</b>\n<size=10>{1} 个</size>";
                 public static LocString TRANSFER = "转移";
                 public static LocString TRANSFER_TOOLTIP = "把这个物品转移到当前场景中的目标储存箱";
@@ -238,6 +282,8 @@ namespace StorageNetwork
                 public static LocString CATEGORY_RECIPE_BUILDING = "生产建筑";
                 public static LocString CATEGORY_ENERGY_GENERATOR = "发电设施";
                 public static LocString CATEGORY_MOD_STORAGE = "模组建筑";
+                public static LocString CATEGORY_INPUT_PORT = "输入端口";
+                public static LocString CATEGORY_OUTPUT_PORT = "输出端口";
                 public static LocString CATEGORY_MINION = "复制人";
                 public static LocString CATEGORY_GEYSER = "泉";
                 public static LocString SOURCE_MOD_NAME = "来源：{0}";
@@ -249,6 +295,11 @@ namespace StorageNetwork
                 public static LocString HEALTH_WAITING = "待料";
                 public static LocString HEALTH_ABNORMAL = "异常";
                 public static LocString HEALTH_OFFLINE = "掉线";
+                public static LocString HEALTH_POWER_STORED = "储电";
+                public static LocString HEALTH_POWER_LEAK = "泄露";
+                public static LocString VIRTUAL_POWER_ITEM_NAME = "虚拟电力";
+                public static LocString VIRTUAL_POWER_ITEM_DETAILS = "容量：{0}    泄露：{1}";
+                public static LocString VIRTUAL_POWER_ITEM_TOOLTIP = "电池服务器中的虚拟电力，不是可搬运的实体物品。";
 
                 public static LocString SUMMARY_BUTTON = "汇总";
                 public static LocString SUMMARY_TOOLTIP = "汇总当前分类中所有箱子的物品";
@@ -319,11 +370,22 @@ namespace StorageNetwork
                 public static LocString TARGET_CAPACITY_DETAILS = "目标容量：{0} / {1}\n最大可转移：{2}";
                 public static LocString TRANSFER_AMOUNT_TITLE = "转移数量";
                 public static LocString TARGET_PREFIX = "目标：{0}";
+                public static LocString CHANGE_TARGET = "更换目标";
                 public static LocString TARGET_SELECTION_TITLE = "选择目标箱子";
                 public static LocString TARGET_SELECTION_HEADER = "当前场景中的可接收目标";
                 public static LocString CANCEL = "取消";
                 public static LocString BUILDING_SETTINGS_TITLE = "建筑设置";
                 public static LocString STORAGE_DETAILS = "储存：{0} / {1}\n剩余容量：{2}";
+                public static LocString POWER_PORT_STORAGE_DETAILS = "储电缓存：{0} / {1}\n剩余容量：{2}";
+                public static LocString POWER_PORT_BATTERY_TITLE = "端口电池";
+                public static LocString POWER_PORT_BATTERY_NAME = "本地电量";
+                public static LocString COLD_STORAGE_COOLING_TITLE = "冷库降温";
+                public static LocString COLD_STORAGE_COOLING_SIDE_SCREEN_TITLE = "冷库降温";
+                public static LocString COLD_STORAGE_COOLING_CURRENT = "目标温度";
+                public static LocString COLD_STORAGE_COOLING_AMOUNT = "目标温度";
+                public static LocString COLD_STORAGE_COOLING_DEFAULT = "默认值";
+                public static LocString COLD_STORAGE_COOLING_VALUE = "目标温度：{0}";
+                public static LocString COLD_STORAGE_COOLING_DESC = "调整冷库服务器把内容物冷却到的目标温度；储存网络窗口与详情侧屏使用同一数值。";
                 public static LocString PRODUCTION_STATUS_TITLE = "运行状态";
                 public static LocString PRODUCTION_CONTENT_TITLE = "内容物";
                 public static LocString PRODUCTION_STATUS_IDLE = "当前状态：待机";
@@ -350,6 +412,116 @@ namespace StorageNetwork
                 public static LocString MATERIAL_PORT_DIRECTION_INPUT = "输入网络";
                 public static LocString MATERIAL_PORT_DIRECTION_OUTPUT = "输出网络";
                 public static LocString MATERIAL_PORT_MANUAL_OPERATION_ALLOWED = "允许人力操作";
+                public static LocString PORT_STATUS_ITEM_NAME = "储存网络端口";
+                public static LocString PORT_STATUS_ITEM_TOOLTIP = "{0}";
+                public static LocString PORT_STATUS_ONLINE = "网络：在线";
+                public static LocString PORT_STATUS_OFFLINE = "网络：离线（当前星球没有在线核心）";
+                public static LocString PORT_STATUS_SHORT_ONLINE = "在线";
+                public static LocString PORT_STATUS_SHORT_OFFLINE = "离线";
+                public static LocString PORT_STATUS_DIRECTION = "方向：{0}";
+                public static LocString PORT_STATUS_CACHE = "端口缓存：{0} / {1}";
+                public static LocString PORT_STATUS_REMAINING = "剩余容量：{0}";
+                public static LocString PORT_STATUS_FILTERS = "筛选：{0}";
+                public static LocString PORT_STATUS_FILTERS_EMPTY = "未选择物品";
+                public static LocString PORT_STATUS_FILTERS_ANY = "不限制";
+                public static LocString PORT_STATUS_MANUAL = "人力操作：{0}";
+                public static LocString PORT_STATUS_MANUAL_ALLOWED = "允许";
+                public static LocString PORT_STATUS_MANUAL_FORBIDDEN = "禁止";
+                public static LocString PORT_STATUS_INPUT_ENABLED = "内容物入网：{0}";
+                public static LocString PORT_STATUS_OUTPUT_ENABLED = "请求输出：{0}";
+                public static LocString PORT_STATUS_INPUT_SUMMARY = "内容物入网：{0}  {1}";
+                public static LocString PORT_STATUS_OUTPUT_SUMMARY = "请求输出：{0}  {1}";
+                public static LocString PORT_STATUS_POLICY = "存放策略：{0}";
+                public static LocString PORT_STATUS_SOURCE_POLICY = "来源策略：{0}";
+                public static LocString PORT_STATUS_REQUEST = "网络调度：{0}";
+                public static LocString PORT_STATUS_BUFFER = "复制人取货缓冲：{0}";
+                public static LocString PORT_STATUS_OUTPUT_AMOUNT = "输出包目标：{0}";
+                public static LocString INPUT_PORT_STORE_TITLE = "内容物入网";
+                public static LocString INPUT_PORT_STORE_ENABLED = "向网络输入";
+                public static LocString INPUT_PORT_STORE_DESC = "开启后，端口会把自身缓存中的内容物自动存入储存网络中的匹配服务器。";
+                public static LocString INPUT_PORT_STORE_STATUS = "入网状态：{0}";
+                public static LocString OUTPUT_PORT_REQUEST_TITLE = "内容物出网";
+                public static LocString OUTPUT_PORT_REQUEST_ENABLED = "向管道输出";
+                public static LocString OUTPUT_PORT_REQUEST_DESC = "开启后，端口会从储存网络中的匹配服务器请求液体，并输出到连接的液体管道。";
+                public static LocString OUTPUT_PORT_REQUEST_STATUS = "出网状态：{0}";
+                public static LocString OUTPUT_PORT_SOURCE_POLICY = "来源策略";
+                public static LocString OUTPUT_PORT_FILTER = "输出筛选";
+                public static LocString OUTPUT_PORT_FILTER_ANY = "任意液体";
+                public static LocString OUTPUT_PORT_FILTER_SELECT = "选择输出液体";
+                public static LocString OUTPUT_PORT_FILTER_DESC = "选择当前网络服务器中已有的液体；端口只会向管道输出所选液体。";
+                public static LocString OUTPUT_PORT_FILTER_EMPTY = "当前网络服务器中没有可输出液体";
+                public static LocString MATERIAL_OUTPUT_PORT_REQUEST_TITLE = "材料出网";
+                public static LocString MATERIAL_OUTPUT_PORT_REQUEST_ENABLED = "向轨道输出";
+                public static LocString MATERIAL_OUTPUT_PORT_REQUEST_DESC = "开启后，端口会从储存网络中的匹配服务器请求材料，并输出到连接的运输轨道。";
+                public static LocString MATERIAL_OUTPUT_PORT_REQUEST_STATUS = "出网状态：{0}";
+                public static LocString MATERIAL_OUTPUT_PORT_FILTER_ANY = "任意材料";
+                public static LocString MATERIAL_OUTPUT_PORT_FILTER_SELECT = "选择输出材料";
+                public static LocString MATERIAL_OUTPUT_PORT_FILTER_DESC = "选择当前网络服务器中已有的材料；端口只会向运输轨道输出所选材料。";
+                public static LocString MATERIAL_OUTPUT_PORT_FILTER_EMPTY = "当前网络服务器中没有可输出材料";
+                public static LocString MATERIAL_OUTPUT_PORT_MANUAL_ALLOWED_TOOLTIP = "允许复制人从材料出网端口缓存中取货。";
+                public static LocString MATERIAL_OUTPUT_PORT_MANUAL_FORBIDDEN_TOOLTIP = "禁止复制人从材料出网端口缓存中取货。";
+                public static LocString OUTPUT_PORT_LIMIT_ENABLED = "启用输出限额";
+                public static LocString OUTPUT_PORT_LIMIT = "输出限额：{0} / {1}";
+                public static LocString OUTPUT_PORT_SET_LIMIT = "设置限额";
+                public static LocString OUTPUT_PORT_REQUEST_RATE = "请求速率";
+                public static LocString OUTPUT_PORT_OUTPUT_RATE = "输出速率";
+                public static LocString OUTPUT_PORT_REQUEST_RATE_VALUE = "{0}/秒";
+                public static LocString OUTPUT_PORT_SET_REQUEST_RATE = "设置请求速率";
+                public static LocString POWER_INPUT_PORT_STORE_TITLE = "电力入网";
+                public static LocString POWER_INPUT_PORT_STORE_ENABLED = "向网络输入";
+                public static LocString POWER_INPUT_PORT_STORE_DESC = "开启后，端口会把连接电路中的外部电力存入储存网络中的电池服务器。";
+                public static LocString POWER_INPUT_PORT_STORE_AUTO_DESC = "自动存入已接入网络且仍有容量的电池服务器。";
+                public static LocString POWER_OUTPUT_PORT_REQUEST_TITLE = "电力出网";
+                public static LocString POWER_OUTPUT_PORT_REQUEST_ENABLED = "向电路输出";
+                public static LocString POWER_OUTPUT_PORT_REQUEST_DESC = "开启后，端口会从储存网络中的电池服务器取电，并输出到连接的电路。";
+                public static LocString POWER_OUTPUT_PORT_SOURCE_AUTO_DESC = "自动从已接入网络的电池服务器中取电。";
+                public static LocString POWER_OUTPUT_PORT_LIMIT = "输出限额：{0} / {1}";
+                public static LocString POWER_OUTPUT_PORT_SET_LIMIT = "设置输出限额";
+                public static LocString POWER_OUTPUT_PORT_LIMIT_LABEL = "电力限额";
+                public static LocString POWER_PORT_RATE = "电力速率";
+                public static LocString POWER_PORT_INPUT_RATE = "输入速率";
+                public static LocString POWER_PORT_OUTPUT_RATE = "输出速率";
+                public static LocString POWER_PORT_RATE_VALUE = "{0:0.#} W";
+                public static LocString POWER_PORT_SET_RATE = "设置电力速率";
+                public static LocString POWER_INPUT_PORT_RATE_TOOLTIP = "设置电力入网端口从外部电路存入网络的最大速率：{0}";
+                public static LocString POWER_OUTPUT_PORT_RATE_TOOLTIP = "设置电力出网端口向外部电路输出的最大速率：{0}";
+                public static LocString POWER_INPUT_PORT_STATUS_ITEM = "电力入网端口：{0}";
+                public static LocString POWER_INPUT_PORT_STATUS_TOOLTIP = "向网络输入：{0}\n网络：{1}\n存放策略：{2}\n输入速率：{3}\n端口缓存：{4} / {5}\n入网状态：{6}";
+                public static LocString POWER_OUTPUT_PORT_STATUS_ITEM = "电力出网端口：{0}";
+                public static LocString POWER_OUTPUT_PORT_STATUS_TOOLTIP = "向电路输出：{0}\n网络：{1}\n来源策略：{2}\n输出限额：{3}\n输出速率：{4}\n端口缓存：{5} / {6}\n出网状态：{7}";
+                public static LocString POWER_STATUS_WAITING_EXTERNAL = "等待外部供电";
+                public static LocString POWER_STATUS_NO_CAPACITY = "电池服务器已满";
+                public static LocString POWER_STATUS_NO_STORED = "网络电力不足";
+                public static LocString POWER_STATUS_STORED = "当前输入 {0}";
+                public static LocString POWER_STATUS_OUTPUT = "已输出 {0}";
+                public static LocString POWER_STATUS_BUFFER_FULL = "端口电池已满";
+                public static LocString POWER_STATUS_CHARGED = "当前充入 {0}";
+                public static LocString POWER_STATUS_REFILLED = "已从网络取电 {0}";
+                public static LocString SOLID_INPUT_PORT_STATUS_ITEM = "固体入网端口：{0}";
+                public static LocString SOLID_INPUT_PORT_STATUS_TOOLTIP = "向网络输入：{0}\n网络：{1}\n存放策略：{2}\n端口缓存：{3} / {4}\n入网状态：{5}";
+                public static LocString SOLID_OUTPUT_PORT_STATUS_ITEM = "固体出网端口：{0}";
+                public static LocString SOLID_OUTPUT_PORT_STATUS_TOOLTIP = "向轨道输出：{0}\n网络：{1}\n来源策略：{2}\n输出筛选：{3}\n输出限额：{4}\n请求速率：{5}\n端口缓存：{6} / {7}\n出网状态：{8}\n人力操作：{9}";
+                public static LocString LIQUID_INPUT_PORT_STATUS_ITEM = "液体入网端口：{0}";
+                public static LocString LIQUID_INPUT_PORT_STATUS_TOOLTIP = "向网络输入：{0}\n网络：{1}\n存放策略：{2}\n端口缓存：{3} / {4}\n入网状态：{5}";
+                public static LocString LIQUID_OUTPUT_PORT_STATUS_ITEM = "液体出网端口：{0}";
+                public static LocString LIQUID_OUTPUT_PORT_STATUS_TOOLTIP = "向管道输出：{0}\n网络：{1}\n来源策略：{2}\n输出筛选：{3}\n输出限额：{4}\n请求速率：{5}\n端口缓存：{6} / {7}\n出网状态：{8}";
+                public static LocString GAS_INPUT_PORT_STORE_TITLE = "气体入网";
+                public static LocString GAS_INPUT_PORT_STORE_ENABLED = "向网络输入";
+                public static LocString GAS_INPUT_PORT_STORE_DESC = "开启后，端口会把气体管道输入的气体存入储存网络中的匹配服务器。";
+                public static LocString GAS_INPUT_PORT_STORE_STATUS = "入网状态：{0}";
+                public static LocString GAS_OUTPUT_PORT_REQUEST_TITLE = "气体出网";
+                public static LocString GAS_OUTPUT_PORT_REQUEST_ENABLED = "向管道输出";
+                public static LocString GAS_OUTPUT_PORT_REQUEST_DESC = "开启后，端口会从储存网络中的匹配服务器请求气体，并输出到连接的气体管道。";
+                public static LocString GAS_OUTPUT_PORT_REQUEST_STATUS = "出网状态：{0}";
+                public static LocString GAS_OUTPUT_PORT_FILTER_ANY = "任意气体";
+                public static LocString GAS_OUTPUT_PORT_FILTER_SELECT = "选择输出气体";
+                public static LocString GAS_OUTPUT_PORT_FILTER_DESC = "选择当前网络服务器中已有的气体；端口只会向管道输出所选气体。";
+                public static LocString GAS_OUTPUT_PORT_FILTER_EMPTY = "当前网络服务器中没有可输出气体";
+                public static LocString GAS_INPUT_PORT_STATUS_ITEM = "气体入网端口：{0}";
+                public static LocString GAS_INPUT_PORT_STATUS_TOOLTIP = "向网络输入：{0}\n网络：{1}\n存放策略：{2}\n端口缓存：{3} / {4}\n入网状态：{5}";
+                public static LocString GAS_OUTPUT_PORT_STATUS_ITEM = "气体出网端口：{0}";
+                public static LocString GAS_OUTPUT_PORT_STATUS_TOOLTIP = "向管道输出：{0}\n网络：{1}\n来源策略：{2}\n输出筛选：{3}\n输出限额：{4}\n请求速率：{5}\n端口缓存：{6} / {7}\n出网状态：{8}";
+                public static LocString GAS_OUTPUT_SIDE_SCREEN_TITLE = "气体输出筛选";
                 public static LocString MATERIAL_REQUEST_MODE = "请求方式：{0}";
                 public static LocString MATERIAL_REQUEST_MODE_SEARCH = "从服务器中寻找材料";
                 public static LocString MATERIAL_REQUEST_MODE_SPECIFIC = "指定网络中某个服务器提供材料";
@@ -614,6 +786,16 @@ namespace StorageNetwork
                 public static LocString CORE_SIDE_SCREEN_RELAY = "跨星球中继：{0}";
                 public static LocString CORE_SIDE_SCREEN_RELAY_ONLINE = "已连接";
                 public static LocString CORE_SIDE_SCREEN_RELAY_OFFLINE = "未连接";
+                public static LocString CORE_SIDE_SCREEN_WORLD_LABEL = "星球";
+                public static LocString CORE_SIDE_SCREEN_STATUS_LABEL = "状态";
+                public static LocString CORE_SIDE_SCREEN_STORED_LABEL = "容量";
+                public static LocString CORE_SIDE_SCREEN_REMAINING_LABEL = "剩余";
+                public static LocString CORE_SIDE_SCREEN_SERVERS_LABEL = "服务器";
+                public static LocString CORE_SIDE_SCREEN_STORAGES_LABEL = "接入储存";
+                public static LocString CORE_SIDE_SCREEN_RELAY_LABEL = "中继";
+                public static LocString LIQUID_OUTPUT_SIDE_SCREEN_TITLE = "液体输出筛选";
+                public static LocString LIQUID_OUTPUT_SIDE_SCREEN_CURRENT = "当前输出：{0}";
+                public static LocString LIQUID_OUTPUT_SIDE_SCREEN_HINT = "快速选择液体出网端口要输出的液体。列表来自当前网络服务器中已有的液体，切换后会替换端口缓存并立即尝试输出。";
                 public static LocString MAIN_SEARCH_TOOLTIP = "搜索建筑、分类、储存物或泉输出。";
 
                 public static LocString MATERIAL_STATUS_NO_QUEUE = "没有可请求材料的排队配方";

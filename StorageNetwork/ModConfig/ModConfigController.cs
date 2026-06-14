@@ -52,7 +52,8 @@ namespace StorageNetwork.ModConfig
             {
                 ModTitlePrefix = modTitlePrefix,
                 ButtonName = buttonName,
-                ButtonText = Loc.Get(Loc.UI.STORAGE_NETWORK.OPTIONS_BUTTON),
+                ButtonTextKey = ModsScreenOptionsButtonDefinition.DefaultButtonTextKey,
+                ButtonText = ModsScreenOptionsButtonDefinition.DefaultButtonTextFallback,
                 Tooltip = StableText(tooltip, Loc.Get(Loc.UI.STORAGE_NETWORK.CONFIG_TOOLTIP)),
                 OnClick = () => ShowDialog(
                     StableText(dialogTitle, Loc.Get(Loc.UI.STORAGE_NETWORK.CONFIG_TITLE)),
