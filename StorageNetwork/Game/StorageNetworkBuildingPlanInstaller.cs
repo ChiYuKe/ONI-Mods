@@ -4,6 +4,12 @@ namespace StorageNetwork.Gameplay
 {
     internal static class StorageNetworkBuildingPlanInstaller
     {
+        private const string BaseCategory = "Base";
+        private const string ConveyanceCategory = "Conveyance";
+        private const string FoodCategory = "Food";
+        private const string GasCategory = "HVAC";
+        private const string LiquidCategory = "Plumbing";
+        private const string PowerCategory = "Power";
         private const string StorageNetworkSubcategory = "StorageNetwork";
 
         public static void Install()
@@ -33,15 +39,40 @@ namespace StorageNetwork.Gameplay
 
         private static void InstallStorageBuildings()
         {
-            foreach (string buildingId in StorageNetworkStorageBuildingSpecs.AllIds)
-            {
-                ModUtil.AddBuildingToPlanScreen("Base", buildingId, StorageNetworkSubcategory);
-            }
+            Add(BaseCategory, StorageNetworkCoreConfig.ID);
+            Add(BaseCategory, SmallSolidServerConfig.ID);
+            Add(BaseCategory, MediumSolidServerConfig.ID);
+            Add(BaseCategory, LargeSolidServerConfig.ID);
 
-            foreach (string buildingId in StorageNetworkPortSpecs.AllIds)
-            {
-                ModUtil.AddBuildingToPlanScreen("Base", buildingId, StorageNetworkSubcategory);
-            }
+            Add(LiquidCategory, SmallLiquidServerConfig.ID);
+            Add(LiquidCategory, MediumLiquidServerConfig.ID);
+            Add(LiquidCategory, LargeLiquidServerConfig.ID);
+            Add(LiquidCategory, StorageNetworkLiquidInputPortConfig.ID);
+            Add(LiquidCategory, StorageNetworkLiquidOutputPortConfig.ID);
+
+            Add(GasCategory, SmallGasServerConfig.ID);
+            Add(GasCategory, MediumGasServerConfig.ID);
+            Add(GasCategory, LargeGasServerConfig.ID);
+            Add(GasCategory, StorageNetworkGasInputPortConfig.ID);
+            Add(GasCategory, StorageNetworkGasOutputPortConfig.ID);
+
+            Add(PowerCategory, SmallBatteryServerConfig.ID);
+            Add(PowerCategory, MediumBatteryServerConfig.ID);
+            Add(PowerCategory, LargeBatteryServerConfig.ID);
+            Add(PowerCategory, StorageNetworkPowerInputPortConfig.ID);
+            Add(PowerCategory, StorageNetworkPowerOutputPortConfig.ID);
+
+            Add(FoodCategory, SmallColdStorageServerConfig.ID);
+            Add(FoodCategory, MediumColdStorageServerConfig.ID);
+            Add(FoodCategory, LargeColdStorageServerConfig.ID);
+
+            Add(ConveyanceCategory, StorageNetworkSolidInputPortConfig.ID);
+            Add(ConveyanceCategory, StorageNetworkSolidOutputPortConfig.ID);
+        }
+
+        private static void Add(string category, string buildingId)
+        {
+            ModUtil.AddBuildingToPlanScreen(category, buildingId, StorageNetworkSubcategory);
         }
     }
 }
