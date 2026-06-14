@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using System.Linq;
+using StorageNetwork.Services;
 using UnityEngine;
 
 namespace StorageNetwork.Core
@@ -10,6 +12,12 @@ namespace StorageNetwork.Core
         private static int cachedFrame = -1;
         private static int cachedRegistryVersion = -1;
         private static bool cachedNetworkOnline;
+        private static readonly Dictionary<WorldSnapshotKey, WorldSnapshotCacheEntry> WorldSnapshots = new Dictionary<WorldSnapshotKey, WorldSnapshotCacheEntry>();
+        private static readonly Dictionary<WorldSnapshotKey, LightweightSnapshotCacheEntry> LightweightSnapshots = new Dictionary<WorldSnapshotKey, LightweightSnapshotCacheEntry>();
+        private static readonly List<WorldSnapshotKey> ExpiredWorldSnapshotKeys = new List<WorldSnapshotKey>();
+        private static readonly List<WorldSnapshotKey> ExpiredLightweightSnapshotKeys = new List<WorldSnapshotKey>();
+        private static int cachedWorldRegistryVersion = -1;
+        private const float WorldSnapshotCacheSeconds = 2f;
 
         /// <summary>
         /// 扫描当前场景中的储存网络成员，并返回带缓存的快照。UI 高频刷新时优先使用这个入口。
@@ -54,23 +62,85 @@ namespace StorageNetwork.Core
         public static StorageSceneSnapshot CollectForWorld(int worldId, bool includeReachableWorlds = true)
         {
             StorageSceneRegistry.EnsureSceneSeeded();
-            bool crossPlanetRelayOnline = includeReachableWorlds && StorageSceneRegistry.IsCrossPlanetRelayOnline();
+            PruneWorldCaches();
+            WorldSnapshotKey key = new WorldSnapshotKey(worldId, includeReachableWorlds);
+            if (WorldSnapshots.TryGetValue(key, out WorldSnapshotCacheEntry cached) &&
+                (cached.Frame == Time.frameCount || Time.unscaledTime - cached.CreatedAt <= WorldSnapshotCacheSeconds))
+            {
+                return cached.Snapshot;
+            }
+
             bool networkOnline = StorageSceneRegistry.HasOnlineCoreInWorld(worldId);
             if (!networkOnline)
             {
-                return new StorageSceneSnapshot(new List<StorageInfo>(), 0f, 0f, false);
+                StorageSceneSnapshot offline = new StorageSceneSnapshot(new List<StorageInfo>(), 0f, 0f, false);
+                WorldSnapshots[key] = new WorldSnapshotCacheEntry(offline, Time.frameCount, Time.unscaledTime);
+                return offline;
             }
 
+            bool crossPlanetRelayOnline = includeReachableWorlds && StorageSceneRegistry.IsCrossPlanetRelayOnline();
             List<StorageInfo> collected = new List<StorageInfo>();
             BuildSnapshotContents(collected, worldId, crossPlanetRelayOnline);
-            return CreateSnapshot(collected, true);
+            StorageSceneSnapshot snapshot = CreateSnapshot(collected, true);
+            WorldSnapshots[key] = new WorldSnapshotCacheEntry(snapshot, Time.frameCount, Time.unscaledTime);
+            StorageNetworkPerformanceCounters.RecordCollectForWorldRebuild();
+            return snapshot;
+        }
+
+        public static StorageSceneLightweightSnapshot CollectLightweightForWorld(int worldId, bool includeReachableWorlds = true)
+        {
+            StorageSceneRegistry.EnsureSceneSeeded();
+            PruneWorldCaches();
+            WorldSnapshotKey key = new WorldSnapshotKey(worldId, includeReachableWorlds);
+            if (LightweightSnapshots.TryGetValue(key, out LightweightSnapshotCacheEntry cached) &&
+                (cached.Frame == Time.frameCount || Time.unscaledTime - cached.CreatedAt <= WorldSnapshotCacheSeconds))
+            {
+                return cached.Snapshot;
+            }
+
+            bool networkOnline = StorageSceneRegistry.HasOnlineCoreInWorld(worldId);
+            if (!networkOnline)
+            {
+                LightweightSnapshots[key] = new LightweightSnapshotCacheEntry(StorageSceneLightweightSnapshot.Empty, Time.frameCount, Time.unscaledTime);
+                return StorageSceneLightweightSnapshot.Empty;
+            }
+
+            bool crossPlanetRelayOnline = includeReachableWorlds && StorageSceneRegistry.IsCrossPlanetRelayOnline();
+            List<Storage> storages = new List<Storage>();
+            foreach (Storage storage in StorageSceneRegistry.GetStorages())
+            {
+                if (!StorageSceneRegistry.IsLive(storage))
+                {
+                    continue;
+                }
+
+                if (!crossPlanetRelayOnline && worldId >= 0 && storage.gameObject.GetMyWorldId() != worldId)
+                {
+                    continue;
+                }
+
+                if (StorageNetworkMembership.IsCollectableStorage(storage))
+                {
+                    storages.Add(storage);
+                }
+            }
+
+            StorageSceneLightweightSnapshot snapshot = new StorageSceneLightweightSnapshot(storages, true);
+            LightweightSnapshots[key] = new LightweightSnapshotCacheEntry(snapshot, Time.frameCount, Time.unscaledTime);
+            StorageNetworkPerformanceCounters.RecordLightweightSceneRebuild();
+            return snapshot;
         }
 
         private static void BuildSnapshotContents(List<StorageInfo> collected, int worldId, bool crossPlanetRelayOnline)
         {
             foreach (Storage storage in StorageSceneRegistry.GetStorages())
             {
-                if (!crossPlanetRelayOnline && worldId >= 0 && storage.GetMyWorldId() != worldId)
+                if (!StorageSceneRegistry.IsLive(storage))
+                {
+                    continue;
+                }
+
+                if (!crossPlanetRelayOnline && worldId >= 0 && storage.gameObject.GetMyWorldId() != worldId)
                 {
                     continue;
                 }
@@ -83,7 +153,12 @@ namespace StorageNetwork.Core
 
             foreach (Geyser geyser in StorageSceneRegistry.GetGeysers())
             {
-                if (!crossPlanetRelayOnline && worldId >= 0 && geyser.GetMyWorldId() != worldId)
+                if (!StorageSceneRegistry.IsLive(geyser))
+                {
+                    continue;
+                }
+
+                if (!crossPlanetRelayOnline && worldId >= 0 && geyser.gameObject.GetMyWorldId() != worldId)
                 {
                     continue;
                 }
@@ -126,12 +201,121 @@ namespace StorageNetwork.Core
             cachedAtUnscaledTime = -1f;
             cachedFrame = -1;
             cachedRegistryVersion = -1;
+            WorldSnapshots.Clear();
+            LightweightSnapshots.Clear();
+            cachedWorldRegistryVersion = -1;
         }
 
         public static void ResetRuntimeState()
         {
             InvalidateCache();
             cachedNetworkOnline = false;
+        }
+
+        private static void PruneWorldCaches()
+        {
+            int registryVersion = StorageSceneRegistry.Version;
+            if (cachedWorldRegistryVersion != registryVersion)
+            {
+                WorldSnapshots.Clear();
+                LightweightSnapshots.Clear();
+                cachedWorldRegistryVersion = registryVersion;
+                return;
+            }
+
+            float cutoff = Time.unscaledTime - WorldSnapshotCacheSeconds;
+            ExpiredWorldSnapshotKeys.Clear();
+            foreach (KeyValuePair<WorldSnapshotKey, WorldSnapshotCacheEntry> pair in WorldSnapshots)
+            {
+                if (pair.Value.CreatedAt < cutoff)
+                {
+                    ExpiredWorldSnapshotKeys.Add(pair.Key);
+                }
+            }
+
+            foreach (WorldSnapshotKey key in ExpiredWorldSnapshotKeys)
+            {
+                WorldSnapshots.Remove(key);
+            }
+
+            ExpiredWorldSnapshotKeys.Clear();
+            ExpiredLightweightSnapshotKeys.Clear();
+            foreach (KeyValuePair<WorldSnapshotKey, LightweightSnapshotCacheEntry> pair in LightweightSnapshots)
+            {
+                if (pair.Value.CreatedAt < cutoff)
+                {
+                    ExpiredLightweightSnapshotKeys.Add(pair.Key);
+                }
+            }
+
+            foreach (WorldSnapshotKey key in ExpiredLightweightSnapshotKeys)
+            {
+                LightweightSnapshots.Remove(key);
+            }
+
+            ExpiredLightweightSnapshotKeys.Clear();
+        }
+
+        private readonly struct WorldSnapshotKey : System.IEquatable<WorldSnapshotKey>
+        {
+            private readonly int worldId;
+            private readonly bool includeReachableWorlds;
+
+            public WorldSnapshotKey(int worldId, bool includeReachableWorlds)
+            {
+                this.worldId = worldId;
+                this.includeReachableWorlds = includeReachableWorlds;
+            }
+
+            public bool Equals(WorldSnapshotKey other)
+            {
+                return worldId == other.worldId && includeReachableWorlds == other.includeReachableWorlds;
+            }
+
+            public override bool Equals(object obj)
+            {
+                return obj is WorldSnapshotKey other && Equals(other);
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    return (worldId * 397) ^ includeReachableWorlds.GetHashCode();
+                }
+            }
+        }
+
+        private readonly struct WorldSnapshotCacheEntry
+        {
+            public WorldSnapshotCacheEntry(StorageSceneSnapshot snapshot, int frame, float createdAt)
+            {
+                Snapshot = snapshot;
+                Frame = frame;
+                CreatedAt = createdAt;
+            }
+
+            public StorageSceneSnapshot Snapshot { get; }
+
+            public int Frame { get; }
+
+            public float CreatedAt { get; }
+        }
+
+        private readonly struct LightweightSnapshotCacheEntry
+        {
+            public LightweightSnapshotCacheEntry(StorageSceneLightweightSnapshot snapshot, int frame, float createdAt)
+            {
+                Snapshot = snapshot;
+                Frame = frame;
+                CreatedAt = createdAt;
+            }
+
+            public StorageSceneLightweightSnapshot Snapshot { get; }
+
+            public int Frame { get; }
+
+            public float CreatedAt { get; }
         }
     }
 }

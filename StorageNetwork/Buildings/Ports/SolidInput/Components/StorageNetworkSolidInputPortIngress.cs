@@ -1,0 +1,389 @@
+using KSerialization;
+using System;
+using System.Runtime.Serialization;
+using StorageNetwork.Core;
+using StorageNetwork.Services;
+using UnityEngine;
+using Loc = StorageNetwork.STRINGS;
+
+namespace StorageNetwork.Components
+{
+    [SerializationConfig(MemberSerialization.OptIn)]
+    public sealed class StorageNetworkSolidInputPortIngress : KMonoBehaviour, ISim1000ms
+    {
+        private const float EmptyRetrySeconds = 2f;
+
+        [Serialize]
+        public bool InputStoreEnabled = true;
+
+        [Serialize]
+        public bool AllowManualOperation;
+
+        [Serialize]
+        public bool ManualOperationMigratedToAutomatable;
+
+        [Serialize]
+        public int InputStoreModeValue;
+
+        [Serialize]
+        public int InputStorageInstanceId = KPrefabID.InvalidInstanceID;
+
+        [MyCmpGet]
+        private Storage storage = null;
+
+        [MyCmpGet]
+        private Automatable automatable = null;
+
+        private static StatusItem solidInputPortStatusItem;
+        private static readonly EventSystem.IntraObjectHandler<StorageNetworkSolidInputPortIngress> OnCopySettingsDelegate =
+            new EventSystem.IntraObjectHandler<StorageNetworkSolidInputPortIngress>((component, data) => component.OnCopySettings(data));
+
+        private Guid solidInputPortStatusHandle = Guid.Empty;
+        private FilteredStorage filteredStorage;
+        private float retryTimer;
+        private string lastStatus;
+        private string cachedStatusText;
+        private bool shouldMigrateManualOperation;
+
+        public StorageNetworkMaterialRequester.OutputStoreMode CurrentInputStoreMode
+        {
+            get => (StorageNetworkMaterialRequester.OutputStoreMode)Mathf.Clamp(InputStoreModeValue, 0, 1);
+            set => InputStoreModeValue = (int)value;
+        }
+
+        public string LastStatus => lastStatus;
+
+        protected override void OnPrefabInit()
+        {
+            base.OnPrefabInit();
+            filteredStorage = new FilteredStorage(this, null, null, false, Db.Get().ChoreTypes.StorageFetch);
+        }
+
+        protected override void OnSpawn()
+        {
+            base.OnSpawn();
+            storage?.SetDefaultStoredItemModifiers(Storage.StandardInsulatedStorage);
+            if (shouldMigrateManualOperation)
+            {
+                MigrateManualOperationToAutomatable();
+            }
+            else
+            {
+                ManualOperationMigratedToAutomatable = true;
+                SyncManualOperation();
+            }
+
+            filteredStorage?.FilterChanged();
+            RefreshSolidInputPortStatus();
+            Subscribe((int)GameHashes.CopySettings, OnCopySettingsDelegate);
+        }
+
+        [OnDeserialized]
+        private void OnDeserialized()
+        {
+            shouldMigrateManualOperation = !ManualOperationMigratedToAutomatable;
+        }
+
+        protected override void OnCleanUp()
+        {
+            filteredStorage?.CleanUp();
+            RemoveSolidInputPortStatus();
+            base.OnCleanUp();
+        }
+
+        public void Sim1000ms(float dt)
+        {
+            SyncManualOperation();
+            RefreshSolidInputPortStatus();
+            if (storage == null || !InputStoreEnabled)
+            {
+                return;
+            }
+
+            if (retryTimer > 0f)
+            {
+                retryTimer -= dt;
+                return;
+            }
+
+            if (storage.items == null || storage.items.Count == 0)
+            {
+                lastStatus = Loc.Get(Loc.UI.STORAGE_NETWORK.MATERIAL_STATUS_WAITING_CONTENTS);
+                retryTimer = EmptyRetrySeconds;
+                UpdateCachedStatusText();
+                return;
+            }
+
+            StorageTransferResult result = NetworkStorageTransferService.TransferStoredItemsToNetwork(
+                storage,
+                new[] { storage },
+                CurrentInputStoreMode == StorageNetworkMaterialRequester.OutputStoreMode.SpecificStorage ? ResolveInputStorage() : null);
+
+            lastStatus = NetworkStorageTransferService.FormatOutputStatus(result, Loc.Get(Loc.UI.STORAGE_NETWORK.MATERIAL_STATUS_WAITING_CONTENTS));
+            retryTimer = result.MovedKg > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ? 0f : EmptyRetrySeconds;
+            UpdateCachedStatusText();
+        }
+
+        public void SetInputStorage(Storage target)
+        {
+            InputStorageInstanceId = GetStorageInstanceId(target);
+            CurrentInputStoreMode = StorageNetworkMaterialRequester.OutputStoreMode.SpecificStorage;
+        }
+
+        public void UseAutomaticInputStorage()
+        {
+            CurrentInputStoreMode = StorageNetworkMaterialRequester.OutputStoreMode.AutoNetwork;
+            InputStorageInstanceId = KPrefabID.InvalidInstanceID;
+        }
+
+        public Storage ResolveInputStorage()
+        {
+            if (InputStorageInstanceId == KPrefabID.InvalidInstanceID)
+            {
+                return null;
+            }
+
+            foreach (StorageInfo info in StorageSceneCollector.Collect().Storages)
+            {
+                Storage target = info?.Storage;
+                if (info?.Minion == null &&
+                    StorageNetworkStorageRules.IsNetworkStorageTarget(target, storage) &&
+                    GetStorageInstanceId(target) == InputStorageInstanceId)
+                {
+                    return target;
+                }
+            }
+
+            return null;
+        }
+
+        private void OnCopySettings(object data)
+        {
+            GameObject sourceObject = data as GameObject;
+            StorageNetworkSolidInputPortIngress source = sourceObject != null ? sourceObject.GetComponent<StorageNetworkSolidInputPortIngress>() : null;
+            if (source == null || source == this)
+            {
+                return;
+            }
+
+            InputStoreEnabled = source.InputStoreEnabled;
+            AllowManualOperation = source.AllowManualOperation;
+            InputStoreModeValue = source.InputStoreModeValue;
+            InputStorageInstanceId = source.InputStorageInstanceId;
+            if (automatable != null)
+            {
+                automatable.SetAutomationOnly(source.automatable != null
+                    ? source.automatable.GetAutomationOnly()
+                    : !source.AllowManualOperation);
+                ManualOperationMigratedToAutomatable = true;
+            }
+
+            retryTimer = 0f;
+            lastStatus = string.Empty;
+            cachedStatusText = null;
+            SyncManualOperation();
+        }
+
+        private void SyncManualOperation()
+        {
+            if (storage == null)
+            {
+                return;
+            }
+
+            AllowManualOperation = automatable == null || !automatable.GetAutomationOnly();
+            storage.allowItemRemoval = false;
+            storage.allowUIItemRemoval = false;
+            storage.fetchCategory = Storage.FetchCategory.Building;
+        }
+
+        private void MigrateManualOperationToAutomatable()
+        {
+            if (automatable == null)
+            {
+                return;
+            }
+
+            automatable.SetAutomationOnly(!AllowManualOperation);
+            ManualOperationMigratedToAutomatable = true;
+            shouldMigrateManualOperation = false;
+            SyncManualOperation();
+        }
+
+        private void RefreshSolidInputPortStatus()
+        {
+            if (solidInputPortStatusHandle != Guid.Empty)
+            {
+                return;
+            }
+
+            KSelectable selectable = GetComponent<KSelectable>();
+            if (selectable != null)
+            {
+                solidInputPortStatusHandle = selectable.AddStatusItem(GetSolidInputPortStatusItem(), this);
+            }
+        }
+
+        private void RemoveSolidInputPortStatus()
+        {
+            if (solidInputPortStatusHandle == Guid.Empty)
+            {
+                return;
+            }
+
+            KSelectable selectable = GetComponent<KSelectable>();
+            if (selectable != null)
+            {
+                selectable.RemoveStatusItem(solidInputPortStatusHandle);
+            }
+
+            solidInputPortStatusHandle = Guid.Empty;
+        }
+
+        private static StatusItem GetSolidInputPortStatusItem()
+        {
+            if (solidInputPortStatusItem != null)
+            {
+                return solidInputPortStatusItem;
+            }
+
+            solidInputPortStatusItem = new StatusItem(
+                "StorageNetworkSolidInputPort",
+                Loc.Get(Loc.UI.STORAGE_NETWORK.SOLID_INPUT_PORT_STATUS_ITEM),
+                Loc.Get(Loc.UI.STORAGE_NETWORK.SOLID_INPUT_PORT_STATUS_TOOLTIP),
+                "status_item_need_resource",
+                StatusItem.IconType.Custom,
+                NotificationType.Good,
+                false,
+                OverlayModes.None.ID,
+                129022,
+                false);
+
+            solidInputPortStatusItem.resolveStringCallback = (text, data) =>
+            {
+                StorageNetworkSolidInputPortIngress ingress = data as StorageNetworkSolidInputPortIngress;
+                return ingress != null ? ingress.GetStatusText() : text;
+            };
+            solidInputPortStatusItem.resolveTooltipCallback = (tooltip, data) =>
+            {
+                StorageNetworkSolidInputPortIngress ingress = data as StorageNetworkSolidInputPortIngress;
+                return ingress != null ? ingress.GetStatusText() : tooltip;
+            };
+
+            return solidInputPortStatusItem;
+        }
+
+        private string GetStatusText()
+        {
+            if (cachedStatusText == null)
+            {
+                UpdateCachedStatusText();
+            }
+
+            return cachedStatusText;
+        }
+
+        private void UpdateCachedStatusText()
+        {
+            cachedStatusText = BuildStatusText();
+        }
+
+        private string BuildStatusText()
+        {
+            return ColorizeInfo(string.Format(
+                Loc.Get(Loc.UI.STORAGE_NETWORK.SOLID_INPUT_PORT_STATUS_ITEM),
+                GetCurrentStatusText())) + "\n" + string.Format(
+                Loc.Get(Loc.UI.STORAGE_NETWORK.SOLID_INPUT_PORT_STATUS_TOOLTIP),
+                ColorizeEnabled(InputStoreEnabled),
+                ColorizeNetwork(StorageSceneRegistry.HasOnlineCoreInWorld(GetWorldId())),
+                ColorizeInfo(GetInputStoreModeStatusText()),
+                ColorizeAmount(GameUtil.GetFormattedMass(storage != null ? storage.MassStored() : 0f)),
+                ColorizeAmount(GameUtil.GetFormattedMass(storage != null ? storage.Capacity() : 0f)),
+                ColorizeStatus(GetCurrentStatusText()));
+        }
+
+        private string GetInputStoreModeStatusText()
+        {
+            if (CurrentInputStoreMode == StorageNetworkMaterialRequester.OutputStoreMode.SpecificStorage)
+            {
+                Storage target = ResolveInputStorage();
+                return target != null
+                    ? string.Format(Loc.Get(Loc.UI.STORAGE_NETWORK.OUTPUT_STORE_TARGET), target.GetProperName())
+                    : Loc.Get(Loc.UI.STORAGE_NETWORK.OUTPUT_STORE_MODE_SPECIFIC);
+            }
+
+            return Loc.Get(Loc.UI.STORAGE_NETWORK.OUTPUT_STORE_MODE_AUTO);
+        }
+
+        private string GetCurrentStatusText()
+        {
+            if (!InputStoreEnabled)
+            {
+                return Loc.Get(Loc.UI.STORAGE_NETWORK.STATUS_DISABLED);
+            }
+
+            if (!StorageSceneRegistry.HasOnlineCoreInWorld(GetWorldId()))
+            {
+                return Loc.Get(Loc.UI.STORAGE_NETWORK.PORT_STATUS_SHORT_OFFLINE);
+            }
+
+            return string.IsNullOrEmpty(lastStatus) ? Loc.Get(Loc.UI.STORAGE_NETWORK.STATUS_ENABLED) : lastStatus;
+        }
+
+        private int GetWorldId()
+        {
+            int worldId = gameObject.GetMyWorldId();
+            if (worldId != byte.MaxValue && worldId >= 0)
+            {
+                return worldId;
+            }
+
+            int cell = Grid.PosToCell(gameObject);
+            return Grid.IsValidCell(cell) ? Grid.WorldIdx[cell] : -1;
+        }
+
+        private static string GetOnOffText(bool enabled)
+        {
+            return enabled ? Loc.Get(Loc.UI.STORAGE_NETWORK.STATUS_ENABLED) : Loc.Get(Loc.UI.STORAGE_NETWORK.STATUS_DISABLED);
+        }
+
+        private static string ColorizeEnabled(bool enabled)
+        {
+            return Colorize(GetOnOffText(enabled), enabled ? "#55d17a" : "#d86a6a");
+        }
+
+        private static string ColorizeNetwork(bool online)
+        {
+            return Colorize(online ? Loc.Get(Loc.UI.STORAGE_NETWORK.PORT_STATUS_SHORT_ONLINE) : Loc.Get(Loc.UI.STORAGE_NETWORK.PORT_STATUS_SHORT_OFFLINE), online ? "#55d17a" : "#d86a6a");
+        }
+
+        private static string ColorizeInfo(string text)
+        {
+            return Colorize(text, "#8ec7ff");
+        }
+
+        private static string ColorizeAmount(string text)
+        {
+            return Colorize(text, "#f0c96a");
+        }
+
+        private static string ColorizeStatus(string text)
+        {
+            bool warning = text.Contains(Loc.Get(Loc.UI.STORAGE_NETWORK.STATUS_DISABLED)) ||
+                text.Contains(Loc.Get(Loc.UI.STORAGE_NETWORK.PORT_STATUS_SHORT_OFFLINE)) ||
+                text.Contains(Loc.Get(Loc.UI.STORAGE_NETWORK.CORE_OFFLINE_TITLE));
+            return Colorize(text, warning ? "#d86a6a" : "#55d17a");
+        }
+
+        private static string Colorize(string text, string color)
+        {
+            return string.Format("<color={0}>{1}</color>", color, text);
+        }
+
+        private static int GetStorageInstanceId(Storage target)
+        {
+            KPrefabID prefabId = target != null ? target.GetComponent<KPrefabID>() : null;
+            return prefabId != null ? prefabId.InstanceID : KPrefabID.InvalidInstanceID;
+        }
+    }
+}

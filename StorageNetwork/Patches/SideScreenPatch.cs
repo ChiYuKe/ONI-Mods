@@ -1,12 +1,23 @@
 using HarmonyLib;
+using System.Reflection;
+using StorageNetwork.Core;
 using StorageNetwork.Components;
+using StorageNetwork.UI;
 using StorageNetwork.UI.Installers;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace StorageNetwork.Patches
 {
     public static class SideScreenPatch
     {
+        private const string TitleSettingsButtonName = "StorageNetworkTitleSettingsButton";
+        private static readonly FieldInfo DetailsCodexEntryButtonField = AccessTools.Field(typeof(DetailsScreen), "CodexEntryButton");
+        private static readonly FieldInfo DetailsCloseButtonField = AccessTools.Field(typeof(DetailsScreen), "CloseButton");
+        private static Sprite titleSettingsButtonSprite;
+        private static DetailsScreen lastTitleDetailsScreen;
+        private static GameObject lastTitleTarget;
+
         [HarmonyPatch(typeof(ManagementMenu), "OnPrefabInit")]
         public static class ManagementMenuOnPrefabInitPatch
         {
@@ -64,6 +75,217 @@ namespace StorageNetwork.Patches
                 catch (System.Exception exception)
                 {
                     Debug.LogWarning("[StorageNetwork] Failed to add core side screen: " + exception);
+                }
+            }
+        }
+
+        [HarmonyPatch(typeof(DetailsScreen), "Refresh")]
+        public static class DetailsScreenRefreshPatch
+        {
+            public static void Postfix(DetailsScreen __instance, GameObject go)
+            {
+                if (__instance == null)
+                {
+                    return;
+                }
+
+                try
+                {
+                    RefreshStorageNetworkTitleButton(__instance, go);
+                }
+                catch (System.Exception exception)
+                {
+                    Debug.LogWarning("[StorageNetwork] Failed to refresh title port network settings button: " + exception);
+                }
+            }
+        }
+
+        private static void RefreshStorageNetworkTitleButton(DetailsScreen detailsScreen, GameObject target)
+        {
+            if (lastTitleDetailsScreen == detailsScreen && lastTitleTarget == target)
+            {
+                return;
+            }
+
+            lastTitleDetailsScreen = detailsScreen;
+            lastTitleTarget = target;
+
+            Storage storage = target != null ? target.GetComponent<Storage>() : null;
+            KButton template = DetailsCodexEntryButtonField?.GetValue(detailsScreen) as KButton;
+            if (template == null || template.transform.parent == null)
+            {
+                return;
+            }
+
+            Transform parent = template.transform.parent;
+            Transform existing = parent.Find(TitleSettingsButtonName);
+            bool shouldShow = StorageNetworkStorageRules.IsNetworkPortStorage(storage);
+            if (!shouldShow)
+            {
+                if (existing != null)
+                {
+                    existing.gameObject.SetActive(false);
+                }
+
+                return;
+            }
+
+            GameObject buttonObject = existing != null
+                ? existing.gameObject
+                : Object.Instantiate(template.gameObject, parent, false);
+            buttonObject.name = TitleSettingsButtonName;
+            buttonObject.SetActive(true);
+
+            StorageNetworkTitleButtonState state = buttonObject.GetComponent<StorageNetworkTitleButtonState>();
+            if (state == null)
+            {
+                state = buttonObject.AddComponent<StorageNetworkTitleButtonState>();
+                state.Initialize(buttonObject);
+            }
+
+            state.SetTarget(storage);
+            PlaceBeforeCloseButton(detailsScreen, buttonObject.transform);
+        }
+
+        private static Sprite GetTitleSettingsButtonSprite()
+        {
+            if (titleSettingsButtonSprite == null)
+            {
+                titleSettingsButtonSprite = StorageNetworkSpriteLoader.GetSprite("storage_network_overlay") ??
+                                            Assets.GetSprite("icon_category_storage") ??
+                                            Assets.GetSprite("icon_category_shipping") ??
+                                            Assets.GetSprite("unknown");
+            }
+
+            return titleSettingsButtonSprite;
+        }
+
+        private static void PlaceBeforeCloseButton(DetailsScreen detailsScreen, Transform buttonTransform)
+        {
+            KButton closeButton = DetailsCloseButtonField?.GetValue(detailsScreen) as KButton;
+            if (closeButton != null && closeButton.transform.parent == buttonTransform.parent)
+            {
+                buttonTransform.SetSiblingIndex(closeButton.transform.GetSiblingIndex());
+            }
+            else
+            {
+                buttonTransform.SetAsLastSibling();
+            }
+        }
+
+        private sealed class StorageNetworkTitleButtonState : KMonoBehaviour
+        {
+            private KButton button;
+            private ToolTip tooltip;
+            private Image icon;
+            private readonly System.Collections.Generic.List<Image> backgroundImages = new System.Collections.Generic.List<Image>();
+            private readonly System.Collections.Generic.List<Image> extraIconImages = new System.Collections.Generic.List<Image>();
+            private Storage targetStorage;
+
+            public void Initialize(GameObject buttonObject)
+            {
+                button = buttonObject.GetComponent<KButton>() ?? buttonObject.GetComponentInChildren<KButton>(true);
+                tooltip = buttonObject.GetComponent<ToolTip>() ?? buttonObject.GetComponentInChildren<ToolTip>(true);
+
+                LocText text = buttonObject.GetComponentInChildren<LocText>(true);
+                if (text != null)
+                {
+                    text.gameObject.SetActive(false);
+                }
+
+                ConfigureImages(buttonObject);
+                RefreshIcon();
+
+                tooltip?.SetSimpleTooltip(StorageNetwork.STRINGS.Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PORT_NETWORK_SETTINGS_TOOLTIP));
+
+                if (button != null)
+                {
+                    button.isInteractable = true;
+                    button.ClearOnClick();
+                    button.onClick += OnClick;
+                }
+            }
+
+            public void SetTarget(Storage storage)
+            {
+                targetStorage = storage;
+                RefreshIcon();
+                if (button != null)
+                {
+                    button.isInteractable = targetStorage != null;
+                }
+            }
+
+            private void RefreshIcon()
+            {
+                foreach (Image background in backgroundImages)
+                {
+                    if (background == null)
+                    {
+                        continue;
+                    }
+
+                    background.enabled = true;
+                    background.color = new Color(0.22f, 0.24f, 0.31f, 1f);
+                }
+
+                foreach (Image extraIcon in extraIconImages)
+                {
+                    if (extraIcon != null)
+                    {
+                        extraIcon.enabled = false;
+                    }
+                }
+
+                Sprite sprite = GetTitleSettingsButtonSprite();
+                if (icon != null && sprite != null)
+                {
+                    icon.sprite = sprite;
+                    icon.color = Color.white;
+                    icon.preserveAspect = true;
+                    icon.enabled = true;
+                }
+            }
+
+            private void OnClick()
+            {
+                if (targetStorage != null)
+                {
+                    StorageNetworkPanel.ShowSettings(targetStorage);
+                }
+            }
+
+            private void ConfigureImages(GameObject buttonObject)
+            {
+                Image[] images = buttonObject.GetComponentsInChildren<Image>(true);
+                icon = null;
+                backgroundImages.Clear();
+                extraIconImages.Clear();
+                foreach (Image image in images)
+                {
+                    if (image == null)
+                    {
+                        continue;
+                    }
+
+                    string imageName = image.name.ToLowerInvariant();
+                    bool isBackground = imageName.Contains("bg") ||
+                        imageName.Contains("background") ||
+                        image.gameObject == buttonObject;
+                    if (isBackground)
+                    {
+                        backgroundImages.Add(image);
+                        continue;
+                    }
+
+                    if (icon == null)
+                    {
+                        icon = image;
+                    }
+                    else
+                    {
+                        extraIconImages.Add(image);
+                    }
                 }
             }
         }

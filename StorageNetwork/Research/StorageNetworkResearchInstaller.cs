@@ -40,9 +40,9 @@ namespace StorageNetwork.Research
                 StorageNetworkPowerInputPortConfig.ID,
                 StorageNetworkPowerOutputPortConfig.ID
             }, 50f, 0f, 0f),
-            new StorageNetworkTechSpec(SmallStorageTechId, "STORAGENETWORKRESEARCHSMALLSTORAGE", CoreTechId, 1, 0, new[] { SmallSolidServerConfig.ID, SmallLiquidServerConfig.ID, SmallGasServerConfig.ID }, 50f, 0f, 0f),
-            new StorageNetworkTechSpec(MediumStorageTechId, "STORAGENETWORKRESEARCHMEDIUMSTORAGE", SmallStorageTechId, 2, 0, new[] { MediumSolidServerConfig.ID, MediumLiquidServerConfig.ID, MediumGasServerConfig.ID }, 50f, 30f, 0f),
-            new StorageNetworkTechSpec(LargeStorageTechId, "STORAGENETWORKRESEARCHLARGESTORAGE", MediumStorageTechId, 3, 0, new[] { LargeSolidServerConfig.ID, LargeLiquidServerConfig.ID, LargeGasServerConfig.ID }, 70f, 50f, 0f),
+            new StorageNetworkTechSpec(SmallStorageTechId, "STORAGENETWORKRESEARCHSMALLSTORAGE", CoreTechId, 1, 0, new[] { SmallSolidServerConfig.ID, SmallLiquidServerConfig.ID, SmallGasServerConfig.ID, SmallBatteryServerConfig.ID, SmallColdStorageServerConfig.ID }, 50f, 0f, 0f),
+            new StorageNetworkTechSpec(MediumStorageTechId, "STORAGENETWORKRESEARCHMEDIUMSTORAGE", SmallStorageTechId, 2, 0, new[] { MediumSolidServerConfig.ID, MediumLiquidServerConfig.ID, MediumGasServerConfig.ID, MediumBatteryServerConfig.ID, MediumColdStorageServerConfig.ID }, 50f, 30f, 0f),
+            new StorageNetworkTechSpec(LargeStorageTechId, "STORAGENETWORKRESEARCHLARGESTORAGE", MediumStorageTechId, 3, 0, new[] { LargeSolidServerConfig.ID, LargeLiquidServerConfig.ID, LargeGasServerConfig.ID, LargeBatteryServerConfig.ID, LargeColdStorageServerConfig.ID }, 70f, 50f, 0f),
             new StorageNetworkTechSpec(RelayTechId, "STORAGENETWORKRESEARCHRELAY", LargeStorageTechId, 4, 0, new[] { StorageNetworkRelayModuleConfig.ID }, 70f, 100f, 200f)
         };
 

@@ -40,6 +40,13 @@ namespace StorageNetwork.Components
         {
             base.OnSpawn();
             EnsureStorage();
+            if (StorageNetworkStorageRules.IsServerStorage(storage))
+            {
+                OutputStoreEnabled = false;
+                lastOutputStatus = string.Empty;
+                return;
+            }
+
             OutputStoreEnabled = IsOutputStoreEnabled();
             ApplyServerStorageModifiers();
             StorageSceneRegistry.Register(gameObject);
@@ -54,7 +61,7 @@ namespace StorageNetwork.Components
         public void Sim1000ms(float dt)
         {
             EnsureStorage();
-            if (!IsOutputStoreEnabled() || storage == null)
+            if (storage == null || StorageNetworkStorageRules.IsServerStorage(storage) || !IsOutputStoreEnabled())
             {
                 lastOutputStatus = string.Empty;
                 outputRetryTimer = 0f;
@@ -85,6 +92,11 @@ namespace StorageNetwork.Components
         public bool IsOutputStoreEnabled()
         {
             EnsureStorage();
+            if (StorageNetworkStorageRules.IsServerStorage(storage))
+            {
+                return false;
+            }
+
             return OutputStoreEnabled ||
                    Config.Instance.IsStorageOutputStoreToNetworkEnabled(storage);
         }
@@ -92,6 +104,12 @@ namespace StorageNetwork.Components
         public void SetOutputStoreEnabled(bool enabled)
         {
             EnsureStorage();
+            if (StorageNetworkStorageRules.IsServerStorage(storage))
+            {
+                OutputStoreEnabled = false;
+                return;
+            }
+
             OutputStoreEnabled = enabled;
             Config.Instance.SetStorageOutputStoreToNetworkEnabled(storage, enabled);
             Config.Save();

@@ -39,13 +39,6 @@ namespace StorageNetwork.Components
                 return;
             }
 
-            StorageNetworkPort port = GetComponent<StorageNetworkPort>();
-            if (port != null && !port.IsInput)
-            {
-                filterState.MarkDefaultInitialized();
-                return;
-            }
-
             HashSet<Tag> defaultTags = BuildDefaultTags(storage.storageFilters);
             if (defaultTags.Count > 0)
             {

@@ -1,17 +1,25 @@
 using System.Collections.Generic;
 using StorageNetwork.Components;
 using StorageNetwork.Core;
-using StorageNetwork.Services;
 using TUNING;
 using UnityEngine;
 
 namespace StorageNetwork.Buildings
 {
+    public enum StorageNetworkPortKind
+    {
+        SolidInput,
+        SolidOutput,
+        LiquidInput,
+        LiquidOutput,
+        GasInput,
+        GasOutput,
+        PowerInput,
+        PowerOutput
+    }
+
     public abstract class StorageNetworkPortBuildingBase : IBuildingConfig
     {
-        private const float PowerPortBatteryCapacityKJ = 10000f;
-        private const float PowerPortBatteryJoulesLostPerSecond = 1.6666666f;
-
         protected abstract StorageNetworkPortSpec Spec { get; }
 
         public override BuildingDef CreateBuildingDef()
@@ -22,19 +30,22 @@ namespace StorageNetwork.Buildings
                 spec.Width,
                 spec.Height,
                 spec.AnimFile,
-                30,
-                30f,
-                BUILDINGS.CONSTRUCTION_MASS_KG.TIER3,
+                1000,
+                60f,
+                BUILDINGS.CONSTRUCTION_MASS_KG.TIER4,
                 MATERIALS.REFINED_METALS,
-                1600f,
-                BuildLocationRule.Anywhere,
-                BUILDINGS.DECOR.PENALTY.TIER1,
-                NOISE_POLLUTION.NONE,
+                9999f,
+                BuildLocationRule.OnFloor,
+                BUILDINGS.DECOR.NONE,
+                NOISE_POLLUTION.NOISY.TIER2,
                 0.2f);
 
+            buildingDef.ObjectLayer = ObjectLayer.Building;
             buildingDef.Floodable = false;
             buildingDef.Overheatable = false;
             buildingDef.AudioCategory = "Metal";
+            buildingDef.CanMove = false;
+            buildingDef.UseStructureTemperature = false;
             buildingDef.ViewMode = spec.ViewMode;
             buildingDef.PermittedRotations = PermittedRotations.R360;
             buildingDef.AddSearchTerms(global::STRINGS.SEARCH_TERMS.STORAGE);
@@ -44,12 +55,12 @@ namespace StorageNetwork.Buildings
                 if (spec.Direction == StorageNetworkPortDirection.Input)
                 {
                     buildingDef.InputConduitType = spec.ConduitType;
-                    buildingDef.UtilityInputOffset = spec.UtilityOffset;
+                    buildingDef.UtilityInputOffset = spec.InputOffset;
                 }
                 else
                 {
                     buildingDef.OutputConduitType = spec.ConduitType;
-                    buildingDef.UtilityOutputOffset = spec.UtilityOffset;
+                    buildingDef.UtilityOutputOffset = spec.OutputOffset;
                 }
             }
 
@@ -57,9 +68,16 @@ namespace StorageNetwork.Buildings
             {
                 buildingDef.RequiresPowerInput = spec.Direction == StorageNetworkPortDirection.Input;
                 buildingDef.RequiresPowerOutput = spec.Direction == StorageNetworkPortDirection.Output;
-                buildingDef.PowerInputOffset = spec.Direction == StorageNetworkPortDirection.Input ? spec.UtilityOffset : new CellOffset(0, 0);
-                buildingDef.PowerOutputOffset = spec.Direction == StorageNetworkPortDirection.Output ? spec.UtilityOffset : new CellOffset(0, 0);
-                buildingDef.ElectricalArrowOffset = spec.UtilityOffset;
+                buildingDef.PowerInputOffset = spec.Direction == StorageNetworkPortDirection.Input ? spec.PowerOffset : new CellOffset(0, 0);
+                buildingDef.PowerOutputOffset = spec.Direction == StorageNetworkPortDirection.Output ? spec.PowerOffset : new CellOffset(0, 0);
+                buildingDef.ElectricalArrowOffset = spec.PowerOffset;
+                buildingDef.EnergyConsumptionWhenActive = 0f;
+                buildingDef.GeneratorWattageRating = spec.Direction == StorageNetworkPortDirection.Output
+                    ? StorageNetworkPowerOutputPortGenerator.MaxOutputWatts
+                    : 0f;
+                buildingDef.GeneratorBaseCapacity = spec.Direction == StorageNetworkPortDirection.Output
+                    ? StorageNetworkPowerOutputPortGenerator.MaxOutputWatts
+                    : 0f;
             }
 
             RegisterOverlay(spec);
@@ -72,70 +90,37 @@ namespace StorageNetwork.Buildings
             KPrefabID prefabId = go.GetComponent<KPrefabID>();
             prefabId?.AddTag(RoomConstraints.ConstraintTags.IndustrialMachinery);
             prefabId?.AddTag(StorageSceneTags.ModStorage);
+            prefabId?.AddTag(Spec.Direction == StorageNetworkPortDirection.Input
+                ? StorageSceneTags.CategoryInputPort
+                : StorageSceneTags.CategoryOutputPort);
+            AddPortCategoryTags(prefabId, Spec.Kind);
 
             Storage storage = go.AddOrGet<Storage>();
             storage.capacityKg = Spec.CapacityKg;
             storage.showInUI = !Spec.PowerPort;
-            storage.allowItemRemoval = false;
+            storage.allowItemRemoval = Spec.Kind == StorageNetworkPortKind.SolidOutput;
             storage.showDescriptor = false;
             storage.storageFilters = Spec.Filters ?? new List<Tag>();
-            storage.fetchCategory = Storage.FetchCategory.Building;
+            storage.fetchCategory = Spec.Kind == StorageNetworkPortKind.SolidOutput
+                ? Storage.FetchCategory.GeneralStorage
+                : Storage.FetchCategory.Building;
             storage.showCapacityStatusItem = false;
             storage.showCapacityAsMainStatus = false;
 
-            go.AddOrGet<StorageNetworkPort>().Configure(Spec.Kind);
-            go.AddOrGet<StorageNetworkPortStatusSilencer>();
-            go.AddOrGet<StorageNetworkPortStatusReporter>();
+            go.AddOrGet<StorageNetworkSceneMember>();
+            ConfigureRuntime(go, storage, Spec);
             go.AddOrGet<UserNameable>();
-            if (Spec.Kind == StorageNetworkPortKind.SolidInput || Spec.Kind == StorageNetworkPortKind.SolidOutput)
-            {
-                Automatable automatable = go.AddOrGet<Automatable>();
-                automatable.SetAutomationOnly(false);
-            }
-
-            if (Spec.Kind == StorageNetworkPortKind.SolidInput)
-            {
-                go.AddOrGet<StorageNetworkPortManualFetch>();
-                ConfigureSolidInputConsumer(go, storage, Spec);
-            }
-
-            if (!Spec.PowerPort && Spec.Direction == StorageNetworkPortDirection.Input)
-            {
-                go.AddOrGet<StorageNetworkStorageConnector>();
-            }
-            else if (!Spec.PowerPort && Spec.Direction == StorageNetworkPortDirection.Output)
-            {
-                go.AddOrGet<StorageNetworkPortRequester>();
-                ConfigureOutputDispenser(go, storage, Spec);
-                if (Spec.Kind == StorageNetworkPortKind.SolidOutput)
-                {
-                    StorageNetworkPortPickupBufferStorage.ConfigurePrefab(go, Spec.CapacityKg);
-                }
-            }
-
-            if (ShouldShowFilterUI(Spec))
-            {
-                StorageNetworkFilterConfigurator.Configure(go.AddOrGet<TreeFilterable>());
-                if (ShouldInitializeDefaultFilters(Spec))
-                {
-                    go.AddOrGet<StorageNetworkDefaultFilterInitializer>();
-                }
-            }
-
             go.AddOrGetDef<RocketUsageRestriction.Def>();
         }
 
         public override void DoPostConfigureComplete(GameObject go)
         {
-            Prioritizable.AddRef(go);
-            if (Spec.PowerPort)
+            if (Spec.Kind == StorageNetworkPortKind.SolidOutput)
             {
-                Battery battery = go.AddOrGet<Battery>();
-                battery.capacity = PowerPortBatteryCapacityKJ;
-                battery.joulesLostPerSecond = PowerPortBatteryJoulesLostPerSecond;
-                battery.powerSortOrder = 1000;
-                go.AddOrGetDef<PoweredActiveController.Def>();
+                Object.DestroyImmediate(go.GetComponent<RequireOutputs>());
             }
+
+            Prioritizable.AddRef(go);
         }
 
         private static void RegisterOverlay(StorageNetworkPortSpec spec)
@@ -161,48 +146,118 @@ namespace StorageNetwork.Buildings
             }
         }
 
-        private static bool ShouldShowFilterUI(StorageNetworkPortSpec spec)
+        private static void ConfigureRuntime(GameObject go, Storage storage, StorageNetworkPortSpec spec)
         {
-            return !spec.PowerPort &&
-                   spec.Kind != StorageNetworkPortKind.LiquidInput &&
-                   spec.Kind != StorageNetworkPortKind.GasInput;
-        }
-
-        private static bool ShouldInitializeDefaultFilters(StorageNetworkPortSpec spec)
-        {
-            return spec.Direction == StorageNetworkPortDirection.Input &&
-                   spec.Kind != StorageNetworkPortKind.LiquidOutput &&
-                   spec.Kind != StorageNetworkPortKind.GasOutput;
-        }
-
-        private static void ConfigureSolidInputConsumer(GameObject go, Storage storage, StorageNetworkPortSpec spec)
-        {
-            SolidConduitConsumer consumer = go.AddOrGet<SolidConduitConsumer>();
-            consumer.storage = storage;
-            consumer.capacityTag = GameTags.Any;
-            consumer.capacityKG = spec.CapacityKg;
-            consumer.alwaysConsume = true;
-        }
-
-        private static void ConfigureOutputDispenser(GameObject go, Storage storage, StorageNetworkPortSpec spec)
-        {
-            switch (spec.ConduitType)
+            if (spec.Kind == StorageNetworkPortKind.LiquidInput)
             {
-                case ConduitType.Solid:
-                    SolidConduitDispenser solidDispenser = go.AddOrGet<SolidConduitDispenser>();
-                    solidDispenser.storage = storage;
-                    solidDispenser.elementFilter = null;
-                    solidDispenser.alwaysDispense = true;
-                    solidDispenser.solidOnly = true;
+                StorageNetworkLiquidInputPortIngressConduit.Configure(go, storage, spec.CapacityKg);
+                go.AddOrGet<CopyBuildingSettings>();
+                go.AddOrGet<StorageNetworkLiquidInputPortIngress>();
+            }
+            else if (spec.Kind == StorageNetworkPortKind.LiquidOutput)
+            {
+                StorageNetworkLiquidOutputPortEgressConduit.Configure(go, storage);
+                go.AddOrGet<CopyBuildingSettings>();
+                go.AddOrGet<StorageNetworkLiquidOutputPortEgress>();
+            }
+            else if (spec.Kind == StorageNetworkPortKind.GasInput)
+            {
+                StorageNetworkGasInputPortIngressConduit.Configure(go, storage, spec.CapacityKg);
+                go.AddOrGet<CopyBuildingSettings>();
+                go.AddOrGet<StorageNetworkGasInputPortIngress>();
+            }
+            else if (spec.Kind == StorageNetworkPortKind.GasOutput)
+            {
+                StorageNetworkGasOutputPortEgressConduit.Configure(go, storage);
+                go.AddOrGet<CopyBuildingSettings>();
+                go.AddOrGet<StorageNetworkGasOutputPortEgress>();
+            }
+            else if (spec.Kind == StorageNetworkPortKind.PowerInput)
+            {
+                Battery battery = go.AddOrGet<Battery>();
+                battery.capacity = spec.CapacityKg;
+                battery.chargeWattage = StorageNetworkPowerInputPortConsumer.MaxInputWatts;
+                battery.joulesLostPerSecond = 0f;
+                go.AddOrGet<CopyBuildingSettings>();
+                go.AddOrGet<StorageNetworkPowerInputPortConsumer>();
+            }
+            else if (spec.Kind == StorageNetworkPortKind.PowerOutput)
+            {
+                go.AddOrGet<CopyBuildingSettings>();
+                go.AddOrGet<StorageNetworkPowerOutputPortGenerator>();
+            }
+            else if (spec.Kind == StorageNetworkPortKind.SolidInput)
+            {
+                SolidConduitConsumer consumer = go.AddOrGet<SolidConduitConsumer>();
+                consumer.storage = storage;
+                consumer.capacityTag = GameTags.Any;
+                consumer.capacityKG = spec.CapacityKg;
+                consumer.alwaysConsume = true;
+                go.AddOrGet<Automatable>();
+                TreeFilterable filterable = go.AddOrGet<TreeFilterable>();
+                filterable.dropIncorrectOnFilterChange = false;
+                filterable.autoSelectStoredOnLoad = false;
+                filterable.preventAutoAddOnDiscovery = true;
+                filterable.copySettingsEnabled = true;
+                filterable.tintOnNoFiltersSet = false;
+                filterable.uiHeight = TreeFilterable.UISideScreenHeight.Tall;
+                go.AddOrGet<CopyBuildingSettings>();
+                go.AddOrGet<StorageNetworkDefaultFilterInitializer>();
+                go.AddOrGet<StorageNetworkSolidInputPortIngress>();
+            }
+            else if (spec.Kind == StorageNetworkPortKind.SolidOutput)
+            {
+                SolidConduitDispenser dispenser = go.AddOrGet<SolidConduitDispenser>();
+                dispenser.storage = storage;
+                dispenser.elementFilter = null;
+                dispenser.solidOnly = true;
+                dispenser.alwaysDispense = true;
+                go.AddOrGet<CopyBuildingSettings>();
+                go.AddOrGet<StorageNetworkSolidOutputPortEgress>();
+                go.AddOrGet<StorageNetworkSolidOutputPortManualOperationButton>();
+            }
+        }
+
+        private static void AddPortCategoryTags(KPrefabID prefabId, StorageNetworkPortKind kind)
+        {
+            if (prefabId == null)
+            {
+                return;
+            }
+
+            switch (kind)
+            {
+                case StorageNetworkPortKind.SolidInput:
+                    prefabId.AddTag(StorageSceneTags.CategorySolidPort);
+                    prefabId.AddTag(StorageSceneTags.CategorySolidInputPort);
                     break;
-                case ConduitType.Liquid:
-                case ConduitType.Gas:
-                    ConduitDispenser conduitDispenser = go.AddOrGet<ConduitDispenser>();
-                    conduitDispenser.conduitType = spec.ConduitType;
-                    conduitDispenser.elementFilter = null;
-                    conduitDispenser.storage = storage;
-                    conduitDispenser.alwaysDispense = true;
-                    go.AddOrGet<RequireOutputs>().ignoreFullPipe = true;
+                case StorageNetworkPortKind.SolidOutput:
+                    prefabId.AddTag(StorageSceneTags.CategorySolidPort);
+                    prefabId.AddTag(StorageSceneTags.CategorySolidOutputPort);
+                    break;
+                case StorageNetworkPortKind.LiquidInput:
+                    prefabId.AddTag(StorageSceneTags.CategoryLiquidPort);
+                    prefabId.AddTag(StorageSceneTags.CategoryLiquidInputPort);
+                    break;
+                case StorageNetworkPortKind.LiquidOutput:
+                    prefabId.AddTag(StorageSceneTags.CategoryLiquidPort);
+                    prefabId.AddTag(StorageSceneTags.CategoryLiquidOutputPort);
+                    break;
+                case StorageNetworkPortKind.GasInput:
+                    prefabId.AddTag(StorageSceneTags.CategoryGasPort);
+                    prefabId.AddTag(StorageSceneTags.CategoryGasInputPort);
+                    break;
+                case StorageNetworkPortKind.GasOutput:
+                    prefabId.AddTag(StorageSceneTags.CategoryGasPort);
+                    prefabId.AddTag(StorageSceneTags.CategoryGasOutputPort);
+                    break;
+                case StorageNetworkPortKind.PowerInput:
+                    prefabId.AddTag(StorageSceneTags.CategoryPowerPort);
+                    prefabId.AddTag(StorageSceneTags.CategoryPowerInputPort);
+                    break;
+                case StorageNetworkPortKind.PowerOutput:
+                    prefabId.AddTag(StorageSceneTags.CategoryPowerPort);
+                    prefabId.AddTag(StorageSceneTags.CategoryPowerOutputPort);
                     break;
             }
         }
@@ -274,14 +329,18 @@ namespace StorageNetwork.Buildings
         public HashedString ViewMode { get; set; }
         public ConduitType ConduitType { get; set; }
         public bool PowerPort { get; set; }
-        public CellOffset UtilityOffset { get; set; }
+        public CellOffset InputOffset { get; set; }
+        public CellOffset OutputOffset { get; set; }
+        public CellOffset PowerOffset { get; set; }
         public float CapacityKg { get; set; }
         public List<Tag> Filters { get; set; }
     }
 
     public static class StorageNetworkPortSpecs
     {
-        private static readonly CellOffset PortUtilityOffset = new CellOffset(0, 0);
+        private static readonly CellOffset AccessoryInputOffset = new CellOffset(0, 0);
+        private static readonly CellOffset AccessoryOutputOffset = new CellOffset(0, 0);
+        private static readonly CellOffset AccessoryPowerOffset = new CellOffset(0, 0);
 
         private const string SolidInputPortAnimFile = "StorageNetworkSolidInputPort_kanim";
         private const string SolidOutputPortAnimFile = "StorageNetworkSolidOutputPort_kanim";
@@ -291,6 +350,8 @@ namespace StorageNetwork.Buildings
         private const string GasOutputPortAnimFile = "StorageNetworkGasOutputPort_kanim";
         private const string PowerInputPortAnimFile = "StorageNetworkPowerInputPort_kanim";
         private const string PowerOutputPortAnimFile = "StorageNetworkPowerOutputPort_kanim";
+        private const float PowerInputPortCapacityJoules = 10000f;
+        private const float PowerOutputPortCapacityJoules = 10000f;
 
         public static readonly StorageNetworkPortSpec SolidInput = Create(
             StorageNetworkSolidInputPortConfig.ID,
@@ -349,13 +410,15 @@ namespace StorageNetwork.Buildings
             StorageNetworkPowerInputPortConfig.ID,
             StorageNetworkPortKind.PowerInput,
             StorageNetworkPortDirection.Input,
-            PowerInputPortAnimFile);
+            PowerInputPortAnimFile,
+            PowerInputPortCapacityJoules);
 
         public static readonly StorageNetworkPortSpec PowerOutput = CreatePower(
             StorageNetworkPowerOutputPortConfig.ID,
             StorageNetworkPortKind.PowerOutput,
             StorageNetworkPortDirection.Output,
-            PowerOutputPortAnimFile);
+            PowerOutputPortAnimFile,
+            PowerOutputPortCapacityJoules);
 
         public static IEnumerable<string> AllIds
         {
@@ -391,13 +454,15 @@ namespace StorageNetwork.Buildings
                 AnimFile = animFile,
                 ViewMode = viewMode,
                 ConduitType = conduitType,
-                UtilityOffset = PortUtilityOffset,
+                InputOffset = AccessoryInputOffset,
+                OutputOffset = AccessoryOutputOffset,
+                PowerOffset = AccessoryPowerOffset,
                 CapacityKg = capacityKg,
                 Filters = GetStorageFilters(conduitType)
             };
         }
 
-        private static StorageNetworkPortSpec CreatePower(string id, StorageNetworkPortKind kind, StorageNetworkPortDirection direction, string animFile)
+        private static StorageNetworkPortSpec CreatePower(string id, StorageNetworkPortKind kind, StorageNetworkPortDirection direction, string animFile, float capacityJoules)
         {
             return new StorageNetworkPortSpec
             {
@@ -410,8 +475,10 @@ namespace StorageNetwork.Buildings
                 ViewMode = OverlayModes.Power.ID,
                 ConduitType = ConduitType.None,
                 PowerPort = true,
-                UtilityOffset = PortUtilityOffset,
-                CapacityKg = 10000f,
+                InputOffset = AccessoryInputOffset,
+                OutputOffset = AccessoryOutputOffset,
+                PowerOffset = AccessoryPowerOffset,
+                CapacityKg = capacityJoules,
                 Filters = new List<Tag>()
             };
         }

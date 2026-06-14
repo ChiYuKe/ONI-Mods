@@ -7,7 +7,9 @@ namespace StorageNetwork.Gameplay
     {
         public static StorageNetworkStorageConnector GetOrCreateForSettingsStorage(Storage storage)
         {
-            if (storage == null || !StorageNetworkStorageRules.HasSettingsButtonTag(storage))
+            if (storage == null ||
+                !StorageNetworkStorageRules.HasSettingsButtonTag(storage) ||
+                StorageNetworkStorageRules.IsServerStorage(storage))
             {
                 return null;
             }

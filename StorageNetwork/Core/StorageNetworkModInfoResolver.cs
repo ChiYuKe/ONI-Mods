@@ -20,7 +20,8 @@ namespace StorageNetwork.Core
         }
 
         /// <summary>
-        /// Infers a building's source mod from runtime components first, then from its IBuildingConfig assembly.
+        /// Infers a building's source mod from its IBuildingConfig assembly first.
+        /// Runtime components may be added by compatibility patches from unrelated mods, so they are only a fallback.
         /// </summary>
         public static string GetSourceModName(Storage storage)
         {
@@ -33,6 +34,12 @@ namespace StorageNetwork.Core
             if (modNames.Count == 0)
             {
                 return string.Empty;
+            }
+
+            string configModName = GetSourceModNameFromBuildingConfig(storage, modNames);
+            if (!string.IsNullOrEmpty(configModName))
+            {
+                return configModName;
             }
 
             foreach (Component component in storage.GetComponents<Component>())
@@ -54,7 +61,7 @@ namespace StorageNetwork.Core
                 }
             }
 
-            return GetSourceModNameFromBuildingConfig(storage, modNames);
+            return string.Empty;
         }
 
         private static string GetSourceModNameFromBuildingConfig(Storage storage, Dictionary<Assembly, string> modNames)

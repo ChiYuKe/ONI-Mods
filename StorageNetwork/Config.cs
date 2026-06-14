@@ -140,7 +140,7 @@ namespace StorageNetwork
 
         public Config()
         {
-            SceneScanCacheSeconds = 0.25f;
+            SceneScanCacheSeconds = 1f;
             DefaultMaterialRequestLimitKg = 1000f;
             StoragesEnabledOutputStoreToNetwork = new List<int>();
             WindowLayouts = new Dictionary<string, StorageNetworkWindowLayout>();
@@ -224,7 +224,7 @@ namespace StorageNetwork
                 StoragesEnabledOutputStoreToNetwork = new List<int>();
             }
 
-            SceneScanCacheSeconds = Clamp(SceneScanCacheSeconds, 0.05f, 5f);
+            SceneScanCacheSeconds = Clamp(SceneScanCacheSeconds, 0.5f, 5f);
             DefaultMaterialRequestLimitKg = Clamp(DefaultMaterialRequestLimitKg, 1f, 1000000f);
             MaterialRequestSuccessCooldownSeconds = Clamp(MaterialRequestSuccessCooldownSeconds, 0.5f, 60f);
             MaterialRequestRetryCooldownSeconds = Clamp(MaterialRequestRetryCooldownSeconds, 0.5f, 60f);
@@ -282,10 +282,16 @@ namespace StorageNetwork
 
         private static string GetConfigPath()
         {
+            string documents = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            if (!string.IsNullOrEmpty(documents))
+            {
+                return Path.Combine(documents, "Klei", "OxygenNotIncluded", "mods", "config", "StorageNetwork", "StorageNetworkConfig.json");
+            }
+
             string root = !string.IsNullOrEmpty(modPath)
                 ? modPath
                 : Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-            return Path.Combine(root, "StorageNetworkConfig.json");
+            return Path.Combine(root, "config", "StorageNetwork", "StorageNetworkConfig.json");
         }
 
         private static ModConfigController<Config> Controller

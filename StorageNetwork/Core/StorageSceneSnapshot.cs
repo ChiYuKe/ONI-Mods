@@ -34,6 +34,7 @@ namespace StorageNetwork.Core
     {
         public StorageInfo(Storage storage)
         {
+            StorageNetworkPerformanceCounters.RecordStorageInfoConstruction();
             Storage = storage;
             GameObject = storage.gameObject;
             bool connected = StorageNetworkStorageRules.IsConnectedNetworkStorage(storage);
@@ -71,6 +72,7 @@ namespace StorageNetwork.Core
 
         public StorageInfo(Geyser geyser)
         {
+            StorageNetworkPerformanceCounters.RecordStorageInfoConstruction();
             Geyser = geyser;
             GameObject = geyser.gameObject;
             Name = GameObject.GetProperName();
@@ -114,5 +116,21 @@ namespace StorageNetwork.Core
             ComplexFabricator fabricator = storage != null ? storage.GetComponent<ComplexFabricator>() : null;
             return new List<Storage>(StorageNetworkProductionStorageCollector.GetProductionStorages(storage, fabricator));
         }
+    }
+
+    public sealed class StorageSceneLightweightSnapshot
+    {
+        public static readonly StorageSceneLightweightSnapshot Empty =
+            new StorageSceneLightweightSnapshot(new List<Storage>(), false);
+
+        public StorageSceneLightweightSnapshot(IReadOnlyList<Storage> storages, bool networkOnline)
+        {
+            Storages = storages;
+            NetworkOnline = networkOnline;
+        }
+
+        public IReadOnlyList<Storage> Storages { get; }
+
+        public bool NetworkOnline { get; }
     }
 }

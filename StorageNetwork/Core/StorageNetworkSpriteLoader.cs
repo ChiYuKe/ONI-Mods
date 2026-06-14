@@ -56,7 +56,6 @@ namespace StorageNetwork.Core
 
             LoadedSprites[spriteName] = sprite;
             RegisterSprite(spriteName, sprite);
-            Debug.Log("[StorageNetwork] Registered sprite: " + spriteName + " from " + filePath);
             return sprite;
         }
 

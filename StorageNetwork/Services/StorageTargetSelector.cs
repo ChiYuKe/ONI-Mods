@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace StorageNetwork.Services
 {
-    internal static class StorageTargetSelector
+    internal static partial class StorageTargetSelector
     {
         public static bool MatchesAllowedTags(GameObject item, HashSet<Tag> allowedTags)
         {
@@ -39,16 +39,43 @@ namespace StorageNetwork.Services
                 return IsUsableOutputTarget(specificTarget, item, matchTags, excludedStorages, sourceWorldId) ? specificTarget : null;
             }
 
+            if (snapshot == null && sourceWorldId >= 0)
+            {
+                return FindOutputTargetInStorages(
+                    item,
+                    matchTags,
+                    excludedStorages,
+                    StorageSceneCollector.CollectLightweightForWorld(sourceWorldId).Storages,
+                    sourceWorldId);
+            }
+
             snapshot = snapshot ?? StorageSceneCollector.Collect();
+            List<Storage> storages = new List<Storage>();
+            foreach (StorageInfo info in snapshot.Storages)
+            {
+                if (info?.Minion == null && info.Storage != null)
+                {
+                    storages.Add(info.Storage);
+                }
+            }
+
+            return FindOutputTargetInStorages(item, matchTags, excludedStorages, storages, sourceWorldId);
+        }
+
+        private static Storage FindOutputTargetInStorages(
+            GameObject item,
+            HashSet<Tag> matchTags,
+            HashSet<Storage> excludedStorages,
+            IEnumerable<Storage> storages,
+            int sourceWorldId)
+        {
             Storage best = null;
             float bestAvailable = 0f;
             bool bestFilterAccepting = false;
             float bestRemaining = 0f;
-            foreach (StorageInfo info in snapshot.Storages)
+            foreach (Storage target in storages)
             {
-                Storage target = info?.Storage;
-                if (info?.Minion != null ||
-                    !IsUsableOutputTarget(target, item, matchTags, excludedStorages, sourceWorldId) ||
+                if (!IsUsableOutputTarget(target, item, matchTags, excludedStorages, sourceWorldId) ||
                     !IsAutoOutputMatch(target, matchTags))
                 {
                     continue;
@@ -105,6 +132,21 @@ namespace StorageNetwork.Services
                     : new List<Storage>();
             }
 
+            if (snapshot == null && sourceWorldId >= 0)
+            {
+                List<Storage> lightweightTargets = new List<Storage>();
+                foreach (Storage target in StorageSceneCollector.CollectLightweightForWorld(sourceWorldId).Storages)
+                {
+                    if (IsUsableElementOutputTarget(target, tag, excluded, sourceWorldId))
+                    {
+                        lightweightTargets.Add(target);
+                    }
+                }
+
+                lightweightTargets.Sort((left, right) => CompareElementTargets(right, left, tag));
+                return lightweightTargets;
+            }
+
             snapshot = snapshot ?? (sourceWorldId >= 0 ? StorageSceneCollector.CollectForWorld(sourceWorldId) : StorageSceneCollector.Collect());
             List<Storage> targets = new List<Storage>();
             foreach (StorageInfo info in snapshot.Storages)
@@ -137,16 +179,14 @@ namespace StorageNetwork.Services
                 return sources;
             }
 
-            foreach (StorageInfo info in StorageSceneCollector.CollectForWorld(destinationWorldId).Storages)
+            foreach (Storage storage in StorageNetworkSourceIndexService.GetSourceStorages(destinationWorldId, true, wantedTags, excludedStorages))
             {
-                Storage storage = info?.Storage;
-                if (info?.Minion == null && IsUsableNetworkSource(storage, wantedTags, excludedStorages, destinationWorldId))
+                if (IsUsableNetworkSource(storage, wantedTags, excludedStorages, destinationWorldId))
                 {
                     sources.Add(storage);
                 }
             }
 
-            sources.Sort((left, right) => GetAmountAvailableByAnyMatchTag(right, wantedTags).CompareTo(GetAmountAvailableByAnyMatchTag(left, wantedTags)));
             return sources;
         }
 
@@ -186,258 +226,50 @@ namespace StorageNetwork.Services
             return Grid.IsValidCell(cell) ? Grid.WorldIdx[cell] : -1;
         }
 
-        private static int CompareElementTargets(Storage left, Storage right, Tag tag)
+        public static string DescribeElementOutputTargetFailure(
+            SimHashes elementHash,
+            Storage specificTarget = null,
+            int sourceWorldId = -1)
         {
-            float leftAvailable = left.GetAmountAvailable(tag);
-            float rightAvailable = right.GetAmountAvailable(tag);
-            int compare = leftAvailable.CompareTo(rightAvailable);
-            if (compare != 0)
+            Element element = ElementLoader.FindElementByHash(elementHash);
+            if (element == null)
             {
-                return compare;
+                return "element not found";
             }
 
-            compare = IsFilterAccepting(left, tag).CompareTo(IsFilterAccepting(right, tag));
-            if (compare != 0)
+            Tag tag = elementHash.CreateTag();
+            HashSet<Storage> excluded = new HashSet<Storage>();
+            List<string> reasons = new List<string>();
+
+            if (specificTarget != null)
             {
-                return compare;
+                reasons.Add(DescribeElementTargetCandidate(specificTarget, tag, excluded, sourceWorldId));
+                return string.Join("; ", reasons);
             }
 
-            return left.RemainingCapacity().CompareTo(right.RemainingCapacity());
-        }
+            IEnumerable<Storage> candidates = sourceWorldId >= 0
+                ? StorageSceneCollector.CollectLightweightForWorld(sourceWorldId).Storages
+                : StorageSceneCollector.Collect().Storages
+                    .Where(info => info?.Minion == null && info.Storage != null)
+                    .Select(info => info.Storage);
 
-        private static bool IsUsableOutputTarget(Storage target, GameObject item, HashSet<Tag> matchTags, HashSet<Storage> excludedStorages, int sourceWorldId = -1)
-        {
-            return target != null &&
-                   IsStorageReachableFromWorld(target, sourceWorldId) &&
-                   !excludedStorages.Contains(target) &&
-                   StorageNetworkStorageRules.IsServerStorage(target) &&
-                   StorageNetworkStorageRules.IsConnectedNetworkStorage(target) &&
-                   !StorageNetworkStorageRules.IsMinionStorage(target) &&
-                   !StorageNetworkStorageRules.IsProductionStorage(target) &&
-                   target.RemainingCapacity() > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT &&
-                   IsStorageAccepting(target, matchTags) &&
-                   (target.items == null || !target.items.Contains(item));
-        }
-
-        private static bool IsUsableElementOutputTarget(Storage target, Tag tag, HashSet<Storage> excludedStorages, int sourceWorldId = -1)
-        {
-            return target != null &&
-                   tag != Tag.Invalid &&
-                   IsStorageReachableFromWorld(target, sourceWorldId) &&
-                   !excludedStorages.Contains(target) &&
-                   StorageNetworkStorageRules.IsServerStorage(target) &&
-                   StorageNetworkStorageRules.IsConnectedNetworkStorage(target) &&
-                   !StorageNetworkStorageRules.IsMinionStorage(target) &&
-                   !StorageNetworkStorageRules.IsProductionStorage(target) &&
-                   target.RemainingCapacity() > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT &&
-                   IsStorageAccepting(target, tag) &&
-                   (target.GetAmountAvailable(tag) > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ||
-                    IsFilterAccepting(target, tag) ||
-                    HasNoExplicitStorageFilter(target));
-        }
-
-        private static bool IsUsableNetworkSource(Storage source, IEnumerable<Tag> tags, HashSet<Storage> excludedStorages, int destinationWorldId)
-        {
-            return source != null &&
-                   IsStorageReachableFromWorld(source, destinationWorldId) &&
-                   !excludedStorages.Contains(source) &&
-                   StorageNetworkStorageRules.IsServerStorage(source) &&
-                   StorageNetworkStorageRules.IsConnectedNetworkStorage(source) &&
-                   !StorageNetworkStorageRules.IsMinionStorage(source) &&
-                   !StorageNetworkStorageRules.IsProductionStorage(source) &&
-                   GetAmountAvailableByAnyMatchTag(source, tags) > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT;
-        }
-
-        private static bool IsStorageReachableFromWorld(Storage storage, int worldId)
-        {
-            if (storage == null)
+            foreach (Storage candidate in candidates)
             {
-                return false;
-            }
-
-            if (worldId < 0 || StorageSceneRegistry.IsCrossPlanetRelayOnline())
-            {
-                return true;
-            }
-
-            return GetObjectWorldId(storage.gameObject) == worldId;
-        }
-
-        private static bool IsAutoOutputMatch(Storage target, HashSet<Tag> matchTags)
-        {
-            return GetAmountAvailableByAnyMatchTag(target, matchTags) > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ||
-                   IsFilterAccepting(target, matchTags) ||
-                   HasNoExplicitStorageFilter(target);
-        }
-
-        private static bool IsFilterAccepting(Storage target, HashSet<Tag> matchTags)
-        {
-            if (StorageNetworkFilterBypass.ShouldBypassUserFilter(target))
-            {
-                return AnyTagAcceptedByStorageFilter(target.storageFilters, matchTags);
-            }
-
-            TreeFilterable filterable = target != null ? target.GetComponent<TreeFilterable>() : null;
-            if (IsEmptyFilteredPort(target, filterable))
-            {
-                return false;
-            }
-
-            return filterable != null && AnyTagAcceptedByTreeFilter(filterable, target.storageFilters, matchTags);
-        }
-
-        private static bool IsFilterAccepting(Storage target, Tag tag)
-        {
-            if (StorageNetworkFilterBypass.ShouldBypassUserFilter(target))
-            {
-                return IsStorageFilterAcceptingTag(target.storageFilters, tag);
-            }
-
-            TreeFilterable filterable = target != null ? target.GetComponent<TreeFilterable>() : null;
-            if (IsEmptyFilteredPort(target, filterable))
-            {
-                return false;
-            }
-
-            return filterable != null && IsFilterAcceptingTag(filterable, tag, target.storageFilters);
-        }
-
-        private static bool IsStorageAccepting(Storage target, HashSet<Tag> matchTags)
-        {
-            if (StorageNetworkFilterBypass.ShouldBypassUserFilter(target))
-            {
-                return AnyTagAcceptedByStorageFilter(target.storageFilters, matchTags);
-            }
-
-            if (IsFilteredPort(target))
-            {
-                return IsFilterAccepting(target, matchTags);
-            }
-
-            return target != null &&
-                   (IsFilterAccepting(target, matchTags) ||
-                    target.storageFilters == null ||
-                    target.storageFilters.Count == 0 ||
-                   AnyTagAcceptedByStorageFilter(target.storageFilters, matchTags));
-        }
-
-        private static bool IsStorageAccepting(Storage target, Tag tag)
-        {
-            if (StorageNetworkFilterBypass.ShouldBypassUserFilter(target))
-            {
-                return IsStorageFilterAcceptingTag(target.storageFilters, tag);
-            }
-
-            if (IsFilteredPort(target))
-            {
-                return IsFilterAccepting(target, tag);
-            }
-
-            return target != null &&
-                   (IsFilterAccepting(target, tag) ||
-                    target.storageFilters == null ||
-                    target.storageFilters.Count == 0 ||
-                    IsStorageFilterAcceptingTag(target.storageFilters, tag));
-        }
-
-        private static bool IsFilterAcceptingTag(TreeFilterable filterable, Tag tag, List<Tag> storageFilters)
-        {
-            return filterable != null &&
-                   (filterable.ContainsTag(tag) ||
-                    filterable.AcceptedTags.Any(accepted => IsDiscoveredCategoryAccepting(accepted, tag)) ||
-                    (filterable.AcceptedTags.Count == 0 && IsStorageFilterAcceptingTag(storageFilters, tag)));
-        }
-
-        private static bool IsStorageFilterAcceptingTag(List<Tag> storageFilters, Tag tag)
-        {
-            return storageFilters == null ||
-                   storageFilters.Count == 0 ||
-                   storageFilters.Contains(tag) ||
-                   storageFilters.Any(filter => IsDiscoveredCategoryAccepting(filter, tag));
-        }
-
-        private static bool IsDiscoveredCategoryAccepting(Tag categoryTag, Tag itemTag)
-        {
-            return categoryTag == itemTag ||
-                   DiscoveredResources.Instance != null &&
-                   DiscoveredResources.Instance.GetDiscoveredResourcesFromTag(categoryTag).Contains(itemTag);
-        }
-
-        private static bool AnyTagAcceptedByTreeFilter(TreeFilterable filterable, List<Tag> storageFilters, IEnumerable<Tag> tags)
-        {
-            if (tags == null)
-            {
-                return false;
-            }
-
-            foreach (Tag tag in tags)
-            {
-                if (IsFilterAcceptingTag(filterable, tag, storageFilters))
+                if (candidate == null)
                 {
-                    return true;
+                    continue;
                 }
+
+                reasons.Add(DescribeElementTargetCandidate(candidate, tag, excluded, sourceWorldId));
             }
 
-            return false;
-        }
-
-        private static bool AnyTagAcceptedByStorageFilter(List<Tag> storageFilters, IEnumerable<Tag> tags)
-        {
-            if (tags == null)
+            if (reasons.Count == 0)
             {
-                return false;
+                return "no storage candidates collected";
             }
 
-            foreach (Tag tag in tags)
-            {
-                if (IsStorageFilterAcceptingTag(storageFilters, tag))
-                {
-                    return true;
-                }
-            }
-
-            return false;
+            return string.Join("; ", reasons);
         }
 
-        private static float GetAmountAvailableByAnyMatchTag(Storage target, IEnumerable<Tag> matchTags)
-        {
-            if (target == null || matchTags == null)
-            {
-                return 0f;
-            }
-
-            float available = 0f;
-            foreach (Tag tag in matchTags)
-            {
-                available = Mathf.Max(available, target.GetAmountAvailable(tag));
-            }
-
-            return available;
-        }
-
-        private static bool HasNoExplicitStorageFilter(Storage target)
-        {
-            if (IsFilteredPort(target))
-            {
-                return false;
-            }
-
-            TreeFilterable filterable = target != null ? target.GetComponent<TreeFilterable>() : null;
-            return (filterable == null || filterable.GetTags() == null || filterable.GetTags().Count == 0) &&
-                   (target.storageFilters == null || target.storageFilters.Count == 0);
-        }
-
-        private static bool IsFilteredPort(Storage target)
-        {
-            return target != null &&
-                   target.GetComponent<StorageNetworkPort>() != null &&
-                   target.GetComponent<TreeFilterable>() != null;
-        }
-
-        private static bool IsEmptyFilteredPort(Storage target, TreeFilterable filterable)
-        {
-            return IsFilteredPort(target) &&
-                   (filterable == null || filterable.AcceptedTags == null || filterable.AcceptedTags.Count == 0);
-        }
     }
 }

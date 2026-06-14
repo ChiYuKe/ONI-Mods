@@ -254,16 +254,7 @@ namespace StorageNetwork.Components
 
         private void RefreshGeyserEmitterRegistration()
         {
-            ElementEmitter emitter = GetComponent<ElementEmitter>();
-            if (emitter == null || !emitter.IsSimActive)
-            {
-                return;
-            }
-
-            emitter.SetEmitting(false);
-            emitter.Sim200ms(0f);
-            emitter.SetEmitting(true);
-            emitter.Sim200ms(0f);
+            GetComponent<StorageNetworkGeyserOutput>()?.ApplyEmitterState();
         }
 
         private void RefreshConnectedStatus()

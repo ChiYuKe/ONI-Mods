@@ -27,7 +27,6 @@ namespace StorageNetwork.Services
             HashSet<Storage> excluded = StorageTargetSelector.BuildExclusionSet(excludedStorages);
             float totalMoved = 0f;
             string blockedItem = null;
-            StorageSceneSnapshot snapshot = specificTarget == null ? StorageSceneCollector.CollectForWorld(sourceWorldId) : null;
             List<GameObject> items = new List<GameObject>(source.items.Count);
             foreach (GameObject item in source.items)
             {
@@ -44,7 +43,7 @@ namespace StorageNetwork.Services
                     continue;
                 }
 
-                StorageTransferResult result = TransferStoredItem(source, item, excluded, specificTarget, snapshot, sourceWorldId);
+                StorageTransferResult result = TransferStoredItem(source, item, excluded, specificTarget, null, sourceWorldId);
                 totalMoved += result.MovedKg;
                 if (!string.IsNullOrEmpty(result.BlockedItem))
                 {
@@ -81,7 +80,7 @@ namespace StorageNetwork.Services
             HashSet<Tag> matchTags = StorageItemUtility.GetStorageMatchTags(item);
             HashSet<Storage> excluded = StorageTargetSelector.BuildExclusionSet(excludedStorages);
             Pickupable pickupable = item.GetComponent<Pickupable>();
-            Storage target = StorageTargetSelector.FindOutputTarget(item, matchTags, excluded, specificTarget, StorageSceneCollector.CollectForWorld(sourceWorldId), sourceWorldId);
+            Storage target = StorageTargetSelector.FindOutputTarget(item, matchTags, excluded, specificTarget, null, sourceWorldId);
             if (pickupable == null || target == null)
             {
                 return StorageTransferResult.Blocked(StorageItemUtility.GetItemDisplayName(item, tag));
@@ -119,6 +118,27 @@ namespace StorageNetwork.Services
             return moved > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT
                 ? new StorageTransferResult(moved, null)
                 : StorageTransferResult.Blocked(StorageItemUtility.GetItemDisplayName(item, tag));
+        }
+
+        public static StorageTransferResult TransferStoredItemToNetwork(
+            Storage source,
+            GameObject item,
+            IEnumerable<Storage> excludedStorages,
+            Storage specificTarget = null)
+        {
+            if (source == null || item == null || source.items == null || !source.items.Contains(item))
+            {
+                return StorageTransferResult.Idle;
+            }
+
+            int sourceWorldId = StorageTargetSelector.GetObjectWorldId(source.gameObject);
+            if (!StorageSceneRegistry.HasOnlineCoreInWorld(sourceWorldId))
+            {
+                return StorageTransferResult.Offline;
+            }
+
+            HashSet<Storage> excluded = StorageTargetSelector.BuildExclusionSet(excludedStorages);
+            return TransferStoredItem(source, item, excluded, specificTarget, null, sourceWorldId);
         }
 
         public static float TransferFromNetworkToStorage(
@@ -194,6 +214,349 @@ namespace StorageNetwork.Services
             }
 
             return moved;
+        }
+
+        public static StorageTransferResult TransferAnyLiquidFromNetworkToStorage(
+            Storage destination,
+            float amount,
+            IEnumerable<Storage> excludedStorages = null,
+            Storage specificSource = null,
+            SimHashes? liquidFilter = null)
+        {
+            return TransferAnyElementStateFromNetworkToStorage(
+                destination,
+                amount,
+                excludedStorages,
+                specificSource,
+                liquidFilter,
+                IsLiquidItem,
+                GameTags.Liquid.ProperName());
+        }
+
+        public static StorageTransferResult TransferAnyGasFromNetworkToStorage(
+            Storage destination,
+            float amount,
+            IEnumerable<Storage> excludedStorages = null,
+            Storage specificSource = null,
+            SimHashes? gasFilter = null)
+        {
+            return TransferAnyElementStateFromNetworkToStorage(
+                destination,
+                amount,
+                excludedStorages,
+                specificSource,
+                gasFilter,
+                IsGasItem,
+                GameTags.Gas.ProperName());
+        }
+
+        public static StorageTransferResult TransferAnySolidFromNetworkToStorage(
+            Storage destination,
+            float amount,
+            IEnumerable<Storage> excludedStorages = null,
+            Storage specificSource = null,
+            IEnumerable<Tag> allowedTags = null)
+        {
+            if (destination == null ||
+                amount <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ||
+                destination.RemainingCapacity() <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+            {
+                return StorageTransferResult.Idle;
+            }
+
+            int destinationWorldId = StorageTargetSelector.GetObjectWorldId(destination.gameObject);
+            if (!StorageSceneRegistry.HasOnlineCoreInWorld(destinationWorldId))
+            {
+                return StorageTransferResult.Offline;
+            }
+
+            HashSet<Tag> allowed = BuildAllowedTagSet(allowedTags);
+            HashSet<Storage> excluded = StorageTargetSelector.BuildExclusionSet(excludedStorages);
+            excluded.Add(destination);
+            IEnumerable<Storage> sources = specificSource != null
+                ? new[] { specificSource }
+                : StorageSceneCollector.CollectLightweightForWorld(destinationWorldId).Storages;
+
+            float moved = 0f;
+            string blockedItem = null;
+            foreach (Storage source in sources)
+            {
+                if (amount - moved <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ||
+                    destination.RemainingCapacity() <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+                {
+                    break;
+                }
+
+                if (source == null ||
+                    excluded.Contains(source) ||
+                    !StorageNetworkStorageRules.IsServerStorage(source) ||
+                    !StorageNetworkStorageRules.IsConnectedNetworkStorage(source) ||
+                    source.items == null)
+                {
+                    continue;
+                }
+
+                List<GameObject> items = new List<GameObject>(source.items.Count);
+                foreach (GameObject item in source.items)
+                {
+                    if (IsSolidItem(item) && StorageTargetSelector.MatchesAllowedTags(item, allowed))
+                    {
+                        items.Add(item);
+                    }
+                }
+
+                foreach (GameObject item in items)
+                {
+                    if (amount - moved <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ||
+                        destination.RemainingCapacity() <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+                    {
+                        break;
+                    }
+
+                    float transferAmount = Mathf.Min(
+                        amount - moved,
+                        StorageItemUtility.GetMass(item),
+                        Mathf.Max(0f, destination.RemainingCapacity()));
+                    if (transferAmount <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+                    {
+                        continue;
+                    }
+
+                    float transferred = TransferStoredObject(source, destination, item, transferAmount);
+                    if (transferred > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+                    {
+                        moved += transferred;
+                    }
+                    else if (blockedItem == null)
+                    {
+                        blockedItem = StorageItemUtility.GetItemDisplayName(item, StorageItemUtility.GetStorageTransferTag(item));
+                    }
+                }
+            }
+
+            return moved > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT
+                ? new StorageTransferResult(moved, null)
+                : StorageTransferResult.Blocked(blockedItem ?? GameTags.Solid.ProperName());
+        }
+
+        private static StorageTransferResult TransferAnyElementStateFromNetworkToStorage(
+            Storage destination,
+            float amount,
+            IEnumerable<Storage> excludedStorages,
+            Storage specificSource,
+            SimHashes? elementFilter,
+            System.Func<GameObject, SimHashes?, bool> itemPredicate,
+            string fallbackBlockedItem)
+        {
+            if (destination == null ||
+                amount <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ||
+                destination.RemainingCapacity() <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+            {
+                return StorageTransferResult.Idle;
+            }
+
+            int destinationWorldId = StorageTargetSelector.GetObjectWorldId(destination.gameObject);
+            if (!StorageSceneRegistry.HasOnlineCoreInWorld(destinationWorldId))
+            {
+                return StorageTransferResult.Offline;
+            }
+
+            HashSet<Storage> excluded = StorageTargetSelector.BuildExclusionSet(excludedStorages);
+            excluded.Add(destination);
+            List<Storage> sources = new List<Storage>();
+            if (specificSource != null)
+            {
+                sources.Add(specificSource);
+            }
+            else
+            {
+                foreach (Storage source in StorageSceneCollector.CollectLightweightForWorld(destinationWorldId).Storages)
+                {
+                    if (source != null)
+                    {
+                        sources.Add(source);
+                    }
+                }
+            }
+
+            float moved = 0f;
+            string blockedItem = null;
+            foreach (Storage source in sources)
+            {
+                if (amount - moved <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ||
+                    destination.RemainingCapacity() <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+                {
+                    break;
+                }
+
+                if (source == null ||
+                    excluded.Contains(source) ||
+                    !StorageNetworkStorageRules.IsServerStorage(source) ||
+                    !StorageNetworkStorageRules.IsConnectedNetworkStorage(source) ||
+                    source.items == null)
+                {
+                    continue;
+                }
+
+                List<GameObject> items = new List<GameObject>(source.items.Count);
+                foreach (GameObject item in source.items)
+                {
+                    if (itemPredicate(item, elementFilter))
+                    {
+                        items.Add(item);
+                    }
+                }
+
+                foreach (GameObject item in items)
+                {
+                    if (amount - moved <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ||
+                        destination.RemainingCapacity() <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+                    {
+                        break;
+                    }
+
+                    float transferAmount = Mathf.Min(
+                        amount - moved,
+                        StorageItemUtility.GetMass(item),
+                        Mathf.Max(0f, destination.RemainingCapacity()));
+                    if (transferAmount <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+                    {
+                        continue;
+                    }
+
+                    float transferred = TransferStoredObject(source, destination, item, transferAmount);
+                    if (transferred > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+                    {
+                        moved += transferred;
+                    }
+                    else if (blockedItem == null)
+                    {
+                        blockedItem = StorageItemUtility.GetItemDisplayName(item, StorageItemUtility.GetStorageTransferTag(item));
+                    }
+                }
+            }
+
+            return moved > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT
+                ? new StorageTransferResult(moved, null)
+                : StorageTransferResult.Blocked(blockedItem ?? fallbackBlockedItem);
+        }
+
+        public static List<SimHashes> GetAvailableLiquidElementsInNetwork(Storage ownerStorage, Storage specificSource = null)
+        {
+            List<SimHashes> elements = new List<SimHashes>();
+            HashSet<SimHashes> seen = new HashSet<SimHashes>();
+            int worldId = StorageTargetSelector.GetObjectWorldId(ownerStorage?.gameObject);
+            IEnumerable<Storage> sources = specificSource != null
+                ? new[] { specificSource }
+                : StorageSceneCollector.CollectLightweightForWorld(worldId).Storages;
+
+            foreach (Storage source in sources)
+            {
+                if (source == null ||
+                    source == ownerStorage ||
+                    !StorageNetworkStorageRules.IsServerStorage(source) ||
+                    !StorageNetworkStorageRules.IsConnectedNetworkStorage(source) ||
+                    source.items == null)
+                {
+                    continue;
+                }
+
+                foreach (GameObject item in source.items)
+                {
+                    PrimaryElement primaryElement = item != null ? item.GetComponent<PrimaryElement>() : null;
+                    if (primaryElement == null || !IsLiquidItem(item, null) || primaryElement.Mass <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+                    {
+                        continue;
+                    }
+
+                    if (seen.Add(primaryElement.ElementID))
+                    {
+                        elements.Add(primaryElement.ElementID);
+                    }
+                }
+            }
+
+            elements.Sort((left, right) => string.Compare(GetElementName(left), GetElementName(right), System.StringComparison.CurrentCulture));
+            return elements;
+        }
+
+        public static List<SimHashes> GetAvailableGasElementsInNetwork(Storage ownerStorage, Storage specificSource = null)
+        {
+            List<SimHashes> elements = new List<SimHashes>();
+            HashSet<SimHashes> seen = new HashSet<SimHashes>();
+            int worldId = StorageTargetSelector.GetObjectWorldId(ownerStorage?.gameObject);
+            IEnumerable<Storage> sources = specificSource != null
+                ? new[] { specificSource }
+                : StorageSceneCollector.CollectLightweightForWorld(worldId).Storages;
+
+            foreach (Storage source in sources)
+            {
+                if (source == null ||
+                    source == ownerStorage ||
+                    !StorageNetworkStorageRules.IsServerStorage(source) ||
+                    !StorageNetworkStorageRules.IsConnectedNetworkStorage(source) ||
+                    source.items == null)
+                {
+                    continue;
+                }
+
+                foreach (GameObject item in source.items)
+                {
+                    PrimaryElement primaryElement = item != null ? item.GetComponent<PrimaryElement>() : null;
+                    if (primaryElement == null || !IsGasItem(item, null) || primaryElement.Mass <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+                    {
+                        continue;
+                    }
+
+                    if (seen.Add(primaryElement.ElementID))
+                    {
+                        elements.Add(primaryElement.ElementID);
+                    }
+                }
+            }
+
+            elements.Sort((left, right) => string.Compare(GetElementName(left), GetElementName(right), System.StringComparison.CurrentCulture));
+            return elements;
+        }
+
+        public static List<Tag> GetAvailableSolidItemTagsInNetwork(Storage ownerStorage, Storage specificSource = null)
+        {
+            List<Tag> tags = new List<Tag>();
+            HashSet<Tag> seen = new HashSet<Tag>();
+            int worldId = StorageTargetSelector.GetObjectWorldId(ownerStorage?.gameObject);
+            IEnumerable<Storage> sources = specificSource != null
+                ? new[] { specificSource }
+                : StorageSceneCollector.CollectLightweightForWorld(worldId).Storages;
+
+            foreach (Storage source in sources)
+            {
+                if (source == null ||
+                    source == ownerStorage ||
+                    !StorageNetworkStorageRules.IsServerStorage(source) ||
+                    !StorageNetworkStorageRules.IsConnectedNetworkStorage(source) ||
+                    source.items == null)
+                {
+                    continue;
+                }
+
+                foreach (GameObject item in source.items)
+                {
+                    PrimaryElement primaryElement = item != null ? item.GetComponent<PrimaryElement>() : null;
+                    if (primaryElement == null || !IsSolidItem(item) || primaryElement.Mass <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+                    {
+                        continue;
+                    }
+
+                    Tag tag = StorageItemUtility.GetStorageTransferTag(item);
+                    if (tag != Tag.Invalid && seen.Add(tag))
+                    {
+                        tags.Add(tag);
+                    }
+                }
+            }
+
+            tags.Sort((left, right) => string.Compare(StorageItemUtility.GetTagDisplayName(left), StorageItemUtility.GetTagDisplayName(right), System.StringComparison.CurrentCulture));
+            return tags;
         }
 
         public static string FormatOutputStatus(StorageTransferResult result, string idleText)
@@ -323,6 +686,77 @@ namespace StorageNetwork.Services
             source.Trigger(-1697596308, item);
             source.OnStorageChange?.Invoke(item);
             return moved;
+        }
+
+        private static bool IsLiquidItem(GameObject item, SimHashes? liquidFilter)
+        {
+            PrimaryElement primaryElement = item != null ? item.GetComponent<PrimaryElement>() : null;
+            if (primaryElement == null)
+            {
+                return false;
+            }
+
+            if (liquidFilter.HasValue && primaryElement.ElementID != liquidFilter.Value)
+            {
+                return false;
+            }
+
+            Element element = ElementLoader.FindElementByHash(primaryElement.ElementID);
+            return element != null && element.IsLiquid;
+        }
+
+        private static bool IsGasItem(GameObject item, SimHashes? gasFilter)
+        {
+            PrimaryElement primaryElement = item != null ? item.GetComponent<PrimaryElement>() : null;
+            if (primaryElement == null)
+            {
+                return false;
+            }
+
+            if (gasFilter.HasValue && primaryElement.ElementID != gasFilter.Value)
+            {
+                return false;
+            }
+
+            Element element = ElementLoader.FindElementByHash(primaryElement.ElementID);
+            return element != null && element.IsGas;
+        }
+
+        private static bool IsSolidItem(GameObject item)
+        {
+            PrimaryElement primaryElement = item != null ? item.GetComponent<PrimaryElement>() : null;
+            if (primaryElement == null)
+            {
+                return false;
+            }
+
+            Element element = ElementLoader.FindElementByHash(primaryElement.ElementID);
+            return element != null && (element.IsSolid || !Mathf.Approximately(primaryElement.MassPerUnit, 1f));
+        }
+
+        private static HashSet<Tag> BuildAllowedTagSet(IEnumerable<Tag> tags)
+        {
+            HashSet<Tag> allowed = new HashSet<Tag>();
+            if (tags == null)
+            {
+                return allowed;
+            }
+
+            foreach (Tag tag in tags)
+            {
+                if (tag != Tag.Invalid)
+                {
+                    allowed.Add(tag);
+                }
+            }
+
+            return allowed;
+        }
+
+        private static string GetElementName(SimHashes elementHash)
+        {
+            Element element = ElementLoader.FindElementByHash(elementHash);
+            return element != null ? element.name : elementHash.ToString();
         }
 
     }

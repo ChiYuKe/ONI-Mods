@@ -56,6 +56,11 @@ namespace StorageNetwork.Patches
         {
             public static bool Prefix(KButtonEvent e)
             {
+                if (ConsumeStorageNetworkMouseScroll(e))
+                {
+                    return false;
+                }
+
                 if (StorageNetworkPanel.IsTextInputFocused())
                 {
                     e.Consumed = true;
@@ -71,6 +76,11 @@ namespace StorageNetwork.Patches
         {
             public static bool Prefix(KButtonEvent e)
             {
+                if (ConsumeStorageNetworkMouseScroll(e))
+                {
+                    return false;
+                }
+
                 if (StorageNetworkPanel.IsTextInputFocused())
                 {
                     e.Consumed = true;
@@ -86,6 +96,11 @@ namespace StorageNetwork.Patches
         {
             public static bool Prefix(KButtonEvent e)
             {
+                if (ConsumeStorageNetworkMouseScroll(e))
+                {
+                    return false;
+                }
+
                 if (StorageNetworkPanel.IsTextInputFocused())
                 {
                     e.Consumed = true;
@@ -101,6 +116,11 @@ namespace StorageNetwork.Patches
         {
             public static bool Prefix(KButtonEvent e)
             {
+                if (ConsumeStorageNetworkMouseScroll(e))
+                {
+                    return false;
+                }
+
                 if (StorageNetworkPanel.IsTextInputFocused())
                 {
                     e.Consumed = true;
@@ -113,12 +133,35 @@ namespace StorageNetwork.Patches
 
         private static bool ConsumeStorageNetworkRightClick(KButtonEvent e, bool keyUp = false)
         {
-            if (e == null || !e.IsAction(global::Action.MouseRight) || !StorageNetworkPanel.IsOpen())
+            if (e == null || !e.IsAction(global::Action.MouseRight))
             {
                 return false;
             }
 
+            if (keyUp)
+            {
+                StorageNetworkPanel.FinishRightClickCloseCandidate(out _);
+                return false;
+            }
+
+            StorageNetworkPanel.BeginRightClickCloseCandidate();
             return false;
+        }
+
+        private static bool ConsumeStorageNetworkMouseScroll(KButtonEvent e)
+        {
+            if (e == null || !ScrollWheelBlocker.IsPointerOverBlocker)
+            {
+                return false;
+            }
+
+            if (!e.IsAction(global::Action.ZoomIn) && !e.IsAction(global::Action.ZoomOut))
+            {
+                return false;
+            }
+
+            e.Consumed = true;
+            return true;
         }
     }
 }

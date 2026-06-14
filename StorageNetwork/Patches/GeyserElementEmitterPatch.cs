@@ -8,10 +8,10 @@ namespace StorageNetwork.Patches
         [HarmonyPatch(typeof(ElementEmitter), "OnSimActivate")]
         public static class ElementEmitterOnSimActivatePatch
         {
-            public static bool Prefix(ElementEmitter __instance)
+            public static void Postfix(ElementEmitter __instance)
             {
                 StorageNetworkGeyserOutput output = __instance.GetComponent<StorageNetworkGeyserOutput>();
-                return output == null || !output.CanCaptureOutput();
+                output?.ApplyEmitterState();
             }
         }
     }

@@ -14,6 +14,11 @@ namespace StorageNetwork.Buildings
         protected virtual bool OnePerWorld => false;
         protected virtual bool AllowManualRemoval => false;
         protected virtual Storage.FetchCategory FetchCategory => Storage.FetchCategory.Building;
+        protected virtual bool SupportsFilterUi => true;
+        protected virtual bool SupportsStorageConnector => false;
+        protected virtual bool ShowStorageSettingsButton => true;
+        protected virtual bool UsesRefrigeratedStorage => false;
+        protected virtual bool StoresPower => false;
 
         public override BuildingDef CreateBuildingDef()
         {
@@ -33,14 +38,27 @@ namespace StorageNetwork.Buildings
                 NOISE_POLLUTION.NONE,
                 0.2f);
 
-            buildingDef.Floodable = false;
+            buildingDef.Floodable = StoresPower;
             buildingDef.AudioCategory = "Metal";
             buildingDef.Overheatable = false;
-            buildingDef.RequiresPowerInput = spec.PowerWatts > 0f;
-            buildingDef.EnergyConsumptionWhenActive = spec.PowerWatts;
+            buildingDef.RequiresPowerInput = spec.PowerWatts > 0f && !StoresPower;
+            buildingDef.EnergyConsumptionWhenActive = StoresPower ? 0f : spec.PowerWatts;
             buildingDef.SelfHeatKilowattsWhenActive = spec.SelfHeatKilowatts;
+            buildingDef.ExhaustKilowattsWhenActive = UsesRefrigeratedStorage ? 0f : buildingDef.ExhaustKilowattsWhenActive;
+            buildingDef.RequiresPowerOutput = false;
+            buildingDef.UseWhitePowerOutputConnectorColour = false;
+
             buildingDef.OnePerWorld = OnePerWorld;
             buildingDef.AddSearchTerms(global::STRINGS.SEARCH_TERMS.STORAGE);
+            if (UsesRefrigeratedStorage)
+            {
+                buildingDef.AddSearchTerms(global::STRINGS.SEARCH_TERMS.FRIDGE);
+            }
+            if (StoresPower)
+            {
+                buildingDef.AddSearchTerms(global::STRINGS.SEARCH_TERMS.POWER);
+            }
+
             return buildingDef;
         }
 
@@ -55,23 +73,49 @@ namespace StorageNetwork.Buildings
             {
                 prefabId?.AddTag(StorageSceneTags.ModStorage);
                 prefabId?.AddTag(StorageSceneTags.ServerStorage);
-                prefabId?.AddTag(StorageSceneTags.ShowSettingsButton);
+                prefabId?.AddTag(StorageSceneTags.CategoryModStorage);
+
+                if (ShowStorageSettingsButton)
+                {
+                    prefabId?.AddTag(StorageSceneTags.ShowSettingsButton);
+                }
 
                 Storage storage = go.AddOrGet<Storage>();
                 storage.capacityKg = spec.CapacityKg;
-                storage.showInUI = true;
+                storage.showInUI = !StoresPower;
                 storage.allowItemRemoval = AllowManualRemoval;
-                storage.showDescriptor = true;
+                storage.showDescriptor = !StoresPower;
                 storage.storageFilters = spec.Filters;
                 storage.storageFullMargin = STORAGE.STORAGE_LOCKER_FILLED_MARGIN;
                 storage.fetchCategory = FetchCategory;
-                storage.showCapacityStatusItem = false;
-                storage.showCapacityAsMainStatus = false;
+                storage.showCapacityStatusItem = !StoresPower;
+                storage.showCapacityAsMainStatus = !StoresPower && !UsesRefrigeratedStorage;
                 storage.SetDefaultStoredItemModifiers(Storage.StandardInsulatedStorage);
 
-                go.AddOrGet<StorageNetworkStorageConnector>();
-                StorageNetworkFilterConfigurator.Configure(go.AddOrGet<TreeFilterable>());
-                go.AddOrGet<StorageNetworkDefaultFilterInitializer>();
+                if (UsesRefrigeratedStorage)
+                {
+                    prefabId?.AddTag(RoomConstraints.ConstraintTags.KitchenRefrigerator);
+                    ConfigureRefrigeratedStorage(go);
+                }
+
+                if (StoresPower)
+                {
+                    prefabId?.AddTag(RoomConstraints.ConstraintTags.PowerBuilding);
+                    ConfigurePowerStorage(go, spec);
+                }
+
+                if (SupportsStorageConnector)
+                {
+                    go.AddOrGet<StorageNetworkStorageConnector>();
+                }
+
+                go.AddOrGet<StorageNetworkServerStatus>();
+
+                if (SupportsFilterUi)
+                {
+                    StorageNetworkFilterConfigurator.Configure(go.AddOrGet<TreeFilterable>());
+                    go.AddOrGet<StorageNetworkDefaultFilterInitializer>();
+                }
             }
             else
             {
@@ -81,7 +125,7 @@ namespace StorageNetwork.Buildings
 
             go.AddOrGet<UserNameable>();
             go.AddOrGetDef<RocketUsageRestriction.Def>();
-            if (spec.PowerWatts > 0f)
+            if (spec.PowerWatts > 0f && !StoresPower)
             {
                 go.AddOrGet<EnergyConsumer>();
             }
@@ -94,10 +138,31 @@ namespace StorageNetwork.Buildings
                 go.AddOrGetDef<StorageController.Def>();
             }
 
-            if (Spec.PowerWatts > 0f)
+            if (Spec.PowerWatts > 0f && !StoresPower)
             {
                 go.AddOrGetDef<PoweredController.Def>();
             }
+
+            if (UsesRefrigeratedStorage)
+            {
+                go.AddOrGetDef<StorageNetworkColdStorageController.Def>();
+            }
+
+        }
+
+        private static void ConfigureRefrigeratedStorage(GameObject go)
+        {
+            Storage storage = go.AddOrGet<Storage>();
+            storage.SetDefaultStoredItemModifiers(StorageNetworkColdStorageCooling.StoredItemModifiers);
+            go.AddOrGet<StorageNetworkColdStorageCooling>();
+        }
+
+        private static void ConfigurePowerStorage(GameObject go, StorageNetworkStorageBuildingSpec spec)
+        {
+            StorageNetworkPowerStorage powerStorage = go.AddOrGet<StorageNetworkPowerStorage>();
+            powerStorage.capacityJoules = spec.CapacityKg;
+            powerStorage.joulesLostPerSecond = spec.PowerStorageJoulesLostPerSecond;
+            go.AddOrGet<StorageNetworkPowerOverlayBattery>();
         }
     }
 
@@ -119,12 +184,30 @@ namespace StorageNetwork.Buildings
     {
         public const string ID = "StorageNetworkSmallLiquidServer";
         protected override StorageNetworkStorageBuildingSpec Spec => StorageNetworkStorageBuildingSpecs.SmallLiquid;
+        protected override bool SupportsFilterUi => false;
     }
 
     public sealed class SmallGasServerConfig : StorageNetworkStorageBuildingBase
     {
         public const string ID = "StorageNetworkSmallGasServer";
         protected override StorageNetworkStorageBuildingSpec Spec => StorageNetworkStorageBuildingSpecs.SmallGas;
+        protected override bool SupportsFilterUi => false;
+    }
+
+    public sealed class SmallBatteryServerConfig : StorageNetworkStorageBuildingBase
+    {
+        public const string ID = "StorageNetworkSmallBatteryServer";
+        protected override StorageNetworkStorageBuildingSpec Spec => StorageNetworkStorageBuildingSpecs.SmallBattery;
+        protected override bool SupportsFilterUi => false;
+        protected override bool StoresPower => true;
+    }
+
+    public sealed class SmallColdStorageServerConfig : StorageNetworkStorageBuildingBase
+    {
+        public const string ID = "StorageNetworkSmallColdStorageServer";
+        protected override StorageNetworkStorageBuildingSpec Spec => StorageNetworkStorageBuildingSpecs.SmallColdStorage;
+        protected override bool SupportsFilterUi => false;
+        protected override bool UsesRefrigeratedStorage => true;
     }
 
     public sealed class MediumSolidServerConfig : StorageNetworkStorageBuildingBase
@@ -137,12 +220,30 @@ namespace StorageNetwork.Buildings
     {
         public const string ID = "StorageNetworkMediumLiquidServer";
         protected override StorageNetworkStorageBuildingSpec Spec => StorageNetworkStorageBuildingSpecs.MediumLiquid;
+        protected override bool SupportsFilterUi => false;
     }
 
     public sealed class MediumGasServerConfig : StorageNetworkStorageBuildingBase
     {
         public const string ID = "StorageNetworkMediumGasServer";
         protected override StorageNetworkStorageBuildingSpec Spec => StorageNetworkStorageBuildingSpecs.MediumGas;
+        protected override bool SupportsFilterUi => false;
+    }
+
+    public sealed class MediumBatteryServerConfig : StorageNetworkStorageBuildingBase
+    {
+        public const string ID = "StorageNetworkMediumBatteryServer";
+        protected override StorageNetworkStorageBuildingSpec Spec => StorageNetworkStorageBuildingSpecs.MediumBattery;
+        protected override bool SupportsFilterUi => false;
+        protected override bool StoresPower => true;
+    }
+
+    public sealed class MediumColdStorageServerConfig : StorageNetworkStorageBuildingBase
+    {
+        public const string ID = "StorageNetworkMediumColdStorageServer";
+        protected override StorageNetworkStorageBuildingSpec Spec => StorageNetworkStorageBuildingSpecs.MediumColdStorage;
+        protected override bool SupportsFilterUi => false;
+        protected override bool UsesRefrigeratedStorage => true;
     }
 
     public sealed class LargeSolidServerConfig : StorageNetworkStorageBuildingBase
@@ -155,12 +256,30 @@ namespace StorageNetwork.Buildings
     {
         public const string ID = "StorageNetworkLargeLiquidServer";
         protected override StorageNetworkStorageBuildingSpec Spec => StorageNetworkStorageBuildingSpecs.LargeLiquid;
+        protected override bool SupportsFilterUi => false;
     }
 
     public sealed class LargeGasServerConfig : StorageNetworkStorageBuildingBase
     {
         public const string ID = "StorageNetworkLargeGasServer";
         protected override StorageNetworkStorageBuildingSpec Spec => StorageNetworkStorageBuildingSpecs.LargeGas;
+        protected override bool SupportsFilterUi => false;
+    }
+
+    public sealed class LargeBatteryServerConfig : StorageNetworkStorageBuildingBase
+    {
+        public const string ID = "StorageNetworkLargeBatteryServer";
+        protected override StorageNetworkStorageBuildingSpec Spec => StorageNetworkStorageBuildingSpecs.LargeBattery;
+        protected override bool SupportsFilterUi => false;
+        protected override bool StoresPower => true;
+    }
+
+    public sealed class LargeColdStorageServerConfig : StorageNetworkStorageBuildingBase
+    {
+        public const string ID = "StorageNetworkLargeColdStorageServer";
+        protected override StorageNetworkStorageBuildingSpec Spec => StorageNetworkStorageBuildingSpecs.LargeColdStorage;
+        protected override bool SupportsFilterUi => false;
+        protected override bool UsesRefrigeratedStorage => true;
     }
 
     [System.Obsolete("Compatibility prefab for old saves only. It may be removed in a future StorageNetwork update.")]
@@ -170,7 +289,7 @@ namespace StorageNetwork.Buildings
         protected override StorageNetworkStorageBuildingSpec Spec => StorageNetworkStorageBuildingSpecs.LegacySceneStorageBox;
         protected override bool AllowManualRemoval => true;
         protected override Storage.FetchCategory FetchCategory => Storage.FetchCategory.GeneralStorage;
-
+        protected override bool SupportsStorageConnector => true;
         public override void ConfigureBuildingTemplate(GameObject go, Tag prefabTag)
         {
             base.ConfigureBuildingTemplate(go, prefabTag);
@@ -262,6 +381,7 @@ namespace StorageNetwork.Buildings
         public float CapacityKg { get; set; }
         public float PowerWatts { get; set; }
         public float SelfHeatKilowatts { get; set; }
+        public float PowerStorageJoulesLostPerSecond { get; set; }
         public List<Tag> Filters { get; set; }
     }
 
@@ -271,15 +391,25 @@ namespace StorageNetwork.Buildings
         private const string SmallSolidServerAnim = "storagenetwork_small_solid_server_kanim";
         private const string SmallLiquidServerAnim = "storagenetwork_small_liquid_server_kanim";
         private const string SmallGasServerAnim = "storagenetwork_small_gas_server_kanim";
+        private const string SmallBatteryServerAnim = "storagenetwork_small_battery_server_kanim";
+        private const string SmallColdStorageServerAnim = "storagenetwork_small_cold_storage_server_kanim";
         private const string MediumSolidServerAnim = "storagenetwork_medium_solid_server_kanim";
         private const string MediumLiquidServerAnim = "storagenetwork_medium_liquid_server_kanim";
         private const string MediumGasServerAnim = "storagenetwork_medium_gas_server_kanim";
+        private const string MediumBatteryServerAnim = "storagenetwork_medium_battery_server_kanim";
+        private const string MediumColdStorageServerAnim = "storagenetwork_medium_cold_storage_server_kanim";
         private const string LargeSolidServerAnim = "storagenetwork_large_solid_server_kanim";
         private const string LargeLiquidServerAnim = "storagenetwork_large_liquid_server_kanim";
         private const string LargeGasServerAnim = "storagenetwork_large_gas_server_kanim";
+        private const string LargeBatteryServerAnim = "storagenetwork_large_battery_server_kanim";
+        private const string LargeColdStorageServerAnim = "storagenetwork_large_cold_storage_server_kanim";
         private const string LegacySceneStorageBoxId = "StorageNetworkSceneStorageBox";
         private const string LegacySceneStorageBoxAnim = "storagelocker_kanim";
         private const float MeltingPoint = 1600f;
+        private const float BatteryServerJoulesLostPerSecond = 100f;
+        private const float SmallBatteryServerSelfHeatKilowatts = 0.2f;
+        private const float MediumBatteryServerSelfHeatKilowatts = 0.4f;
+        private const float LargeBatteryServerSelfHeatKilowatts = 0.6f;
 
         public static readonly StorageNetworkStorageBuildingSpec Core = Create(
             StorageNetworkCoreConfig.ID,
@@ -322,6 +452,29 @@ namespace StorageNetwork.Buildings
             STORAGEFILTERS.GASES,
             BUILDINGS.CONSTRUCTION_MASS_KG.TIER3);
 
+        public static readonly StorageNetworkStorageBuildingSpec SmallBattery = CreateServer(
+            SmallBatteryServerConfig.ID,
+            1,
+            3,
+            SmallBatteryServerAnim,
+            25000f,
+            60f,
+            STORAGEFILTERS.POWER_BANKS,
+            BUILDINGS.CONSTRUCTION_MASS_KG.TIER3,
+            BatteryServerJoulesLostPerSecond,
+            SmallBatteryServerSelfHeatKilowatts);
+
+        public static readonly StorageNetworkStorageBuildingSpec SmallColdStorage = CreateServer(
+            SmallColdStorageServerConfig.ID,
+            1,
+            3,
+            SmallColdStorageServerAnim,
+            25000f,
+            60f,
+            STORAGEFILTERS.FOOD,
+            BUILDINGS.CONSTRUCTION_MASS_KG.TIER3,
+            selfHeatKilowatts: 0f);
+
         public static readonly StorageNetworkStorageBuildingSpec MediumSolid = CreateServer(
             MediumSolidServerConfig.ID,
             2,
@@ -351,6 +504,29 @@ namespace StorageNetwork.Buildings
             120f,
             STORAGEFILTERS.GASES,
             BUILDINGS.CONSTRUCTION_MASS_KG.TIER4);
+
+        public static readonly StorageNetworkStorageBuildingSpec MediumBattery = CreateServer(
+            MediumBatteryServerConfig.ID,
+            2,
+            2,
+            MediumBatteryServerAnim,
+            100000f,
+            120f,
+            STORAGEFILTERS.POWER_BANKS,
+            BUILDINGS.CONSTRUCTION_MASS_KG.TIER4,
+            BatteryServerJoulesLostPerSecond,
+            MediumBatteryServerSelfHeatKilowatts);
+
+        public static readonly StorageNetworkStorageBuildingSpec MediumColdStorage = CreateServer(
+            MediumColdStorageServerConfig.ID,
+            2,
+            2,
+            MediumColdStorageServerAnim,
+            100000f,
+            120f,
+            STORAGEFILTERS.FOOD,
+            BUILDINGS.CONSTRUCTION_MASS_KG.TIER4,
+            selfHeatKilowatts: 0f);
 
         public static readonly StorageNetworkStorageBuildingSpec LargeSolid = CreateServer(
             LargeSolidServerConfig.ID,
@@ -382,6 +558,29 @@ namespace StorageNetwork.Buildings
             STORAGEFILTERS.GASES,
             BUILDINGS.CONSTRUCTION_MASS_KG.TIER5);
 
+        public static readonly StorageNetworkStorageBuildingSpec LargeBattery = CreateServer(
+            LargeBatteryServerConfig.ID,
+            2,
+            4,
+            LargeBatteryServerAnim,
+            2500000f,
+            240f,
+            STORAGEFILTERS.POWER_BANKS,
+            BUILDINGS.CONSTRUCTION_MASS_KG.TIER5,
+            BatteryServerJoulesLostPerSecond,
+            LargeBatteryServerSelfHeatKilowatts);
+
+        public static readonly StorageNetworkStorageBuildingSpec LargeColdStorage = CreateServer(
+            LargeColdStorageServerConfig.ID,
+            2,
+            4,
+            LargeColdStorageServerAnim,
+            2500000f,
+            240f,
+            STORAGEFILTERS.FOOD,
+            BUILDINGS.CONSTRUCTION_MASS_KG.TIER5,
+            selfHeatKilowatts: 0f);
+
         public static readonly StorageNetworkStorageBuildingSpec LegacySceneStorageBox = Create(
             LegacySceneStorageBoxId,
             1,
@@ -403,12 +602,18 @@ namespace StorageNetwork.Buildings
                 yield return SmallSolidServerConfig.ID;
                 yield return SmallLiquidServerConfig.ID;
                 yield return SmallGasServerConfig.ID;
+                yield return SmallBatteryServerConfig.ID;
+                yield return SmallColdStorageServerConfig.ID;
                 yield return MediumSolidServerConfig.ID;
                 yield return MediumLiquidServerConfig.ID;
                 yield return MediumGasServerConfig.ID;
+                yield return MediumBatteryServerConfig.ID;
+                yield return MediumColdStorageServerConfig.ID;
                 yield return LargeSolidServerConfig.ID;
                 yield return LargeLiquidServerConfig.ID;
                 yield return LargeGasServerConfig.ID;
+                yield return LargeBatteryServerConfig.ID;
+                yield return LargeColdStorageServerConfig.ID;
             }
         }
 
@@ -444,9 +649,11 @@ namespace StorageNetwork.Buildings
             float capacityKg,
             float powerWatts,
             List<Tag> filters,
-            float[] constructionMass)
+            float[] constructionMass,
+            float powerStorageJoulesLostPerSecond = 0f,
+            float selfHeatKilowatts = 1f)
         {
-            return Create(id, width, height, animFile, capacityKg, powerWatts, 1f, filters, constructionMass);
+            return Create(id, width, height, animFile, capacityKg, powerWatts, selfHeatKilowatts, filters, constructionMass, powerStorageJoulesLostPerSecond);
         }
 
         private static StorageNetworkStorageBuildingSpec Create(
@@ -458,9 +665,10 @@ namespace StorageNetwork.Buildings
             float powerWatts,
             float selfHeatKilowatts,
             List<Tag> filters,
-            float[] constructionMass)
+            float[] constructionMass,
+            float powerStorageJoulesLostPerSecond = 0f)
         {
-            return Create(id, width, height, animFile, capacityKg, powerWatts, selfHeatKilowatts, filters, constructionMass, MATERIALS.REFINED_METALS, 30f);
+            return Create(id, width, height, animFile, capacityKg, powerWatts, selfHeatKilowatts, filters, constructionMass, MATERIALS.REFINED_METALS, 30f, powerStorageJoulesLostPerSecond);
         }
 
         private static StorageNetworkStorageBuildingSpec Create(
@@ -474,7 +682,8 @@ namespace StorageNetwork.Buildings
             List<Tag> filters,
             float[] constructionMass,
             string[] constructionMaterials,
-            float constructionTime)
+            float constructionTime,
+            float powerStorageJoulesLostPerSecond = 0f)
         {
             return new StorageNetworkStorageBuildingSpec
             {
@@ -489,6 +698,7 @@ namespace StorageNetwork.Buildings
                 CapacityKg = capacityKg,
                 PowerWatts = powerWatts,
                 SelfHeatKilowatts = selfHeatKilowatts,
+                PowerStorageJoulesLostPerSecond = powerStorageJoulesLostPerSecond,
                 Filters = filters
             };
         }

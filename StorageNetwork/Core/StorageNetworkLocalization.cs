@@ -68,7 +68,6 @@ namespace StorageNetwork.Core
                     }
                     else
                     {
-                        Debug.Log("[StorageNetwork] Localization file not found for locale " + localeCode + "; using built-in strings.");
                         return;
                     }
                 }
@@ -79,7 +78,6 @@ namespace StorageNetwork.Core
                     return;
                 }
 
-                Debug.Log("[StorageNetwork] Loading localization file: " + poPath);
                 Localization.OverloadStrings(Localization.LoadStringsFile(poPath, false));
             }
             catch (Exception ex)

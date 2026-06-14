@@ -1,5 +1,6 @@
 using HarmonyLib;
 using StorageNetwork.Core;
+using StorageNetwork.Services;
 
 namespace StorageNetwork.Patches
 {
@@ -11,6 +12,7 @@ namespace StorageNetwork.Patches
             public static void Prefix()
             {
                 StorageNetworkLifecycle.ResetRuntimeState();
+                StorageNetworkConstructionSupplyService.Reset();
             }
         }
 
@@ -20,6 +22,7 @@ namespace StorageNetwork.Patches
             public static void Postfix()
             {
                 StorageNetworkLifecycle.ResetRuntimeState();
+                StorageNetworkConstructionSupplyService.Reset();
             }
         }
 
@@ -29,6 +32,7 @@ namespace StorageNetwork.Patches
             public static void Postfix()
             {
                 StorageNetworkLifecycle.ResetRuntimeState();
+                StorageNetworkConstructionSupplyService.Reset();
             }
         }
     }

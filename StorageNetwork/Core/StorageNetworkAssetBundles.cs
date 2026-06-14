@@ -94,7 +94,6 @@ namespace StorageNetwork.Core
             }
 
             LoadedBundles[bundleName] = bundle;
-            Debug.Log("[StorageNetwork] Loaded AssetBundle: " + bundlePath);
             return bundle;
         }
 

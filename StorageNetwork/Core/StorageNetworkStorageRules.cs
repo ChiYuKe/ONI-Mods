@@ -73,22 +73,97 @@ namespace StorageNetwork.Core
 
         public static bool IsNetworkPortStorage(Storage storage)
         {
-            return storage?.GetComponent<StorageNetworkPort>() != null;
+            return HasInputPortTag(storage) || HasOutputPortTag(storage);
         }
 
         public static bool IsConfigurableMaterialPort(Storage storage)
         {
-            return storage?.GetComponent<StorageNetworkPort>()?.IsSolidMaterialPort == true;
+            return IsSolidInputPort(storage) || IsSolidOutputPort(storage);
         }
 
         public static bool IsConfigurablePort(Storage storage)
         {
-            return storage?.GetComponent<StorageNetworkPort>() != null;
+            return IsNetworkPortStorage(storage);
+        }
+
+        public static bool HasInputPortTag(Storage storage)
+        {
+            return HasTag(storage, StorageNetworkTags.CategoryInputPort);
+        }
+
+        public static bool HasOutputPortTag(Storage storage)
+        {
+            return HasTag(storage, StorageNetworkTags.CategoryOutputPort);
+        }
+
+        public static bool HasSolidPortTag(Storage storage)
+        {
+            return HasTag(storage, StorageNetworkTags.CategorySolidPort);
+        }
+
+        public static bool HasLiquidPortTag(Storage storage)
+        {
+            return HasTag(storage, StorageNetworkTags.CategoryLiquidPort);
+        }
+
+        public static bool HasGasPortTag(Storage storage)
+        {
+            return HasTag(storage, StorageNetworkTags.CategoryGasPort);
+        }
+
+        public static bool HasPowerPortTag(Storage storage)
+        {
+            return HasTag(storage, StorageNetworkTags.CategoryPowerPort);
+        }
+
+        public static bool IsSolidInputPort(Storage storage)
+        {
+            return HasTag(storage, StorageNetworkTags.CategorySolidInputPort);
+        }
+
+        public static bool IsSolidOutputPort(Storage storage)
+        {
+            return HasTag(storage, StorageNetworkTags.CategorySolidOutputPort);
+        }
+
+        public static bool IsLiquidInputPort(Storage storage)
+        {
+            return HasTag(storage, StorageNetworkTags.CategoryLiquidInputPort);
+        }
+
+        public static bool IsLiquidOutputPort(Storage storage)
+        {
+            return HasTag(storage, StorageNetworkTags.CategoryLiquidOutputPort);
+        }
+
+        public static bool IsGasInputPort(Storage storage)
+        {
+            return HasTag(storage, StorageNetworkTags.CategoryGasInputPort);
+        }
+
+        public static bool IsGasOutputPort(Storage storage)
+        {
+            return HasTag(storage, StorageNetworkTags.CategoryGasOutputPort);
+        }
+
+        public static bool IsPowerInputPort(Storage storage)
+        {
+            return HasTag(storage, StorageNetworkTags.CategoryPowerInputPort);
+        }
+
+        public static bool IsPowerOutputPort(Storage storage)
+        {
+            return HasTag(storage, StorageNetworkTags.CategoryPowerOutputPort);
+        }
+
+        public static bool IsPowerStorageServer(Storage storage)
+        {
+            return storage?.GetComponent<StorageNetworkPowerStorage>() != null;
         }
 
         public static bool CountsTowardNetworkCapacity(Storage storage)
         {
-            return IsServerStorage(storage);
+            return IsServerStorage(storage) && !IsPowerStorageServer(storage);
         }
 
         /// <summary>
@@ -148,6 +223,7 @@ namespace StorageNetwork.Core
                    storage != ownerStorage &&
                    IsServerStorage(storage) &&
                    IsConnectedNetworkStorage(storage) &&
+                   !IsPowerStorageServer(storage) &&
                    !IsNetworkPortStorage(storage) &&
                    !IsMinionStorage(storage) &&
                    !IsProductionStorage(storage);

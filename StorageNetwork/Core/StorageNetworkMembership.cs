@@ -49,7 +49,7 @@ namespace StorageNetwork.Core
         /// </summary>
         public static bool IsCollectableStorage(Storage storage)
         {
-            if (storage == null || storage.gameObject == null)
+            if (!StorageSceneRegistry.IsLive(storage))
             {
                 return false;
             }

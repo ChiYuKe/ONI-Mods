@@ -1,5 +1,6 @@
 using StorageNetwork.API;
 using StorageNetwork.Components;
+using StorageNetwork.Services;
 using UnityEngine;
 
 namespace StorageNetwork.Gameplay
@@ -22,6 +23,7 @@ namespace StorageNetwork.Gameplay
             }
 
             go.AddOrGet<StorageNetworkEnrollment>();
+            StorageNetworkFilterConfigurator.Configure(go.GetComponent<TreeFilterable>());
             if (go.GetComponent<Reservoir>() != null)
             {
                 go.AddOrGet<UserNameable>();

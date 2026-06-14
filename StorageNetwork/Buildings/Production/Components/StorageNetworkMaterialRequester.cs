@@ -13,9 +13,8 @@ namespace StorageNetwork.Components
     /// <summary>
     /// 生产建筑材料请求与成品入网组件。挂在 ComplexFabricator 上，按队列从储存网络调拨材料。
     /// </summary>
-    public sealed class StorageNetworkMaterialRequester : KMonoBehaviour, ISim1000ms
+    public sealed partial class StorageNetworkMaterialRequester : KMonoBehaviour, ISim1000ms
     {
-        private static readonly bool DebugTransferLogging = false;
         private const float EmptyOutputRetrySeconds = 5f;
 
         public enum RequestMode
@@ -290,127 +289,6 @@ namespace StorageNetwork.Components
             base.OnCleanUp();
         }
 
-        public void ForceStoreProducedOutputs(IEnumerable<GameObject> producedOutputs)
-        {
-            EnsureFabricator();
-            if (!OutputStoreEnabled)
-            {
-                lastOutputStatus = string.Empty;
-                lastRecipeResultTags = null;
-                return;
-            }
-
-            HashSet<Tag> resultTags = GetCurrentRecipeResultTags();
-            if (resultTags.Count > 0)
-            {
-                lastRecipeResultTags = resultTags;
-            }
-            else
-            {
-                resultTags = GetKnownRecipeResultTags();
-            }
-
-            float totalMoved = 0f;
-            string lastBlockedItem = null;
-            if (producedOutputs != null)
-            {
-                List<GameObject> outputs = new List<GameObject>();
-                foreach (GameObject output in producedOutputs)
-                {
-                    if (output != null)
-                    {
-                        outputs.Add(output);
-                    }
-                }
-
-                foreach (GameObject output in outputs)
-                {
-                    StorageTransferResult result = NetworkStorageTransferService.TransferLooseItemToNetwork(
-                        output,
-                        GetFabricatorStorages(),
-                        GetSpecificOutputTarget(),
-                        resultTags);
-                    totalMoved += result.MovedKg;
-                    if (!string.IsNullOrEmpty(result.BlockedItem))
-                    {
-                        lastBlockedItem = result.BlockedItem;
-                    }
-                }
-            }
-
-            StorageTransferResult outputStorageResult = StoreOutputsFromOutputStorage();
-            totalMoved += outputStorageResult.MovedKg;
-            if (!string.IsNullOrEmpty(outputStorageResult.BlockedItem))
-            {
-                lastBlockedItem = outputStorageResult.BlockedItem;
-            }
-
-            lastOutputStatus = NetworkStorageTransferService.FormatOutputStatus(
-                new StorageTransferResult(totalMoved, lastBlockedItem),
-                Loc.Get(Loc.UI.STORAGE_NETWORK.MATERIAL_STATUS_WAITING_OUTPUT));
-        }
-
-        private void RefreshMaterialRequestStatus()
-        {
-            if (materialRequestStatusHandle != Guid.Empty)
-            {
-                return;
-            }
-
-            KSelectable selectable = GetComponent<KSelectable>();
-            if (selectable != null)
-            {
-                materialRequestStatusHandle = selectable.AddStatusItem(GetMaterialRequestStatusItem(), this);
-            }
-        }
-
-        private void RemoveMaterialRequestStatus()
-        {
-            if (materialRequestStatusHandle == Guid.Empty)
-            {
-                return;
-            }
-
-            KSelectable selectable = GetComponent<KSelectable>();
-            if (selectable != null)
-            {
-                selectable.RemoveStatusItem(materialRequestStatusHandle);
-            }
-
-            materialRequestStatusHandle = Guid.Empty;
-        }
-
-        private static StatusItem GetMaterialRequestStatusItem()
-        {
-            if (materialRequestStatusItem != null)
-            {
-                return materialRequestStatusItem;
-            }
-
-            materialRequestStatusItem = new StatusItem(
-                "StorageNetworkMaterialRequest",
-                Loc.Get(Loc.UI.STORAGE_NETWORK.MATERIAL_REQUEST_STATUS_ITEM),
-                Loc.Get(Loc.UI.STORAGE_NETWORK.MATERIAL_REQUEST_STATUS_TOOLTIP),
-                "status_item_need_resource",
-                StatusItem.IconType.Custom,
-                NotificationType.Good,
-                false,
-                OverlayModes.None.ID,
-                129022,
-                false);
-
-            materialRequestStatusItem.resolveTooltipCallback = (tooltip, data) =>
-            {
-                StorageNetworkMaterialRequester requester = data as StorageNetworkMaterialRequester;
-                string status = requester != null && !string.IsNullOrEmpty(requester.LastStatus)
-                    ? requester.LastStatus
-                    : Loc.Get(Loc.UI.STORAGE_NETWORK.MATERIAL_REQUEST_STATUS_ITEM);
-                return string.Format(Loc.Get(Loc.UI.STORAGE_NETWORK.MATERIAL_REQUEST_STATUS_TOOLTIP), status);
-            };
-
-            return materialRequestStatusItem;
-        }
-
         private ComplexRecipe GetRecipeToRequest()
         {
             if (fabricator.CurrentWorkingOrder != null)
@@ -530,124 +408,9 @@ namespace StorageNetwork.Components
 
                 float transferred = source.Transfer(fabricator.inStorage, tag, transferAmount, block_events: false, hide_popups: true);
                 moved += transferred;
-                if (transferred > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
-                {
-                    if (DebugTransferLogging)
-                    {
-                        Debug.Log(string.Format(
-                            "[StorageNetworkMaterialRequester] Moved {0} of {1} from {2} to {3}.",
-                            GameUtil.GetFormattedMass(transferred),
-                            tag,
-                            source.GetProperName(),
-                            gameObject.GetProperName()));
-                    }
-                }
             }
 
             return moved;
-        }
-
-        private void StoreOutputsToNetwork()
-        {
-            if (!OutputStoreEnabled)
-            {
-                lastOutputStatus = string.Empty;
-                outputStoreCooldown = 0f;
-                return;
-            }
-
-            if (outputStoreCooldown > 0f)
-            {
-                outputStoreCooldown -= 1f;
-                return;
-            }
-
-            StorageTransferResult result = StoreOutputsFromOutputStorage();
-            lastOutputStatus = NetworkStorageTransferService.FormatOutputStatus(result, Loc.Get(Loc.UI.STORAGE_NETWORK.MATERIAL_STATUS_WAITING_PRODUCTS));
-            outputStoreCooldown = result.MovedKg > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ? 0f : EmptyOutputRetrySeconds;
-        }
-
-        private StorageTransferResult StoreOutputsFromOutputStorage()
-        {
-            EnsureFabricator();
-            if (fabricator.outStorage == null || fabricator.outStorage.items == null)
-            {
-                lastOutputStatus = Loc.Get(Loc.UI.STORAGE_NETWORK.MATERIAL_STATUS_NO_OUTPUT_STORAGE);
-                return StorageTransferResult.Idle;
-            }
-
-            return NetworkStorageTransferService.TransferStoredItemsToNetwork(
-                fabricator.outStorage,
-                GetFabricatorStorages(),
-                GetSpecificOutputTarget(),
-                GetAllowedOutputTags());
-        }
-
-        private HashSet<Tag> GetAllowedOutputTags()
-        {
-            HashSet<Tag> current = GetCurrentRecipeResultTags();
-            if (current.Count > 0)
-            {
-                lastRecipeResultTags = current;
-                return current;
-            }
-
-            return lastRecipeResultTags != null && lastRecipeResultTags.Count > 0
-                ? lastRecipeResultTags
-                : GetKnownRecipeResultTags();
-        }
-
-        // 只把当前配方 results 里的真实产物入网，避免金属精炼器冷却液这类工艺介质被当作成品搬走。
-        private HashSet<Tag> GetCurrentRecipeResultTags()
-        {
-            HashSet<Tag> tags = new HashSet<Tag>();
-            ComplexRecipe recipe = fabricator != null ? fabricator.CurrentWorkingOrder : null;
-            if (recipe == null)
-            {
-                recipe = fabricator != null ? fabricator.NextOrder : null;
-            }
-
-            if (recipe?.results == null)
-            {
-                return tags;
-            }
-
-            foreach (ComplexRecipe.RecipeElement result in recipe.results)
-            {
-                if (result != null && result.material != Tag.Invalid)
-                {
-                    tags.Add(result.material);
-                }
-            }
-
-            return tags;
-        }
-
-        private HashSet<Tag> GetKnownRecipeResultTags()
-        {
-            HashSet<Tag> tags = new HashSet<Tag>();
-            if (fabricator == null)
-            {
-                return tags;
-            }
-
-            foreach (ComplexRecipe recipe in fabricator.GetRecipes())
-            {
-                if (recipe?.results == null)
-                {
-                    continue;
-                }
-
-                foreach (ComplexRecipe.RecipeElement result in recipe.results)
-                {
-                    if (result != null && result.material != Tag.Invalid)
-                    {
-                        tags.Add(result.material);
-                    }
-                }
-            }
-
-            return tags;
         }
 
         private IEnumerable<Storage> GetSourceStorages(Tag tag)
@@ -673,20 +436,6 @@ namespace StorageNetwork.Components
             }
         }
 
-        private HashSet<Storage> BuildSourceExclusions()
-        {
-            HashSet<Storage> excluded = new HashSet<Storage>();
-            foreach (Storage storage in GetFabricatorStorages())
-            {
-                if (storage != null)
-                {
-                    excluded.Add(storage);
-                }
-            }
-
-            return excluded;
-        }
-
         private bool IsUsableSource(Storage storage, Tag tag)
         {
             return storage != null &&
@@ -704,11 +453,6 @@ namespace StorageNetwork.Components
                    GetAmountAvailable(fabricator.buildStorage, tag);
         }
 
-        private static float GetAmountAvailable(Storage storage, Tag tag)
-        {
-            return storage != null ? storage.GetAmountAvailable(tag) : 0f;
-        }
-
         private void EnsureFabricator()
         {
             if (fabricator == null)
@@ -717,43 +461,5 @@ namespace StorageNetwork.Components
             }
         }
 
-        internal static Tag GetStorageTransferTag(GameObject item)
-        {
-            return StorageItemUtility.GetStorageTransferTag(item);
-        }
-
-        internal static bool MatchesStorageTag(GameObject item, Tag tag)
-        {
-            return StorageItemUtility.MatchesStorageTag(item, tag);
-        }
-
-        private IEnumerable<Storage> GetFabricatorStorages()
-        {
-            if (fabricator == null)
-            {
-                yield break;
-            }
-
-            yield return fabricator.inStorage;
-            yield return fabricator.buildStorage;
-            yield return fabricator.outStorage;
-        }
-
-        private Storage GetSpecificOutputTarget()
-        {
-            return CurrentOutputStoreMode == OutputStoreMode.SpecificStorage
-                ? ResolveOutputStorage()
-                : null;
-        }
-
-        internal static int GetStorageInstanceId(Storage storage)
-        {
-            return StorageItemUtility.GetStorageInstanceId(storage);
-        }
-
-        private static string GetTagDisplayName(Tag tag)
-        {
-            return StorageItemUtility.GetTagDisplayName(tag);
-        }
     }
 }
