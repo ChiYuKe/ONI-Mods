@@ -5,7 +5,6 @@ namespace StorageNetwork.Gameplay
     internal static class StorageNetworkBuildingPlanInstaller
     {
         private const string BaseCategory = "Base";
-        private const string ConveyanceCategory = "Conveyance";
         private const string FoodCategory = "Food";
         private const string GasCategory = "HVAC";
         private const string LiquidCategory = "Plumbing";
@@ -43,6 +42,8 @@ namespace StorageNetwork.Gameplay
             Add(BaseCategory, SmallSolidServerConfig.ID);
             Add(BaseCategory, MediumSolidServerConfig.ID);
             Add(BaseCategory, LargeSolidServerConfig.ID);
+            Add(BaseCategory, StorageNetworkSolidInputPortConfig.ID);
+            Add(BaseCategory, StorageNetworkSolidOutputPortConfig.ID);
 
             Add(LiquidCategory, SmallLiquidServerConfig.ID);
             Add(LiquidCategory, MediumLiquidServerConfig.ID);
@@ -66,8 +67,6 @@ namespace StorageNetwork.Gameplay
             Add(FoodCategory, MediumColdStorageServerConfig.ID);
             Add(FoodCategory, LargeColdStorageServerConfig.ID);
 
-            Add(ConveyanceCategory, StorageNetworkSolidInputPortConfig.ID);
-            Add(ConveyanceCategory, StorageNetworkSolidOutputPortConfig.ID);
         }
 
         private static void Add(string category, string buildingId)
