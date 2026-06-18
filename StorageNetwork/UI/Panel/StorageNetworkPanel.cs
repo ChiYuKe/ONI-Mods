@@ -74,6 +74,7 @@ namespace StorageNetwork.UI
         private readonly Dictionary<Geyser, bool> expandedGeysers = new Dictionary<Geyser, bool>();
         private float refreshElapsed;
         private float structureRefreshElapsed;
+        private int lastObservedRegistryVersion = -1;
         private string lastListSignature;
         private const float LiveRefreshSeconds = 1f;
         private const float StructureRefreshSeconds = 5f;
@@ -108,6 +109,7 @@ namespace StorageNetwork.UI
 
             currentSnapshot = null;
             lastListSignature = null;
+            lastObservedRegistryVersion = StorageSceneRegistry.Version;
             refreshElapsed = 0f;
             structureRefreshElapsed = 0f;
             FocusStorageRow(focusStorage);
@@ -128,10 +130,12 @@ namespace StorageNetwork.UI
             if (refreshElapsed >= LiveRefreshSeconds)
             {
                 refreshElapsed = 0f;
-                bool refreshStructure = structureRefreshElapsed >= StructureRefreshSeconds;
+                int registryVersion = StorageSceneRegistry.Version;
+                bool refreshStructure = structureRefreshElapsed >= StructureRefreshSeconds || registryVersion != lastObservedRegistryVersion;
                 if (refreshStructure)
                 {
                     structureRefreshElapsed = 0f;
+                    lastObservedRegistryVersion = registryVersion;
                 }
 
                 RefreshStoragePanel(refreshStructure ? StoragePanelRefreshMode.StructureCheck : StoragePanelRefreshMode.Live);

@@ -1,0 +1,467 @@
+===== get_Storage hasbody=True =====
+IL_0000: ldarg.0
+IL_0001: ldfld Storage ConduitDispenser::storage
+IL_0006: ret
+===== get_ConduitType hasbody=True =====
+IL_0000: ldarg.0
+IL_0001: ldfld ConduitType ConduitDispenser::conduitType
+IL_0006: ret
+===== get_ConduitContents hasbody=True =====
+IL_0000: ldarg.0
+IL_0001: call ConduitFlow ConduitDispenser::GetConduitManager()
+IL_0006: ldarg.0
+IL_0007: ldfld System.Int32 ConduitDispenser::utilityCell
+IL_000c: callvirt ConduitFlow/ConduitContents ConduitFlow::GetContents(System.Int32)
+IL_0011: ret
+===== SetConduitData hasbody=True =====
+IL_0000: ldarg.0
+IL_0001: ldarg.1
+IL_0002: stfld ConduitType ConduitDispenser::conduitType
+IL_0007: ret
+===== GetConduitManager hasbody=True =====
+IL_0000: ldarg.0
+IL_0001: ldfld ConduitType ConduitDispenser::conduitType
+IL_0006: stloc.0
+IL_0007: ldloc.0
+IL_0008: ldc.i4.1
+IL_0009: beq.s IL_0011
+IL_000b: ldloc.0
+IL_000c: ldc.i4.2
+IL_000d: beq.s IL_001c
+IL_000f: br.s IL_0027
+IL_0011: call Game Game::get_Instance()
+IL_0016: ldfld ConduitFlow Game::gasConduitFlow
+IL_001b: ret
+IL_001c: call Game Game::get_Instance()
+IL_0021: ldfld ConduitFlow Game::liquidConduitFlow
+IL_0026: ret
+IL_0027: ldnull
+IL_0028: ret
+===== OnConduitConnectionChanged hasbody=True =====
+IL_0000: ldarg.0
+IL_0001: ldc.i4 -2094018600
+IL_0006: ldarg.0
+IL_0007: call System.Boolean ConduitDispenser::get_IsConnected()
+IL_000c: call Boxed`1<System.Boolean> BoxedBools::Box(System.Boolean)
+IL_0011: call System.Void KMonoBehaviour::Trigger(System.Int32,System.Object)
+IL_0016: ret
+===== OnSpawn hasbody=True =====
+IL_0000: ldarg.0
+IL_0001: call System.Void KMonoBehaviour::OnSpawn()
+IL_0006: ldsfld GameScheduler GameScheduler::Instance
+IL_000b: ldstr "PlumbingTutorial"
+IL_0010: ldc.r4 2
+IL_0015: ldsfld System.Action`1<System.Object> ConduitDispenser/<>c::<>9__25_0
+IL_001a: dup
+IL_001b: brtrue.s IL_0034
+IL_001d: pop
+IL_001e: ldsfld ConduitDispenser/<>c ConduitDispenser/<>c::<>9
+IL_0023: ldftn System.Void ConduitDispenser/<>c::<OnSpawn>b__25_0(System.Object)
+IL_0029: newobj System.Void System.Action`1<System.Object>::.ctor(System.Object,System.IntPtr)
+IL_002e: dup
+IL_002f: stsfld System.Action`1<System.Object> ConduitDispenser/<>c::<>9__25_0
+IL_0034: ldnull
+IL_0035: ldnull
+IL_0036: callvirt SchedulerHandle GameScheduler::Schedule(System.String,System.Single,System.Action`1<System.Object>,System.Object,SchedulerGroup)
+IL_003b: pop
+IL_003c: ldarg.0
+IL_003d: call ConduitFlow ConduitDispenser::GetConduitManager()
+IL_0042: stloc.0
+IL_0043: ldarg.0
+IL_0044: ldarg.0
+IL_0045: ldloc.0
+IL_0046: ldfld ConduitType ConduitFlow::conduitType
+IL_004b: call System.Int32 ConduitDispenser::GetOutputCell(ConduitType)
+IL_0050: stfld System.Int32 ConduitDispenser::utilityCell
+IL_0055: call GameScenePartitioner GameScenePartitioner::get_Instance()
+IL_005a: ldfld ScenePartitionerLayer[] GameScenePartitioner::objectLayers
+IL_005f: ldarg.0
+IL_0060: ldfld ConduitType ConduitDispenser::conduitType
+IL_0065: ldc.i4.1
+IL_0066: beq.s IL_006c
+IL_0068: ldc.i4.s 16
+IL_006a: br.s IL_006e
+IL_006c: ldc.i4.s 12
+IL_006e: ldelem.ref
+IL_006f: stloc.1
+IL_0070: ldarg.0
+IL_0071: call GameScenePartitioner GameScenePartitioner::get_Instance()
+IL_0076: ldstr "ConduitConsumer.OnSpawn"
+IL_007b: ldarg.0
+IL_007c: call UnityEngine.GameObject UnityEngine.Component::get_gameObject()
+IL_0081: ldarg.0
+IL_0082: ldfld System.Int32 ConduitDispenser::utilityCell
+IL_0087: ldloc.1
+IL_0088: ldarg.0
+IL_0089: ldftn System.Void ConduitDispenser::OnConduitConnectionChanged(System.Object)
+IL_008f: newobj System.Void System.Action`1<System.Object>::.ctor(System.Object,System.IntPtr)
+IL_0094: callvirt HandleVector`1/Handle<System.Int32> GameScenePartitioner::Add(System.String,System.Object,System.Int32,ScenePartitionerLayer,System.Action`1<System.Object>)
+IL_0099: stfld HandleVector`1/Handle<System.Int32> ConduitDispenser::partitionerEntry
+IL_009e: ldarg.0
+IL_009f: call ConduitFlow ConduitDispenser::GetConduitManager()
+IL_00a4: ldarg.0
+IL_00a5: ldftn System.Void ConduitDispenser::ConduitUpdate(System.Single)
+IL_00ab: newobj System.Void System.Action`1<System.Single>::.ctor(System.Object,System.IntPtr)
+IL_00b0: ldc.i4.s 50
+IL_00b2: callvirt System.Void ConduitFlow::AddConduitUpdater(System.Action`1<System.Single>,ConduitFlowPriority)
+IL_00b7: ldarg.0
+IL_00b8: ldnull
+IL_00b9: call System.Void ConduitDispenser::OnConduitConnectionChanged(System.Object)
+IL_00be: ret
+===== OnCleanUp hasbody=True =====
+IL_0000: ldarg.0
+IL_0001: call ConduitFlow ConduitDispenser::GetConduitManager()
+IL_0006: ldarg.0
+IL_0007: ldftn System.Void ConduitDispenser::ConduitUpdate(System.Single)
+IL_000d: newobj System.Void System.Action`1<System.Single>::.ctor(System.Object,System.IntPtr)
+IL_0012: callvirt System.Void ConduitFlow::RemoveConduitUpdater(System.Action`1<System.Single>)
+IL_0017: call GameScenePartitioner GameScenePartitioner::get_Instance()
+IL_001c: ldarg.0
+IL_001d: ldflda HandleVector`1/Handle<System.Int32> ConduitDispenser::partitionerEntry
+IL_0022: callvirt System.Void GameScenePartitioner::Free(HandleVector`1/Handle<System.Int32>&)
+IL_0027: ldarg.0
+IL_0028: call System.Void KMonoBehaviour::OnCleanUp()
+IL_002d: ret
+===== SetOnState hasbody=True =====
+IL_0000: ldarg.0
+IL_0001: ldarg.1
+IL_0002: stfld System.Boolean ConduitDispenser::isOn
+IL_0007: ret
+===== ConduitUpdate hasbody=True =====
+IL_0000: ldarg.0
+IL_0001: ldfld Operational ConduitDispenser::operational
+IL_0006: ldnull
+IL_0007: call System.Boolean UnityEngine.Object::op_Inequality(UnityEngine.Object,UnityEngine.Object)
+IL_000c: brfalse.s IL_0024
+IL_000e: ldarg.0
+IL_000f: ldfld Operational ConduitDispenser::operational
+IL_0014: ldsfld Operational/Flag ConduitDispenser::outputConduitFlag
+IL_0019: ldarg.0
+IL_001a: call System.Boolean ConduitDispenser::get_IsConnected()
+IL_001f: callvirt System.Void Operational::SetFlag(Operational/Flag,System.Boolean)
+IL_0024: ldarg.0
+IL_0025: ldc.i4.0
+IL_0026: stfld System.Boolean ConduitDispenser::blocked
+IL_002b: ldarg.0
+IL_002c: ldfld System.Boolean ConduitDispenser::isOn
+IL_0031: brfalse.s IL_003a
+IL_0033: ldarg.0
+IL_0034: ldarg.1
+IL_0035: call System.Void ConduitDispenser::Dispense(System.Single)
+IL_003a: ret
+===== Dispense hasbody=True =====
+IL_0000: ldarg.0
+IL_0001: ldfld Operational ConduitDispenser::operational
+IL_0006: ldnull
+IL_0007: call System.Boolean UnityEngine.Object::op_Inequality(UnityEngine.Object,UnityEngine.Object)
+IL_000c: brfalse.s IL_001b
+IL_000e: ldarg.0
+IL_000f: ldfld Operational ConduitDispenser::operational
+IL_0014: callvirt System.Boolean Operational::get_IsOperational()
+IL_0019: brtrue.s IL_0026
+IL_001b: ldarg.0
+IL_001c: ldfld System.Boolean ConduitDispenser::alwaysDispense
+IL_0021: brfalse IL_011a
+IL_0026: ldarg.0
+IL_0027: ldfld Building ConduitDispenser::building
+IL_002c: ldnull
+IL_002d: call System.Boolean UnityEngine.Object::op_Inequality(UnityEngine.Object,UnityEngine.Object)
+IL_0032: brfalse.s IL_005d
+IL_0034: ldarg.0
+IL_0035: ldfld Building ConduitDispenser::building
+IL_003a: ldfld BuildingDef Building::Def
+IL_003f: ldfld System.Boolean BuildingDef::CanMove
+IL_0044: brfalse.s IL_005d
+IL_0046: ldarg.0
+IL_0047: ldarg.0
+IL_0048: ldarg.0
+IL_0049: call ConduitFlow ConduitDispenser::GetConduitManager()
+IL_004e: ldfld ConduitType ConduitFlow::conduitType
+IL_0053: call System.Int32 ConduitDispenser::GetOutputCell(ConduitType)
+IL_0058: stfld System.Int32 ConduitDispenser::utilityCell
+IL_005d: ldarg.0
+IL_005e: call PrimaryElement ConduitDispenser::FindSuitableElement()
+IL_0063: stloc.0
+IL_0064: ldloc.0
+IL_0065: ldnull
+IL_0066: call System.Boolean UnityEngine.Object::op_Inequality(UnityEngine.Object,UnityEngine.Object)
+IL_006b: brfalse IL_0113
+IL_0070: ldloc.0
+IL_0071: ldc.i4.1
+IL_0072: stfld System.Boolean PrimaryElement::KeepZeroMassObject
+IL_0077: ldarg.0
+IL_0078: ldc.i4.0
+IL_0079: stfld System.Boolean ConduitDispenser::empty
+IL_007e: ldarg.0
+IL_007f: call ConduitFlow ConduitDispenser::GetConduitManager()
+IL_0084: ldarg.0
+IL_0085: ldfld System.Int32 ConduitDispenser::utilityCell
+IL_008a: ldloc.0
+IL_008b: ldfld SimHashes PrimaryElement::ElementID
+IL_0090: ldloc.0
+IL_0091: callvirt System.Single PrimaryElement::get_Mass()
+IL_0096: ldloc.0
+IL_0097: callvirt System.Single PrimaryElement::get_Temperature()
+IL_009c: ldloc.0
+IL_009d: callvirt System.Byte PrimaryElement::get_DiseaseIdx()
+IL_00a2: ldloc.0
+IL_00a3: callvirt System.Int32 PrimaryElement::get_DiseaseCount()
+IL_00a8: callvirt System.Single ConduitFlow::AddElement(System.Int32,SimHashes,System.Single,System.Single,System.Byte,System.Int32)
+IL_00ad: stloc.1
+IL_00ae: ldloc.1
+IL_00af: ldc.r4 0
+IL_00b4: ble.un.s IL_010b
+IL_00b6: ldloc.1
+IL_00b7: ldloc.0
+IL_00b8: callvirt System.Single PrimaryElement::get_Mass()
+IL_00bd: div
+IL_00be: ldloc.0
+IL_00bf: callvirt System.Int32 PrimaryElement::get_DiseaseCount()
+IL_00c4: conv.r4
+IL_00c5: mul
+IL_00c6: conv.i4
+IL_00c7: stloc.2
+IL_00c8: ldloc.0
+IL_00c9: ldloc.2
+IL_00ca: neg
+IL_00cb: ldstr "ConduitDispenser.ConduitUpdate"
+IL_00d0: callvirt System.Void PrimaryElement::ModifyDiseaseCount(System.Int32,System.String)
+IL_00d5: ldloc.0
+IL_00d6: dup
+IL_00d7: callvirt System.Single PrimaryElement::get_Mass()
+IL_00dc: ldloc.1
+IL_00dd: sub
+IL_00de: callvirt System.Void PrimaryElement::set_Mass(System.Single)
+IL_00e3: ldarg.0
+IL_00e4: ldfld Storage ConduitDispenser::storage
+IL_00e9: ldc.i4 -1697596308
+IL_00ee: ldloc.0
+IL_00ef: callvirt UnityEngine.GameObject UnityEngine.Component::get_gameObject()
+IL_00f4: callvirt System.Void KMonoBehaviour::Trigger(System.Int32,System.Object)
+IL_00f9: ldarg.0
+IL_00fa: ldfld Storage ConduitDispenser::storage
+IL_00ff: ldc.i4 2051543657
+IL_0104: ldloc.0
+IL_0105: callvirt System.Void KMonoBehaviour::Trigger(System.Int32,System.Object)
+IL_010a: ret
+IL_010b: ldarg.0
+IL_010c: ldc.i4.1
+IL_010d: stfld System.Boolean ConduitDispenser::blocked
+IL_0112: ret
+IL_0113: ldarg.0
+IL_0114: ldc.i4.1
+IL_0115: stfld System.Boolean ConduitDispenser::empty
+IL_011a: ret
+===== FindSuitableElement hasbody=True =====
+IL_0000: ldarg.0
+IL_0001: ldfld Storage ConduitDispenser::storage
+IL_0006: ldfld System.Collections.Generic.List`1<UnityEngine.GameObject> Storage::items
+IL_000b: stloc.0
+IL_000c: ldloc.0
+IL_000d: callvirt System.Int32 System.Collections.Generic.List`1<UnityEngine.GameObject>::get_Count()
+IL_0012: stloc.1
+IL_0013: ldc.i4.0
+IL_0014: stloc.2
+IL_0015: br IL_00c9
+IL_001a: ldloc.2
+IL_001b: ldarg.0
+IL_001c: ldfld System.Int32 ConduitDispenser::elementOutputOffset
+IL_0021: add
+IL_0022: ldloc.1
+IL_0023: rem
+IL_0024: stloc.3
+IL_0025: ldloc.0
+IL_0026: ldloc.3
+IL_0027: callvirt !0 System.Collections.Generic.List`1<UnityEngine.GameObject>::get_Item(System.Int32)
+IL_002c: callvirt !!0 UnityEngine.GameObject::GetComponent<PrimaryElement>()
+IL_0031: stloc.s V_4
+IL_0033: ldloc.s V_4
+IL_0035: ldnull
+IL_0036: call System.Boolean UnityEngine.Object::op_Inequality(UnityEngine.Object,UnityEngine.Object)
+IL_003b: brfalse IL_00c5
+IL_0040: ldloc.s V_4
+IL_0042: callvirt System.Single PrimaryElement::get_Mass()
+IL_0047: ldc.r4 0
+IL_004c: ble.un.s IL_00c5
+IL_004e: ldarg.0
+IL_004f: ldfld ConduitType ConduitDispenser::conduitType
+IL_0054: ldc.i4.2
+IL_0055: beq.s IL_0065
+IL_0057: ldloc.s V_4
+IL_0059: callvirt Element PrimaryElement::get_Element()
+IL_005e: callvirt System.Boolean Element::get_IsGas()
+IL_0063: br.s IL_0071
+IL_0065: ldloc.s V_4
+IL_0067: callvirt Element PrimaryElement::get_Element()
+IL_006c: callvirt System.Boolean Element::get_IsLiquid()
+IL_0071: brfalse.s IL_00c5
+IL_0073: ldarg.0
+IL_0074: ldfld SimHashes[] ConduitDispenser::elementFilter
+IL_0079: brfalse.s IL_00b2
+IL_007b: ldarg.0
+IL_007c: ldfld SimHashes[] ConduitDispenser::elementFilter
+IL_0081: ldlen
+IL_0082: brfalse.s IL_00b2
+IL_0084: ldarg.0
+IL_0085: ldfld System.Boolean ConduitDispenser::invertElementFilter
+IL_008a: brtrue.s IL_009b
+IL_008c: ldarg.0
+IL_008d: ldloc.s V_4
+IL_008f: ldfld SimHashes PrimaryElement::ElementID
+IL_0094: call System.Boolean ConduitDispenser::IsFilteredElement(SimHashes)
+IL_0099: brtrue.s IL_00b2
+IL_009b: ldarg.0
+IL_009c: ldfld System.Boolean ConduitDispenser::invertElementFilter
+IL_00a1: brfalse.s IL_00c5
+IL_00a3: ldarg.0
+IL_00a4: ldloc.s V_4
+IL_00a6: ldfld SimHashes PrimaryElement::ElementID
+IL_00ab: call System.Boolean ConduitDispenser::IsFilteredElement(SimHashes)
+IL_00b0: brtrue.s IL_00c5
+IL_00b2: ldarg.0
+IL_00b3: ldarg.0
+IL_00b4: ldfld System.Int32 ConduitDispenser::elementOutputOffset
+IL_00b9: ldc.i4.1
+IL_00ba: add
+IL_00bb: ldloc.1
+IL_00bc: rem
+IL_00bd: stfld System.Int32 ConduitDispenser::elementOutputOffset
+IL_00c2: ldloc.s V_4
+IL_00c4: ret
+IL_00c5: ldloc.2
+IL_00c6: ldc.i4.1
+IL_00c7: add
+IL_00c8: stloc.2
+IL_00c9: ldloc.2
+IL_00ca: ldloc.1
+IL_00cb: blt IL_001a
+IL_00d0: ldnull
+IL_00d1: ret
+===== IsFilteredElement hasbody=True =====
+IL_0000: ldc.i4.0
+IL_0001: stloc.0
+IL_0002: br.s IL_0015
+IL_0004: ldarg.0
+IL_0005: ldfld SimHashes[] ConduitDispenser::elementFilter
+IL_000a: ldloc.0
+IL_000b: ldelem.i4
+IL_000c: ldarg.1
+IL_000d: bne.un.s IL_0011
+IL_000f: ldc.i4.1
+IL_0010: ret
+IL_0011: ldloc.0
+IL_0012: ldc.i4.1
+IL_0013: add
+IL_0014: stloc.0
+IL_0015: ldloc.0
+IL_0016: ldarg.0
+IL_0017: ldfld SimHashes[] ConduitDispenser::elementFilter
+IL_001c: ldlen
+IL_001d: conv.i4
+IL_001e: bne.un.s IL_0004
+IL_0020: ldc.i4.0
+IL_0021: ret
+===== get_IsConnected hasbody=True =====
+IL_0000: ldsflda Grid/ObjectLayerIndexer Grid::Objects
+IL_0005: ldarg.0
+IL_0006: ldfld System.Int32 ConduitDispenser::utilityCell
+IL_000b: ldarg.0
+IL_000c: ldfld ConduitType ConduitDispenser::conduitType
+IL_0011: ldc.i4.1
+IL_0012: beq.s IL_0018
+IL_0014: ldc.i4.s 16
+IL_0016: br.s IL_001a
+IL_0018: ldc.i4.s 12
+IL_001a: call UnityEngine.GameObject Grid/ObjectLayerIndexer::get_Item(System.Int32,System.Int32)
+IL_001f: stloc.0
+IL_0020: ldloc.0
+IL_0021: ldnull
+IL_0022: call System.Boolean UnityEngine.Object::op_Inequality(UnityEngine.Object,UnityEngine.Object)
+IL_0027: brfalse.s IL_0036
+IL_0029: ldloc.0
+IL_002a: callvirt !!0 UnityEngine.GameObject::GetComponent<BuildingComplete>()
+IL_002f: ldnull
+IL_0030: call System.Boolean UnityEngine.Object::op_Inequality(UnityEngine.Object,UnityEngine.Object)
+IL_0035: ret
+IL_0036: ldc.i4.0
+IL_0037: ret
+===== GetOutputCell hasbody=True =====
+IL_0000: ldarg.0
+IL_0001: call !!0 UnityEngine.Component::GetComponent<Building>()
+IL_0006: stloc.0
+IL_0007: ldloc.0
+IL_0008: ldnull
+IL_0009: call System.Boolean UnityEngine.Object::op_Inequality(UnityEngine.Object,UnityEngine.Object)
+IL_000e: brfalse.s IL_006e
+IL_0010: ldarg.0
+IL_0011: ldfld System.Boolean ConduitDispenser::useSecondaryOutput
+IL_0016: brfalse.s IL_0067
+IL_0018: ldarg.0
+IL_0019: call !!0[] UnityEngine.Component::GetComponents<ISecondaryOutput>()
+IL_001e: stloc.1
+IL_001f: ldloc.1
+IL_0020: stloc.2
+IL_0021: ldc.i4.0
+IL_0022: stloc.3
+IL_0023: br.s IL_004c
+IL_0025: ldloc.2
+IL_0026: ldloc.3
+IL_0027: ldelem.ref
+IL_0028: stloc.s V_4
+IL_002a: ldloc.s V_4
+IL_002c: ldarg.1
+IL_002d: callvirt System.Boolean ISecondaryOutput::HasSecondaryConduitType(ConduitType)
+IL_0032: brfalse.s IL_0048
+IL_0034: ldloc.0
+IL_0035: call System.Int32 GameUtil::NaturalBuildingCell(KMonoBehaviour)
+IL_003a: ldloc.s V_4
+IL_003c: ldarg.1
+IL_003d: callvirt CellOffset ISecondaryOutput::GetSecondaryConduitOffset(ConduitType)
+IL_0042: call System.Int32 Grid::OffsetCell(System.Int32,CellOffset)
+IL_0047: ret
+IL_0048: ldloc.3
+IL_0049: ldc.i4.1
+IL_004a: add
+IL_004b: stloc.3
+IL_004c: ldloc.3
+IL_004d: ldloc.2
+IL_004e: ldlen
+IL_004f: conv.i4
+IL_0050: blt.s IL_0025
+IL_0052: ldloc.0
+IL_0053: call System.Int32 GameUtil::NaturalBuildingCell(KMonoBehaviour)
+IL_0058: ldloc.1
+IL_0059: ldc.i4.0
+IL_005a: ldelem.ref
+IL_005b: ldarg.1
+IL_005c: callvirt CellOffset ISecondaryOutput::GetSecondaryConduitOffset(ConduitType)
+IL_0061: call System.Int32 Grid::OffsetCell(System.Int32,CellOffset)
+IL_0066: ret
+IL_0067: ldloc.0
+IL_0068: callvirt System.Int32 Building::GetUtilityOutputCell()
+IL_006d: ret
+IL_006e: ldarg.0
+IL_006f: call System.Int32 Grid::PosToCell(KMonoBehaviour)
+IL_0074: ldarg.0
+IL_0075: ldfld CellOffset ConduitDispenser::noBuildingOutputCellOffset
+IL_007a: call System.Int32 Grid::OffsetCell(System.Int32,CellOffset)
+IL_007f: ret
+===== .ctor hasbody=True =====
+IL_0000: ldarg.0
+IL_0001: ldc.i4.1
+IL_0002: stfld System.Boolean ConduitDispenser::isOn
+IL_0007: ldarg.0
+IL_0008: ldc.i4.1
+IL_0009: stfld System.Boolean ConduitDispenser::empty
+IL_000e: ldarg.0
+IL_000f: ldc.i4.m1
+IL_0010: stfld System.Int32 ConduitDispenser::utilityCell
+IL_0015: ldarg.0
+IL_0016: call System.Void KMonoBehaviour::.ctor()
+IL_001b: ret
+===== .cctor hasbody=True =====
+IL_0000: ldstr "output_conduit"
+IL_0005: ldc.i4.1
+IL_0006: newobj System.Void Operational/Flag::.ctor(System.String,Operational/Flag/Type)
+IL_000b: stsfld Operational/Flag ConduitDispenser::outputConduitFlag
+IL_0010: ret

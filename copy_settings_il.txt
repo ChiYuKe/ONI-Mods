@@ -1,0 +1,309 @@
+===== TYPE CopyBuildingSettings =====
+FIELDS
+Private KPrefabID id
+Public Tag copyGroupTag
+Private, Static, InitOnly EventSystem/IntraObjectHandler`1<CopyBuildingSettings> OnRefreshUserMenuDelegate
+METHODS
+Family, Virtual, HideBySig System.Void OnPrefabInit
+Private, HideBySig System.Void OnRefreshUserMenu
+Private, HideBySig System.Void ActivateCopyTool
+Public, Static, HideBySig ObjectLayer ResolveLayer
+Public, Static, HideBySig KPrefabID ResolveTarget
+Public, Static, HideBySig System.Boolean ApplyCopy
+Public, HideBySig, SpecialName, RTSpecialName System.Void .ctor
+Private, Static, HideBySig, SpecialName, RTSpecialName System.Void .cctor
+--- OnPrefabInit ---
+IL_0000: ldarg.0
+IL_0001: call System.Void KMonoBehaviour::OnPrefabInit()
+IL_0006: ldarg.0
+IL_0007: ldc.i4 493375141
+IL_000c: ldsfld EventSystem/IntraObjectHandler`1<CopyBuildingSettings> CopyBuildingSettings::OnRefreshUserMenuDelegate
+IL_0011: call System.Int32 KMonoBehaviour::Subscribe<CopyBuildingSettings>(System.Int32,EventSystem/IntraObjectHandler`1<!!0>)
+IL_0016: pop
+IL_0017: ret
+--- OnRefreshUserMenu ---
+IL_0000: call Game Game::get_Instance()
+IL_0005: ldfld UserMenu Game::userMenu
+IL_000a: ldarg.0
+IL_000b: call UnityEngine.GameObject UnityEngine.Component::get_gameObject()
+IL_0010: ldstr "action_mirror"
+IL_0015: ldsfld LocString STRINGS.UI/USERMENUACTIONS/COPY_BUILDING_SETTINGS::NAME
+IL_001a: call System.String LocString::op_Implicit(LocString)
+IL_001f: ldarg.0
+IL_0020: ldftn System.Void CopyBuildingSettings::ActivateCopyTool()
+IL_0026: newobj System.Void System.Action::.ctor(System.Object,System.IntPtr)
+IL_002b: ldc.i4 140
+IL_0030: ldnull
+IL_0031: ldnull
+IL_0032: ldnull
+IL_0033: ldsfld LocString STRINGS.UI/USERMENUACTIONS/COPY_BUILDING_SETTINGS::TOOLTIP
+IL_0038: call System.String LocString::op_Implicit(LocString)
+IL_003d: ldc.i4.1
+IL_003e: newobj System.Void KIconButtonMenu/ButtonInfo::.ctor(System.String,System.String,System.Action,Action,System.Action`1<UnityEngine.GameObject>,System.Action`1<KIconButtonMenu/ButtonInfo>,UnityEngine.Texture,System.String,System.Boolean)
+IL_0043: ldc.r4 1
+IL_0048: callvirt System.Void UserMenu::AddButton(UnityEngine.GameObject,KIconButtonMenu/ButtonInfo,System.Single)
+IL_004d: ret
+--- ActivateCopyTool ---
+IL_0000: ldsfld CopySettingsTool CopySettingsTool::Instance
+IL_0005: ldarg.0
+IL_0006: call UnityEngine.GameObject UnityEngine.Component::get_gameObject()
+IL_000b: callvirt System.Void CopySettingsTool::SetSourceObject(UnityEngine.GameObject)
+IL_0010: call PlayerController PlayerController::get_Instance()
+IL_0015: ldsfld CopySettingsTool CopySettingsTool::Instance
+IL_001a: callvirt System.Void PlayerController::ActivateTool(InterfaceTool)
+IL_001f: ret
+--- ResolveLayer ---
+IL_0000: ldc.i4.1
+IL_0001: stloc.0
+IL_0002: ldarg.0
+IL_0003: ldloca.s V_1
+IL_0005: callvirt System.Boolean UnityEngine.GameObject::TryGetComponent<MoverLayerOccupier>(!!0&)
+IL_000a: brfalse.s IL_000f
+IL_000c: ldc.i4.s 40
+IL_000e: stloc.0
+IL_000f: ldarg.0
+IL_0010: ldloca.s V_2
+IL_0012: callvirt System.Boolean UnityEngine.GameObject::TryGetComponent<BuildingComplete>(!!0&)
+IL_0017: brfalse.s IL_0025
+IL_0019: ldloc.2
+IL_001a: ldfld BuildingDef Building::Def
+IL_001f: ldfld ObjectLayer BuildingDef::ObjectLayer
+IL_0024: stloc.0
+IL_0025: ldloc.0
+IL_0026: ret
+--- ResolveTarget ---
+IL_0000: ldsflda Grid/ObjectLayerIndexer Grid::Objects
+IL_0005: ldarg.1
+IL_0006: ldarg.0
+IL_0007: call UnityEngine.GameObject Grid/ObjectLayerIndexer::get_Item(System.Int32,System.Int32)
+IL_000c: stloc.0
+IL_000d: ldloc.0
+IL_000e: ldnull
+IL_000f: call System.Boolean UnityEngine.Object::op_Equality(UnityEngine.Object,UnityEngine.Object)
+IL_0014: brfalse.s IL_0018
+IL_0016: ldnull
+IL_0017: ret
+IL_0018: ldloc.0
+IL_0019: ldloca.s V_1
+IL_001b: callvirt System.Boolean UnityEngine.GameObject::TryGetComponent<KPrefabID>(!!0&)
+IL_0020: pop
+IL_0021: ldloc.1
+IL_0022: ret
+--- ApplyCopy ---
+IL_0000: ldarg.0
+IL_0001: callvirt UnityEngine.GameObject UnityEngine.Component::get_gameObject()
+IL_0006: ldarg.1
+IL_0007: call System.Boolean UnityEngine.Object::op_Inequality(UnityEngine.Object,UnityEngine.Object)
+IL_000c: ldstr "source and target must not be equal"
+IL_0011: ldnull
+IL_0012: call System.Void DebugUtil::DevAssert(System.Boolean,System.String,UnityEngine.Object)
+IL_0017: ldarg.0
+IL_0018: callvirt UnityEngine.GameObject UnityEngine.Component::get_gameObject()
+IL_001d: ldarg.1
+IL_001e: call System.Boolean UnityEngine.Object::op_Equality(UnityEngine.Object,UnityEngine.Object)
+IL_0023: brfalse.s IL_0027
+IL_0025: ldc.i4.0
+IL_0026: ret
+IL_0027: ldarg.0
+IL_0028: callvirt UnityEngine.GameObject UnityEngine.Component::get_gameObject()
+IL_002d: ldloca.s V_0
+IL_002f: callvirt System.Boolean UnityEngine.GameObject::TryGetComponent<CopyBuildingSettings>(!!0&)
+IL_0034: brtrue.s IL_0038
+IL_0036: ldc.i4.0
+IL_0037: ret
+IL_0038: ldarg.3
+IL_0039: ldfld Tag CopyBuildingSettings::copyGroupTag
+IL_003e: ldsfld Tag Tag::Invalid
+IL_0043: call System.Boolean Tag::op_Inequality(Tag,Tag)
+IL_0048: brfalse.s IL_005f
+IL_004a: ldarg.3
+IL_004b: ldfld Tag CopyBuildingSettings::copyGroupTag
+IL_0050: ldloc.0
+IL_0051: ldfld Tag CopyBuildingSettings::copyGroupTag
+IL_0056: call System.Boolean Tag::op_Inequality(Tag,Tag)
+IL_005b: brfalse.s IL_0074
+IL_005d: ldc.i4.0
+IL_005e: ret
+IL_005f: ldarg.0
+IL_0060: callvirt Tag KPrefabID::PrefabID()
+IL_0065: ldarg.2
+IL_0066: callvirt Tag KPrefabID::PrefabID()
+IL_006b: call System.Boolean Tag::op_Inequality(Tag,Tag)
+IL_0070: brfalse.s IL_0074
+IL_0072: ldc.i4.0
+IL_0073: ret
+IL_0074: ldarg.0
+IL_0075: ldc.i4 -905833192
+IL_007a: ldarg.1
+IL_007b: callvirt System.Void KMonoBehaviour::Trigger(System.Int32,System.Object)
+IL_0080: ldsfld PopFXManager PopFXManager::Instance
+IL_0085: ldsfld PopFXManager PopFXManager::Instance
+IL_008a: ldfld UnityEngine.Sprite PopFXManager::sprite_Plus
+IL_008f: ldsfld LocString STRINGS.UI::COPIED_SETTINGS
+IL_0094: call System.String LocString::op_Implicit(LocString)
+IL_0099: ldarg.0
+IL_009a: callvirt UnityEngine.GameObject UnityEngine.Component::get_gameObject()
+IL_009f: callvirt UnityEngine.Transform UnityEngine.GameObject::get_transform()
+IL_00a4: ldc.r4 0
+IL_00a9: ldc.r4 0.5
+IL_00ae: ldc.r4 0
+IL_00b3: newobj System.Void UnityEngine.Vector3::.ctor(System.Single,System.Single,System.Single)
+IL_00b8: ldc.r4 1.5
+IL_00bd: ldc.i4.0
+IL_00be: ldc.i4.0
+IL_00bf: callvirt PopFX PopFXManager::SpawnFX(UnityEngine.Sprite,System.String,UnityEngine.Transform,UnityEngine.Vector3,System.Single,System.Boolean,System.Boolean)
+IL_00c4: pop
+IL_00c5: ldc.i4.1
+IL_00c6: ret
+--- .ctor ---
+IL_0000: ldarg.0
+IL_0001: call System.Void KMonoBehaviour::.ctor()
+IL_0006: ret
+--- .cctor ---
+IL_0000: ldsfld CopyBuildingSettings/<>c CopyBuildingSettings/<>c::<>9
+IL_0005: ldftn System.Void CopyBuildingSettings/<>c::<.cctor>b__10_0(CopyBuildingSettings,System.Object)
+IL_000b: newobj System.Void System.Action`2<CopyBuildingSettings,System.Object>::.ctor(System.Object,System.IntPtr)
+IL_0010: newobj System.Void EventSystem/IntraObjectHandler`1<CopyBuildingSettings>::.ctor(System.Action`2<!0,System.Object>)
+IL_0015: stsfld EventSystem/IntraObjectHandler`1<CopyBuildingSettings> CopyBuildingSettings::OnRefreshUserMenuDelegate
+IL_001a: ret
+===== TYPE CopySettingsTool =====
+FIELDS
+Public, Static CopySettingsTool Instance
+Public UnityEngine.GameObject Placer
+Private UnityEngine.GameObject sourceGameObject
+Private, InitOnly System.Collections.Generic.Dictionary`2<UnityEngine.GameObject,KPrefabID> targets
+METHODS
+Public, Static, HideBySig System.Void DestroyInstance
+Family, Virtual, HideBySig System.Void OnPrefabInit
+Public, HideBySig System.Void Activate
+Public, HideBySig System.Void SetSourceObject
+Family, Virtual, HideBySig System.Void OnDragTool
+Family, Virtual, HideBySig System.Void OnDragComplete
+Family, Virtual, HideBySig System.Void OnActivateTool
+Family, Virtual, HideBySig System.Void OnDeactivateTool
+Public, HideBySig, SpecialName, RTSpecialName System.Void .ctor
+--- DestroyInstance ---
+IL_0000: ldnull
+IL_0001: stsfld CopySettingsTool CopySettingsTool::Instance
+IL_0006: ret
+--- OnPrefabInit ---
+IL_0000: ldarg.0
+IL_0001: call System.Void DragTool::OnPrefabInit()
+IL_0006: ldarg.0
+IL_0007: stsfld CopySettingsTool CopySettingsTool::Instance
+IL_000c: ret
+--- Activate ---
+IL_0000: call PlayerController PlayerController::get_Instance()
+IL_0005: ldarg.0
+IL_0006: callvirt System.Void PlayerController::ActivateTool(InterfaceTool)
+IL_000b: ret
+--- SetSourceObject ---
+IL_0000: ldarg.0
+IL_0001: ldarg.1
+IL_0002: stfld UnityEngine.GameObject CopySettingsTool::sourceGameObject
+IL_0007: ret
+--- OnDragTool ---
+IL_0000: ldarg.0
+IL_0001: ldfld UnityEngine.GameObject CopySettingsTool::sourceGameObject
+IL_0006: ldnull
+IL_0007: call System.Boolean UnityEngine.Object::op_Equality(UnityEngine.Object,UnityEngine.Object)
+IL_000c: brfalse.s IL_000f
+IL_000e: ret
+IL_000f: ldarg.1
+IL_0010: call System.Boolean Grid::IsValidCell(System.Int32)
+IL_0015: ldstr "DragTool only calls us with valid cells"
+IL_001a: ldnull
+IL_001b: call System.Void DebugUtil::DevAssert(System.Boolean,System.String,UnityEngine.Object)
+IL_0020: ldarg.0
+IL_0021: ldfld UnityEngine.GameObject CopySettingsTool::sourceGameObject
+IL_0026: call ObjectLayer CopyBuildingSettings::ResolveLayer(UnityEngine.GameObject)
+IL_002b: ldarg.1
+IL_002c: call KPrefabID CopyBuildingSettings::ResolveTarget(ObjectLayer,System.Int32)
+IL_0031: stloc.0
+IL_0032: ldloc.0
+IL_0033: ldnull
+IL_0034: call System.Boolean UnityEngine.Object::op_Inequality(UnityEngine.Object,UnityEngine.Object)
+IL_0039: brfalse.s IL_0061
+IL_003b: ldloc.0
+IL_003c: callvirt UnityEngine.GameObject UnityEngine.Component::get_gameObject()
+IL_0041: ldarg.0
+IL_0042: ldfld UnityEngine.GameObject CopySettingsTool::sourceGameObject
+IL_0047: call System.Boolean UnityEngine.Object::op_Inequality(UnityEngine.Object,UnityEngine.Object)
+IL_004c: brfalse.s IL_0061
+IL_004e: ldarg.0
+IL_004f: ldfld System.Collections.Generic.Dictionary`2<UnityEngine.GameObject,KPrefabID> CopySettingsTool::targets
+IL_0054: ldloc.0
+IL_0055: callvirt UnityEngine.GameObject UnityEngine.Component::get_gameObject()
+IL_005a: ldloc.0
+IL_005b: callvirt System.Boolean System.Collections.Generic.Dictionary`2<UnityEngine.GameObject,KPrefabID>::TryAdd(!0,!1)
+IL_0060: pop
+IL_0061: ret
+--- OnDragComplete ---
+IL_0000: ldarg.0
+IL_0001: ldfld UnityEngine.GameObject CopySettingsTool::sourceGameObject
+IL_0006: ldnull
+IL_0007: call System.Boolean UnityEngine.Object::op_Inequality(UnityEngine.Object,UnityEngine.Object)
+IL_000c: brfalse.s IL_007d
+IL_000e: ldarg.0
+IL_000f: ldfld UnityEngine.GameObject CopySettingsTool::sourceGameObject
+IL_0014: ldloca.s V_0
+IL_0016: callvirt System.Boolean UnityEngine.GameObject::TryGetComponent<KPrefabID>(!!0&)
+IL_001b: pop
+IL_001c: ldarg.0
+IL_001d: ldfld UnityEngine.GameObject CopySettingsTool::sourceGameObject
+IL_0022: ldloca.s V_1
+IL_0024: callvirt System.Boolean UnityEngine.GameObject::TryGetComponent<CopyBuildingSettings>(!!0&)
+IL_0029: pop
+IL_002a: ldloc.0
+IL_002b: ldnull
+IL_002c: call System.Boolean UnityEngine.Object::op_Inequality(UnityEngine.Object,UnityEngine.Object)
+IL_0031: brfalse.s IL_007d
+IL_0033: ldloc.1
+IL_0034: ldnull
+IL_0035: call System.Boolean UnityEngine.Object::op_Inequality(UnityEngine.Object,UnityEngine.Object)
+IL_003a: brfalse.s IL_007d
+IL_003c: ldarg.0
+IL_003d: ldfld System.Collections.Generic.Dictionary`2<UnityEngine.GameObject,KPrefabID> CopySettingsTool::targets
+IL_0042: callvirt System.Collections.Generic.Dictionary`2/ValueCollection<!0,!1> System.Collections.Generic.Dictionary`2<UnityEngine.GameObject,KPrefabID>::get_Values()
+IL_0047: callvirt System.Collections.Generic.Dictionary`2/ValueCollection/Enumerator<!0,!1> System.Collections.Generic.Dictionary`2/ValueCollection<UnityEngine.GameObject,KPrefabID>::GetEnumerator()
+IL_004c: stloc.2
+IL_004d: br.s IL_0064
+IL_004f: ldloca.s V_2
+IL_0051: call !1 System.Collections.Generic.Dictionary`2/ValueCollection/Enumerator<UnityEngine.GameObject,KPrefabID>::get_Current()
+IL_0056: ldarg.0
+IL_0057: ldfld UnityEngine.GameObject CopySettingsTool::sourceGameObject
+IL_005c: ldloc.0
+IL_005d: ldloc.1
+IL_005e: call System.Boolean CopyBuildingSettings::ApplyCopy(KPrefabID,UnityEngine.GameObject,KPrefabID,CopyBuildingSettings)
+IL_0063: pop
+IL_0064: ldloca.s V_2
+IL_0066: call System.Boolean System.Collections.Generic.Dictionary`2/ValueCollection/Enumerator<UnityEngine.GameObject,KPrefabID>::MoveNext()
+IL_006b: brtrue.s IL_004f
+IL_006d: leave.s IL_007d
+IL_006f: ldloca.s V_2
+IL_0071: constrained. System.Collections.Generic.Dictionary`2/ValueCollection/Enumerator<UnityEngine.GameObject,KPrefabID>
+IL_0077: callvirt System.Void System.IDisposable::Dispose()
+IL_007c: endfinally
+IL_007d: ldarg.0
+IL_007e: ldfld System.Collections.Generic.Dictionary`2<UnityEngine.GameObject,KPrefabID> CopySettingsTool::targets
+IL_0083: callvirt System.Void System.Collections.Generic.Dictionary`2<UnityEngine.GameObject,KPrefabID>::Clear()
+IL_0088: ret
+--- OnActivateTool ---
+IL_0000: ldarg.0
+IL_0001: call System.Void DragTool::OnActivateTool()
+IL_0006: ret
+--- OnDeactivateTool ---
+IL_0000: ldarg.0
+IL_0001: ldarg.1
+IL_0002: call System.Void DragTool::OnDeactivateTool(InterfaceTool)
+IL_0007: ldarg.0
+IL_0008: ldnull
+IL_0009: stfld UnityEngine.GameObject CopySettingsTool::sourceGameObject
+IL_000e: ret
+--- .ctor ---
+IL_0000: ldarg.0
+IL_0001: newobj System.Void System.Collections.Generic.Dictionary`2<UnityEngine.GameObject,KPrefabID>::.ctor()
+IL_0006: stfld System.Collections.Generic.Dictionary`2<UnityEngine.GameObject,KPrefabID> CopySettingsTool::targets
+IL_000b: ldarg.0
+IL_000c: call System.Void DragTool::.ctor()
+IL_0011: ret

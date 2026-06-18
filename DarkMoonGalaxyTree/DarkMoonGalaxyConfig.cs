@@ -50,6 +50,7 @@ namespace DarkMoonGalaxy
                  can_drown: true,                  
                  can_tinker: true,                  // 是否允许通过“调整”（Tinker）来修改或互动
                  require_solid_tile: true,         
+                 require_Backwall_Foundation: false,
                  should_grow_old: true,             
                  max_age: 2400f,                    
                  min_radiation: 0f,                 

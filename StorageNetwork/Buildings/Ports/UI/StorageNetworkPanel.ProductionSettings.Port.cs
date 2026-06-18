@@ -585,7 +585,7 @@ namespace StorageNetwork.UI
                 enabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ACTION_CLOSE) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ON),
                 () =>
                 {
-                    input.SetInputWatts(enabled ? 0f : StorageNetworkPowerInputPortConsumer.DefaultInputWatts);
+                    input.SetInputWatts(enabled ? 0f : Mathf.Min(StorageNetworkPowerInputPortConsumer.DefaultInputWatts, StorageNetworkPowerInputPortConsumer.GetMaxInputWatts()));
                     UpdateProductionSettingsPanel(true);
                 },
                 enabled);
@@ -624,7 +624,7 @@ namespace StorageNetwork.UI
                 enabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ACTION_CLOSE) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ON),
                 () =>
                 {
-                    output.SetOutputWatts(enabled ? 0f : StorageNetworkPowerOutputPortGenerator.DefaultOutputWatts);
+                    output.SetOutputWatts(enabled ? 0f : Mathf.Min(StorageNetworkPowerOutputPortGenerator.DefaultOutputWatts, StorageNetworkPowerOutputPortGenerator.GetMaxOutputWatts()));
                     UpdateProductionSettingsPanel(true);
                 },
                 enabled);

@@ -230,14 +230,19 @@ namespace StorageNetwork.Components
             return Mathf.Clamp(
                 RequestRateKgPerSecond <= 0f ? DefaultRequestRateKgPerSecond : RequestRateKgPerSecond,
                 MinRequestRateKgPerSecond,
-                MaxRequestRateKgPerSecond);
+                GetMaxRequestRateKgPerSecond());
         }
 
         public void SetRequestRateKgPerSecond(float value)
         {
-            RequestRateKgPerSecond = Mathf.Clamp(value, MinRequestRateKgPerSecond, MaxRequestRateKgPerSecond);
+            RequestRateKgPerSecond = Mathf.Clamp(value, MinRequestRateKgPerSecond, GetMaxRequestRateKgPerSecond());
             retryTimer = 0f;
             cachedStatusText = null;
+        }
+
+        public static float GetMaxRequestRateKgPerSecond()
+        {
+            return Mathf.Max(MinRequestRateKgPerSecond, Config.Instance.LiquidOutputMaxKgPerSecond);
         }
 
         public void SetButtonTextOverride(ButtonMenuTextOverride textOverride)

@@ -46,22 +46,26 @@ namespace StorageNetwork.Services
                    (target.items == null || !target.items.Contains(item));
         }
 
-        private static bool IsUsableElementOutputTarget(Storage target, Tag tag, HashSet<Storage> excludedStorages, int sourceWorldId = -1)
+        private static bool IsUsableElementOutputTarget(Storage target, Element element, Tag tag, HashSet<Storage> excludedStorages, int sourceWorldId = -1)
+        {
+            return IsElementOutputTargetCandidate(target, element, tag, excludedStorages, sourceWorldId, true);
+        }
+
+        private static bool IsElementOutputTargetCandidate(Storage target, Element element, Tag tag, HashSet<Storage> excludedStorages, int sourceWorldId, bool requireCapacity)
         {
             return StorageSceneRegistry.IsLive(target) &&
+                   element != null &&
                    tag != Tag.Invalid &&
                    IsStorageReachableFromWorld(target, sourceWorldId) &&
                    !excludedStorages.Contains(target) &&
                    StorageNetworkStorageRules.IsServerStorage(target) &&
                    StorageNetworkStorageRules.IsConnectedNetworkStorage(target) &&
+                   StorageNetworkStorageRules.MatchesElementState(target, element) &&
+                   !StorageNetworkStorageRules.IsNetworkPortStorage(target) &&
                    !StorageNetworkStorageRules.IsMinionStorage(target) &&
                    !StorageNetworkStorageRules.IsProductionStorage(target) &&
-                   target.RemainingCapacity() > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT &&
-                   IsStorageAccepting(target, tag) &&
-                   (target.GetAmountAvailable(tag) > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ||
-                    AcceptsByElementStateWithoutFilterUi(target, tag) ||
-                    IsFilterAccepting(target, tag) ||
-                    HasNoExplicitStorageFilter(target));
+                   (!requireCapacity || target.RemainingCapacity() > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT) &&
+                   IsElementOutputStorageAccepting(target, element, tag);
         }
 
         private static bool IsUsableNetworkSource(Storage source, IEnumerable<Tag> tags, HashSet<Storage> excludedStorages, int destinationWorldId)
@@ -153,6 +157,29 @@ namespace StorageNetwork.Services
                     target.storageFilters == null ||
                     target.storageFilters.Count == 0 ||
                    AnyTagAcceptedByStorageFilter(target.storageFilters, matchTags));
+        }
+
+        private static bool IsElementOutputStorageAccepting(Storage target, Element element, Tag tag)
+        {
+            if (target == null || element == null || tag == Tag.Invalid)
+            {
+                return false;
+            }
+
+            if (element.IsLiquid)
+            {
+                return StorageNetworkStorageRules.MatchesElementState(target, element);
+            }
+
+            if (element.IsGas)
+            {
+                return StorageNetworkStorageRules.MatchesElementState(target, element);
+            }
+
+            return IsStorageAccepting(target, tag) &&
+                   (target.GetAmountAvailable(tag) > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ||
+                    IsFilterAccepting(target, tag) ||
+                    HasNoExplicitStorageFilter(target));
         }
 
         private static bool IsStorageAccepting(Storage target, Tag tag)
@@ -364,6 +391,17 @@ namespace StorageNetwork.Services
             if (!StorageNetworkStorageRules.IsServerStorage(target))
             {
                 return name + "=not server storage";
+            }
+
+            Element element = ElementLoader.FindElementByHash((SimHashes)tag.GetHash());
+            if (!StorageNetworkStorageRules.MatchesElementState(target, element))
+            {
+                return string.Format("{0}=wrong state for {1}", name, tag);
+            }
+
+            if (StorageNetworkStorageRules.IsNetworkPortStorage(target))
+            {
+                return name + "=network port";
             }
 
             if (!StorageNetworkStorageRules.IsConnectedNetworkStorage(target))

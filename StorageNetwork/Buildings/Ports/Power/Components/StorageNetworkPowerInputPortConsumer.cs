@@ -283,12 +283,12 @@ namespace StorageNetwork.Components
 
         public float GetInputWattsSetting()
         {
-            return Mathf.Clamp(InputWatts, MinInputWatts, MaxInputWatts);
+            return Mathf.Clamp(InputWatts, MinInputWatts, GetMaxInputWatts());
         }
 
         public void SetInputWatts(float watts)
         {
-            InputWatts = Mathf.Clamp(watts, MinInputWatts, MaxInputWatts);
+            InputWatts = Mathf.Clamp(watts, MinInputWatts, GetMaxInputWatts());
         }
 
         public string SliderTitleKey => "STRINGS.UI.STORAGE_NETWORK.POWER_PORT_INPUT_RATE";
@@ -307,7 +307,7 @@ namespace StorageNetwork.Components
 
         public float GetSliderMax(int index)
         {
-            return MaxInputWatts;
+            return GetMaxInputWatts();
         }
 
         public float GetSliderValue(int index)
@@ -583,6 +583,11 @@ namespace StorageNetwork.Components
         private static string FormatPowerRate(float watts)
         {
             return GameUtil.GetFormattedWattage(watts, GameUtil.WattageFormatterUnit.Automatic, true);
+        }
+
+        public static float GetMaxInputWatts()
+        {
+            return Mathf.Max(MinInputWatts, Config.Instance.PowerInputMaxWatts);
         }
 
         private static string GetOnOffText(bool enabled)

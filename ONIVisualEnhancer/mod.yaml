@@ -1,0 +1,8 @@
+title: "ONI Visual Enhancer"
+description: "Adds lightweight screen-space visual presets for Oxygen Not Included."
+staticID: "ONIVisualEnhancer"
+supportedContent: ALL
+minimumSupportedBuild: 525812
+version: 0.1.0
+APIVersion: 2
+

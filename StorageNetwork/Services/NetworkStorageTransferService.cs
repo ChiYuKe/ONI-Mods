@@ -11,7 +11,9 @@ namespace StorageNetwork.Services
             Storage source,
             IEnumerable<Storage> excludedStorages,
             Storage specificTarget = null,
-            HashSet<Tag> allowedTags = null)
+            HashSet<Tag> allowedTags = null,
+            bool skipPortReservedItems = false,
+            bool preferColdStorageForFood = false)
         {
             if (source == null || source.items == null)
             {
@@ -38,12 +40,17 @@ namespace StorageNetwork.Services
 
             foreach (GameObject item in items)
             {
+                if (skipPortReservedItems && IsPortReservedItem(item))
+                {
+                    continue;
+                }
+
                 if (!StorageTargetSelector.MatchesAllowedTags(item, allowedTags))
                 {
                     continue;
                 }
 
-                StorageTransferResult result = TransferStoredItem(source, item, excluded, specificTarget, null, sourceWorldId);
+                StorageTransferResult result = TransferStoredItem(source, item, excluded, specificTarget, null, sourceWorldId, preferColdStorageForFood);
                 totalMoved += result.MovedKg;
                 if (!string.IsNullOrEmpty(result.BlockedItem))
                 {
@@ -339,6 +346,14 @@ namespace StorageNetwork.Services
                 : StorageTransferResult.Blocked(blockedItem ?? GameTags.Solid.ProperName());
         }
 
+        private static bool IsPortReservedItem(GameObject item)
+        {
+            KPrefabID prefabId = item != null ? item.GetComponent<KPrefabID>() : null;
+            return prefabId != null &&
+                (prefabId.HasTag(StorageNetwork.API.StorageNetworkTags.SolidOutputPortBufferedItem) ||
+                 prefabId.HasTag(StorageNetwork.API.StorageNetworkTags.ReservedForConstruction));
+        }
+
         private static StorageTransferResult TransferAnyElementStateFromNetworkToStorage(
             Storage destination,
             float amount,
@@ -599,13 +614,24 @@ namespace StorageNetwork.Services
             return StorageTargetSelector.FindElementOutputTargets(elementHash, excludedStorages, specificTarget, snapshot, sourceWorldId);
         }
 
+        public static bool HasElementOutputCandidateIgnoringCapacity(
+            SimHashes elementHash,
+            HashSet<Storage> excludedStorages = null,
+            Storage specificTarget = null,
+            StorageSceneSnapshot snapshot = null,
+            int sourceWorldId = -1)
+        {
+            return StorageTargetSelector.HasElementOutputCandidateIgnoringCapacity(elementHash, excludedStorages, specificTarget, snapshot, sourceWorldId);
+        }
+
         private static StorageTransferResult TransferStoredItem(
             Storage source,
             GameObject item,
             HashSet<Storage> excludedStorages,
             Storage specificTarget,
             StorageSceneSnapshot snapshot,
-            int sourceWorldId)
+            int sourceWorldId,
+            bool preferColdStorageForFood = false)
         {
             float mass = StorageItemUtility.GetMass(item);
             if (mass <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
@@ -617,7 +643,9 @@ namespace StorageNetwork.Services
             HashSet<Tag> matchTags = StorageItemUtility.GetStorageMatchTags(item);
             float remaining = mass;
             float moved = 0f;
-            Storage target = StorageTargetSelector.FindOutputTarget(item, matchTags, excludedStorages, specificTarget, snapshot, sourceWorldId);
+            Storage target = preferColdStorageForFood && StorageItemUtility.IsFoodOrCookingIngredient(item)
+                ? StorageTargetSelector.FindFoodOutputTarget(item, matchTags, excludedStorages, specificTarget, snapshot, sourceWorldId)
+                : StorageTargetSelector.FindOutputTarget(item, matchTags, excludedStorages, specificTarget, snapshot, sourceWorldId);
             if (target == null)
             {
                 return StorageTransferResult.Blocked(StorageItemUtility.GetItemDisplayName(item, tag));

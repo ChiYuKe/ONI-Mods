@@ -29,12 +29,36 @@ namespace StorageNetwork.Services
             {
                 nextIndex = 0;
             }
+
+            ReconcileAllConstructionReservations();
         }
 
         public static void Reset()
         {
             Constructables.Clear();
             nextIndex = 0;
+        }
+
+        public static void ReconcileAllConstructionReservations()
+        {
+            StorageNetwork.Core.StorageSceneSnapshot snapshot = StorageNetwork.Core.StorageSceneCollector.Collect();
+            if (snapshot?.Storages == null)
+            {
+                return;
+            }
+
+            foreach (StorageNetwork.Core.StorageInfo info in snapshot.Storages)
+            {
+                Storage storage = info?.Storage;
+                if (storage == null ||
+                    storage.GetComponent<StorageNetwork.Components.StorageNetworkSolidOutputPortEgress>() == null)
+                {
+                    continue;
+                }
+
+                int worldId = StorageTargetSelector.GetObjectWorldId(storage.gameObject);
+                ReconcileConstructionReservations(storage, new HashSet<Tag>(), worldId);
+            }
         }
 
         public static StorageTransferResult SupplyNextConstruction(
@@ -181,6 +205,15 @@ namespace StorageNetwork.Services
             }
         }
 
+        public static void ClearSolidOutputBufferMarker(GameObject item)
+        {
+            KPrefabID prefabId = item != null ? item.GetComponent<KPrefabID>() : null;
+            if (prefabId != null && prefabId.HasTag(StorageNetworkTags.SolidOutputPortBufferedItem))
+            {
+                prefabId.RemoveTag(StorageNetworkTags.SolidOutputPortBufferedItem);
+            }
+        }
+
         public static bool IsConstructionReserved(GameObject item)
         {
             KPrefabID prefabId = item != null ? item.GetComponent<KPrefabID>() : null;
@@ -190,6 +223,7 @@ namespace StorageNetwork.Services
         private static void MarkConstructionReservedItem(GameObject item)
         {
             item?.GetComponent<KPrefabID>()?.AddTag(StorageNetworkTags.ReservedForConstruction, false);
+            ClearSolidOutputBufferMarker(item);
         }
 
         private static float TransferConstructionItems(Storage source, Storage destination, Tag tag, float amount)
@@ -474,6 +508,7 @@ namespace StorageNetwork.Services
         private static void ReturnReservedItemToNetwork(Storage portStorage, GameObject item)
         {
             ClearConstructionReservation(item);
+            ClearSolidOutputBufferMarker(item);
             NetworkStorageTransferService.TransferStoredItemToNetwork(portStorage, item, new[] { portStorage });
         }
 

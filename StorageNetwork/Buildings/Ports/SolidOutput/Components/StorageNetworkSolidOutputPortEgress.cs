@@ -1,6 +1,7 @@
 using KSerialization;
 using System;
 using System.Collections.Generic;
+using StorageNetwork.API;
 using StorageNetwork.Core;
 using StorageNetwork.Services;
 using StorageNetwork.UI;
@@ -157,6 +158,13 @@ namespace StorageNetwork.Components
                 return;
             }
 
+            if (!AllowManualOperation && !IsSolidRailConnected())
+            {
+                lastStatus = Loc.Get(Loc.UI.STORAGE_NETWORK.MATERIAL_STATUS_WAITING_CONTENTS);
+                retryTimer = RetrySeconds;
+                return;
+            }
+
             RequestBufferedOutput(source);
         }
 
@@ -211,8 +219,14 @@ namespace StorageNetwork.Components
             }
 
             SyncDispenserState();
+            MarkBufferedOutputItems();
             RefreshFetchableBufferedItems();
             retryTimer = result.MovedKg > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ? 0f : RetrySeconds;
+        }
+
+        private bool IsSolidRailConnected()
+        {
+            return dispenser != null && dispenser.IsConnected;
         }
 
         public void SetSourceStorage(Storage source)
@@ -272,14 +286,19 @@ namespace StorageNetwork.Components
             return Mathf.Clamp(
                 RequestRateKgPerSecond <= 0f ? DefaultRequestRateKgPerSecond : RequestRateKgPerSecond,
                 MinRequestRateKgPerSecond,
-                MaxRequestRateKgPerSecond);
+                GetMaxRequestRateKgPerSecond());
         }
 
         public void SetRequestRateKgPerSecond(float value)
         {
-            RequestRateKgPerSecond = Mathf.Clamp(value, MinRequestRateKgPerSecond, MaxRequestRateKgPerSecond);
+            RequestRateKgPerSecond = Mathf.Clamp(value, MinRequestRateKgPerSecond, GetMaxRequestRateKgPerSecond());
             retryTimer = 0f;
             cachedStatusText = null;
+        }
+
+        public static float GetMaxRequestRateKgPerSecond()
+        {
+            return Mathf.Max(MinRequestRateKgPerSecond, Config.Instance.SolidOutputMaxKgPerSecond);
         }
 
         public void SetAllowManualOperation(bool enabled)
@@ -395,6 +414,24 @@ namespace StorageNetwork.Components
                 {
                     pickupable.OnStore(storage);
                 }
+            }
+        }
+
+        private void MarkBufferedOutputItems()
+        {
+            if (storage?.items == null)
+            {
+                return;
+            }
+
+            foreach (GameObject item in storage.items)
+            {
+                if (item == null || StorageNetworkConstructionSupplyService.IsConstructionReserved(item))
+                {
+                    continue;
+                }
+
+                item.GetComponent<KPrefabID>()?.AddTag(StorageNetworkTags.SolidOutputPortBufferedItem, false);
             }
         }
 

@@ -170,7 +170,7 @@ namespace StorageNetwork.UI
                 body.transform,
                 currentRate,
                 StorageNetworkLiquidOutputPortEgress.MinRequestRateKgPerSecond,
-                StorageNetworkLiquidOutputPortEgress.MaxRequestRateKgPerSecond,
+                StorageNetworkLiquidOutputPortEgress.GetMaxRequestRateKgPerSecond(),
                 out KInputTextField input,
                 Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_PORT_REQUEST_RATE));
             input.characterValidation = TMP_InputField.CharacterValidation.Decimal;
@@ -201,7 +201,7 @@ namespace StorageNetwork.UI
                     value,
                     slider.value,
                     StorageNetworkLiquidOutputPortEgress.MinRequestRateKgPerSecond,
-                    StorageNetworkLiquidOutputPortEgress.MaxRequestRateKgPerSecond);
+                    StorageNetworkLiquidOutputPortEgress.GetMaxRequestRateKgPerSecond());
                 syncingControls = false;
             });
 
@@ -228,7 +228,7 @@ namespace StorageNetwork.UI
                     input.text,
                     currentRate,
                     StorageNetworkLiquidOutputPortEgress.MinRequestRateKgPerSecond,
-                    StorageNetworkLiquidOutputPortEgress.MaxRequestRateKgPerSecond));
+                    StorageNetworkLiquidOutputPortEgress.GetMaxRequestRateKgPerSecond()));
                 CloseProductionPicker();
                 UpdateProductionSettingsPanel(true);
             }, KleiPinkStyle());
@@ -246,7 +246,7 @@ namespace StorageNetwork.UI
                 egress.SetRequestRateKgPerSecond,
                 StorageNetworkGasOutputPortEgress.DefaultRequestRateKgPerSecond,
                 StorageNetworkGasOutputPortEgress.MinRequestRateKgPerSecond,
-                StorageNetworkGasOutputPortEgress.MaxRequestRateKgPerSecond);
+                StorageNetworkGasOutputPortEgress.GetMaxRequestRateKgPerSecond());
         }
 
         private void ShowOutputPortRequestRateDialog(StorageNetworkSolidOutputPortEgress egress)
@@ -261,7 +261,7 @@ namespace StorageNetwork.UI
                 egress.SetRequestRateKgPerSecond,
                 StorageNetworkSolidOutputPortEgress.DefaultRequestRateKgPerSecond,
                 StorageNetworkSolidOutputPortEgress.MinRequestRateKgPerSecond,
-                StorageNetworkSolidOutputPortEgress.MaxRequestRateKgPerSecond);
+                StorageNetworkSolidOutputPortEgress.GetMaxRequestRateKgPerSecond());
         }
 
         private void ShowOutputPortRequestRateDialog(
@@ -398,7 +398,7 @@ namespace StorageNetwork.UI
                 input.SetInputWatts,
                 StorageNetworkPowerInputPortConsumer.DefaultInputWatts,
                 StorageNetworkPowerInputPortConsumer.MinInputWatts,
-                StorageNetworkPowerInputPortConsumer.MaxInputWatts,
+                StorageNetworkPowerInputPortConsumer.GetMaxInputWatts(),
                 Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.POWER_PORT_INPUT_RATE));
         }
 
@@ -432,7 +432,7 @@ namespace StorageNetwork.UI
                 output.SetOutputWatts,
                 StorageNetworkPowerOutputPortGenerator.DefaultOutputWatts,
                 StorageNetworkPowerOutputPortGenerator.MinOutputWatts,
-                StorageNetworkPowerOutputPortGenerator.MaxOutputWatts,
+                StorageNetworkPowerOutputPortGenerator.GetMaxOutputWatts(),
                 Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.POWER_PORT_OUTPUT_RATE));
         }
 

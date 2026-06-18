@@ -57,6 +57,7 @@ namespace StorageNetwork.Patches
                     __instance.GetComponent<StorageNetwork.Components.StorageNetworkSolidOutputPortEgress>() != null)
                 {
                     StorageNetworkConstructionSupplyService.ClearConstructionReservation(go);
+                    StorageNetworkConstructionSupplyService.ClearSolidOutputBufferMarker(go);
                 }
             }
         }
@@ -69,7 +70,7 @@ namespace StorageNetwork.Patches
                 Pickupable pickupable = context.data as Pickupable;
                 if (pickupable != null)
                 {
-                    StorageNetworkConstructionSupplyService.ClearConstructionReservation(pickupable.gameObject);
+                    StorageNetworkConstructionSupplyService.ClearSolidOutputBufferMarker(pickupable.gameObject);
                 }
             }
         }

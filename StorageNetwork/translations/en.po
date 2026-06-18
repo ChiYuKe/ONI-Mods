@@ -2019,6 +2019,62 @@ msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_METRIC_DIRECT_OUTPUT"
 msgid "直入"
 msgstr "Direct"
 
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_STATUS_ITEM"
+msgid "储存网络：{0}"
+msgstr "Storage Network: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_STATUS_TOOLTIP"
+msgid "{0}"
+msgstr "{0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_STATUS_LINE_NETWORK"
+msgid "接入：{0}    核心：{1}"
+msgstr "Enrolled: {0}    Core: {1}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_STATUS_LINE_DIRECT"
+msgid "直入：{0}    状态：{1}"
+msgstr "Direct: {0}    State: {1}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_STATUS_LINE_OUTPUT"
+msgid "产物：{0}    速率：{1}"
+msgstr "Output: {0}    Rate: {1}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_STATUS_LINE_POLICY"
+msgid "存放策略：{0}"
+msgstr "Store policy: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_STATUS_LINE_TARGETS"
+msgid "可用目标：{0}"
+msgstr "Available targets: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_STATUS_LINE_STATUS"
+msgid "当前去向：{0}"
+msgstr "Current route: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_STATUS_NETWORK_OUTPUT"
+msgid "存入网络"
+msgstr "Stored in network"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_STATUS_OVERFLOW_OUTPUT"
+msgid "服务器已满，溢出到世界"
+msgstr "Server full, overflowing to world"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_STATUS_WORLD_OUTPUT"
+msgid "按原版排放"
+msgstr "Vanilla emission"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_STATUS_MISSING_EMITTER"
+msgid "缺少喷发组件"
+msgstr "Missing emitter"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_STATUS_TARGET_FULL"
+msgid "有匹配服务器，但容量已满"
+msgstr "Matching server exists, but it is full"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_STATUS_TARGET_SUMMARY"
+msgid "{0} 个服务器，剩余 {1}"
+msgstr "{0} servers, {1} free"
+
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_FILTER_CURRENT"
 msgid "当前"
 msgstr "Current"

@@ -177,12 +177,12 @@ namespace StorageNetwork.Components
 
         public float GetOutputWattsSetting()
         {
-            return Mathf.Clamp(OutputWatts, MinOutputWatts, MaxOutputWatts);
+            return Mathf.Clamp(OutputWatts, MinOutputWatts, GetMaxOutputWatts());
         }
 
         public void SetOutputWatts(float watts)
         {
-            OutputWatts = Mathf.Clamp(watts, MinOutputWatts, MaxOutputWatts);
+            OutputWatts = Mathf.Clamp(watts, MinOutputWatts, GetMaxOutputWatts());
             SyncGeneratorOutputModifier();
         }
 
@@ -202,7 +202,7 @@ namespace StorageNetwork.Components
 
         public float GetSliderMax(int index)
         {
-            return MaxOutputWatts;
+            return GetMaxOutputWatts();
         }
 
         public float GetSliderValue(int index)
@@ -600,7 +600,7 @@ namespace StorageNetwork.Components
                 return;
             }
 
-            float modifierValue = (Mathf.Clamp01(watts / MaxOutputWatts) - 1f) * 100f;
+            float modifierValue = (Mathf.Clamp01(watts / GetMaxOutputWatts()) - 1f) * 100f;
             if (outputRateModifier == null)
             {
                 outputRateModifier = new AttributeModifier(
@@ -662,6 +662,11 @@ namespace StorageNetwork.Components
         private static string Colorize(string text, string color)
         {
             return string.Format("<color={0}>{1}</color>", color, text);
+        }
+
+        public static float GetMaxOutputWatts()
+        {
+            return Mathf.Max(MinOutputWatts, Config.Instance.PowerOutputMaxWatts);
         }
 
         private int GetWorldId()

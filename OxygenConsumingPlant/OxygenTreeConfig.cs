@@ -23,7 +23,7 @@ namespace OxygenConsumingPlant
                 SimHashes.Oxygen,
                 SimHashes.ContaminatedOxygen,
                 SimHashes.CarbonDioxide
-            }, true, 0f, 0.15f, OxygenTreeFruit_GConfig.ID, true, true, true, true, 2400f, 0f, 1000f, "KModOxygenTreeOriginal", STRINGS.CREATURES.SPECIES.KMODOXYGENTREE.NAME);
+            }, true, 0f, 0.15f, OxygenTreeFruit_GConfig.ID, true, true, true, false, true, 2400f, 0f, 1000f, "KModOxygenTreeOriginal", STRINGS.CREATURES.SPECIES.KMODOXYGENTREE.NAME);
             EntityTemplates.ExtendPlantToIrrigated(gameObject, new PlantElementAbsorber.ConsumeInfo[]
             {
                 new PlantElementAbsorber.ConsumeInfo

@@ -19,6 +19,7 @@ namespace StorageNetwork.Buildings
         protected virtual bool ShowStorageSettingsButton => true;
         protected virtual bool UsesRefrigeratedStorage => false;
         protected virtual bool StoresPower => false;
+        protected virtual Tag? StorageStateCategoryTag => null;
 
         public override BuildingDef CreateBuildingDef()
         {
@@ -65,6 +66,7 @@ namespace StorageNetwork.Buildings
         public override void ConfigureBuildingTemplate(GameObject go, Tag prefabTag)
         {
             StorageNetworkStorageBuildingSpec spec = Spec;
+            go.AddOrGet<CodexEntryRedirector>().CodexID = spec.Id;
             SoundEventVolumeCache.instance.AddVolume(spec.AnimFile, "StorageLocker_Hit_metallic_low", NOISE_POLLUTION.NOISY.TIER1);
             Prioritizable.AddRef(go);
 
@@ -74,6 +76,11 @@ namespace StorageNetwork.Buildings
                 prefabId?.AddTag(StorageSceneTags.ModStorage);
                 prefabId?.AddTag(StorageSceneTags.ServerStorage);
                 prefabId?.AddTag(StorageSceneTags.CategoryModStorage);
+                Tag? stateCategoryTag = StorageStateCategoryTag;
+                if (stateCategoryTag.HasValue)
+                {
+                    prefabId?.AddTag(stateCategoryTag.Value);
+                }
 
                 if (ShowStorageSettingsButton)
                 {
@@ -81,7 +88,7 @@ namespace StorageNetwork.Buildings
                 }
 
                 Storage storage = go.AddOrGet<Storage>();
-                storage.capacityKg = spec.CapacityKg;
+                storage.capacityKg = spec.CapacityKg * Config.Instance.ServerCapacityMultiplier;
                 storage.showInUI = !StoresPower;
                 storage.allowItemRemoval = AllowManualRemoval;
                 storage.showDescriptor = !StoresPower;
@@ -160,7 +167,7 @@ namespace StorageNetwork.Buildings
         private static void ConfigurePowerStorage(GameObject go, StorageNetworkStorageBuildingSpec spec)
         {
             StorageNetworkPowerStorage powerStorage = go.AddOrGet<StorageNetworkPowerStorage>();
-            powerStorage.capacityJoules = spec.CapacityKg;
+            powerStorage.capacityJoules = spec.CapacityKg * Config.Instance.ServerCapacityMultiplier;
             powerStorage.joulesLostPerSecond = spec.PowerStorageJoulesLostPerSecond;
             go.AddOrGet<StorageNetworkPowerOverlayBattery>();
         }
@@ -178,6 +185,7 @@ namespace StorageNetwork.Buildings
     {
         public const string ID = "StorageNetworkSmallSolidServer";
         protected override StorageNetworkStorageBuildingSpec Spec => StorageNetworkStorageBuildingSpecs.SmallSolid;
+        protected override Tag? StorageStateCategoryTag => StorageSceneTags.CategorySolidPort;
     }
 
     public sealed class SmallLiquidServerConfig : StorageNetworkStorageBuildingBase
@@ -185,6 +193,7 @@ namespace StorageNetwork.Buildings
         public const string ID = "StorageNetworkSmallLiquidServer";
         protected override StorageNetworkStorageBuildingSpec Spec => StorageNetworkStorageBuildingSpecs.SmallLiquid;
         protected override bool SupportsFilterUi => false;
+        protected override Tag? StorageStateCategoryTag => StorageSceneTags.CategoryLiquidPort;
     }
 
     public sealed class SmallGasServerConfig : StorageNetworkStorageBuildingBase
@@ -192,6 +201,7 @@ namespace StorageNetwork.Buildings
         public const string ID = "StorageNetworkSmallGasServer";
         protected override StorageNetworkStorageBuildingSpec Spec => StorageNetworkStorageBuildingSpecs.SmallGas;
         protected override bool SupportsFilterUi => false;
+        protected override Tag? StorageStateCategoryTag => StorageSceneTags.CategoryGasPort;
     }
 
     public sealed class SmallBatteryServerConfig : StorageNetworkStorageBuildingBase
@@ -206,14 +216,16 @@ namespace StorageNetwork.Buildings
     {
         public const string ID = "StorageNetworkSmallColdStorageServer";
         protected override StorageNetworkStorageBuildingSpec Spec => StorageNetworkStorageBuildingSpecs.SmallColdStorage;
-        protected override bool SupportsFilterUi => false;
         protected override bool UsesRefrigeratedStorage => true;
+        protected override bool AllowManualRemoval => true;
+        protected override Storage.FetchCategory FetchCategory => Storage.FetchCategory.GeneralStorage;
     }
 
     public sealed class MediumSolidServerConfig : StorageNetworkStorageBuildingBase
     {
         public const string ID = "StorageNetworkMediumSolidServer";
         protected override StorageNetworkStorageBuildingSpec Spec => StorageNetworkStorageBuildingSpecs.MediumSolid;
+        protected override Tag? StorageStateCategoryTag => StorageSceneTags.CategorySolidPort;
     }
 
     public sealed class MediumLiquidServerConfig : StorageNetworkStorageBuildingBase
@@ -221,6 +233,7 @@ namespace StorageNetwork.Buildings
         public const string ID = "StorageNetworkMediumLiquidServer";
         protected override StorageNetworkStorageBuildingSpec Spec => StorageNetworkStorageBuildingSpecs.MediumLiquid;
         protected override bool SupportsFilterUi => false;
+        protected override Tag? StorageStateCategoryTag => StorageSceneTags.CategoryLiquidPort;
     }
 
     public sealed class MediumGasServerConfig : StorageNetworkStorageBuildingBase
@@ -228,6 +241,7 @@ namespace StorageNetwork.Buildings
         public const string ID = "StorageNetworkMediumGasServer";
         protected override StorageNetworkStorageBuildingSpec Spec => StorageNetworkStorageBuildingSpecs.MediumGas;
         protected override bool SupportsFilterUi => false;
+        protected override Tag? StorageStateCategoryTag => StorageSceneTags.CategoryGasPort;
     }
 
     public sealed class MediumBatteryServerConfig : StorageNetworkStorageBuildingBase
@@ -242,14 +256,16 @@ namespace StorageNetwork.Buildings
     {
         public const string ID = "StorageNetworkMediumColdStorageServer";
         protected override StorageNetworkStorageBuildingSpec Spec => StorageNetworkStorageBuildingSpecs.MediumColdStorage;
-        protected override bool SupportsFilterUi => false;
         protected override bool UsesRefrigeratedStorage => true;
+        protected override bool AllowManualRemoval => true;
+        protected override Storage.FetchCategory FetchCategory => Storage.FetchCategory.GeneralStorage;
     }
 
     public sealed class LargeSolidServerConfig : StorageNetworkStorageBuildingBase
     {
         public const string ID = "StorageNetworkLargeSolidServer";
         protected override StorageNetworkStorageBuildingSpec Spec => StorageNetworkStorageBuildingSpecs.LargeSolid;
+        protected override Tag? StorageStateCategoryTag => StorageSceneTags.CategorySolidPort;
     }
 
     public sealed class LargeLiquidServerConfig : StorageNetworkStorageBuildingBase
@@ -257,6 +273,7 @@ namespace StorageNetwork.Buildings
         public const string ID = "StorageNetworkLargeLiquidServer";
         protected override StorageNetworkStorageBuildingSpec Spec => StorageNetworkStorageBuildingSpecs.LargeLiquid;
         protected override bool SupportsFilterUi => false;
+        protected override Tag? StorageStateCategoryTag => StorageSceneTags.CategoryLiquidPort;
     }
 
     public sealed class LargeGasServerConfig : StorageNetworkStorageBuildingBase
@@ -264,6 +281,7 @@ namespace StorageNetwork.Buildings
         public const string ID = "StorageNetworkLargeGasServer";
         protected override StorageNetworkStorageBuildingSpec Spec => StorageNetworkStorageBuildingSpecs.LargeGas;
         protected override bool SupportsFilterUi => false;
+        protected override Tag? StorageStateCategoryTag => StorageSceneTags.CategoryGasPort;
     }
 
     public sealed class LargeBatteryServerConfig : StorageNetworkStorageBuildingBase
@@ -278,8 +296,9 @@ namespace StorageNetwork.Buildings
     {
         public const string ID = "StorageNetworkLargeColdStorageServer";
         protected override StorageNetworkStorageBuildingSpec Spec => StorageNetworkStorageBuildingSpecs.LargeColdStorage;
-        protected override bool SupportsFilterUi => false;
         protected override bool UsesRefrigeratedStorage => true;
+        protected override bool AllowManualRemoval => true;
+        protected override Storage.FetchCategory FetchCategory => Storage.FetchCategory.GeneralStorage;
     }
 
     [System.Obsolete("Compatibility prefab for old saves only. It may be removed in a future StorageNetwork update.")]
@@ -290,6 +309,7 @@ namespace StorageNetwork.Buildings
         protected override bool AllowManualRemoval => true;
         protected override Storage.FetchCategory FetchCategory => Storage.FetchCategory.GeneralStorage;
         protected override bool SupportsStorageConnector => true;
+        protected override Tag? StorageStateCategoryTag => StorageSceneTags.CategorySolidPort;
         public override void ConfigureBuildingTemplate(GameObject go, Tag prefabTag)
         {
             base.ConfigureBuildingTemplate(go, prefabTag);

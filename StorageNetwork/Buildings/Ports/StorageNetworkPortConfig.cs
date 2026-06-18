@@ -20,6 +20,8 @@ namespace StorageNetwork.Buildings
 
     public abstract class StorageNetworkPortBuildingBase : IBuildingConfig
     {
+        private const float PortConstructionTime = 40f;
+
         protected abstract StorageNetworkPortSpec Spec { get; }
 
         public override BuildingDef CreateBuildingDef()
@@ -31,7 +33,7 @@ namespace StorageNetwork.Buildings
                 spec.Height,
                 spec.AnimFile,
                 1000,
-                60f,
+                PortConstructionTime,
                 BUILDINGS.CONSTRUCTION_MASS_KG.TIER4,
                 MATERIALS.REFINED_METALS,
                 9999f,
@@ -73,10 +75,10 @@ namespace StorageNetwork.Buildings
                 buildingDef.ElectricalArrowOffset = spec.PowerOffset;
                 buildingDef.EnergyConsumptionWhenActive = 0f;
                 buildingDef.GeneratorWattageRating = spec.Direction == StorageNetworkPortDirection.Output
-                    ? StorageNetworkPowerOutputPortGenerator.MaxOutputWatts
+                    ? StorageNetworkPowerOutputPortGenerator.GetMaxOutputWatts()
                     : 0f;
                 buildingDef.GeneratorBaseCapacity = spec.Direction == StorageNetworkPortDirection.Output
-                    ? StorageNetworkPowerOutputPortGenerator.MaxOutputWatts
+                    ? StorageNetworkPowerOutputPortGenerator.GetMaxOutputWatts()
                     : 0f;
             }
 
@@ -87,6 +89,7 @@ namespace StorageNetwork.Buildings
         public override void ConfigureBuildingTemplate(GameObject go, Tag prefabTag)
         {
             GeneratedBuildings.MakeBuildingAlwaysOperational(go);
+            go.AddOrGet<CodexEntryRedirector>().CodexID = Spec.Id;
             KPrefabID prefabId = go.GetComponent<KPrefabID>();
             prefabId?.AddTag(RoomConstraints.ConstraintTags.IndustrialMachinery);
             prefabId?.AddTag(StorageSceneTags.ModStorage);
@@ -96,7 +99,7 @@ namespace StorageNetwork.Buildings
             AddPortCategoryTags(prefabId, Spec.Kind);
 
             Storage storage = go.AddOrGet<Storage>();
-            storage.capacityKg = Spec.CapacityKg;
+            storage.capacityKg = Spec.CapacityKg * GetCapacityMultiplier(Spec);
             storage.showInUI = !Spec.PowerPort;
             storage.allowItemRemoval = Spec.Kind == StorageNetworkPortKind.SolidOutput;
             storage.showDescriptor = false;
@@ -150,7 +153,7 @@ namespace StorageNetwork.Buildings
         {
             if (spec.Kind == StorageNetworkPortKind.LiquidInput)
             {
-                StorageNetworkLiquidInputPortIngressConduit.Configure(go, storage, spec.CapacityKg);
+                StorageNetworkLiquidInputPortIngressConduit.Configure(go, storage, spec.CapacityKg * Config.Instance.PortCapacityMultiplier);
                 go.AddOrGet<CopyBuildingSettings>();
                 go.AddOrGet<StorageNetworkLiquidInputPortIngress>();
             }
@@ -162,7 +165,7 @@ namespace StorageNetwork.Buildings
             }
             else if (spec.Kind == StorageNetworkPortKind.GasInput)
             {
-                StorageNetworkGasInputPortIngressConduit.Configure(go, storage, spec.CapacityKg);
+                StorageNetworkGasInputPortIngressConduit.Configure(go, storage, spec.CapacityKg * Config.Instance.PortCapacityMultiplier);
                 go.AddOrGet<CopyBuildingSettings>();
                 go.AddOrGet<StorageNetworkGasInputPortIngress>();
             }
@@ -175,8 +178,8 @@ namespace StorageNetwork.Buildings
             else if (spec.Kind == StorageNetworkPortKind.PowerInput)
             {
                 Battery battery = go.AddOrGet<Battery>();
-                battery.capacity = spec.CapacityKg;
-                battery.chargeWattage = StorageNetworkPowerInputPortConsumer.MaxInputWatts;
+                battery.capacity = spec.CapacityKg * Config.Instance.PowerPortCapacityMultiplier;
+                battery.chargeWattage = Config.Instance.PowerInputMaxWatts;
                 battery.joulesLostPerSecond = 0f;
                 go.AddOrGet<CopyBuildingSettings>();
                 go.AddOrGet<StorageNetworkPowerInputPortConsumer>();
@@ -191,7 +194,7 @@ namespace StorageNetwork.Buildings
                 SolidConduitConsumer consumer = go.AddOrGet<SolidConduitConsumer>();
                 consumer.storage = storage;
                 consumer.capacityTag = GameTags.Any;
-                consumer.capacityKG = spec.CapacityKg;
+                consumer.capacityKG = spec.CapacityKg * Config.Instance.PortCapacityMultiplier;
                 consumer.alwaysConsume = true;
                 go.AddOrGet<Automatable>();
                 TreeFilterable filterable = go.AddOrGet<TreeFilterable>();
@@ -260,6 +263,13 @@ namespace StorageNetwork.Buildings
                     prefabId.AddTag(StorageSceneTags.CategoryPowerOutputPort);
                     break;
             }
+        }
+
+        private static float GetCapacityMultiplier(StorageNetworkPortSpec spec)
+        {
+            return spec.PowerPort
+                ? Config.Instance.PowerPortCapacityMultiplier
+                : Config.Instance.PortCapacityMultiplier;
         }
 
     }
@@ -458,7 +468,7 @@ namespace StorageNetwork.Buildings
                 OutputOffset = AccessoryOutputOffset,
                 PowerOffset = AccessoryPowerOffset,
                 CapacityKg = capacityKg,
-                Filters = GetStorageFilters(conduitType)
+                Filters = GetStorageFilters(kind, conduitType)
             };
         }
 
@@ -483,11 +493,22 @@ namespace StorageNetwork.Buildings
             };
         }
 
-        private static List<Tag> GetStorageFilters(ConduitType conduitType)
+        private static List<Tag> GetStorageFilters(StorageNetworkPortKind kind, ConduitType conduitType)
         {
             switch (conduitType)
             {
                 case ConduitType.Solid:
+                    if (kind == StorageNetworkPortKind.SolidInput)
+                    {
+                        HashSet<Tag> filters = new HashSet<Tag>(STORAGEFILTERS.STORAGE_LOCKERS_STANDARD);
+                        foreach (Tag foodFilter in STORAGEFILTERS.FOOD)
+                        {
+                            filters.Add(foodFilter);
+                        }
+
+                        return new List<Tag>(filters);
+                    }
+
                     return new List<Tag>(STORAGEFILTERS.STORAGE_LOCKERS_STANDARD);
                 case ConduitType.Liquid:
                     return new List<Tag>(STORAGEFILTERS.LIQUIDS);

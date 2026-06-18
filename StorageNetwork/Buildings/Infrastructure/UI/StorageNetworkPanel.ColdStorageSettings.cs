@@ -97,7 +97,7 @@ namespace StorageNetwork.UI
             label.color = new Color(0.20f, 0.21f, 0.20f, 1f);
             label.gameObject.AddComponent<LayoutElement>().preferredWidth = 82f;
 
-            KSlider slider = CreateAmountSlider(row.transform, GameUtil.GetConvertedTemperature(StorageNetworkColdStorageCooling.MaxTargetTemperature, true));
+            KSlider slider = CreateAmountSlider(row.transform, GameUtil.GetConvertedTemperature(StorageNetworkColdStorageCooling.GetMaxTargetTemperature(), true));
             LayoutElement sliderLayout = slider.gameObject.GetComponent<LayoutElement>();
             if (sliderLayout != null)
             {
@@ -115,8 +115,8 @@ namespace StorageNetwork.UI
                 24f,
                 11);
 
-            slider.minValue = GameUtil.GetConvertedTemperature(StorageNetworkColdStorageCooling.MinTargetTemperature, true);
-            slider.maxValue = GameUtil.GetConvertedTemperature(StorageNetworkColdStorageCooling.MaxTargetTemperature, true);
+            slider.minValue = GameUtil.GetConvertedTemperature(StorageNetworkColdStorageCooling.GetMinTargetTemperature(), true);
+            slider.maxValue = GameUtil.GetConvertedTemperature(StorageNetworkColdStorageCooling.GetMaxTargetTemperature(), true);
             slider.wholeNumbers = true;
             slider.value = GameUtil.GetConvertedTemperature(value, true);
             return slider;

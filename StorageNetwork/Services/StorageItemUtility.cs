@@ -111,6 +111,13 @@ namespace StorageNetwork.Services
             return tags;
         }
 
+        public static bool IsFoodOrCookingIngredient(GameObject item)
+        {
+            return item != null &&
+                   (item.HasTag(GameTags.Edible) ||
+                    item.HasTag(GameTags.CookingIngredient));
+        }
+
         private static void AddTag(HashSet<Tag> tags, Tag tag)
         {
             if (tag != Tag.Invalid)

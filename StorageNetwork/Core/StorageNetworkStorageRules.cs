@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using StorageNetwork.API;
+using StorageNetwork.Buildings;
 using StorageNetwork.Components;
 
 namespace StorageNetwork.Core
@@ -161,6 +162,60 @@ namespace StorageNetwork.Core
             return storage?.GetComponent<StorageNetworkPowerStorage>() != null;
         }
 
+        public static bool MatchesElementState(Storage storage, Element element)
+        {
+            if (storage == null || element == null)
+            {
+                return false;
+            }
+
+            if (element.IsGas)
+            {
+                return HasGasPortTag(storage) || IsGasStorageServer(storage);
+            }
+
+            if (element.IsLiquid)
+            {
+                return HasLiquidPortTag(storage) || IsLiquidStorageServer(storage);
+            }
+
+            return element.IsSolid && (HasSolidPortTag(storage) || IsSolidStorageServer(storage)) && !IsColdStorageServer(storage);
+        }
+
+        public static bool IsColdStorageServer(Storage storage)
+        {
+            string prefabId = GetPrefabId(storage);
+            return storage?.GetComponent<StorageNetworkColdStorageCooling>() != null ||
+                   prefabId == SmallColdStorageServerConfig.ID ||
+                   prefabId == MediumColdStorageServerConfig.ID ||
+                   prefabId == LargeColdStorageServerConfig.ID;
+        }
+
+        public static bool IsSolidStorageServer(Storage storage)
+        {
+            string prefabId = GetPrefabId(storage);
+            return prefabId == SmallSolidServerConfig.ID ||
+                   prefabId == MediumSolidServerConfig.ID ||
+                   prefabId == LargeSolidServerConfig.ID ||
+                   prefabId == "StorageNetworkSceneStorageBox";
+        }
+
+        private static bool IsLiquidStorageServer(Storage storage)
+        {
+            string prefabId = GetPrefabId(storage);
+            return prefabId == SmallLiquidServerConfig.ID ||
+                   prefabId == MediumLiquidServerConfig.ID ||
+                   prefabId == LargeLiquidServerConfig.ID;
+        }
+
+        private static bool IsGasStorageServer(Storage storage)
+        {
+            string prefabId = GetPrefabId(storage);
+            return prefabId == SmallGasServerConfig.ID ||
+                   prefabId == MediumGasServerConfig.ID ||
+                   prefabId == LargeGasServerConfig.ID;
+        }
+
         public static bool CountsTowardNetworkCapacity(Storage storage)
         {
             return IsServerStorage(storage) && !IsPowerStorageServer(storage);
@@ -300,6 +355,12 @@ namespace StorageNetwork.Core
         private static bool HasTag(Storage storage, Tag tag)
         {
             return storage?.GetComponent<KPrefabID>()?.HasTag(tag) == true;
+        }
+
+        private static string GetPrefabId(Storage storage)
+        {
+            KPrefabID prefabId = storage?.GetComponent<KPrefabID>();
+            return prefabId != null ? prefabId.PrefabID().ToString() : string.Empty;
         }
     }
 }

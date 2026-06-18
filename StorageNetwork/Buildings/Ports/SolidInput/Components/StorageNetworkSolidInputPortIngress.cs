@@ -1,6 +1,7 @@
 using KSerialization;
 using System;
 using System.Runtime.Serialization;
+using StorageNetwork.API;
 using StorageNetwork.Core;
 using StorageNetwork.Services;
 using UnityEngine;
@@ -56,7 +57,12 @@ namespace StorageNetwork.Components
         protected override void OnPrefabInit()
         {
             base.OnPrefabInit();
-            filteredStorage = new FilteredStorage(this, null, null, false, Db.Get().ChoreTypes.StorageFetch);
+            filteredStorage = new FilteredStorage(
+                this,
+                new[] { StorageNetworkTags.SolidOutputPortBufferedItem, StorageNetworkTags.ReservedForConstruction },
+                null,
+                false,
+                Db.Get().ChoreTypes.StorageFetch);
         }
 
         protected override void OnSpawn()
@@ -117,7 +123,10 @@ namespace StorageNetwork.Components
             StorageTransferResult result = NetworkStorageTransferService.TransferStoredItemsToNetwork(
                 storage,
                 new[] { storage },
-                CurrentInputStoreMode == StorageNetworkMaterialRequester.OutputStoreMode.SpecificStorage ? ResolveInputStorage() : null);
+                CurrentInputStoreMode == StorageNetworkMaterialRequester.OutputStoreMode.SpecificStorage ? ResolveInputStorage() : null,
+                null,
+                true,
+                true);
 
             lastStatus = NetworkStorageTransferService.FormatOutputStatus(result, Loc.Get(Loc.UI.STORAGE_NETWORK.MATERIAL_STATUS_WAITING_CONTENTS));
             retryTimer = result.MovedKg > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ? 0f : EmptyRetrySeconds;

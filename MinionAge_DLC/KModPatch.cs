@@ -1,6 +1,5 @@
 ﻿using HarmonyLib;
 using KMod;
-using Microsoft.SqlServer.Server;
 using MinionAge;
 using Newtonsoft.Json;
 using PeterHan.PLib.Options;

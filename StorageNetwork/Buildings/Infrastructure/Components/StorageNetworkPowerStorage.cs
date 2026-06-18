@@ -11,7 +11,6 @@ namespace StorageNetwork.Components
     public sealed class StorageNetworkPowerStorage : KMonoBehaviour, ISim1000ms, IGameObjectEffectDescriptor
     {
         private const float SecondsPerCycle = 600f;
-        private const float BatteryServerJoulesLostPerCycle = 100f;
         private const float FullSnapJoules = 0.5f;
 
         [SerializeField]
@@ -63,7 +62,7 @@ namespace StorageNetwork.Components
             StorageSceneRegistry.Register(gameObject);
             if (IsBatteryServerPrefab())
             {
-                joulesLostPerSecond = BatteryServerJoulesLostPerCycle;
+                joulesLostPerSecond = Config.Instance.BatteryServerLeakJoulesPerCycle;
             }
 
             joulesAvailable = Mathf.Clamp(joulesAvailable, 0f, CapacityJoules);

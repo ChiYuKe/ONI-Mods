@@ -74,7 +74,7 @@ namespace StorageNetwork.Components
                 value = DefaultTargetTemperature;
             }
 
-            return Mathf.Clamp(value, MinTargetTemperature, MaxTargetTemperature);
+            return Mathf.Clamp(value, GetMinTargetTemperature(), GetMaxTargetTemperature());
         }
 
         public static float NormalizeDisplayTemperature(float value)
@@ -133,7 +133,7 @@ namespace StorageNetwork.Components
                 return 0f;
             }
 
-            return Mathf.Min(EnergySaverPowerWatts, baseWatts);
+            return Mathf.Min(Config.Instance.ColdStorageEnergySaverWatts, baseWatts);
         }
 
         public float GetCoolingPowerWatts()
@@ -145,12 +145,12 @@ namespace StorageNetwork.Components
                 return 0f;
             }
 
-            return Mathf.Lerp(baseWatts, MaxCoolingPowerWatts, GetCoolingIntensity());
+            return Mathf.Lerp(baseWatts, Config.Instance.ColdStorageMaxCoolingWatts, GetCoolingIntensity());
         }
 
         public float GetCoolingHeatKW()
         {
-            return Mathf.Lerp(BaseCoolingHeatKW, MaxCoolingHeatKW, GetCoolingIntensity());
+            return Mathf.Lerp(BaseCoolingHeatKW, Config.Instance.ColdStorageMaxCoolingHeatKW, GetCoolingIntensity());
         }
 
         public float GetCurrentHeatKW()
@@ -170,7 +170,7 @@ namespace StorageNetwork.Components
 
         private float GetCoolingIntensity()
         {
-            return Mathf.InverseLerp(DefaultTargetTemperature, MinTargetTemperature, TargetTemperature);
+            return Mathf.InverseLerp(GetMaxTargetTemperature(), GetMinTargetTemperature(), TargetTemperature);
         }
 
         public void ApplyToStoredItems()
@@ -223,12 +223,12 @@ namespace StorageNetwork.Components
 
         public float GetSliderMin(int index)
         {
-            return GameUtil.GetConvertedTemperature(MinTargetTemperature, true);
+            return GameUtil.GetConvertedTemperature(GetMinTargetTemperature(), true);
         }
 
         public float GetSliderMax(int index)
         {
-            return GameUtil.GetConvertedTemperature(MaxTargetTemperature, true);
+            return GameUtil.GetConvertedTemperature(GetMaxTargetTemperature(), true);
         }
 
         public float GetSliderValue(int index)
@@ -277,7 +277,17 @@ namespace StorageNetwork.Components
 
         private static bool IsLegacyCoolingRate(float value)
         {
-            return value <= 0f || value > MaxTargetTemperature + 50f;
+            return value <= 0f || value > GetMaxTargetTemperature() + 50f;
+        }
+
+        public static float GetMinTargetTemperature()
+        {
+            return GameUtil.GetTemperatureConvertedToKelvin(Config.Instance.ColdStorageMinTemperatureC);
+        }
+
+        public static float GetMaxTargetTemperature()
+        {
+            return GameUtil.GetTemperatureConvertedToKelvin(Config.Instance.ColdStorageMaxTemperatureC);
         }
     }
 }

@@ -127,6 +127,146 @@ namespace StorageNetwork
         [JsonProperty]
         public float FinishedOrderRecordLifetimeCycles { get; set; }
 
+        [ModConfigOption(
+            "",
+            "",
+            "服务器容量倍率",
+            "影响新建储存服务器和电池服务器的容量。已存在建筑通常需要重建或重新加载后才完全刷新。",
+            0.1f,
+            100f)]
+        [JsonProperty]
+        public float ServerCapacityMultiplier { get; set; }
+
+        [ModConfigOption(
+            "",
+            "",
+            "端口缓存容量倍率",
+            "影响新建材料、液体、气体端口的缓存容量。",
+            0.1f,
+            100f)]
+        [JsonProperty]
+        public float PortCapacityMultiplier { get; set; }
+
+        [ModConfigOption(
+            "",
+            "",
+            "电力端口缓存倍率",
+            "影响新建电力入网/出网端口的缓存电量。",
+            0.1f,
+            100f)]
+        [JsonProperty]
+        public float PowerPortCapacityMultiplier { get; set; }
+
+        [ModConfigOption(
+            "",
+            "",
+            "电池服务器漏电 J/周期",
+            "所有电池服务器每周期损失的电量。",
+            0f,
+            100000f)]
+        [JsonProperty]
+        public float BatteryServerLeakJoulesPerCycle { get; set; }
+
+        [ModConfigOption(
+            "",
+            "",
+            "冷库最低目标温度 °C",
+            "冷库温度滑条允许设置的最低目标温度。",
+            -100f,
+            0f)]
+        [JsonProperty]
+        public float ColdStorageMinTemperatureC { get; set; }
+
+        [ModConfigOption(
+            "",
+            "",
+            "冷库最高目标温度 °C",
+            "冷库温度滑条允许设置的最高目标温度。",
+            -20f,
+            30f)]
+        [JsonProperty]
+        public float ColdStorageMaxTemperatureC { get; set; }
+
+        [ModConfigOption(
+            "",
+            "",
+            "冷库节能功耗 W",
+            "内容物达到目标温度后，冷库维持温度时的功耗。",
+            0f,
+            1000f)]
+        [JsonProperty]
+        public float ColdStorageEnergySaverWatts { get; set; }
+
+        [ModConfigOption(
+            "",
+            "",
+            "冷库最大制冷功耗 W",
+            "目标温度越低越接近此功耗。",
+            1f,
+            10000f)]
+        [JsonProperty]
+        public float ColdStorageMaxCoolingWatts { get; set; }
+
+        [ModConfigOption(
+            "",
+            "",
+            "冷库最大产热 kDTU/s",
+            "目标温度越低越接近此产热。",
+            0f,
+            20f)]
+        [JsonProperty]
+        public float ColdStorageMaxCoolingHeatKW { get; set; }
+
+        [ModConfigOption(
+            "",
+            "",
+            "材料出网最大速率 kg/s",
+            "材料出网端口设置滑条的最大输出速率。",
+            1f,
+            1000f)]
+        [JsonProperty]
+        public float SolidOutputMaxKgPerSecond { get; set; }
+
+        [ModConfigOption(
+            "",
+            "",
+            "液体出网最大速率 kg/s",
+            "液体出网端口设置滑条的最大输出速率。",
+            1f,
+            1000f)]
+        [JsonProperty]
+        public float LiquidOutputMaxKgPerSecond { get; set; }
+
+        [ModConfigOption(
+            "",
+            "",
+            "气体出网最大速率 kg/s",
+            "气体出网端口设置滑条的最大输出速率。",
+            0.1f,
+            100f)]
+        [JsonProperty]
+        public float GasOutputMaxKgPerSecond { get; set; }
+
+        [ModConfigOption(
+            "",
+            "",
+            "电力入网最大功率 W",
+            "电力入网端口滑条的最大输入功率。",
+            100f,
+            1000000f)]
+        [JsonProperty]
+        public float PowerInputMaxWatts { get; set; }
+
+        [ModConfigOption(
+            "",
+            "",
+            "电力出网最大功率 W",
+            "电力出网端口滑条的最大输出功率。",
+            100f,
+            1000000f)]
+        [JsonProperty]
+        public float PowerOutputMaxWatts { get; set; }
+
         private static ModConfigController<Config> controller;
         private static string modPath;
 
@@ -157,6 +297,20 @@ namespace StorageNetwork
             ProductionPlanMaxDepth = 4;
             AbnormalOrderTimeoutCycles = 0.5f;
             FinishedOrderRecordLifetimeCycles = 1f;
+            ServerCapacityMultiplier = 1f;
+            PortCapacityMultiplier = 1f;
+            PowerPortCapacityMultiplier = 1f;
+            BatteryServerLeakJoulesPerCycle = 100f;
+            ColdStorageMinTemperatureC = -20f;
+            ColdStorageMaxTemperatureC = 1f;
+            ColdStorageEnergySaverWatts = 20f;
+            ColdStorageMaxCoolingWatts = 1000f;
+            ColdStorageMaxCoolingHeatKW = 1f;
+            SolidOutputMaxKgPerSecond = 100f;
+            LiquidOutputMaxKgPerSecond = 20f;
+            GasOutputMaxKgPerSecond = 5f;
+            PowerInputMaxWatts = 10000f;
+            PowerOutputMaxWatts = 100000f;
         }
 
         public static void SetModPath(string path)
@@ -233,6 +387,25 @@ namespace StorageNetwork
             ProductionPlanMaxDepth = Math.Max(1, Math.Min(10, ProductionPlanMaxDepth));
             AbnormalOrderTimeoutCycles = Clamp(AbnormalOrderTimeoutCycles, 0.05f, 10f);
             FinishedOrderRecordLifetimeCycles = Clamp(FinishedOrderRecordLifetimeCycles, 0.05f, 20f);
+            ServerCapacityMultiplier = Clamp(ServerCapacityMultiplier, 0.1f, 100f);
+            PortCapacityMultiplier = Clamp(PortCapacityMultiplier, 0.1f, 100f);
+            PowerPortCapacityMultiplier = Clamp(PowerPortCapacityMultiplier, 0.1f, 100f);
+            BatteryServerLeakJoulesPerCycle = Clamp(BatteryServerLeakJoulesPerCycle, 0f, 100000f);
+            ColdStorageMinTemperatureC = Clamp(ColdStorageMinTemperatureC, -100f, 0f);
+            ColdStorageMaxTemperatureC = Clamp(ColdStorageMaxTemperatureC, -20f, 30f);
+            if (ColdStorageMaxTemperatureC < ColdStorageMinTemperatureC)
+            {
+                ColdStorageMaxTemperatureC = ColdStorageMinTemperatureC;
+            }
+
+            ColdStorageEnergySaverWatts = Clamp(ColdStorageEnergySaverWatts, 0f, 1000f);
+            ColdStorageMaxCoolingWatts = Clamp(ColdStorageMaxCoolingWatts, 1f, 10000f);
+            ColdStorageMaxCoolingHeatKW = Clamp(ColdStorageMaxCoolingHeatKW, 0f, 20f);
+            SolidOutputMaxKgPerSecond = Clamp(SolidOutputMaxKgPerSecond, 1f, 1000f);
+            LiquidOutputMaxKgPerSecond = Clamp(LiquidOutputMaxKgPerSecond, 1f, 1000f);
+            GasOutputMaxKgPerSecond = Clamp(GasOutputMaxKgPerSecond, 0.1f, 100f);
+            PowerInputMaxWatts = Clamp(PowerInputMaxWatts, 100f, 1000000f);
+            PowerOutputMaxWatts = Clamp(PowerOutputMaxWatts, 100f, 1000000f);
             if (MainWorldFilterId < -2)
             {
                 MainWorldFilterId = -2;

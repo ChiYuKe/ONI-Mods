@@ -48,6 +48,28 @@ namespace StorageNetwork.Services
             return false;
         }
 
+        public static float GetEdibleCalories(int worldId, bool includeRelatedWorlds, Dictionary<string, float> unitsById = null)
+        {
+            if (worldId < 0)
+            {
+                return 0f;
+            }
+
+            InventoryIndexSnapshot snapshot = GetSnapshot(worldId, includeRelatedWorlds);
+            return snapshot != null ? snapshot.GetEdibleCalories(null, unitsById) : 0f;
+        }
+
+        public static float GetEdibleCaloriesForId(int worldId, bool includeRelatedWorlds, string foodId)
+        {
+            if (worldId < 0 || string.IsNullOrEmpty(foodId))
+            {
+                return 0f;
+            }
+
+            InventoryIndexSnapshot snapshot = GetSnapshot(worldId, includeRelatedWorlds);
+            return snapshot != null ? snapshot.GetEdibleCalories(foodId, null) : 0f;
+        }
+
         public static void Invalidate()
         {
             Snapshots.Clear();
@@ -130,8 +152,9 @@ namespace StorageNetwork.Services
             HashSet<Tag> tags = StorageItemUtility.GetStorageMatchTags(item);
             KPrefabID prefabId = item != null ? item.GetComponent<KPrefabID>() : null;
             Pickupable pickupable = item != null ? item.GetComponent<Pickupable>() : null;
+            Edible edible = item != null ? item.GetComponent<Edible>() : null;
             float amount = pickupable != null ? pickupable.TotalAmount : StorageItemUtility.GetMass(item);
-            return new InventoryIndexItem(tags, prefabId, amount);
+            return new InventoryIndexItem(tags, prefabId, amount, edible);
         }
 
         private static void PruneSnapshots()
@@ -266,6 +289,38 @@ namespace StorageNetwork.Services
                 return amountWithFilter;
             }
 
+            public float GetEdibleCalories(string foodId, Dictionary<string, float> unitsById)
+            {
+                float calories = 0f;
+                foreach (InventoryIndexItem item in items)
+                {
+                    if (item.EdibleCalories <= 0f || string.IsNullOrEmpty(item.FoodId))
+                    {
+                        continue;
+                    }
+
+                    if (!string.IsNullOrEmpty(foodId) && item.FoodId != foodId)
+                    {
+                        continue;
+                    }
+
+                    calories += item.EdibleCalories;
+                    if (unitsById != null)
+                    {
+                        if (unitsById.ContainsKey(item.FoodId))
+                        {
+                            unitsById[item.FoodId] += item.EdibleUnits;
+                        }
+                        else
+                        {
+                            unitsById[item.FoodId] = item.EdibleUnits;
+                        }
+                    }
+                }
+
+                return calories;
+            }
+
             private static string BuildForbiddenSignature(IEnumerable<Tag> forbiddenTags)
             {
                 return string.Join(
@@ -282,16 +337,25 @@ namespace StorageNetwork.Services
             private readonly HashSet<Tag> tags;
             private readonly KPrefabID prefabId;
 
-            public InventoryIndexItem(HashSet<Tag> tags, KPrefabID prefabId, float amount)
+            public InventoryIndexItem(HashSet<Tag> tags, KPrefabID prefabId, float amount, Edible edible)
             {
                 this.tags = tags ?? new HashSet<Tag>();
                 this.prefabId = prefabId;
                 Amount = amount;
+                FoodId = edible != null ? edible.FoodID : null;
+                EdibleCalories = edible != null ? edible.Calories : 0f;
+                EdibleUnits = edible != null ? edible.Units : 0f;
             }
 
             public IEnumerable<Tag> Tags => tags;
 
             public float Amount { get; }
+
+            public string FoodId { get; }
+
+            public float EdibleCalories { get; }
+
+            public float EdibleUnits { get; }
 
             public bool Matches(Tag tag)
             {

@@ -19,6 +19,36 @@ namespace StorageNetwork.Services
             return StorageNetworkInventoryIndexService.GetAmount(worldId, includeRelatedWorlds, tag, forbiddenTags);
         }
 
+        public static float GetMirroredEdibleCalories(WorldInventory inventory, bool includeRelatedWorlds, System.Collections.Generic.Dictionary<string, float> unitsById = null)
+        {
+            if (inventory == null || !TryGetWorldId(inventory, out int worldId))
+            {
+                return 0f;
+            }
+
+            if (!StorageSceneRegistry.HasOnlineCoreInWorld(worldId))
+            {
+                return 0f;
+            }
+
+            return StorageNetworkInventoryIndexService.GetEdibleCalories(worldId, includeRelatedWorlds, unitsById);
+        }
+
+        public static float GetMirroredEdibleCaloriesForId(WorldInventory inventory, bool includeRelatedWorlds, string foodId)
+        {
+            if (inventory == null || string.IsNullOrEmpty(foodId) || !TryGetWorldId(inventory, out int worldId))
+            {
+                return 0f;
+            }
+
+            if (!StorageSceneRegistry.HasOnlineCoreInWorld(worldId))
+            {
+                return 0f;
+            }
+
+            return StorageNetworkInventoryIndexService.GetEdibleCaloriesForId(worldId, includeRelatedWorlds, foodId);
+        }
+
         private static bool TryGetWorldId(WorldInventory inventory, out int worldId)
         {
             WorldContainer world = inventory.GetComponent<WorldContainer>();

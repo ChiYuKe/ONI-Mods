@@ -15,6 +15,14 @@ namespace StorageNetwork.Services
                 return true;
             }
 
+            foreach (Tag tag in allowedTags)
+            {
+                if (tag != Tag.Invalid && item != null && item.HasTag(tag))
+                {
+                    return true;
+                }
+            }
+
             foreach (Tag tag in StorageItemUtility.GetStorageMatchTags(item))
             {
                 if (allowedTags.Contains(tag))
@@ -62,6 +70,45 @@ namespace StorageNetwork.Services
             return FindOutputTargetInStorages(item, matchTags, excludedStorages, storages, sourceWorldId);
         }
 
+        public static Storage FindFoodOutputTarget(
+            GameObject item,
+            HashSet<Tag> matchTags,
+            HashSet<Storage> excludedStorages,
+            Storage specificTarget,
+            StorageSceneSnapshot snapshot = null,
+            int sourceWorldId = -1)
+        {
+            if (specificTarget != null)
+            {
+                return FindOutputTarget(item, matchTags, excludedStorages, specificTarget, snapshot, sourceWorldId);
+            }
+
+            Storage coldTarget;
+            if (snapshot == null && sourceWorldId >= 0)
+            {
+                coldTarget = FindColdStorageOutputTargetInStorages(
+                    item,
+                    matchTags,
+                    excludedStorages,
+                    StorageSceneCollector.CollectLightweightForWorld(sourceWorldId).Storages,
+                    sourceWorldId);
+                return coldTarget ?? FindOutputTarget(item, matchTags, excludedStorages, null, null, sourceWorldId);
+            }
+
+            snapshot = snapshot ?? StorageSceneCollector.Collect();
+            List<Storage> storages = new List<Storage>();
+            foreach (StorageInfo info in snapshot.Storages)
+            {
+                if (info?.Minion == null && info.Storage != null)
+                {
+                    storages.Add(info.Storage);
+                }
+            }
+
+            coldTarget = FindColdStorageOutputTargetInStorages(item, matchTags, excludedStorages, storages, sourceWorldId);
+            return coldTarget ?? FindOutputTargetInStorages(item, matchTags, excludedStorages, storages, sourceWorldId);
+        }
+
         private static Storage FindOutputTargetInStorages(
             GameObject item,
             HashSet<Tag> matchTags,
@@ -76,6 +123,44 @@ namespace StorageNetwork.Services
             foreach (Storage target in storages)
             {
                 if (!IsUsableOutputTarget(target, item, matchTags, excludedStorages, sourceWorldId) ||
+                    !IsAutoOutputMatch(target, matchTags))
+                {
+                    continue;
+                }
+
+                float available = GetAmountAvailableByAnyMatchTag(target, matchTags);
+                bool filterAccepting = IsFilterAccepting(target, matchTags);
+                float remaining = target.RemainingCapacity();
+                if (best == null ||
+                    available > bestAvailable ||
+                    (Mathf.Approximately(available, bestAvailable) && filterAccepting && !bestFilterAccepting) ||
+                    (Mathf.Approximately(available, bestAvailable) && filterAccepting == bestFilterAccepting && remaining > bestRemaining))
+                {
+                    best = target;
+                    bestAvailable = available;
+                    bestFilterAccepting = filterAccepting;
+                    bestRemaining = remaining;
+                }
+            }
+
+            return best;
+        }
+
+        private static Storage FindColdStorageOutputTargetInStorages(
+            GameObject item,
+            HashSet<Tag> matchTags,
+            HashSet<Storage> excludedStorages,
+            IEnumerable<Storage> storages,
+            int sourceWorldId)
+        {
+            Storage best = null;
+            float bestAvailable = 0f;
+            bool bestFilterAccepting = false;
+            float bestRemaining = 0f;
+            foreach (Storage target in storages)
+            {
+                if (!StorageNetworkStorageRules.IsColdStorageServer(target) ||
+                    !IsUsableOutputTarget(target, item, matchTags, excludedStorages, sourceWorldId) ||
                     !IsAutoOutputMatch(target, matchTags))
                 {
                     continue;
@@ -127,7 +212,7 @@ namespace StorageNetwork.Services
             HashSet<Storage> excluded = excludedStorages ?? new HashSet<Storage>();
             if (specificTarget != null)
             {
-                return IsUsableElementOutputTarget(specificTarget, tag, excluded, sourceWorldId)
+                return IsUsableElementOutputTarget(specificTarget, element, tag, excluded, sourceWorldId)
                     ? new List<Storage> { specificTarget }
                     : new List<Storage>();
             }
@@ -137,7 +222,7 @@ namespace StorageNetwork.Services
                 List<Storage> lightweightTargets = new List<Storage>();
                 foreach (Storage target in StorageSceneCollector.CollectLightweightForWorld(sourceWorldId).Storages)
                 {
-                    if (IsUsableElementOutputTarget(target, tag, excluded, sourceWorldId))
+                    if (IsUsableElementOutputTarget(target, element, tag, excluded, sourceWorldId))
                     {
                         lightweightTargets.Add(target);
                     }
@@ -152,7 +237,7 @@ namespace StorageNetwork.Services
             foreach (StorageInfo info in snapshot.Storages)
             {
                 Storage target = info?.Storage;
-                if (info?.Minion == null && IsUsableElementOutputTarget(target, tag, excluded, sourceWorldId))
+                if (info?.Minion == null && IsUsableElementOutputTarget(target, element, tag, excluded, sourceWorldId))
                 {
                     targets.Add(target);
                 }
@@ -160,6 +245,52 @@ namespace StorageNetwork.Services
 
             targets.Sort((left, right) => CompareElementTargets(right, left, tag));
             return targets;
+        }
+
+        public static bool HasElementOutputCandidateIgnoringCapacity(
+            SimHashes elementHash,
+            HashSet<Storage> excludedStorages = null,
+            Storage specificTarget = null,
+            StorageSceneSnapshot snapshot = null,
+            int sourceWorldId = -1)
+        {
+            Element element = ElementLoader.FindElementByHash(elementHash);
+            if (element == null)
+            {
+                return false;
+            }
+
+            Tag tag = elementHash.CreateTag();
+            HashSet<Storage> excluded = excludedStorages ?? new HashSet<Storage>();
+            if (specificTarget != null)
+            {
+                return IsElementOutputTargetCandidate(specificTarget, element, tag, excluded, sourceWorldId, false);
+            }
+
+            if (snapshot == null && sourceWorldId >= 0)
+            {
+                foreach (Storage target in StorageSceneCollector.CollectLightweightForWorld(sourceWorldId).Storages)
+                {
+                    if (IsElementOutputTargetCandidate(target, element, tag, excluded, sourceWorldId, false))
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+
+            snapshot = snapshot ?? (sourceWorldId >= 0 ? StorageSceneCollector.CollectForWorld(sourceWorldId) : StorageSceneCollector.Collect());
+            foreach (StorageInfo info in snapshot.Storages)
+            {
+                Storage target = info?.Storage;
+                if (info?.Minion == null && IsElementOutputTargetCandidate(target, element, tag, excluded, sourceWorldId, false))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         public static List<Storage> FindNetworkSources(

@@ -50,6 +50,7 @@ namespace TestPlanter
                  can_drown: true,                   // 是否可被淹死（真：植物会因为淹没而死亡）
                  can_tinker: true,                  // 是否允许通过“调整”（Tinker）来修改或互动
                  require_solid_tile: true,          // 是否需要固体地面块才能种植
+                 require_Backwall_Foundation: false,
                  should_grow_old: true,             // 是否会随着时间变老
                  max_age: 2400f,                    // 最大寿命（单位：秒）
                  min_radiation: 0f,                 // 最小辐射阈值，低于该值影响生长

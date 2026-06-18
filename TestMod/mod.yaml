@@ -1,0 +1,7 @@
+title: "AB UI Toolkit"
+description: "Provides a reusable top-bar launcher and runtime helpers for testing AssetBundle UI prefabs on both Windows and macOS."
+staticID: "TestMod"
+supportedContent: ALL
+minimumSupportedBuild: 525812
+version: 0.1.0
+APIVersion: 2

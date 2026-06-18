@@ -835,6 +835,20 @@ namespace StorageNetwork
                 public static LocString GEYSER_METRIC_OUTPUT = "产物";
                 public static LocString GEYSER_METRIC_RATE = "平均输出";
                 public static LocString GEYSER_METRIC_DIRECT_OUTPUT = "直入";
+                public static LocString GEYSER_STATUS_ITEM = "储存网络：{0}";
+                public static LocString GEYSER_STATUS_TOOLTIP = "{0}";
+                public static LocString GEYSER_STATUS_LINE_NETWORK = "接入：{0}    核心：{1}";
+                public static LocString GEYSER_STATUS_LINE_DIRECT = "直入：{0}    状态：{1}";
+                public static LocString GEYSER_STATUS_LINE_OUTPUT = "产物：{0}    速率：{1}";
+                public static LocString GEYSER_STATUS_LINE_POLICY = "存放策略：{0}";
+                public static LocString GEYSER_STATUS_LINE_TARGETS = "可用目标：{0}";
+                public static LocString GEYSER_STATUS_LINE_STATUS = "当前去向：{0}";
+                public static LocString GEYSER_STATUS_NETWORK_OUTPUT = "存入网络";
+                public static LocString GEYSER_STATUS_OVERFLOW_OUTPUT = "服务器已满，溢出到世界";
+                public static LocString GEYSER_STATUS_WORLD_OUTPUT = "按原版排放";
+                public static LocString GEYSER_STATUS_MISSING_EMITTER = "缺少喷发组件";
+                public static LocString GEYSER_STATUS_TARGET_FULL = "有匹配服务器，但容量已满";
+                public static LocString GEYSER_STATUS_TARGET_SUMMARY = "{0} 个服务器，剩余 {1}";
             }
         }
     }

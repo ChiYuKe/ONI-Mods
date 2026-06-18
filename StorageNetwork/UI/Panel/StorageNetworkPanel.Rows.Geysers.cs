@@ -55,6 +55,14 @@ namespace StorageNetwork.UI
 
         private static bool IsGeyserErupting(Geyser geyser)
         {
+            StorageNetwork.Components.StorageNetworkGeyserOutput networkOutput = geyser != null
+                ? geyser.GetComponent<StorageNetwork.Components.StorageNetworkGeyserOutput>()
+                : null;
+            if (networkOutput != null)
+            {
+                return networkOutput.IsRuntimeErupting();
+            }
+
             ElementEmitter emitter = geyser != null ? geyser.GetComponent<ElementEmitter>() : null;
             return emitter != null && emitter.IsSimActive;
         }

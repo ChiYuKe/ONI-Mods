@@ -367,3 +367,6 @@ ONI源码/
 Managed/
 .tools/
 .tmp_video_frames/
+
+# Game animation/asset folders
+**/anim/
