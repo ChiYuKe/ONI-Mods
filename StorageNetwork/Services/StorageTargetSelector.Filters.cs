@@ -220,20 +220,12 @@ namespace StorageNetwork.Services
                 return false;
             }
 
-            if (element.IsLiquid)
+            if (element.IsLiquid || element.IsGas)
             {
-                return IsStorageAccepting(target, tag) &&
-                       (target.GetAmountAvailable(tag) > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ||
-                        IsFilterAccepting(target, tag) ||
-                        HasNoExplicitStorageFilter(target));
-            }
-
-            if (element.IsGas)
-            {
-                return IsStorageAccepting(target, tag) &&
-                       (target.GetAmountAvailable(tag) > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ||
-                        IsFilterAccepting(target, tag) ||
-                        HasNoExplicitStorageFilter(target));
+                return target.GetAmountAvailable(tag) > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ||
+                       !HasUserConfiguredFilter(target) ||
+                       IsFilterAccepting(target, tag) ||
+                       IsStorageFilterAcceptingTag(target.storageFilters, tag);
             }
 
             return IsStorageAccepting(target, tag) &&
@@ -463,6 +455,12 @@ namespace StorageNetwork.Services
             TreeFilterable filterable = target != null ? target.GetComponent<TreeFilterable>() : null;
             return (filterable == null || filterable.GetTags() == null || filterable.GetTags().Count == 0) &&
                    (target.storageFilters == null || target.storageFilters.Count == 0);
+        }
+
+        private static bool HasUserConfiguredFilter(Storage target)
+        {
+            return target != null &&
+                   target.GetComponent<StorageNetwork.Components.StorageNetworkFilterState>()?.UserConfigured == true;
         }
 
         private static bool IsFilteredPort(Storage target)
