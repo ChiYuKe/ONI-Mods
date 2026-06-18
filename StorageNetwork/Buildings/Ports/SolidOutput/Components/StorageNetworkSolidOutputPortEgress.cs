@@ -59,6 +59,7 @@ namespace StorageNetwork.Components
         private float retryTimer;
         private string lastStatus;
         private string cachedStatusText;
+        private string cachedStatusSignature;
 
         public StorageNetworkMaterialRequester.RequestMode CurrentSourceMode
         {
@@ -94,6 +95,7 @@ namespace StorageNetwork.Components
 
         protected override void OnCleanUp()
         {
+            ClearBufferedOutputMarkers();
             RemoveSolidOutputPortStatus();
             base.OnCleanUp();
         }
@@ -435,6 +437,19 @@ namespace StorageNetwork.Components
             }
         }
 
+        private void ClearBufferedOutputMarkers()
+        {
+            if (storage?.items == null)
+            {
+                return;
+            }
+
+            foreach (GameObject item in storage.items)
+            {
+                StorageNetworkConstructionSupplyService.ClearSolidOutputBufferMarker(item);
+            }
+        }
+
         public Tag? GetSelectedOutputTag()
         {
             return string.IsNullOrEmpty(OutputItemTagName) ? (Tag?)null : OutputItemTagName.ToTag();
@@ -489,6 +504,7 @@ namespace StorageNetwork.Components
 
             if (mismatchedTags.Count > 0)
             {
+                ClearBufferedOutputMarkers();
                 NetworkStorageTransferService.TransferStoredItemsToNetwork(storage, new[] { storage }, null, mismatchedTags);
             }
         }
@@ -573,7 +589,33 @@ namespace StorageNetwork.Components
 
         private void UpdateCachedStatusText()
         {
+            string signature = BuildStatusSignature();
+            if (cachedStatusText != null && cachedStatusSignature == signature)
+            {
+                return;
+            }
+
             cachedStatusText = BuildStatusText();
+            cachedStatusSignature = signature;
+        }
+
+        private string BuildStatusSignature()
+        {
+            return string.Format(
+                "{0}|{1}|{2}|{3}|{4:0.###}|{5:0.###}|{6:0.###}|{7:0.###}|{8}|{9}|{10}|{11:0.###}|{12:0.###}",
+                OutputRequestEnabled,
+                SourceModeValue,
+                SourceStorageInstanceId,
+                OutputItemTagName,
+                OutputLimitEnabled ? OutputLimitKg : -1f,
+                OutputLimitEnabled ? OutputLimitUsedKg : -1f,
+                RequestRateKgPerSecond,
+                retryTimer,
+                AllowManualOperation,
+                lastStatus,
+                StorageSceneRegistry.HasOnlineCoreInWorld(GetWorldId()),
+                storage != null ? storage.MassStored() : 0f,
+                storage != null ? storage.Capacity() : 0f);
         }
 
         private string BuildStatusText()

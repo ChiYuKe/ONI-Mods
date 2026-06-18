@@ -282,12 +282,12 @@ namespace StorageNetwork.Components
 
         public static float GetMinTargetTemperature()
         {
-            return GameUtil.GetTemperatureConvertedToKelvin(Config.Instance.ColdStorageMinTemperatureC);
+            return Config.Instance.ColdStorageMinTemperatureC + 273.15f;
         }
 
         public static float GetMaxTargetTemperature()
         {
-            return GameUtil.GetTemperatureConvertedToKelvin(Config.Instance.ColdStorageMaxTemperatureC);
+            return Config.Instance.ColdStorageMaxTemperatureC + 273.15f;
         }
     }
 }

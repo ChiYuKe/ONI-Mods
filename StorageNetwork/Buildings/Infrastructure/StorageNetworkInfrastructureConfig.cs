@@ -67,6 +67,7 @@ namespace StorageNetwork.Buildings
         {
             StorageNetworkStorageBuildingSpec spec = Spec;
             go.AddOrGet<CodexEntryRedirector>().CodexID = spec.Id;
+            go.AddOrGet<StorageNetworkSceneMember>();
             SoundEventVolumeCache.instance.AddVolume(spec.AnimFile, "StorageLocker_Hit_metallic_low", NOISE_POLLUTION.NOISY.TIER1);
             Prioritizable.AddRef(go);
 

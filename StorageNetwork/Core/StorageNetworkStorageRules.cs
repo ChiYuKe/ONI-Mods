@@ -179,7 +179,7 @@ namespace StorageNetwork.Core
                 return HasLiquidPortTag(storage) || IsLiquidStorageServer(storage);
             }
 
-            return element.IsSolid && (HasSolidPortTag(storage) || IsSolidStorageServer(storage)) && !IsColdStorageServer(storage);
+            return element.IsSolid && (HasSolidPortTag(storage) || IsSolidStorageServer(storage) || IsColdStorageServer(storage));
         }
 
         public static bool IsColdStorageServer(Storage storage)

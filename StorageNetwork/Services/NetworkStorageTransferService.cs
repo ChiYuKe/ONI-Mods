@@ -131,7 +131,8 @@ namespace StorageNetwork.Services
             Storage source,
             GameObject item,
             IEnumerable<Storage> excludedStorages,
-            Storage specificTarget = null)
+            Storage specificTarget = null,
+            bool preferColdStorageForFood = false)
         {
             if (source == null || item == null || source.items == null || !source.items.Contains(item))
             {
@@ -145,7 +146,7 @@ namespace StorageNetwork.Services
             }
 
             HashSet<Storage> excluded = StorageTargetSelector.BuildExclusionSet(excludedStorages);
-            return TransferStoredItem(source, item, excluded, specificTarget, null, sourceWorldId);
+            return TransferStoredItem(source, item, excluded, specificTarget, null, sourceWorldId, preferColdStorageForFood);
         }
 
         public static float TransferFromNetworkToStorage(
@@ -169,12 +170,16 @@ namespace StorageNetwork.Services
                 return 0f;
             }
 
-            HashSet<Tag> wantedTags = new HashSet<Tag>();
-            foreach (Tag tag in tags)
+            HashSet<Tag> wantedTags = tags as HashSet<Tag>;
+            if (wantedTags == null)
             {
-                if (tag != Tag.Invalid)
+                wantedTags = new HashSet<Tag>();
+                foreach (Tag tag in tags)
                 {
-                    wantedTags.Add(tag);
+                    if (tag != Tag.Invalid)
+                    {
+                        wantedTags.Add(tag);
+                    }
                 }
             }
 
@@ -286,6 +291,7 @@ namespace StorageNetwork.Services
 
             float moved = 0f;
             string blockedItem = null;
+            List<GameObject> items = new List<GameObject>();
             foreach (Storage source in sources)
             {
                 if (amount - moved <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ||
@@ -303,12 +309,22 @@ namespace StorageNetwork.Services
                     continue;
                 }
 
-                List<GameObject> items = new List<GameObject>(source.items.Count);
+                items.Clear();
+                if (items.Capacity < source.items.Count)
+                {
+                    items.Capacity = source.items.Count;
+                }
+
                 foreach (GameObject item in source.items)
                 {
-                    if (IsSolidItem(item) && StorageTargetSelector.MatchesAllowedTags(item, allowed))
+                    PrimaryElement primaryElement = item != null ? item.GetComponent<PrimaryElement>() : null;
+                    if (IsSolidItem(primaryElement))
                     {
-                        items.Add(item);
+                        StorageItemUtility.StorageMatchTags matchTags = StorageItemUtility.GetStorageMatchTagsNonAlloc(item);
+                        if (StorageTargetSelector.MatchesAllowedTags(item, allowed, matchTags))
+                        {
+                            items.Add(item);
+                        }
                     }
                 }
 
@@ -360,7 +376,7 @@ namespace StorageNetwork.Services
             IEnumerable<Storage> excludedStorages,
             Storage specificSource,
             SimHashes? elementFilter,
-            System.Func<GameObject, SimHashes?, bool> itemPredicate,
+            System.Func<PrimaryElement, SimHashes?, bool> itemPredicate,
             string fallbackBlockedItem)
         {
             if (destination == null ||
@@ -396,6 +412,7 @@ namespace StorageNetwork.Services
 
             float moved = 0f;
             string blockedItem = null;
+            List<GameObject> items = new List<GameObject>();
             foreach (Storage source in sources)
             {
                 if (amount - moved <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ||
@@ -413,10 +430,16 @@ namespace StorageNetwork.Services
                     continue;
                 }
 
-                List<GameObject> items = new List<GameObject>(source.items.Count);
+                items.Clear();
+                if (items.Capacity < source.items.Count)
+                {
+                    items.Capacity = source.items.Count;
+                }
+
                 foreach (GameObject item in source.items)
                 {
-                    if (itemPredicate(item, elementFilter))
+                    PrimaryElement primaryElement = item != null ? item.GetComponent<PrimaryElement>() : null;
+                    if (itemPredicate(primaryElement, elementFilter))
                     {
                         items.Add(item);
                     }
@@ -479,7 +502,7 @@ namespace StorageNetwork.Services
                 foreach (GameObject item in source.items)
                 {
                     PrimaryElement primaryElement = item != null ? item.GetComponent<PrimaryElement>() : null;
-                    if (primaryElement == null || !IsLiquidItem(item, null) || primaryElement.Mass <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+                    if (primaryElement == null || !IsLiquidItem(primaryElement, null) || primaryElement.Mass <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
                     {
                         continue;
                     }
@@ -518,7 +541,7 @@ namespace StorageNetwork.Services
                 foreach (GameObject item in source.items)
                 {
                     PrimaryElement primaryElement = item != null ? item.GetComponent<PrimaryElement>() : null;
-                    if (primaryElement == null || !IsGasItem(item, null) || primaryElement.Mass <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+                    if (primaryElement == null || !IsGasItem(primaryElement, null) || primaryElement.Mass <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
                     {
                         continue;
                     }
@@ -557,7 +580,7 @@ namespace StorageNetwork.Services
                 foreach (GameObject item in source.items)
                 {
                     PrimaryElement primaryElement = item != null ? item.GetComponent<PrimaryElement>() : null;
-                    if (primaryElement == null || !IsSolidItem(item) || primaryElement.Mass <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+                    if (primaryElement == null || !IsSolidItem(primaryElement) || primaryElement.Mass <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
                     {
                         continue;
                     }
@@ -639,8 +662,8 @@ namespace StorageNetwork.Services
                 return StorageTransferResult.Idle;
             }
 
-            Tag tag = StorageItemUtility.GetStorageTransferTag(item);
-            HashSet<Tag> matchTags = StorageItemUtility.GetStorageMatchTags(item);
+            StorageItemUtility.StorageMatchTags matchTags = StorageItemUtility.GetStorageMatchTagsNonAlloc(item);
+            Tag tag = matchTags.TransferTag;
             float remaining = mass;
             float moved = 0f;
             Storage target = preferColdStorageForFood && StorageItemUtility.IsFoodOrCookingIngredient(item)
@@ -716,9 +739,8 @@ namespace StorageNetwork.Services
             return moved;
         }
 
-        private static bool IsLiquidItem(GameObject item, SimHashes? liquidFilter)
+        private static bool IsLiquidItem(PrimaryElement primaryElement, SimHashes? liquidFilter)
         {
-            PrimaryElement primaryElement = item != null ? item.GetComponent<PrimaryElement>() : null;
             if (primaryElement == null)
             {
                 return false;
@@ -733,9 +755,8 @@ namespace StorageNetwork.Services
             return element != null && element.IsLiquid;
         }
 
-        private static bool IsGasItem(GameObject item, SimHashes? gasFilter)
+        private static bool IsGasItem(PrimaryElement primaryElement, SimHashes? gasFilter)
         {
-            PrimaryElement primaryElement = item != null ? item.GetComponent<PrimaryElement>() : null;
             if (primaryElement == null)
             {
                 return false;
@@ -750,9 +771,8 @@ namespace StorageNetwork.Services
             return element != null && element.IsGas;
         }
 
-        private static bool IsSolidItem(GameObject item)
+        private static bool IsSolidItem(PrimaryElement primaryElement)
         {
-            PrimaryElement primaryElement = item != null ? item.GetComponent<PrimaryElement>() : null;
             if (primaryElement == null)
             {
                 return false;
@@ -764,12 +784,18 @@ namespace StorageNetwork.Services
 
         private static HashSet<Tag> BuildAllowedTagSet(IEnumerable<Tag> tags)
         {
-            HashSet<Tag> allowed = new HashSet<Tag>();
             if (tags == null)
+            {
+                return null;
+            }
+
+            HashSet<Tag> allowed = tags as HashSet<Tag>;
+            if (allowed != null)
             {
                 return allowed;
             }
 
+            allowed = new HashSet<Tag>();
             foreach (Tag tag in tags)
             {
                 if (tag != Tag.Invalid)

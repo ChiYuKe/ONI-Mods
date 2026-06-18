@@ -4,6 +4,7 @@ using System.IO;
 using System.Reflection;
 using Newtonsoft.Json;
 using StorageNetwork.ModConfig;
+using UnityEngine;
 
 namespace StorageNetwork
 {
@@ -391,10 +392,15 @@ namespace StorageNetwork
             PortCapacityMultiplier = Clamp(PortCapacityMultiplier, 0.1f, 100f);
             PowerPortCapacityMultiplier = Clamp(PowerPortCapacityMultiplier, 0.1f, 100f);
             BatteryServerLeakJoulesPerCycle = Clamp(BatteryServerLeakJoulesPerCycle, 0f, 100000f);
+            float requestedColdStorageMinTemperatureC = ColdStorageMinTemperatureC;
+            float requestedColdStorageMaxTemperatureC = ColdStorageMaxTemperatureC;
             ColdStorageMinTemperatureC = Clamp(ColdStorageMinTemperatureC, -100f, 0f);
             ColdStorageMaxTemperatureC = Clamp(ColdStorageMaxTemperatureC, -20f, 30f);
             if (ColdStorageMaxTemperatureC < ColdStorageMinTemperatureC)
             {
+                Debug.LogWarning(
+                    $"[StorageNetwork] Cold storage temperature config adjusted: min={requestedColdStorageMinTemperatureC}C, max={requestedColdStorageMaxTemperatureC}C. " +
+                    $"Using min={ColdStorageMinTemperatureC}C, max={ColdStorageMinTemperatureC}C after clamping.");
                 ColdStorageMaxTemperatureC = ColdStorageMinTemperatureC;
             }
 

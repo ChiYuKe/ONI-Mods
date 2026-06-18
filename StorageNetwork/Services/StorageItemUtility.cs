@@ -5,32 +5,49 @@ namespace StorageNetwork.Services
 {
     internal static class StorageItemUtility
     {
+        public readonly struct StorageMatchTags
+        {
+            public readonly Tag PrefabIdTag;
+            public readonly Tag PrefabTag;
+            public readonly Tag ElementTag;
+            public readonly Tag TransferTag;
+
+            public StorageMatchTags(GameObject item)
+            {
+                KPrefabID prefabID = item != null ? item.GetComponent<KPrefabID>() : null;
+                PrimaryElement primaryElement = item != null ? item.GetComponent<PrimaryElement>() : null;
+                PrefabIdTag = prefabID != null ? prefabID.PrefabID() : Tag.Invalid;
+                PrefabTag = prefabID != null ? prefabID.PrefabTag : Tag.Invalid;
+                ElementTag = primaryElement != null ? primaryElement.ElementID.CreateTag() : Tag.Invalid;
+                TransferTag = ResolveTransferTag(item, prefabID, ElementTag);
+            }
+
+            public bool Contains(Tag tag)
+            {
+                return tag != Tag.Invalid &&
+                       (tag == PrefabIdTag ||
+                        tag == PrefabTag ||
+                        tag == ElementTag ||
+                        tag == TransferTag);
+            }
+
+            public bool AnyAcceptedBy(HashSet<Tag> tags)
+            {
+                return tags == null ||
+                       tags.Count == 0 ||
+                       tags.Contains(PrefabIdTag) ||
+                       tags.Contains(PrefabTag) ||
+                       tags.Contains(ElementTag) ||
+                       tags.Contains(TransferTag);
+            }
+        }
+
         /// <summary>
         /// 获取物品在储存网络中用于匹配过滤器和转运的 Tag。
         /// </summary>
         public static Tag GetStorageTransferTag(GameObject item)
         {
-            KPrefabID prefabID = item != null ? item.GetComponent<KPrefabID>() : null;
-            if (prefabID != null)
-            {
-                Tag prefabTag = prefabID.PrefabID();
-                if (prefabTag != Tag.Invalid)
-                {
-                    return prefabTag;
-                }
-            }
-
-            PrimaryElement primaryElement = item != null ? item.GetComponent<PrimaryElement>() : null;
-            if (primaryElement != null)
-            {
-                Tag elementTag = primaryElement.ElementID.CreateTag();
-                if (elementTag != Tag.Invalid && item.HasTag(elementTag))
-                {
-                    return elementTag;
-                }
-            }
-
-            return prefabID != null ? prefabID.PrefabTag : Tag.Invalid;
+            return GetStorageMatchTagsNonAlloc(item).TransferTag;
         }
 
         public static bool MatchesStorageTag(GameObject item, Tag tag)
@@ -40,13 +57,13 @@ namespace StorageNetwork.Services
                 return false;
             }
 
-            if (item.HasTag(tag) || GetStorageTransferTag(item) == tag)
+            StorageMatchTags matchTags = GetStorageMatchTagsNonAlloc(item);
+            if (item.HasTag(tag) || matchTags.Contains(tag))
             {
                 return true;
             }
 
-            PrimaryElement primaryElement = item.GetComponent<PrimaryElement>();
-            return primaryElement != null && primaryElement.ElementID.CreateTag() == tag;
+            return false;
         }
 
         /// <summary>
@@ -94,21 +111,17 @@ namespace StorageNetwork.Services
         public static HashSet<Tag> GetStorageMatchTags(GameObject item)
         {
             HashSet<Tag> tags = new HashSet<Tag>();
-            KPrefabID prefabID = item != null ? item.GetComponent<KPrefabID>() : null;
-            if (prefabID != null)
-            {
-                AddTag(tags, prefabID.PrefabID());
-                AddTag(tags, prefabID.PrefabTag);
-            }
-
-            PrimaryElement primaryElement = item != null ? item.GetComponent<PrimaryElement>() : null;
-            if (primaryElement != null)
-            {
-                AddTag(tags, primaryElement.ElementID.CreateTag());
-            }
-
-            AddTag(tags, GetStorageTransferTag(item));
+            StorageMatchTags matchTags = GetStorageMatchTagsNonAlloc(item);
+            AddTag(tags, matchTags.PrefabIdTag);
+            AddTag(tags, matchTags.PrefabTag);
+            AddTag(tags, matchTags.ElementTag);
+            AddTag(tags, matchTags.TransferTag);
             return tags;
+        }
+
+        public static StorageMatchTags GetStorageMatchTagsNonAlloc(GameObject item)
+        {
+            return new StorageMatchTags(item);
         }
 
         public static bool IsFoodOrCookingIngredient(GameObject item)
@@ -124,6 +137,25 @@ namespace StorageNetwork.Services
             {
                 tags.Add(tag);
             }
+        }
+
+        private static Tag ResolveTransferTag(GameObject item, KPrefabID prefabID, Tag elementTag)
+        {
+            if (prefabID != null)
+            {
+                Tag prefabTag = prefabID.PrefabID();
+                if (prefabTag != Tag.Invalid)
+                {
+                    return prefabTag;
+                }
+            }
+
+            if (elementTag != Tag.Invalid && item != null && item.HasTag(elementTag))
+            {
+                return elementTag;
+            }
+
+            return prefabID != null ? prefabID.PrefabTag : Tag.Invalid;
         }
 
         /// <summary>

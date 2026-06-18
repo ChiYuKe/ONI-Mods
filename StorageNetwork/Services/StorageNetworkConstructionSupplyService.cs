@@ -509,7 +509,12 @@ namespace StorageNetwork.Services
         {
             ClearConstructionReservation(item);
             ClearSolidOutputBufferMarker(item);
-            NetworkStorageTransferService.TransferStoredItemToNetwork(portStorage, item, new[] { portStorage });
+            NetworkStorageTransferService.TransferStoredItemToNetwork(
+                portStorage,
+                item,
+                new[] { portStorage },
+                null,
+                preferColdStorageForFood: true);
         }
 
         private static bool IsAllowed(Tag tag, HashSet<Tag> allowedTags)

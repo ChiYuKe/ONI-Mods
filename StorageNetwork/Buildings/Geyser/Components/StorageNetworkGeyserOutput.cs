@@ -16,6 +16,9 @@ namespace StorageNetwork.Components
         [MyCmpGet]
         private ElementEmitter emitter = null;
 
+        [MyCmpGet]
+        private PrimaryElement primaryElement = null;
+
         private bool isErupting = false;
         private bool lastAppliedEmitting = false;
         private bool hasAppliedEmitting = false;
@@ -66,17 +69,17 @@ namespace StorageNetwork.Components
             ElementConverter.OutputElement output = emitter.outputElement;
             float temperature = output.minOutputTemperature > 0f
                 ? output.minOutputTemperature
-                : GetComponent<PrimaryElement>()?.Temperature ?? 293.15f;
+                : primaryElement?.Temperature ?? 293.15f;
             float mass = GetOutputMass(output, dt);
             if (mass <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
             {
                 return;
             }
 
-            List<Storage> targets = FindOutputTargets(output);
-            if (targets.Count == 0)
+            ElementOutputTargetQuery targetQuery = FindOutputTargetQuery(output);
+            if (targetQuery.Targets.Count == 0)
             {
-                if (HasOutputCandidateIgnoringCapacity(output))
+                if (targetQuery.HasCandidateIgnoringCapacity)
                 {
                     isNetworkCapturing = true;
                     SetNativeEmitterEnabled(false);
@@ -96,7 +99,7 @@ namespace StorageNetwork.Components
             SetNativeEmitterEnabled(false);
             SuppressNativeOverpressureStatus();
 
-            float overflow = StoreElementInNetwork(output.elementHash, mass, temperature, output.addedDiseaseIdx, GetDiseaseCount(output, dt), targets);
+            float overflow = StoreElementInNetwork(output.elementHash, mass, temperature, output.addedDiseaseIdx, GetDiseaseCount(output, dt), targetQuery.Targets);
             if (overflow > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
             {
                 emitter.ForceEmit(overflow, output.addedDiseaseIdx, GetDiseaseCount(output, dt), temperature);
@@ -125,9 +128,8 @@ namespace StorageNetwork.Components
             }
 
             ElementConverter.OutputElement output = emitter.outputElement;
-            bool hasUsableTarget = FindOutputTargets(output).Count > 0;
-            bool hasFullTarget = !hasUsableTarget && HasOutputCandidateIgnoringCapacity(output);
-            isNetworkCapturing = hasUsableTarget || hasFullTarget;
+            ElementOutputTargetQuery targetQuery = FindOutputTargetQuery(output);
+            isNetworkCapturing = targetQuery.Targets.Count > 0 || targetQuery.HasCandidateIgnoringCapacity;
             SetNativeEmitterEnabled(!isNetworkCapturing);
             if (isNetworkCapturing)
             {
@@ -281,6 +283,19 @@ namespace StorageNetwork.Components
                 ? enrollment.ResolveGeyserOutputStorage()
                 : null;
             return NetworkStorageTransferService.FindElementOutputTargets(output.elementHash, null, specificTarget, null, GetOutputWorldId());
+        }
+
+        private ElementOutputTargetQuery FindOutputTargetQuery(ElementConverter.OutputElement output)
+        {
+            if (output.elementHash == SimHashes.Vacuum)
+            {
+                return new ElementOutputTargetQuery();
+            }
+
+            Storage specificTarget = enrollment.CurrentGeyserOutputStoreMode == StorageNetworkMaterialRequester.OutputStoreMode.SpecificStorage
+                ? enrollment.ResolveGeyserOutputStorage()
+                : null;
+            return StorageTargetSelector.FindElementOutputTargetsWithCapacityState(output.elementHash, null, specificTarget, null, GetOutputWorldId());
         }
 
         private bool HasOutputCandidateIgnoringCapacity(ElementConverter.OutputElement output)
@@ -437,13 +452,13 @@ namespace StorageNetwork.Components
                 return Loc.Get(Loc.UI.STORAGE_NETWORK.GEYSER_STATUS_WORLD_OUTPUT);
             }
 
-            ElementConverter.OutputElement output = emitter.outputElement;
-            if (FindOutputTargets(output).Count > 0)
+            ElementOutputTargetQuery targetQuery = FindOutputTargetQuery(emitter.outputElement);
+            if (targetQuery.Targets.Count > 0)
             {
                 return Loc.Get(Loc.UI.STORAGE_NETWORK.GEYSER_STATUS_NETWORK_OUTPUT);
             }
 
-            return HasOutputCandidateIgnoringCapacity(output)
+            return targetQuery.HasCandidateIgnoringCapacity
                 ? Loc.Get(Loc.UI.STORAGE_NETWORK.GEYSER_STATUS_OVERFLOW_OUTPUT)
                 : Loc.Get(Loc.UI.STORAGE_NETWORK.GEYSER_STATUS_WORLD_OUTPUT);
         }
@@ -473,16 +488,16 @@ namespace StorageNetwork.Components
                 return Loc.Get(Loc.UI.STORAGE_NETWORK.NONE);
             }
 
-            List<Storage> targets = FindOutputTargets(output);
-            if (targets.Count == 0)
+            ElementOutputTargetQuery targetQuery = FindOutputTargetQuery(output);
+            if (targetQuery.Targets.Count == 0)
             {
-                return HasOutputCandidateIgnoringCapacity(output)
+                return targetQuery.HasCandidateIgnoringCapacity
                     ? Loc.Get(Loc.UI.STORAGE_NETWORK.GEYSER_STATUS_TARGET_FULL)
                     : Loc.Get(Loc.UI.STORAGE_NETWORK.NONE);
             }
 
             float remaining = 0f;
-            foreach (Storage target in targets)
+            foreach (Storage target in targetQuery.Targets)
             {
                 if (target != null)
                 {
@@ -492,7 +507,7 @@ namespace StorageNetwork.Components
 
             return string.Format(
                 Loc.Get(Loc.UI.STORAGE_NETWORK.GEYSER_STATUS_TARGET_SUMMARY),
-                targets.Count,
+                targetQuery.Targets.Count,
                 GameUtil.GetFormattedMass(remaining));
         }
 
@@ -542,7 +557,7 @@ namespace StorageNetwork.Components
 
         private static string Colorize(string text, string color)
         {
-            return "<color=" + color + ">" + text + "</color>";
+            return $"<color={color}>{text}</color>";
         }
 
         private static float StoreElementInNetwork(

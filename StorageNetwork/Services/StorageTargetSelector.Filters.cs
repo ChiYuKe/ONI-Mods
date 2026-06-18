@@ -46,6 +46,20 @@ namespace StorageNetwork.Services
                    (target.items == null || !target.items.Contains(item));
         }
 
+        private static bool IsUsableOutputTarget(Storage target, GameObject item, StorageItemUtility.StorageMatchTags matchTags, HashSet<Storage> excludedStorages, int sourceWorldId = -1)
+        {
+            return StorageSceneRegistry.IsLive(target) &&
+                   IsStorageReachableFromWorld(target, sourceWorldId) &&
+                   !excludedStorages.Contains(target) &&
+                   StorageNetworkStorageRules.IsServerStorage(target) &&
+                   StorageNetworkStorageRules.IsConnectedNetworkStorage(target) &&
+                   !StorageNetworkStorageRules.IsMinionStorage(target) &&
+                   !StorageNetworkStorageRules.IsProductionStorage(target) &&
+                   target.RemainingCapacity() > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT &&
+                   IsStorageAccepting(target, matchTags) &&
+                   (target.items == null || !target.items.Contains(item));
+        }
+
         private static bool IsUsableElementOutputTarget(Storage target, Element element, Tag tag, HashSet<Storage> excludedStorages, int sourceWorldId = -1)
         {
             return IsElementOutputTargetCandidate(target, element, tag, excludedStorages, sourceWorldId, true);
@@ -103,6 +117,14 @@ namespace StorageNetwork.Services
                    HasNoExplicitStorageFilter(target);
         }
 
+        private static bool IsAutoOutputMatch(Storage target, StorageItemUtility.StorageMatchTags matchTags)
+        {
+            return GetAmountAvailableByAnyMatchTag(target, matchTags) > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ||
+                   AcceptsByElementStateWithoutFilterUi(target, matchTags) ||
+                   IsFilterAccepting(target, matchTags) ||
+                   HasNoExplicitStorageFilter(target);
+        }
+
         private static bool IsFilterAccepting(Storage target, HashSet<Tag> matchTags)
         {
             if (StorageNetworkFilterBypass.ShouldBypassUserFilter(target))
@@ -135,7 +157,39 @@ namespace StorageNetwork.Services
             return filterable != null && IsFilterAcceptingTag(filterable, tag, target.storageFilters);
         }
 
+        private static bool IsFilterAccepting(Storage target, StorageItemUtility.StorageMatchTags matchTags)
+        {
+            return IsFilterAccepting(target, matchTags.PrefabIdTag) ||
+                   IsFilterAccepting(target, matchTags.PrefabTag) ||
+                   IsFilterAccepting(target, matchTags.ElementTag) ||
+                   IsFilterAccepting(target, matchTags.TransferTag);
+        }
+
         private static bool IsStorageAccepting(Storage target, HashSet<Tag> matchTags)
+        {
+            if (AcceptsByElementStateWithoutFilterUi(target, matchTags))
+            {
+                return true;
+            }
+
+            if (StorageNetworkFilterBypass.ShouldBypassUserFilter(target))
+            {
+                return AnyTagAcceptedByStorageFilter(target.storageFilters, matchTags);
+            }
+
+            if (IsFilteredPort(target))
+            {
+                return IsFilterAccepting(target, matchTags);
+            }
+
+            return target != null &&
+                   (IsFilterAccepting(target, matchTags) ||
+                    target.storageFilters == null ||
+                    target.storageFilters.Count == 0 ||
+                   AnyTagAcceptedByStorageFilter(target.storageFilters, matchTags));
+        }
+
+        private static bool IsStorageAccepting(Storage target, StorageItemUtility.StorageMatchTags matchTags)
         {
             if (AcceptsByElementStateWithoutFilterUi(target, matchTags))
             {
@@ -168,12 +222,18 @@ namespace StorageNetwork.Services
 
             if (element.IsLiquid)
             {
-                return StorageNetworkStorageRules.MatchesElementState(target, element);
+                return IsStorageAccepting(target, tag) &&
+                       (target.GetAmountAvailable(tag) > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ||
+                        IsFilterAccepting(target, tag) ||
+                        HasNoExplicitStorageFilter(target));
             }
 
             if (element.IsGas)
             {
-                return StorageNetworkStorageRules.MatchesElementState(target, element);
+                return IsStorageAccepting(target, tag) &&
+                       (target.GetAmountAvailable(tag) > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ||
+                        IsFilterAccepting(target, tag) ||
+                        HasNoExplicitStorageFilter(target));
             }
 
             return IsStorageAccepting(target, tag) &&
@@ -213,17 +273,38 @@ namespace StorageNetwork.Services
                 return false;
             }
 
-            return filterable != null &&
-                   (filterable.ContainsTag(tag) ||
-                    filterable.AcceptedTags.Any(accepted => IsDiscoveredCategoryAccepting(accepted, tag)));
+            if (filterable == null || filterable.ContainsTag(tag))
+            {
+                return filterable != null;
+            }
+
+            foreach (Tag accepted in filterable.AcceptedTags)
+            {
+                if (IsDiscoveredCategoryAccepting(accepted, tag))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static bool IsStorageFilterAcceptingTag(List<Tag> storageFilters, Tag tag)
         {
-            return storageFilters == null ||
-                   storageFilters.Count == 0 ||
-                   storageFilters.Contains(tag) ||
-                   storageFilters.Any(filter => IsDiscoveredCategoryAccepting(filter, tag));
+            if (storageFilters == null || storageFilters.Count == 0 || storageFilters.Contains(tag))
+            {
+                return true;
+            }
+
+            foreach (Tag filter in storageFilters)
+            {
+                if (IsDiscoveredCategoryAccepting(filter, tag))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static bool AcceptsByElementStateWithoutFilterUi(Storage target, IEnumerable<Tag> tags)
@@ -242,6 +323,14 @@ namespace StorageNetwork.Services
             }
 
             return false;
+        }
+
+        private static bool AcceptsByElementStateWithoutFilterUi(Storage target, StorageItemUtility.StorageMatchTags matchTags)
+        {
+            return AcceptsByElementStateWithoutFilterUi(target, matchTags.PrefabIdTag) ||
+                   AcceptsByElementStateWithoutFilterUi(target, matchTags.PrefabTag) ||
+                   AcceptsByElementStateWithoutFilterUi(target, matchTags.ElementTag) ||
+                   AcceptsByElementStateWithoutFilterUi(target, matchTags.TransferTag);
         }
 
         private static bool AcceptsByElementStateWithoutFilterUi(Storage target, Tag tag)
@@ -263,14 +352,20 @@ namespace StorageNetwork.Services
                 return false;
             }
 
-            if (storageFilters.Any(filter => STORAGEFILTERS.LIQUIDS.Contains(filter)))
+            foreach (Tag filter in storageFilters)
             {
-                return element.IsLiquid;
+                if (STORAGEFILTERS.LIQUIDS.Contains(filter))
+                {
+                    return element.IsLiquid;
+                }
             }
 
-            if (storageFilters.Any(filter => STORAGEFILTERS.GASES.Contains(filter)))
+            foreach (Tag filter in storageFilters)
             {
-                return element.IsGas;
+                if (STORAGEFILTERS.GASES.Contains(filter))
+                {
+                    return element.IsGas;
+                }
             }
 
             return false;
@@ -319,6 +414,14 @@ namespace StorageNetwork.Services
             return false;
         }
 
+        private static bool AnyTagAcceptedByStorageFilter(List<Tag> storageFilters, StorageItemUtility.StorageMatchTags matchTags)
+        {
+            return IsStorageFilterAcceptingTag(storageFilters, matchTags.PrefabIdTag) ||
+                   IsStorageFilterAcceptingTag(storageFilters, matchTags.PrefabTag) ||
+                   IsStorageFilterAcceptingTag(storageFilters, matchTags.ElementTag) ||
+                   IsStorageFilterAcceptingTag(storageFilters, matchTags.TransferTag);
+        }
+
         private static float GetAmountAvailableByAnyMatchTag(Storage target, IEnumerable<Tag> matchTags)
         {
             if (!StorageSceneRegistry.IsLive(target) || matchTags == null)
@@ -332,6 +435,21 @@ namespace StorageNetwork.Services
                 available = Mathf.Max(available, target.GetAmountAvailable(tag));
             }
 
+            return available;
+        }
+
+        private static float GetAmountAvailableByAnyMatchTag(Storage target, StorageItemUtility.StorageMatchTags matchTags)
+        {
+            if (!StorageSceneRegistry.IsLive(target))
+            {
+                return 0f;
+            }
+
+            float available = 0f;
+            available = Mathf.Max(available, target.GetAmountAvailable(matchTags.PrefabIdTag));
+            available = Mathf.Max(available, target.GetAmountAvailable(matchTags.PrefabTag));
+            available = Mathf.Max(available, target.GetAmountAvailable(matchTags.ElementTag));
+            available = Mathf.Max(available, target.GetAmountAvailable(matchTags.TransferTag));
             return available;
         }
 
