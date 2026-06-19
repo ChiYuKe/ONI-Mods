@@ -22,6 +22,7 @@ namespace StorageNetwork.API
         public const string CategoryPowerOutputPortTagName = "StorageNetwork_CategoryPowerOutputPort";
         public const string ReservedForConstructionTagName = "StorageNetwork_ReservedForConstruction";
         public const string SolidOutputPortBufferedItemTagName = "StorageNetwork_SolidOutputPortBufferedItem";
+        public const string SelectedEngravingDiskTagName = "StorageNetwork_SelectedEngravingDisk";
 
         public static readonly Tag ModStorage = new Tag(ModStorageTagName);
         public static readonly Tag ServerStorage = new Tag(ServerStorageTagName);
@@ -43,5 +44,6 @@ namespace StorageNetwork.API
         public static readonly Tag CategoryPowerOutputPort = new Tag(CategoryPowerOutputPortTagName);
         public static readonly Tag ReservedForConstruction = new Tag(ReservedForConstructionTagName);
         public static readonly Tag SolidOutputPortBufferedItem = new Tag(SolidOutputPortBufferedItemTagName);
+        public static readonly Tag SelectedEngravingDisk = new Tag(SelectedEngravingDiskTagName);
     }
 }

@@ -221,15 +221,45 @@ namespace StorageNetwork.UI
             }
         }
 
+        private static Color GetBuildingStateColor(ProductionOrderRecord record, ProductionOrderQueueAssignment assignment)
+        {
+            switch (StorageNetworkOrderTrackingRules.GetBuildingStateKind(record, assignment))
+            {
+                case StorageNetworkOrderTrackingRules.BuildingStateKind.Running:
+                    return PositiveColor();
+                case StorageNetworkOrderTrackingRules.BuildingStateKind.WaitingMaterials:
+                    return WarningColor();
+                case StorageNetworkOrderTrackingRules.BuildingStateKind.Disabled:
+                    return new Color(0.46f, 0.46f, 0.42f, 1f);
+                case StorageNetworkOrderTrackingRules.BuildingStateKind.NoRecipe:
+                    return new Color(0.40f, 0.44f, 0.48f, 1f);
+                case StorageNetworkOrderTrackingRules.BuildingStateKind.Abnormal:
+                    return DangerColor();
+                default:
+                    return NeutralBlue();
+            }
+        }
+
         private static string GetBuildingStateLabel(ProductionOrderQueueAssignment assignment)
         {
             return StorageNetworkOrderTrackingRules.GetBuildingStateLabel(assignment);
+        }
+
+        private static string GetBuildingStateLabel(ProductionOrderRecord record, ProductionOrderQueueAssignment assignment)
+        {
+            return StorageNetworkOrderTrackingRules.GetBuildingStateLabel(record, assignment);
         }
 
         private static string BuildBuildingDetailLine(ProductionOrderQueueAssignment assignment, float progress)
         {
             ComplexFabricator fabricator = assignment?.Fabricator;
             return StorageNetworkOrderTrackingRules.BuildBuildingDetailLine(assignment, progress, fabricator != null ? StorageNetworkProductionSettingsText.GetProductionStateText(fabricator) : null);
+        }
+
+        private static string BuildBuildingDetailLine(ProductionOrderRecord record, ProductionOrderQueueAssignment assignment, float progress)
+        {
+            ComplexFabricator fabricator = assignment?.Fabricator;
+            return StorageNetworkOrderTrackingRules.BuildBuildingDetailLine(record, assignment, progress, fabricator != null ? StorageNetworkProductionSettingsText.GetProductionStateText(fabricator) : null);
         }
     }
 }

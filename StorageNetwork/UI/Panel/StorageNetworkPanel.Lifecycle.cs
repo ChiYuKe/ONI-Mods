@@ -12,6 +12,13 @@ namespace StorageNetwork.UI
                 instance = Create();
             }
 
+            instance.boundOrderProductionCenter = null;
+            instance.productionOrderService.SetOrderCenterScope(null);
+            if (instance.windowRect != null)
+            {
+                instance.windowRect.gameObject.SetActive(true);
+            }
+
             instance.SetSnapshot(focusStorage);
             if (!instance.gameObject.activeSelf)
             {
@@ -22,6 +29,43 @@ namespace StorageNetwork.UI
             {
                 instance.Activate();
             }
+        }
+
+        public static void ShowOrderProductionCenter(Components.StorageNetworkOrderProductionCenter center)
+        {
+            if (center == null)
+            {
+                return;
+            }
+
+            if (instance == null)
+            {
+                instance = Create();
+            }
+
+            instance.boundOrderProductionCenter = center;
+            instance.productionOrderService.SetOrderCenterScope(center);
+            if (instance.windowRect != null)
+            {
+                instance.windowRect.gameObject.SetActive(false);
+            }
+
+            if (!instance.gameObject.activeSelf)
+            {
+                instance.gameObject.SetActive(true);
+            }
+
+            if (!instance.IsActive())
+            {
+                instance.Activate();
+            }
+
+            instance.EnsureHeaderWindow();
+            instance.headerWindowRoot.SetActive(true);
+            instance.orderDetailsSignature = null;
+            instance.orderTrackingSignature = null;
+            instance.orderPanelRefreshElapsed = 0f;
+            instance.RefreshOrderPanel(true);
         }
 
         public static void ShowSettings(Storage focusStorage)

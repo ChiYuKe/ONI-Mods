@@ -620,6 +620,7 @@ namespace StorageNetwork.Buildings
             get
             {
                 yield return StorageNetworkCoreConfig.ID;
+                yield return StorageNetworkOrderProductionCenterConfig.ID;
                 yield return SmallSolidServerConfig.ID;
                 yield return SmallLiquidServerConfig.ID;
                 yield return SmallGasServerConfig.ID;

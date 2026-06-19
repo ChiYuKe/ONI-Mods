@@ -28,7 +28,7 @@ namespace StorageNetwork.Research
 
         private static readonly StorageNetworkTechSpec[] TechSpecs =
         {
-            new StorageNetworkTechSpec(CoreTechId, "STORAGENETWORKRESEARCHCORE", null, 0, 0, new[] { StorageNetworkCoreConfig.ID }, 35f, 0f, 0f),
+            new StorageNetworkTechSpec(CoreTechId, "STORAGENETWORKRESEARCHCORE", null, 0, 0, new[] { StorageNetworkCoreConfig.ID, StorageNetworkOrderProductionCenterConfig.ID }, 35f, 0f, 0f),
             new StorageNetworkTechSpec(PortsTechId, "STORAGENETWORKRESEARCHPORTS", CoreTechId, 1, 1, new[]
             {
                 StorageNetworkSolidInputPortConfig.ID,

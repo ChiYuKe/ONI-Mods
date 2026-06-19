@@ -45,6 +45,7 @@ namespace StorageNetwork.Components
         private string lastStatus;
         private string cachedStatusText;
         private bool shouldMigrateManualOperation;
+        private bool wasInputEnabled;
 
         public StorageNetworkMaterialRequester.OutputStoreMode CurrentInputStoreMode
         {
@@ -79,7 +80,17 @@ namespace StorageNetwork.Components
                 SyncManualOperation();
             }
 
-            filteredStorage?.FilterChanged();
+            wasInputEnabled = InputStoreEnabled;
+            if (InputStoreEnabled)
+            {
+                EnsureFilteredStorage();
+                filteredStorage?.FilterChanged();
+            }
+            else
+            {
+                CleanupFilteredStorage();
+            }
+
             RefreshSolidInputPortStatus();
             Subscribe((int)GameHashes.CopySettings, OnCopySettingsDelegate);
         }
@@ -92,7 +103,7 @@ namespace StorageNetwork.Components
 
         protected override void OnCleanUp()
         {
-            filteredStorage?.CleanUp();
+            CleanupFilteredStorage();
             RemoveSolidInputPortStatus();
             base.OnCleanUp();
         }
@@ -101,7 +112,44 @@ namespace StorageNetwork.Components
         {
             SyncManualOperation();
             RefreshSolidInputPortStatus();
-            if (storage == null || !InputStoreEnabled)
+            if (storage == null)
+            {
+                return;
+            }
+
+            // 检测开关状态变化
+            if (wasInputEnabled && !InputStoreEnabled)
+            {
+                // 用户关闭了输入：将缓存物品退回网络，撤销 FilteredStorage 阻止新送货
+                wasInputEnabled = false;
+                if (storage.items != null && storage.items.Count > 0)
+                {
+                    NetworkStorageTransferService.TransferStoredItemsToNetwork(
+                        storage,
+                        new[] { storage },
+                        null,
+                        null,
+                        true,
+                        true);
+                    UpdateCachedStatusText();
+                }
+
+                CleanupFilteredStorage();
+
+                return;
+            }
+
+            if (!wasInputEnabled && InputStoreEnabled)
+            {
+                // 用户重新开启了输入：重建 FilteredStorage 允许送货
+                wasInputEnabled = true;
+                EnsureFilteredStorage();
+                filteredStorage?.FilterChanged();
+                retryTimer = 0f;
+                // 继续执行正常传输逻辑
+            }
+
+            if (!InputStoreEnabled)
             {
                 return;
             }
@@ -191,6 +239,32 @@ namespace StorageNetwork.Components
             lastStatus = string.Empty;
             cachedStatusText = null;
             SyncManualOperation();
+        }
+
+        private void EnsureFilteredStorage()
+        {
+            if (filteredStorage != null)
+            {
+                return;
+            }
+
+            filteredStorage = new FilteredStorage(
+                this,
+                new[] { StorageNetworkTags.SolidOutputPortBufferedItem, StorageNetworkTags.ReservedForConstruction },
+                null,
+                false,
+                Db.Get().ChoreTypes.StorageFetch);
+        }
+
+        private void CleanupFilteredStorage()
+        {
+            if (filteredStorage == null)
+            {
+                return;
+            }
+
+            filteredStorage.CleanUp();
+            filteredStorage = null;
         }
 
         private void SyncManualOperation()

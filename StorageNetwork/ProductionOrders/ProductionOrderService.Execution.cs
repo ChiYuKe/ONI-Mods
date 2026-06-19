@@ -11,6 +11,7 @@ namespace StorageNetwork.ProductionOrders
         public static float RequestLeasedMaterial(ComplexFabricator fabricator, ComplexRecipe recipe, Tag tag, float amount, Storage target)
         {
             if (fabricator == null ||
+                !IsOrderProductionFabricator(fabricator) ||
                 recipe == null ||
                 tag == Tag.Invalid ||
                 target == null ||
@@ -99,12 +100,12 @@ namespace StorageNetwork.ProductionOrders
 
             foreach (ProductionPlanAssignment assignment in node.Assignments)
             {
-                if (assignment.Fabricator == null || node.Recipe == null)
+                if (!IsOrderProductionFabricator(assignment.Fabricator) || node.Recipe == null)
                 {
                     continue;
                 }
 
-                int queued = assignment.Fabricator.GetRecipeQueueCount(node.Recipe);
+                int queued = StorageNetworkFabricatorProgress.GetRecipeQueueCountSafe(assignment.Fabricator, node.Recipe);
                 assignment.Fabricator.SetRecipeQueueCount(node.Recipe, (queued == ComplexFabricator.QUEUE_INFINITE ? 0 : Mathf.Max(0, queued)) + assignment.OrderCount);
                 EnsureOrderAutomationEnabled(assignment.Fabricator, orderKey);
                 DispatchRecipeIngredients(node, assignment, materialLeases);
@@ -113,6 +114,11 @@ namespace StorageNetwork.ProductionOrders
 
         private static void EnsureOrderAutomationEnabled(ComplexFabricator fabricator, string orderKey)
         {
+            if (!IsOrderProductionFabricator(fabricator))
+            {
+                return;
+            }
+
             StorageNetworkMaterialRequester requester = fabricator != null ? fabricator.GetComponent<StorageNetworkMaterialRequester>() : null;
             if (requester != null)
             {
@@ -146,7 +152,7 @@ namespace StorageNetwork.ProductionOrders
 
                 foreach (ProductionOrderQueueAssignment assignment in order.QueueAssignments)
                 {
-                    if (assignment.Fabricator != null)
+                    if (IsOrderProductionFabricator(assignment.Fabricator))
                     {
                         EnsureOrderAutomationEnabled(assignment.Fabricator, order.Key);
                     }

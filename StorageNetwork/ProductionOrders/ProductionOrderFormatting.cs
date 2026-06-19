@@ -80,5 +80,10 @@ namespace StorageNetwork.ProductionOrders
         {
             return cycle.ToString("0.0");
         }
+
+        public static string FormatCycleStamp(float cycle)
+        {
+            return (cycle + 1f).ToString("0.0");
+        }
     }
 }

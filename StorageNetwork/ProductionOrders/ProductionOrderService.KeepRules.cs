@@ -59,6 +59,11 @@ namespace StorageNetwork.ProductionOrders
                     continue;
                 }
 
+                if (FindAutomaticDuplicateOrder(rule.ProductTag, route.Recipe) != null)
+                {
+                    continue;
+                }
+
                 float committedAmount = GetProducedAmountForOrder(rule.ProductTag) + GetPendingProducedAmountAhead(rule.ProductTag);
                 float missingAmount = rule.TargetAmount - committedAmount;
                 if (missingAmount <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)

@@ -38,16 +38,65 @@ namespace StorageNetwork.ProductionOrders
             return string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CANCEL_SUCCESS), order.DisplayId);
         }
 
+        public string ClearOrdersByState(ProductionOrderState state)
+        {
+            List<string> keys = ActiveOrders.Values
+                .Where(order => order != null && order.State == state && IsOrderInCurrentScope(order))
+                .Select(order => order.Key)
+                .ToList();
+            foreach (string key in keys)
+            {
+                ActiveOrders.Remove(key);
+            }
+
+            if (state == ProductionOrderState.Abnormal)
+            {
+                return string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CLEAR_ABNORMAL_SUCCESS), keys.Count);
+            }
+
+            return string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CLEAR_COMPLETED_SUCCESS), keys.Count);
+        }
+
+        public string RetryOrder(string orderKey, float currentCycle)
+        {
+            if (string.IsNullOrEmpty(orderKey) || !ActiveOrders.TryGetValue(orderKey, out ProductionOrderRecord order))
+            {
+                return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_RETRY_MISSING);
+            }
+
+            if (order.State != ProductionOrderState.Abnormal)
+            {
+                return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_RETRY_INVALID);
+            }
+
+            RecipeDisplayInfo route = FindRouteForOrder(order);
+            if (route.Recipe == null)
+            {
+                return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_RETRY_INVALID);
+            }
+
+            ProductDisplayGroup product = new ProductDisplayGroup(order.ProductName, new List<RecipeDisplayInfo> { route });
+            ProductionOrderSubmitResult result = SubmitOrder(product, route, Mathf.Max(order.LastSubmittedAmount, order.RequestedAmount), currentCycle, order.IsAutomatic);
+            if (result.Success)
+            {
+                ActiveOrders.Remove(order.Key);
+            }
+
+            return result.Success
+                ? string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_RETRY_SUCCESS), order.DisplayId, result.Message)
+                : result.Message;
+        }
+
         private static void CancelOrderQueues(ProductionOrderRecord order)
         {
             foreach (QueueCancellationTarget target in BuildQueueCancellationTargets(order))
             {
-                if (target.Fabricator == null || target.Recipe == null || target.OwnedCount <= 0)
+                if (!IsOrderProductionFabricator(target.Fabricator) || target.Recipe == null || target.OwnedCount <= 0)
                 {
                     continue;
                 }
 
-                int queued = target.Fabricator.GetRecipeQueueCount(target.Recipe);
+                int queued = StorageNetworkFabricatorProgress.GetRecipeQueueCountSafe(target.Fabricator, target.Recipe);
                 if (queued == ComplexFabricator.QUEUE_INFINITE)
                 {
                     queued = ComplexFabricator.MAX_QUEUE_SIZE;
@@ -78,7 +127,7 @@ namespace StorageNetwork.ProductionOrders
             Dictionary<string, QueueCancellationTarget> targets = new Dictionary<string, QueueCancellationTarget>();
             foreach (ProductionOrderQueueAssignment assignment in order.QueueAssignments)
             {
-                if (assignment?.Fabricator == null || assignment.Recipe == null)
+                if (assignment == null || !IsOrderProductionFabricator(assignment.Fabricator) || assignment.Recipe == null)
                 {
                     continue;
                 }
@@ -98,7 +147,7 @@ namespace StorageNetwork.ProductionOrders
 
         private static bool ShouldCancelCurrentWorkingOrder(ProductionOrderRecord cancelledOrder, QueueCancellationTarget cancelledTarget)
         {
-            if (cancelledTarget.Fabricator == null ||
+            if (!IsOrderProductionFabricator(cancelledTarget.Fabricator) ||
                 cancelledTarget.Recipe == null ||
                 cancelledTarget.Fabricator.CurrentWorkingOrder != cancelledTarget.Recipe)
             {

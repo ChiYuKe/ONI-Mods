@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using static StorageNetwork.STRINGS;
 
@@ -87,7 +88,9 @@ namespace StorageNetwork.ProductionOrders
                 return ProductionOrderSubmitResult.Fail(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_SUBMIT_NO_EQUIPMENT));
             }
 
-            ProductionOrderRecord duplicate = FindDuplicateOrder(product.ProductTag, route.Recipe, requestedAmount);
+            ProductionOrderRecord duplicate = isAutomatic
+                ? FindAutomaticDuplicateOrder(product.ProductTag, route.Recipe)
+                : FindDuplicateOrder(product.ProductTag, route.Recipe, requestedAmount);
             Dictionary<Tag, float> reservedMaterials = BuildReservedMaterials(plan);
             List<ProductionOrderQueueAssignment> queueAssignments = BuildQueueAssignments(plan);
             List<ProductionOrderMaterialLease> materialLeases = BuildMaterialLeases(plan);
@@ -106,7 +109,7 @@ namespace StorageNetwork.ProductionOrders
             ApplyProductionPlan(plan, orderKey, materialLeases);
             ProductionOrderRecord record = new ProductionOrderRecord(
                 orderKey,
-                ActiveOrders.Count + 1,
+                GetNextOrderDisplayId(),
                 product.ProductTag,
                 product.ProductName,
                 ProductionRecipeCatalog.GetRecipeKey(route.Recipe),
@@ -123,6 +126,11 @@ namespace StorageNetwork.ProductionOrders
             ActiveOrders[orderKey] = record;
             record.ObserveActivity(currentCycle, record.ProducedAtSubmit, CalculateOrderQueueLoad(record));
             return ProductionOrderSubmitResult.Created(record, plan, string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_SUBMIT_CREATED), record.DisplayId, plan.OrderCount));
+        }
+
+        private static int GetNextOrderDisplayId()
+        {
+            return ActiveOrders.Count == 0 ? 1 : ActiveOrders.Values.Max(order => order.DisplayId) + 1;
         }
 
         private static string BuildOrderKey(Tag productTag, ComplexRecipe recipe, float requestedAmount, float createdCycle)

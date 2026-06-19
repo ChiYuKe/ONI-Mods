@@ -4,6 +4,7 @@ using System.Reflection;
 using HarmonyLib;
 using StorageNetwork.Buildings;
 using StorageNetwork.Core;
+using Loc = StorageNetwork.STRINGS;
 using UnityEngine;
 
 namespace StorageNetwork.Patches
@@ -38,6 +39,12 @@ namespace StorageNetwork.Patches
                     {
                         storageNetworkEntries[buildingId] = entry;
                     }
+                }
+
+                CodexEntry engravingDiskEntry = FindOrCreateEngravingDiskEntry();
+                if (engravingDiskEntry != null)
+                {
+                    storageNetworkEntries[StorageNetworkEngravingDiskConfig.ID] = engravingDiskEntry;
                 }
 
                 if (storageNetworkEntries.Count == 0)
@@ -94,6 +101,51 @@ namespace StorageNetwork.Patches
                 }
 
                 return generatedEntry;
+            }
+
+            private static CodexEntry FindOrCreateEngravingDiskEntry()
+            {
+                string codexId = CodexCache.FormatLinkID(StorageNetworkEngravingDiskConfig.ID);
+                if (CodexCache.entries.TryGetValue(codexId, out CodexEntry existingEntry))
+                {
+                    return existingEntry;
+                }
+
+                GameObject prefab = Assets.GetPrefab(StorageNetworkEngravingDiskConfig.ID);
+                if (prefab == null)
+                {
+                    return null;
+                }
+
+                string name = Loc.Get(Loc.ITEMS.INDUSTRIAL_PRODUCTS.STORAGE_NETWORK_ENGRAVING_DISK.NAME);
+                string description = Loc.Get(Loc.ITEMS.INDUSTRIAL_PRODUCTS.STORAGE_NETWORK_ENGRAVING_DISK.DESC);
+                string recipeDescription = Loc.Get(Loc.ITEMS.INDUSTRIAL_PRODUCTS.STORAGE_NETWORK_ENGRAVING_DISK.RECIPEDESC);
+                Tuple<Sprite, Color> icon = Def.GetUISprite(prefab, "ui", false);
+                List<ContentContainer> containers = new List<ContentContainer>
+                {
+                    new ContentContainer(new List<ICodexWidget>
+                    {
+                        new CodexText(name, CodexTextStyle.Title),
+                        new CodexDividerLine()
+                    }, ContentContainer.ContentLayout.Vertical),
+                    new ContentContainer(new List<ICodexWidget>
+                    {
+                        new CodexImage(96, 96, icon),
+                        new CodexText(description, CodexTextStyle.Body),
+                        new CodexSpacer(),
+                        new CodexText(recipeDescription, CodexTextStyle.Body)
+                    }, ContentContainer.ContentLayout.Vertical)
+                };
+
+                CodexEntry entry = new CodexEntry(CategoryId, containers, name)
+                {
+                    parentId = CategoryId,
+                    icon = icon.first,
+                    iconColor = icon.second,
+                    sortString = name
+                };
+                CodexCache.AddEntry(codexId, entry);
+                return entry;
             }
         }
     }

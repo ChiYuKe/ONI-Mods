@@ -18,6 +18,7 @@ namespace StorageNetwork.ProductionOrders
 
             EnsureActiveOrderAutomationLeases();
             float currentCycle = GameClock.Instance != null ? GameClock.Instance.GetCycle() : 0f;
+            UpdateProducedAmountsForActiveOrders();
             foreach (ProductionOrderRecord order in ActiveOrders.Values)
             {
                 if (!IsOrderActive(order))
@@ -25,7 +26,6 @@ namespace StorageNetwork.ProductionOrders
                     continue;
                 }
 
-                UpdateOrderProducedAmount(order);
                 bool planChanged = MaintainActiveOrderPlan(order);
                 float queueLoad = CalculateOrderQueueLoad(order);
                 order.ObserveActivity(currentCycle, order.ProducedAtSubmit, queueLoad, planChanged || HasActiveOrderWork(order));
@@ -44,19 +44,33 @@ namespace StorageNetwork.ProductionOrders
                 {
                     order.State = ProductionOrderState.WaitingMaterials;
                 }
-                else
+                else if (ProductionOrderRuntimeAllocation.GetRunningCountForOrder(order) > 0)
                 {
                     order.State = ProductionOrderState.Producing;
+                }
+                else
+                {
+                    order.State = ProductionOrderState.Submitted;
                 }
             }
         }
 
         private static bool IsOrderActive(ProductionOrderRecord order)
         {
+            return IsOrderActiveForRuntimeAllocation(order);
+        }
+
+        internal static bool IsOrderActiveForRuntimeAllocation(ProductionOrderRecord order)
+        {
             return order != null &&
                    order.State != ProductionOrderState.Completed &&
                    order.State != ProductionOrderState.Abnormal &&
                    order.State != ProductionOrderState.Cancelled;
+        }
+
+        internal static List<ProductionOrderRecord> OrdersSnapshot()
+        {
+            return ActiveOrders.Values.ToList();
         }
 
         private static string FormatOrderUsage(ProductionOrderRecord order, ComplexFabricator fabricator)
@@ -83,7 +97,7 @@ namespace StorageNetwork.ProductionOrders
         private static string FormatPrimaryFabricators(ProductionOrderRecord order)
         {
             List<string> names = order.QueueAssignments
-                .Where(assignment => assignment.Fabricator != null &&
+                .Where(assignment => IsOrderProductionFabricator(assignment.Fabricator) &&
                                      assignment.Recipe != null &&
                                      assignment.Primary)
                 .Select(assignment => assignment.Fabricator.GetProperName())
@@ -152,16 +166,20 @@ namespace StorageNetwork.ProductionOrders
 
             foreach (ProductionOrderQueueAssignment assignment in order.QueueAssignments)
             {
-                if (assignment.Fabricator == null || assignment.Recipe == null)
+                if (!IsOrderProductionFabricator(assignment.Fabricator) || assignment.Recipe == null)
                 {
                     continue;
                 }
 
-                int queued = assignment.Fabricator.GetRecipeQueueCount(assignment.Recipe);
-                load += queued == ComplexFabricator.QUEUE_INFINITE ? ComplexFabricator.MAX_QUEUE_SIZE : Mathf.Max(0, queued);
-                if (assignment.Fabricator.CurrentWorkingOrder == assignment.Recipe)
+                if (ProductionOrderRuntimeAllocation.HasQueuedWorkForAssignment(order, assignment))
                 {
-                    load += Mathf.Clamp01(assignment.Fabricator.OrderProgress);
+                    int queued = StorageNetworkFabricatorProgress.GetRecipeQueueCountSafe(assignment.Fabricator, assignment.Recipe);
+                    load += queued == ComplexFabricator.QUEUE_INFINITE ? ComplexFabricator.MAX_QUEUE_SIZE : Mathf.Min(Mathf.Max(0, queued), assignment.OrderCount);
+                }
+
+                if (ProductionOrderRuntimeAllocation.GetRunningCountForAssignment(order, assignment) > 0)
+                {
+                    load += ProductionOrderRuntimeAllocation.GetProgressForAssignment(order, assignment);
                 }
 
                 load += GetRecipeIngredientLoad(assignment.Fabricator.inStorage, assignment.Recipe);
@@ -180,13 +198,13 @@ namespace StorageNetwork.ProductionOrders
 
             foreach (ProductionOrderQueueAssignment assignment in order.QueueAssignments)
             {
-                if (assignment == null || assignment.Fabricator == null || assignment.Recipe == null)
+                if (assignment == null || !IsOrderProductionFabricator(assignment.Fabricator) || assignment.Recipe == null)
                 {
                     continue;
                 }
 
-                if (GetFiniteRecipeQueueCount(assignment.Fabricator, assignment.Recipe) > 0 ||
-                    assignment.Fabricator.CurrentWorkingOrder == assignment.Recipe)
+                if (ProductionOrderRuntimeAllocation.HasQueuedWorkForAssignment(order, assignment) ||
+                    ProductionOrderRuntimeAllocation.GetRunningCountForAssignment(order, assignment) > 0)
                 {
                     return true;
                 }
@@ -211,12 +229,29 @@ namespace StorageNetwork.ProductionOrders
             return load;
         }
 
-        private void UpdateOrderProducedAmount(ProductionOrderRecord order)
+        private void UpdateProducedAmountsForActiveOrders()
         {
-            float availableProduct = Mathf.Max(GetProducedAmountForOrder(order.ProductTag), GetLeasedPrimaryOutputAmount(order));
-            float producedAfterSubmit = availableProduct - order.StockAtSubmit - order.AllocationOffsetAtSubmit;
-            float allocatedToOrder = Mathf.Clamp(producedAfterSubmit, 0f, order.RequestedAmount);
-            order.SetProducedAmount(allocatedToOrder);
+            foreach (IGrouping<Tag, ProductionOrderRecord> group in ActiveOrders.Values
+                         .Where(order => order != null &&
+                                         order.State != ProductionOrderState.Cancelled &&
+                                         order.State != ProductionOrderState.Abnormal)
+                         .GroupBy(order => order.ProductTag))
+            {
+                float availableProduct = GetProducedAmountForOrder(group.Key);
+                float allocationThreshold = 0f;
+                foreach (ProductionOrderRecord order in group.OrderBy(order => order.DisplayId))
+                {
+                    allocationThreshold = Mathf.Max(allocationThreshold, order.StockAtSubmit + order.AllocationOffsetAtSubmit);
+                    if (IsOrderActive(order))
+                    {
+                        float leasedProduct = GetLeasedPrimaryOutputAmount(order);
+                        float producedAfterThreshold = Mathf.Max(availableProduct, leasedProduct + allocationThreshold) - allocationThreshold;
+                        order.SetProducedAmount(Mathf.Clamp(producedAfterThreshold, 0f, order.RequestedAmount));
+                    }
+
+                    allocationThreshold += order.RequestedAmount;
+                }
+            }
         }
 
         private static float GetLeasedPrimaryOutputAmount(ProductionOrderRecord order)
@@ -224,7 +259,7 @@ namespace StorageNetwork.ProductionOrders
             float amount = 0f;
             foreach (ProductionOrderQueueAssignment assignment in order.QueueAssignments.Where(assignment => assignment.Primary))
             {
-                if (assignment.Fabricator == null || assignment.Fabricator.outStorage == null || assignment.Fabricator.outStorage.items == null)
+                if (!IsOrderProductionFabricator(assignment.Fabricator) || assignment.Fabricator.outStorage == null || assignment.Fabricator.outStorage.items == null)
                 {
                     continue;
                 }

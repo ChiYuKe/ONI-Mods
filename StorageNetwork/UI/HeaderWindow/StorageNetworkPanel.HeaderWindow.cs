@@ -55,6 +55,8 @@ namespace StorageNetwork.UI
         }
         private void ToggleHeaderWindow()
         {
+            boundOrderProductionCenter = null;
+            productionOrderService.SetOrderCenterScope(null);
             EnsureHeaderWindow();
             bool shouldOpen = !headerWindowRoot.activeSelf;
             if (!shouldOpen)
@@ -78,12 +80,27 @@ namespace StorageNetwork.UI
         {
             if (headerWindowRoot != null)
             {
+                bool closePanel = boundOrderProductionCenter != null &&
+                                  windowRect != null &&
+                                  !windowRect.gameObject.activeSelf;
                 DeactivateOrderInputs();
                 orderDetailsSignature = null;
                 orderTrackingSignature = null;
                 CloseOrderTrackingDetail();
                 CloseOrderWorldDropdown();
                 headerWindowRoot.SetActive(false);
+                boundOrderProductionCenter = null;
+                productionOrderService.SetOrderCenterScope(null);
+
+                if (closePanel)
+                {
+                    if (IsActive())
+                    {
+                        Deactivate();
+                    }
+
+                    gameObject.SetActive(false);
+                }
             }
         }
 
@@ -295,6 +312,12 @@ namespace StorageNetwork.UI
         {
             if (headerWindowRoot == null || !headerWindowRoot.activeSelf)
             {
+                return;
+            }
+
+            if (boundOrderProductionCenter == null && windowRect != null && !windowRect.gameObject.activeSelf)
+            {
+                CloseHeaderWindow();
                 return;
             }
 

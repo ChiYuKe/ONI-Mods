@@ -45,7 +45,7 @@ namespace StorageNetwork.ProductionOrders
 
             List<ProductionOrderQueueAssignment> queueAssignments = BuildQueueAssignments(plan);
             List<ProductionOrderMaterialLease> materialLeases = BuildMaterialLeases(plan);
-            bool queued = EnsureProductionPlanQueued(plan, order.Key, materialLeases);
+            bool queued = EnsureProductionPlanQueued(plan, order, materialLeases);
             bool refreshed = order.RefreshPlan(
                 plan.OrderCount,
                 BuildReservedMaterials(plan),
@@ -76,7 +76,7 @@ namespace StorageNetwork.ProductionOrders
             }
         }
 
-        private bool EnsureProductionPlanQueued(ProductionPlanNode node, string orderKey, List<ProductionOrderMaterialLease> materialLeases)
+        private bool EnsureProductionPlanQueued(ProductionPlanNode node, ProductionOrderRecord order, List<ProductionOrderMaterialLease> materialLeases)
         {
             if (node == null)
             {
@@ -86,26 +86,28 @@ namespace StorageNetwork.ProductionOrders
             bool changed = false;
             foreach (ProductionPlanRequirement requirement in node.Requirements)
             {
-                changed |= EnsureProductionPlanQueued(requirement.Child, orderKey, materialLeases);
+                changed |= EnsureProductionPlanQueued(requirement.Child, order, materialLeases);
             }
 
             foreach (ProductionPlanAssignment assignment in node.Assignments)
             {
-                if (assignment.Fabricator == null || node.Recipe == null || assignment.OrderCount <= 0)
+                if (!IsOrderProductionFabricator(assignment.Fabricator) || node.Recipe == null || assignment.OrderCount <= 0)
                 {
                     continue;
                 }
 
-                int deficit = GetQueueDeficit(assignment.Fabricator, node.Recipe, assignment.OrderCount);
+                ProductionOrderQueueAssignment runtimeAssignment = new ProductionOrderQueueAssignment(assignment.Fabricator, node.Recipe, assignment.OrderCount, node.ProductTag, null, null, true);
+                int activeCount = ProductionOrderRuntimeAllocation.GetAllocatedWorkCountForAssignment(order, runtimeAssignment);
+                int deficit = Mathf.Max(0, assignment.OrderCount - activeCount);
                 if (deficit <= 0)
                 {
-                    EnsureOrderAutomationEnabled(assignment.Fabricator, orderKey);
+                    EnsureOrderAutomationEnabled(assignment.Fabricator, order.Key);
                     continue;
                 }
 
                 int queued = GetFiniteRecipeQueueCount(assignment.Fabricator, node.Recipe);
                 assignment.Fabricator.SetRecipeQueueCount(node.Recipe, queued + deficit);
-                EnsureOrderAutomationEnabled(assignment.Fabricator, orderKey);
+                EnsureOrderAutomationEnabled(assignment.Fabricator, order.Key);
                 DispatchRecipeIngredients(node, new ProductionPlanAssignment(assignment.Fabricator, deficit, node.OutputAmount * deficit), materialLeases);
                 changed = true;
             }
@@ -113,15 +115,5 @@ namespace StorageNetwork.ProductionOrders
             return changed;
         }
 
-        private static int GetQueueDeficit(ComplexFabricator fabricator, ComplexRecipe recipe, int desiredCount)
-        {
-            int activeCount = GetFiniteRecipeQueueCount(fabricator, recipe);
-            if (fabricator.CurrentWorkingOrder == recipe)
-            {
-                activeCount++;
-            }
-
-            return Mathf.Max(0, desiredCount - activeCount);
-        }
     }
 }

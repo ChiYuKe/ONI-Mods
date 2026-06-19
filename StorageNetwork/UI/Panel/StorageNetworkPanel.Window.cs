@@ -40,16 +40,15 @@ namespace StorageNetwork.UI
             ToolTip enrollableTooltip = enrollableButton.AddComponent<ToolTip>();
             enrollableTooltip.toolTip = Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENROLLABLE_BUTTON_TOOLTIP);
 
-            GameObject headerWindowButton = CreateGameButton("HeaderWindowButton", header.transform, string.Empty, ToggleHeaderWindow);
-            RectTransform headerWindowRect = headerWindowButton.GetComponent<RectTransform>();
-            headerWindowRect.anchorMin = new Vector2(0f, 0.5f);
-            headerWindowRect.anchorMax = new Vector2(0f, 0.5f);
-            headerWindowRect.pivot = new Vector2(0f, 0.5f);
-            headerWindowRect.anchoredPosition = new Vector2(170f, 0f);
-            headerWindowRect.sizeDelta = new Vector2(58f, 22f);
-            AddButtonIconLabel(headerWindowButton.transform, "action_select_research", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.HEADER_WINDOW_BUTTON), Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.RECIPE_SHORT));
-            ToolTip headerWindowTooltip = headerWindowButton.AddComponent<ToolTip>();
-            headerWindowTooltip.toolTip = Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.HEADER_WINDOW_TOOLTIP);
+            GameObject orderButton = CreateGameButton("OrderCenterButton", header.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CENTER_OPEN_BUTTON), ToggleHeaderWindow);
+            RectTransform orderRect = orderButton.GetComponent<RectTransform>();
+            orderRect.anchorMin = new Vector2(0f, 0.5f);
+            orderRect.anchorMax = new Vector2(0f, 0.5f);
+            orderRect.pivot = new Vector2(0f, 0.5f);
+            orderRect.anchoredPosition = new Vector2(170f, 0f);
+            orderRect.sizeDelta = new Vector2(72f, 22f);
+            ToolTip orderTooltip = orderButton.AddComponent<ToolTip>();
+            orderTooltip.toolTip = Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CENTER_OPEN_TOOLTIP);
 
             GameObject closeButton = CreateCloseIconButton("CloseButton", header.transform, Close);
             RectTransform closeRect = closeButton.GetComponent<RectTransform>();

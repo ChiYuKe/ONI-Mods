@@ -11,7 +11,7 @@ namespace StorageNetwork.UI
         public static string BuildListSignature(ProductDisplayGroup product, IEnumerable<ProductionOrderRecord> records, string searchText, StorageNetworkPanel.TrackingFilterMode filterMode)
         {
             string recordsSignature = string.Join("|", records.Select(record => string.Format(
-                "{0}:{1}:{2}:{3:0.###}:{4:0.###}:{5}:{6}:{7:0.###}:{8}",
+                "{0}:{1}:{2}:{3:0.###}:{4:0.###}:{5}:{6}:{7:0.###}:{8:0.###}:{9}",
                 record.Key,
                 record.DisplayId,
                 record.State,
@@ -20,6 +20,7 @@ namespace StorageNetwork.UI
                 record.OrderCount,
                 record.MergeCount,
                 record.LastActivityCycle,
+                record.CompletedCycle,
                 record.AbnormalReason ?? string.Empty)));
 
             return string.Format("{0}|{1}|{2}|{3}", product?.ProductKey ?? string.Empty, searchText ?? string.Empty, filterMode, recordsSignature);
@@ -28,7 +29,7 @@ namespace StorageNetwork.UI
         public static string BuildCardSignature(ProductionOrderRecord record)
         {
             return string.Format(
-                "{0}:{1}:{2:0.###}:{3:0.###}:{4}:{5}:{6:0.###}:{7}:{8}",
+                "{0}:{1}:{2:0.###}:{3:0.###}:{4}:{5}:{6:0.###}:{7:0.###}:{8}:{9}",
                 record.DisplayId,
                 record.State,
                 record.ProducedAtSubmit,
@@ -36,12 +37,15 @@ namespace StorageNetwork.UI
                 record.OrderCount,
                 record.MergeCount,
                 record.LastActivityCycle,
+                record.CompletedCycle,
                 record.AbnormalReason ?? string.Empty,
                 string.Join(",", (record.QueueAssignments ?? new List<ProductionOrderQueueAssignment>())
                     .Where(assignment => assignment != null)
-                    .Select(assignment => string.Format("{0}:{1}",
+                    .Select(assignment => string.Format("{0}:{1}:{2}:{3:0.###}",
                         assignment.Fabricator != null ? assignment.Fabricator.GetInstanceID() : 0,
-                        assignment.Primary))));
+                        assignment.Primary,
+                        StorageNetworkFabricatorProgress.GetRecipeQueueCountSafe(assignment.Fabricator, assignment.Recipe),
+                        assignment.Fabricator != null && assignment.Recipe != null ? StorageNetworkFabricatorProgress.GetRecipeProgress(assignment.Fabricator, assignment.Recipe) : 0f))));
         }
 
         public static bool MatchesFilter(ProductionOrderRecord record, StorageNetworkPanel.TrackingFilterMode filterMode, string searchText)
@@ -112,12 +116,7 @@ namespace StorageNetwork.UI
                 return record.AbnormalReason;
             }
 
-            int primaryMachines = (record.QueueAssignments ?? new List<ProductionOrderQueueAssignment>())
-                .Where(assignment => assignment != null && assignment.Primary)
-                .Select(assignment => assignment.Fabricator)
-                .Where(fabricator => fabricator != null)
-                .Distinct()
-                .Count();
+            int runningCores = ProductionOrderRuntimeAllocation.GetRunningCountForOrder(record);
             int materialMachines = (record.QueueAssignments ?? new List<ProductionOrderQueueAssignment>())
                 .Where(assignment => assignment != null && !assignment.Primary)
                 .Select(assignment => assignment.Fabricator)
@@ -127,15 +126,27 @@ namespace StorageNetwork.UI
 
             if (materialMachines > 0)
             {
-                return string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_WAITING_MATERIALS), Mathf.Max(1, primaryMachines), materialMachines);
+                int primaryMachines = Mathf.Max(1, (record.QueueAssignments ?? new List<ProductionOrderQueueAssignment>())
+                    .Where(assignment => assignment != null && assignment.Primary)
+                    .Select(assignment => assignment.Fabricator)
+                    .Where(fabricator => fabricator != null)
+                    .Distinct()
+                    .Count());
+                return string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_WAITING_MATERIALS), primaryMachines, materialMachines);
             }
 
-            if (primaryMachines > 0)
+            if (runningCores > 0)
             {
-                return string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_MACHINES_RUNNING), primaryMachines);
+                int runningMachines = (record.QueueAssignments ?? new List<ProductionOrderQueueAssignment>())
+                    .Where(assignment => assignment != null && assignment.Primary && ProductionOrderRuntimeAllocation.GetRunningCountForAssignment(record, assignment) > 0)
+                    .Select(assignment => assignment.Fabricator)
+                    .Where(fabricator => fabricator != null)
+                    .Distinct()
+                    .Count();
+                return string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_MACHINES_RUNNING), Mathf.Max(1, runningMachines), runningCores);
             }
 
-            return string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_STATE_CREATED), GetOrderStateLabel(record.State), ProductionOrderFormatting.FormatCycle(record.CreatedCycle));
+            return string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_STATE_CREATED), GetOrderStateLabel(record.State), ProductionOrderFormatting.FormatCycleStamp(record.CreatedCycle));
         }
 
         public static string GetOrderSourceLabel(ProductionOrderRecord record)
@@ -185,6 +196,27 @@ namespace StorageNetwork.UI
             }
         }
 
+        public static string GetBuildingStateLabel(ProductionOrderRecord record, ProductionOrderQueueAssignment assignment)
+        {
+            switch (GetBuildingStateKind(record, assignment))
+            {
+                case BuildingStateKind.Running:
+                    return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_BUILDING_RUNNING);
+                case BuildingStateKind.WaitingMaterials:
+                    return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_BUILDING_WAITING_MATERIALS);
+                case BuildingStateKind.NoPower:
+                    return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_BUILDING_NO_POWER);
+                case BuildingStateKind.Disabled:
+                    return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_BUILDING_DISABLED);
+                case BuildingStateKind.NoRecipe:
+                    return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_BUILDING_NO_RECIPE);
+                case BuildingStateKind.Abnormal:
+                    return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_BUILDING_ABNORMAL);
+                default:
+                    return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_BUILDING_QUEUED);
+            }
+        }
+
         public static string BuildBuildingDetailLine(ProductionOrderQueueAssignment assignment, float progress, string currentProductionState)
         {
             ComplexFabricator fabricator = assignment?.Fabricator;
@@ -193,12 +225,28 @@ namespace StorageNetwork.UI
                 return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_BUILDING_MISSING);
             }
 
-            if (fabricator.CurrentWorkingOrder == assignment.Recipe)
+            if (StorageNetworkFabricatorProgress.IsWorkingOnRecipe(fabricator, assignment.Recipe))
             {
                 return string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_BUILDING_PROGRESS), Mathf.Clamp01(progress));
             }
 
             return string.IsNullOrEmpty(currentProductionState) ? GetBuildingStateLabel(assignment) : currentProductionState;
+        }
+
+        public static string BuildBuildingDetailLine(ProductionOrderRecord record, ProductionOrderQueueAssignment assignment, float progress, string currentProductionState)
+        {
+            ComplexFabricator fabricator = assignment?.Fabricator;
+            if (fabricator == null)
+            {
+                return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_BUILDING_MISSING);
+            }
+
+            if (ProductionOrderRuntimeAllocation.GetRunningCountForAssignment(record, assignment) > 0)
+            {
+                return string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_BUILDING_PROGRESS), Mathf.Clamp01(progress));
+            }
+
+            return string.IsNullOrEmpty(currentProductionState) ? GetBuildingStateLabel(record, assignment) : currentProductionState;
         }
 
         public static string BuildBuildingQueueLine(ProductionOrderQueueAssignment assignment, string dispatchLabel, string autoDispatchLabel, string queuedText)
@@ -269,13 +317,45 @@ namespace StorageNetwork.UI
                 return BuildingStateKind.Disabled;
             }
 
-            if (fabricator.CurrentWorkingOrder == assignment.Recipe)
+            if (StorageNetworkFabricatorProgress.IsWorkingOnRecipe(fabricator, assignment.Recipe))
             {
                 return BuildingStateKind.Running;
             }
 
-            int queued = fabricator.GetRecipeQueueCount(assignment.Recipe);
+            int queued = StorageNetworkFabricatorProgress.GetRecipeQueueCountSafe(fabricator, assignment.Recipe);
             if (queued != 0)
+            {
+                return BuildingStateKind.WaitingMaterials;
+            }
+
+            return BuildingStateKind.NoRecipe;
+        }
+
+        public static BuildingStateKind GetBuildingStateKind(ProductionOrderRecord record, ProductionOrderQueueAssignment assignment)
+        {
+            ComplexFabricator fabricator = assignment?.Fabricator;
+            if (fabricator == null)
+            {
+                return BuildingStateKind.Abnormal;
+            }
+
+            if (assignment.Recipe == null)
+            {
+                return BuildingStateKind.NoRecipe;
+            }
+
+            Operational operational = fabricator.GetComponent<Operational>();
+            if (operational != null && !operational.IsOperational)
+            {
+                return BuildingStateKind.Disabled;
+            }
+
+            if (ProductionOrderRuntimeAllocation.GetRunningCountForAssignment(record, assignment) > 0)
+            {
+                return BuildingStateKind.Running;
+            }
+
+            if (ProductionOrderRuntimeAllocation.HasQueuedWorkForAssignment(record, assignment))
             {
                 return BuildingStateKind.WaitingMaterials;
             }

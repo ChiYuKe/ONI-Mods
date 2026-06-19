@@ -42,6 +42,7 @@ namespace StorageNetwork.UI
         private KInputTextField enrollableSearchInput;
         private string enrollableSearchText = string.Empty;
         private GameObject headerWindowRoot;
+        private StorageNetworkOrderProductionCenter boundOrderProductionCenter;
         private int orderWorldFilterId = UnsetEnrollableWorldFilterId;
         private RectTransform orderWorldFilterContent;
         private GameObject orderWorldDropdownRoot;
@@ -74,6 +75,7 @@ namespace StorageNetwork.UI
         private readonly Dictionary<Geyser, bool> expandedGeysers = new Dictionary<Geyser, bool>();
         private float refreshElapsed;
         private float structureRefreshElapsed;
+        private int deferredStructureRefreshFrame = -1;
         private int lastObservedRegistryVersion = -1;
         private string lastListSignature;
         private const float LiveRefreshSeconds = 1f;
@@ -124,6 +126,7 @@ namespace StorageNetwork.UI
             }
 
             UpdatePanelDrag();
+            RunDeferredStoragePanelRefresh();
 
             refreshElapsed += Time.unscaledDeltaTime;
             structureRefreshElapsed += Time.unscaledDeltaTime;
@@ -196,6 +199,24 @@ namespace StorageNetwork.UI
             }
 
             LiveUpdateStoragePanels();
+        }
+
+        private void RequestDeferredStoragePanelStructureRefresh()
+        {
+            deferredStructureRefreshFrame = Mathf.Max(deferredStructureRefreshFrame, Time.frameCount + 1);
+        }
+
+        private void RunDeferredStoragePanelRefresh()
+        {
+            if (deferredStructureRefreshFrame < 0 || Time.frameCount < deferredStructureRefreshFrame)
+            {
+                return;
+            }
+
+            deferredStructureRefreshFrame = -1;
+            lastListSignature = null;
+            StorageSceneCollector.InvalidateCache();
+            RefreshStoragePanel(StoragePanelRefreshMode.Structure);
         }
 
         private void RefreshEmptyStorageList(bool forceRebuild)

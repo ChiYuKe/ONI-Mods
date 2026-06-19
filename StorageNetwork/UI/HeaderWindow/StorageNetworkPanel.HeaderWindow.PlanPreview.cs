@@ -38,8 +38,8 @@ namespace StorageNetwork.UI
 
             float currentCycle = StorageNetworkCycleTime.GetCurrent();
             float estimateSeconds = productionOrderService.EstimatePlanSeconds(draft.Plan, out bool infinite);
-            string finish = infinite ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_UNKNOWN) : ProductionOrderFormatting.FormatCycle(currentCycle + estimateSeconds / 600f);
-            AddMetricTile(row.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_METRIC_CURRENT_CYCLE), ProductionOrderFormatting.FormatCycle(currentCycle), NeutralBlue(), 86f);
+            string finish = infinite ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_UNKNOWN) : ProductionOrderFormatting.FormatCycleStamp(currentCycle + estimateSeconds / 600f);
+            AddMetricTile(row.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_METRIC_CURRENT_CYCLE), ProductionOrderFormatting.FormatCycleStamp(currentCycle), NeutralBlue(), 86f);
             AddMetricTile(row.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_METRIC_FINISH), finish, infinite ? WarningColor() : PositiveColor(), 92f);
             AddMetricTile(row.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_METRIC_EQUIPMENT), draft.Plan?.Assignments.Count.ToString() ?? "0", NeutralBlue(), 72f);
             AddMetricTile(row.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_METRIC_AUTO_PRODUCE), draft.ProducedRequirementCount.ToString(), draft.ProducedRequirementCount > 0 ? WarningColor() : PositiveColor(), 76f);

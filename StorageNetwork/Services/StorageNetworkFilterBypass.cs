@@ -7,7 +7,7 @@ namespace StorageNetwork.Services
     {
         public static bool ShouldBypassUserFilter(Storage storage)
         {
-            return StorageNetworkMembership.IsCollectableStorage(storage) &&
+            return StorageNetworkStorageRules.IsServerStorage(storage) &&
                    !StorageNetworkStorageRules.IsProductionStorage(storage);
         }
 

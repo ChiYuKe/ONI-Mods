@@ -122,8 +122,8 @@ namespace StorageNetwork.ProductionOrders
                 return 0;
             }
 
-            int load = node.Assignments.Sum(assignment => assignment.Fabricator != null && node.Recipe != null
-                ? Mathf.Max(0, assignment.Fabricator.GetRecipeQueueCount(node.Recipe))
+            int load = node.Assignments.Sum(assignment => IsOrderProductionFabricator(assignment.Fabricator) && node.Recipe != null
+                ? Mathf.Max(0, StorageNetworkFabricatorProgress.GetRecipeQueueCountSafe(assignment.Fabricator, node.Recipe))
                 : 0);
             foreach (ProductionPlanRequirement requirement in node.Requirements)
             {
@@ -144,7 +144,12 @@ namespace StorageNetwork.ProductionOrders
             float maxQueuedSeconds = 0f;
             foreach (ProductionPlanAssignment assignment in node.Assignments)
             {
-                int queued = assignment.Fabricator.GetRecipeQueueCount(node.Recipe);
+                if (!IsOrderProductionFabricator(assignment.Fabricator))
+                {
+                    continue;
+                }
+
+                int queued = StorageNetworkFabricatorProgress.GetRecipeQueueCountSafe(assignment.Fabricator, node.Recipe);
                 if (queued == ComplexFabricator.QUEUE_INFINITE)
                 {
                     hasInfiniteQueue = true;

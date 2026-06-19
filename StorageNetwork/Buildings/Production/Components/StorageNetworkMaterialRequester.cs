@@ -312,8 +312,8 @@ namespace StorageNetwork.Components
 
             queuedRecipes.Sort((left, right) =>
             {
-                bool leftInfinite = fabricator.GetRecipeQueueCount(left) == ComplexFabricator.QUEUE_INFINITE;
-                bool rightInfinite = fabricator.GetRecipeQueueCount(right) == ComplexFabricator.QUEUE_INFINITE;
+                bool leftInfinite = StorageNetworkFabricatorProgress.GetRecipeQueueCountSafe(fabricator, left) == ComplexFabricator.QUEUE_INFINITE;
+                bool rightInfinite = StorageNetworkFabricatorProgress.GetRecipeQueueCountSafe(fabricator, right) == ComplexFabricator.QUEUE_INFINITE;
                 int compare = rightInfinite.CompareTo(leftInfinite);
                 return compare != 0
                     ? compare
@@ -364,14 +364,14 @@ namespace StorageNetwork.Components
             int count = 0;
             if (fabricator.IsRecipeQueued(recipe))
             {
-                count = fabricator.GetRecipeQueueCount(recipe);
+                count = StorageNetworkFabricatorProgress.GetRecipeQueueCountSafe(fabricator, recipe);
                 if (count == ComplexFabricator.QUEUE_INFINITE)
                 {
                     count = Config.Instance.InfiniteQueueRequestBatchCount;
                 }
             }
 
-            if (fabricator.CurrentWorkingOrder == recipe || fabricator.NextOrder == recipe)
+            if (StorageNetworkFabricatorProgress.IsWorkingOnRecipe(fabricator, recipe) || fabricator.NextOrder == recipe)
             {
                 count = Mathf.Max(count, 1);
             }
@@ -394,7 +394,7 @@ namespace StorageNetwork.Components
                     break;
                 }
 
-                float sourceAmount = source.GetAmountAvailable(tag);
+                float sourceAmount = GetMatchingAmountAvailable(source, tag);
                 if (sourceAmount <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
                 {
                     continue;
@@ -406,7 +406,7 @@ namespace StorageNetwork.Components
                     break;
                 }
 
-                float transferred = source.Transfer(fabricator.inStorage, tag, transferAmount, block_events: false, hide_popups: true);
+                float transferred = NetworkStorageTransferService.TransferMatchingItemsFromStorage(source, fabricator.inStorage, tag, transferAmount);
                 moved += transferred;
             }
 
@@ -444,13 +444,32 @@ namespace StorageNetwork.Components
                    storage != fabricator.outStorage &&
                    StorageNetworkStorageRules.IsServerStorage(storage) &&
                    !StorageNetworkStorageRules.IsProductionStorage(storage) &&
-                   storage.GetAmountAvailable(tag) > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT;
+                   GetMatchingAmountAvailable(storage, tag) > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT;
         }
 
         private float GetAmountAvailableInFabricator(Tag tag)
         {
-            return GetAmountAvailable(fabricator.inStorage, tag) +
-                   GetAmountAvailable(fabricator.buildStorage, tag);
+            return GetMatchingAmountAvailable(fabricator.inStorage, tag) +
+                   GetMatchingAmountAvailable(fabricator.buildStorage, tag);
+        }
+
+        private static float GetMatchingAmountAvailable(Storage storage, Tag tag)
+        {
+            if (storage?.items == null || tag == Tag.Invalid)
+            {
+                return 0f;
+            }
+
+            float amount = 0f;
+            foreach (GameObject item in storage.items)
+            {
+                if (item != null && StorageItemUtility.MatchesStorageTag(item, tag))
+                {
+                    amount += StorageItemUtility.GetMass(item);
+                }
+            }
+
+            return amount;
         }
 
         private void EnsureFabricator()

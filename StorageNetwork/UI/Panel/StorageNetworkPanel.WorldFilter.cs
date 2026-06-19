@@ -30,7 +30,7 @@ namespace StorageNetwork.UI
                 return new StorageSceneSnapshot(new List<StorageInfo>(), 0f, 0f, false);
             }
 
-            return StorageSceneCollector.CollectForWorld(worldId, includeReachableWorlds: false);
+            return StorageSceneCollector.CollectForWorld(worldId, includeReachableWorlds: false, force: force);
         }
 
         private static StorageSceneSnapshot FilterSnapshotToDiscoveredWorlds(StorageSceneSnapshot snapshot)

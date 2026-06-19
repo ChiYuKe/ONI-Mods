@@ -1,4 +1,5 @@
 using UnityEngine;
+using StorageNetwork.Components;
 
 namespace StorageNetwork.UI
 {

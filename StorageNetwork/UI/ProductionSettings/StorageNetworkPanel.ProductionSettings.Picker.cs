@@ -87,7 +87,7 @@ namespace StorageNetwork.UI
             CreateProductionPickerFooter(content.transform, options.Count);
         }
 
-        private static void ShowStandaloneOutputFilterPicker(string title, List<ProductionPickerOption> options)
+        private static void ShowStandaloneOutputFilterPicker(string title, List<ProductionPickerOption> options, string footerTitle = null, string footerHint = null)
         {
             CloseStandaloneOutputFilterPicker();
             if (options == null || options.Count == 0)
@@ -146,6 +146,8 @@ namespace StorageNetwork.UI
             headerText.raycastTarget = false;
             headerText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
 
+            KInputTextField searchInput = CreateStandalonePickerSearchInput(header.transform);
+
             GameObject closeButton = CreateCloseIconButton("PickerClose", header.transform, CloseStandaloneOutputFilterPickerAction);
             LayoutElement closeLayout = closeButton.AddComponent<LayoutElement>();
             closeLayout.preferredWidth = 24f;
@@ -179,12 +181,8 @@ namespace StorageNetwork.UI
             ConfigureSmoothVerticalScroll(scrollRect, 24f);
             viewport.AddComponent<ScrollWheelBlocker>();
 
-            foreach (ProductionPickerOption option in options)
-            {
-                CreateStorageOptionRow(content.transform, option.Title, option.Details, option.Selected, option.OnClick, option.IconTag);
-            }
-
-            CreateProductionPickerFooter(content.transform, options.Count);
+            searchInput.onValueChanged.AddListener(_ => RefreshStandalonePickerOptions(content.transform, options, searchInput.text, footerTitle, footerHint));
+            RefreshStandalonePickerOptions(content.transform, options, string.Empty, footerTitle, footerHint);
         }
 
         private static bool CloseStandaloneOutputFilterPicker()
@@ -204,6 +202,91 @@ namespace StorageNetwork.UI
         private static void CloseStandaloneOutputFilterPickerAction()
         {
             CloseStandaloneOutputFilterPicker();
+        }
+
+        private static KInputTextField CreateStandalonePickerSearchInput(Transform parent)
+        {
+            KInputTextField input = StorageNetworkInputBuilder.CreateKNumberInput(
+                parent,
+                "PickerSearchInput",
+                string.Empty,
+                248f,
+                24f,
+                11,
+                TextAlignmentOptions.MidlineLeft,
+                new Color(0.08f, 0.09f, 0.10f, 1f),
+                "web_box",
+                Color.white,
+                new Color(0.08f, 0.09f, 0.10f, 1f),
+                Vector2.one,
+                false);
+
+            input.characterLimit = 64;
+            input.characterValidation = TMP_InputField.CharacterValidation.None;
+            input.contentType = TMP_InputField.ContentType.Standard;
+            input.inputType = TMP_InputField.InputType.Standard;
+            input.keyboardType = TouchScreenKeyboardType.Default;
+            input.lineType = TMP_InputField.LineType.SingleLine;
+            if (input.textComponent != null)
+            {
+                input.textComponent.textWrappingMode = TextWrappingModes.NoWrap;
+                input.textComponent.overflowMode = TextOverflowModes.Ellipsis;
+            }
+
+            LayoutElement layout = input.gameObject.GetComponent<LayoutElement>();
+            if (layout != null)
+            {
+                layout.preferredWidth = 248f;
+                layout.minWidth = 160f;
+                layout.flexibleWidth = 0f;
+                layout.preferredHeight = 24f;
+                layout.minHeight = 24f;
+            }
+
+            EnsureInputFieldDragReferences(input, 248f, 24f);
+            input.gameObject.AddComponent<StorageNetworkTextInputGuard>().Configure(input, input.gameObject.GetComponent<Image>());
+            return input;
+        }
+
+        private static void RefreshStandalonePickerOptions(Transform content, List<ProductionPickerOption> options, string searchText, string footerTitle = null, string footerHint = null)
+        {
+            if (content == null || options == null)
+            {
+                return;
+            }
+
+            for (int index = content.childCount - 1; index >= 0; index--)
+            {
+                Destroy(content.GetChild(index).gameObject);
+            }
+
+            string query = StorageNetworkTextFormatting.NormalizeSearchText(searchText);
+            int visibleCount = 0;
+            for (int index = 0; index < options.Count; index++)
+            {
+                ProductionPickerOption option = options[index];
+                if (index != 0 && !StandalonePickerOptionMatchesSearch(option, query))
+                {
+                    continue;
+                }
+
+                CreateStorageOptionRow(content, option.Title, option.Details, option.Selected, option.OnClick, option.IconTag);
+                visibleCount++;
+            }
+
+            CreateProductionPickerFooter(content, visibleCount, footerTitle, footerHint);
+        }
+
+        private static bool StandalonePickerOptionMatchesSearch(ProductionPickerOption option, string query)
+        {
+            if (string.IsNullOrEmpty(query))
+            {
+                return true;
+            }
+
+            return option != null &&
+                (StorageNetworkTextFormatting.ContainsSearchText(option.Title, query) ||
+                 StorageNetworkTextFormatting.ContainsSearchText(option.Details, query));
         }
 
         private void CloseProductionPicker()
@@ -273,7 +356,7 @@ namespace StorageNetwork.UI
             detailText.gameObject.AddComponent<LayoutElement>().preferredWidth = 170f;
         }
 
-        private static void CreateProductionPickerFooter(Transform parent, int optionCount)
+        private static void CreateProductionPickerFooter(Transform parent, int optionCount, string footerTitle = null, string footerHint = null)
         {
             GameObject footer = CreatePlainImage("PickerFooter", parent, new Color(0.68f, 0.68f, 0.61f, 1f));
             LayoutElement footerLayout = footer.AddComponent<LayoutElement>();
@@ -292,7 +375,7 @@ namespace StorageNetwork.UI
             TextMeshProUGUI countText = CreateText(
                 "PickerFooterCount",
                 footer.transform,
-                string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PICKER_OPTION_COUNT), Mathf.Max(0, optionCount - 1)),
+                footerTitle ?? string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PICKER_OPTION_COUNT), Mathf.Max(0, optionCount - 1)),
                 11,
                 TextAlignmentOptions.MidlineLeft);
             countText.color = new Color(0.22f, 0.24f, 0.23f, 1f);
@@ -302,7 +385,7 @@ namespace StorageNetwork.UI
             TextMeshProUGUI hintText = CreateText(
                 "PickerFooterHint",
                 footer.transform,
-                Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PICKER_POLICY_HINT),
+                footerHint ?? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PICKER_POLICY_HINT),
                 10,
                 TextAlignmentOptions.TopLeft);
             hintText.color = new Color(0.30f, 0.31f, 0.30f, 1f);

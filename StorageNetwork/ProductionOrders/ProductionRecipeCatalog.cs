@@ -10,23 +10,23 @@ namespace StorageNetwork.ProductionOrders
     {
         public static List<RecipeDisplayInfo> GetCraftableRecipeDisplayInfos()
         {
+            return GetCraftableRecipeDisplayInfos(GetOrderProductionCenters());
+        }
+
+        public static List<RecipeDisplayInfo> GetCraftableRecipeDisplayInfos(IEnumerable<StorageNetworkOrderProductionCenter> centers)
+        {
             Dictionary<string, List<ComplexFabricator>> recipeFabricators = new Dictionary<string, List<ComplexFabricator>>();
             Dictionary<string, ComplexRecipe> recipeByKey = new Dictionary<string, ComplexRecipe>();
             StorageSceneRegistry.EnsureSceneSeeded();
-            foreach (StorageNetworkEnrollment enrollment in StorageSceneRegistry.GetEnrollments())
+            foreach (StorageNetworkOrderProductionCenter center in centers ?? Enumerable.Empty<StorageNetworkOrderProductionCenter>())
             {
-                if (enrollment == null || !enrollment.IncludedInSceneNetwork)
+                ComplexFabricator fabricator = center != null ? center.GetComponent<ComplexFabricator>() : null;
+                if (!ProductionOrderService.IsOrderProductionFabricator(fabricator))
                 {
                     continue;
                 }
 
-                ComplexFabricator fabricator = enrollment.GetComponent<ComplexFabricator>();
-                if (fabricator == null)
-                {
-                    continue;
-                }
-
-                foreach (ComplexRecipe recipe in fabricator.GetRecipes())
+                foreach (ComplexRecipe recipe in GetRecipesForOrderCenter(center))
                 {
                     if (recipe == null || !IsRecipeVisible(fabricator, recipe))
                     {
@@ -71,6 +71,56 @@ namespace StorageNetwork.ProductionOrders
                 .ThenBy(recipe => recipe.FabricatorName)
                 .ThenBy(recipe => recipe.Name)
                 .ToList();
+        }
+
+        public static List<RecipeDisplayInfo> GetCraftableRecipeDisplayInfos(StorageNetworkOrderProductionCenter center)
+        {
+            ComplexFabricator fabricator = center != null ? center.GetComponent<ComplexFabricator>() : null;
+            if (center == null || !ProductionOrderService.IsOrderProductionFabricator(fabricator))
+            {
+                return new List<RecipeDisplayInfo>();
+            }
+
+            return center.EngravedRecipeIds
+                .Select(id => ComplexRecipeManager.Get().GetRecipe(id))
+                .Where(recipe => recipe != null && Game.IsCorrectDlcActiveForCurrentSave(recipe) && IsRecipeVisible(fabricator, recipe))
+                .GroupBy(GetRecipeKey)
+                .Select(group =>
+                {
+                    ComplexRecipe recipe = group.First();
+                    List<ComplexFabricator> fabricators = new List<ComplexFabricator> { fabricator };
+                    return new RecipeDisplayInfo(
+                        recipe.GetUIName(false),
+                        ProductionOrderFormatting.FormatFabricatorGroupName(fabricators),
+                        ProductionOrderFormatting.FormatRecipeDetails(recipe),
+                        recipe,
+                        fabricators,
+                        recipe.GetUIIcon(),
+                        GetProductKey(recipe),
+                        GetProductDisplayName(recipe),
+                        GetProductTag(recipe),
+                        new List<int> { StorageNetworkWorldUtility.GetObjectWorldId(fabricator.gameObject) }
+                            .Where(worldId => worldId >= 0)
+                            .ToList());
+                })
+                .OrderBy(recipe => recipe.ProductName)
+                .ThenBy(recipe => recipe.Name)
+                .ToList();
+        }
+
+        private static List<StorageNetworkOrderProductionCenter> GetOrderProductionCenters()
+        {
+            StorageSceneRegistry.EnsureSceneSeeded();
+            return ProductionOrderCenterCatalog.GetCenters();
+        }
+
+        private static IEnumerable<ComplexRecipe> GetRecipesForOrderCenter(StorageNetworkOrderProductionCenter center)
+        {
+            return center != null
+                ? center.EngravedRecipeIds
+                    .Select(id => ComplexRecipeManager.Get().GetRecipe(id))
+                    .Where(recipe => recipe != null)
+                : Enumerable.Empty<ComplexRecipe>();
         }
 
         public static List<ProductDisplayGroup> BuildProductGroups(List<RecipeDisplayInfo> recipes)

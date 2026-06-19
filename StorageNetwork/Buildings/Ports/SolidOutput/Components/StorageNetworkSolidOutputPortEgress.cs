@@ -269,18 +269,18 @@ namespace StorageNetwork.Components
             OutputLimitEnabled = enabled;
             if (enabled && OutputLimitKg <= 0f)
             {
-                OutputLimitKg = storage != null ? Mathf.Max(1f, storage.Capacity()) : 1f;
+                OutputLimitKg = Mathf.Max(1f, GetPortCapacityKg());
             }
 
             if (enabled && OutputLimitUsedKg <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
             {
-                OutputLimitUsedKg = storage != null ? Mathf.Max(0f, storage.MassStored()) : 0f;
+                OutputLimitUsedKg = GetPortStoredMassKg();
             }
         }
 
         public void ResetOutputLimitUsed()
         {
-            OutputLimitUsedKg = storage != null ? Mathf.Max(0f, storage.MassStored()) : 0f;
+            OutputLimitUsedKg = GetPortStoredMassKg();
         }
 
         public float GetRequestRateKgPerSecond()
@@ -342,7 +342,7 @@ namespace StorageNetwork.Components
 
         public float GetRequestCapacityKg()
         {
-            float remainingCapacity = storage != null ? Mathf.Max(0f, storage.RemainingCapacity()) : 0f;
+            float remainingCapacity = GetPortRemainingCapacityKg();
             float requestRate = GetRequestRateKgPerSecond();
             if (!OutputLimitEnabled)
             {
@@ -360,7 +360,7 @@ namespace StorageNetwork.Components
                 return;
             }
 
-            OutputLimitUsedKg = storage != null ? Mathf.Max(0f, storage.MassStored()) : 0f;
+            OutputLimitUsedKg = GetPortStoredMassKg();
         }
 
         private void OnCopySettings(object data)
@@ -378,7 +378,7 @@ namespace StorageNetwork.Components
             OutputItemTagName = source.OutputItemTagName;
             OutputLimitEnabled = source.OutputLimitEnabled;
             OutputLimitKg = source.OutputLimitKg;
-            OutputLimitUsedKg = OutputLimitEnabled && storage != null ? Mathf.Max(0f, storage.MassStored()) : 0f;
+            OutputLimitUsedKg = OutputLimitEnabled ? GetPortStoredMassKg() : 0f;
             RequestRateKgPerSecond = source.GetRequestRateKgPerSecond();
             AllowManualOperation = source.AllowManualOperation;
             retryTimer = 0f;
@@ -614,8 +614,8 @@ namespace StorageNetwork.Components
                 AllowManualOperation,
                 lastStatus,
                 StorageSceneRegistry.HasOnlineCoreInWorld(GetWorldId()),
-                storage != null ? storage.MassStored() : 0f,
-                storage != null ? storage.Capacity() : 0f);
+                GetPortStoredMassKg(),
+                GetPortCapacityKg());
         }
 
         private string BuildStatusText()
@@ -630,10 +630,25 @@ namespace StorageNetwork.Components
                 ColorizeInfo(GetOutputFilterStatusText()),
                 ColorizeLimit(GetOutputLimitStatusText()),
                 ColorizeAmount(GetRequestRateStatusText()),
-                ColorizeAmount(GameUtil.GetFormattedMass(storage != null ? storage.MassStored() : 0f)),
-                ColorizeAmount(GameUtil.GetFormattedMass(storage != null ? storage.Capacity() : 0f)),
+                ColorizeAmount(GameUtil.GetFormattedMass(GetPortStoredMassKg())),
+                ColorizeAmount(GameUtil.GetFormattedMass(GetPortCapacityKg())),
                 ColorizeStatus(GetCurrentStatusText()),
                 ColorizeManual(AllowManualOperation));
+        }
+
+        private float GetPortStoredMassKg()
+        {
+            return storage != null ? Mathf.Max(0f, StorageItemUtility.GetStoredMass(storage)) : 0f;
+        }
+
+        private float GetPortCapacityKg()
+        {
+            return storage != null ? Mathf.Max(0f, storage.Capacity()) : 0f;
+        }
+
+        private float GetPortRemainingCapacityKg()
+        {
+            return Mathf.Max(0f, GetPortCapacityKg() - GetPortStoredMassKg());
         }
 
         private string GetSourceModeStatusText()

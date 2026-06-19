@@ -1,4 +1,5 @@
 using HarmonyLib;
+using StorageNetwork.Buildings;
 using StorageNetwork.Core;
 using StorageNetwork.Gameplay;
 using StorageNetwork.Research;
@@ -13,6 +14,24 @@ namespace StorageNetwork.Patches
             public static void Prefix()
             {
                 StorageNetworkBuildingPlanInstaller.Install();
+            }
+        }
+
+        [HarmonyPatch(typeof(EntityConfigManager), "LoadGeneratedEntities")]
+        public static class LoadGeneratedEntitiesPatch
+        {
+            public static void Prefix()
+            {
+                Strings.Add(
+                    "STRINGS.ITEMS.INDUSTRIAL_PRODUCTS.STORAGE_NETWORK_ENGRAVING_DISK.NAME",
+                    STRINGS.Get(STRINGS.ITEMS.INDUSTRIAL_PRODUCTS.STORAGE_NETWORK_ENGRAVING_DISK.NAME));
+                Strings.Add(
+                    "STRINGS.ITEMS.INDUSTRIAL_PRODUCTS.STORAGE_NETWORK_ENGRAVING_DISK.DESC",
+                    STRINGS.Get(STRINGS.ITEMS.INDUSTRIAL_PRODUCTS.STORAGE_NETWORK_ENGRAVING_DISK.DESC));
+                Strings.Add(
+                    "STRINGS.ITEMS.INDUSTRIAL_PRODUCTS.STORAGE_NETWORK_ENGRAVING_DISK.RECIPEDESC",
+                    STRINGS.Get(STRINGS.ITEMS.INDUSTRIAL_PRODUCTS.STORAGE_NETWORK_ENGRAVING_DISK.RECIPEDESC));
+                StorageNetworkEngravingDiskConfig.RegisterRecipe();
             }
         }
 

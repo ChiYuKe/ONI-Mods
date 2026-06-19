@@ -71,11 +71,11 @@ namespace StorageNetwork.ProductionOrders
             }
 
             List<ComplexFabricator> available = node.Fabricators
-                .Where(fabricator => fabricator != null && (reservedFabricators == null || !reservedFabricators.Contains(fabricator)))
+                .Where(fabricator => IsOrderProductionFabricator(fabricator) && (reservedFabricators == null || !reservedFabricators.Contains(fabricator)))
                 .ToList();
             if (available.Count == 0)
             {
-                available = node.Fabricators.Where(fabricator => fabricator != null).ToList();
+                available = node.Fabricators.Where(IsOrderProductionFabricator).ToList();
             }
 
             node.Assignments.Clear();
@@ -91,7 +91,7 @@ namespace StorageNetwork.ProductionOrders
             }
 
             List<ComplexFabricator> orderedFabricators = fabricators
-                .Where(fabricator => fabricator != null)
+                .Where(IsOrderProductionFabricator)
                 .OrderBy(GetFiniteTotalQueueCount)
                 .ThenBy(fabricator => GetFiniteRecipeQueueCount(fabricator, recipe))
                 .ThenBy(fabricator => fabricator.gameObject.GetProperName())
@@ -222,8 +222,7 @@ namespace StorageNetwork.ProductionOrders
 
         private static int GetFiniteRecipeQueueCount(ComplexFabricator fabricator, ComplexRecipe recipe)
         {
-            int queued = fabricator != null && recipe != null ? fabricator.GetRecipeQueueCount(recipe) : 0;
-            return queued == ComplexFabricator.QUEUE_INFINITE ? ComplexFabricator.MAX_QUEUE_SIZE : Mathf.Max(0, queued);
+            return StorageNetworkFabricatorProgress.GetFiniteRecipeQueueCountSafe(fabricator, recipe);
         }
     }
 }

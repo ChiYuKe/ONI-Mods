@@ -20,6 +20,13 @@ namespace StorageNetwork
                     public static LocString EFFECT = "提供大容量通用储存，并作为储存网络的主要基础设施。";
                 }
 
+                public class STORAGENETWORKORDERPRODUCTIONCENTER
+                {
+                    public static LocString NAME = "订单生产中心";
+                    public static LocString DESC = "用于刻录制造台配方并承接订单生产的网络建筑。";
+                    public static LocString EFFECT = "点击“刻录”后选择一个带配方的生产建筑，将它的配方刻录到订单生产中心；源建筑会被销毁，同一配方只能刻录一次。";
+                }
+
                 public class STORAGENETWORKSMALLSOLIDSERVER
                 {
                     public static LocString NAME = "小型固体服务器";
@@ -197,6 +204,19 @@ namespace StorageNetwork
             }
         }
 
+        public class ITEMS
+        {
+            public class INDUSTRIAL_PRODUCTS
+            {
+                public class STORAGE_NETWORK_ENGRAVING_DISK
+                {
+                    public static LocString NAME = "刻录盘";
+                    public static LocString DESC = "用于保存 <link=\"STORAGENETWORKORDERPRODUCTIONCENTER\">订单生产中心</link> 刻录出的配方数据。";
+                    public static LocString RECIPEDESC = "制造一张空白刻录盘，可放入 <link=\"STORAGENETWORKORDERPRODUCTIONCENTER\">订单生产中心</link> 并保存刻录出的生产配方。";
+                }
+            }
+        }
+
         public class RESEARCH
         {
             public class TREES
@@ -341,6 +361,11 @@ namespace StorageNetwork
                 public static LocString ORDER_CANCEL_ALREADY_DONE = "订单 #{0} 已经结束，无需取消。";
                 public static LocString ORDER_CANCEL_REASON_MANUAL = "用户手动取消。";
                 public static LocString ORDER_CANCEL_SUCCESS = "订单追踪：已手动取消订单 #{0}，并释放剩余排队批次。";
+                public static LocString ORDER_CLEAR_ABNORMAL_SUCCESS = "订单追踪：已清理 {0} 条异常订单。";
+                public static LocString ORDER_CLEAR_COMPLETED_SUCCESS = "订单追踪：已清理 {0} 条已完成订单。";
+                public static LocString ORDER_RETRY_MISSING = "订单重试失败：找不到目标订单。";
+                public static LocString ORDER_RETRY_INVALID = "订单重试失败：找不到原配方或生产路线。";
+                public static LocString ORDER_RETRY_SUCCESS = "订单追踪：已按订单 #{0} 的原参数重新提交。{1}";
                 public static LocString ORDER_ABNORMAL_TIMEOUT_REASON = "{0:0.##} 周期内无进度变动，已自动取消建筑排产。最后变动周期 {1}";
                 public static LocString ORDER_DISPATCH_TITLE = "调度策略";
                 public static LocString ORDER_DISPATCH_SUMMARY = "优先调拨网络库存；缺口由已接入生产建筑补产；提交后自动开启材料请求。";
@@ -701,7 +726,10 @@ namespace StorageNetwork
                 public static LocString TRACKING_EMPTY = "暂无活动订单。提交后会显示状态、数量、批次和合并记录。";
                 public static LocString TRACKING_ACTIVE_TITLE = "活动订单追踪";
                 public static LocString TRACKING_CREATED_CYCLE = "创建周期";
+                public static LocString TRACKING_ESTIMATED_FINISH_CYCLE = "预计完成";
+                public static LocString TRACKING_FINISHED_CYCLE = "完成周期";
                 public static LocString TRACKING_CYCLE_VALUE = "{0} 周期";
+                public static LocString TRACKING_CYCLE_UNKNOWN = "未知";
                 public static LocString TRACKING_MERGED_ACTIVITY = "已合并 {0} 次 · 活动周期 {1}";
                 public static LocString TRACKING_SUMMARY = "{0}：{1} 个活动订单 / {2} 条最近记录";
                 public static LocString TRACKING_FILTER_CURRENT = "当前";
@@ -711,7 +739,7 @@ namespace StorageNetwork
                 public static LocString TRACKING_FILTER_ABNORMAL = "异常";
                 public static LocString TRACKING_ORDER_SOURCE_BATCH = "{0}订单 · 批次 x{1}";
                 public static LocString TRACKING_WAITING_MATERIALS = "成品设备 {0} 台等待材料，{1} 台设备补产缺口。";
-                public static LocString TRACKING_MACHINES_RUNNING = "{0} 台设备正在处理该订单。";
+                public static LocString TRACKING_MACHINES_RUNNING = "{0} 台设备正在以 {1} 核处理该订单。";
                 public static LocString TRACKING_STATE_CREATED = "{0}，创建于 {1} 周期。";
                 public static LocString TRACKING_SOURCE_KEEP = "货物保持";
                 public static LocString TRACKING_SOURCE_MANUAL = "手动";
@@ -722,6 +750,36 @@ namespace StorageNetwork
                 public static LocString TRACKING_STATE_ABNORMAL = "异常取消";
                 public static LocString TRACKING_STATE_CANCELLED = "已取消";
                 public static LocString TRACKING_STATE_TRACKING = "追踪中";
+                public static LocString TRACKING_ACTION_CLEAR_ABNORMAL = "清异常";
+                public static LocString TRACKING_ACTION_CLEAR_COMPLETED = "清完成";
+                public static LocString TRACKING_ACTION_RETRY = "重试";
+                public static LocString ORDER_PRODUCTION_CENTER_TITLE = "订单生产中心";
+                public static LocString ORDER_CENTER_ENGRAVE_SECTION_TITLE = "刻录";
+                public static LocString ORDER_CENTER_ORDER_SECTION_TITLE = "订单";
+                public static LocString ORDER_CENTER_OPEN_BUTTON = "订单";
+                public static LocString ORDER_CENTER_OPEN_TOOLTIP = "打开此订单生产中心的专属订单面板；只显示并提交刻录到该建筑的配方。";
+                public static LocString ORDER_CENTER_ENGRAVE_BUTTON = "刻录";
+                public static LocString ORDER_CENTER_ENGRAVE_TOOLTIP = "选择一个或多个带配方的建筑进行刻录";
+                public static LocString ORDER_CENTER_ENGRAVE_TOOLNAME = "刻录工具";
+                public static LocString ORDER_CENTER_ENGRAVE_ACTION = "刻录";
+                public static LocString ORDER_CENTER_ENGRAVE_STARTED = "刻录模式：请选择一个带有配方的生产建筑。";
+                public static LocString ORDER_CENTER_ENGRAVE_SUCCESS = "订单生产中心：已刻录 {0} 个新配方。";
+                public static LocString ORDER_CENTER_ENGRAVE_DUPLICATE = "订单生产中心：目标建筑的配方都已经刻录过。";
+                public static LocString ORDER_CENTER_ENGRAVE_NO_RECIPES = "订单生产中心：请选择一个带有配方的生产建筑。";
+                public static LocString ORDER_CENTER_ENGRAVE_NO_DISK = "订单生产中心：请先放入一张空刻录盘。";
+                public static LocString ORDER_CENTER_DISK_CONFIG_TITLE = "刻录盘";
+                public static LocString ORDER_CENTER_DISK_CONFIG_TOOLTIP = "配置订单生产中心的 3 个刻录盘槽。刻录出的配方会写入空刻录盘。";
+                public static LocString ORDER_CENTER_DISK_SLOT_EMPTY = "空槽";
+                public static LocString ORDER_CENTER_DISK_SLOT_BLANK = "空白刻录盘";
+                public static LocString ORDER_CENTER_DISK_SLOT_WRITTEN = "刻录盘：{0} 个配方";
+                public static LocString ORDER_CENTER_DISK_INSERT = "放入";
+                public static LocString ORDER_CENTER_DISK_EJECT = "弹出";
+                public static LocString ORDER_CENTER_DISK_INSERTED = "已放入刻录盘。";
+                public static LocString ORDER_CENTER_DISK_EJECTED = "已弹出刻录盘。";
+                public static LocString ORDER_CENTER_DISK_NO_AVAILABLE = "附近没有可用的刻录盘。";
+                public static LocString ORDER_CENTER_DISK_RECORDED_TITLE = "已刻录配方";
+                public static LocString ORDER_CENTER_DISK_RECIPE_REMOVE = "删除";
+                public static LocString ORDER_CENTER_DISK_RECIPE_REMOVED = "已删除刻录配方。";
                 public static LocString TRACKING_BUILDING_RUNNING = "正常运行";
                 public static LocString TRACKING_BUILDING_WAITING_MATERIALS = "等待材料";
                 public static LocString TRACKING_BUILDING_NO_POWER = "缺电";

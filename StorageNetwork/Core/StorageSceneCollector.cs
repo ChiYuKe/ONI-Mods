@@ -59,12 +59,13 @@ namespace StorageNetwork.Core
             return cachedSnapshot;
         }
 
-        public static StorageSceneSnapshot CollectForWorld(int worldId, bool includeReachableWorlds = true)
+        public static StorageSceneSnapshot CollectForWorld(int worldId, bool includeReachableWorlds = true, bool force = false)
         {
             StorageSceneRegistry.EnsureSceneSeeded();
             PruneWorldCaches();
             WorldSnapshotKey key = new WorldSnapshotKey(worldId, includeReachableWorlds);
-            if (WorldSnapshots.TryGetValue(key, out WorldSnapshotCacheEntry cached) &&
+            if (!force &&
+                WorldSnapshots.TryGetValue(key, out WorldSnapshotCacheEntry cached) &&
                 (cached.Frame == Time.frameCount || Time.unscaledTime - cached.CreatedAt <= WorldSnapshotCacheSeconds))
             {
                 return cached.Snapshot;

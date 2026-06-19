@@ -130,7 +130,7 @@ namespace StorageNetwork.ProductionOrders
                     })
                     .ToList(),
                 queueAssignments = order.QueueAssignments
-                    .Where(assignment => assignment != null && assignment.Fabricator != null && assignment.Recipe != null)
+                    .Where(assignment => assignment != null && ProductionOrderService.IsOrderProductionFabricator(assignment.Fabricator) && assignment.Recipe != null)
                     .Select(assignment => new ProductionOrderQueueSaveRecord
                     {
                         fabricatorInstanceId = GetInstanceId(assignment.Fabricator),
@@ -267,19 +267,12 @@ namespace StorageNetwork.ProductionOrders
 
         private static ComplexFabricator FindFabricator(int instanceId)
         {
-            if (instanceId == KPrefabID.InvalidInstanceID)
-            {
-                return null;
-            }
-
-            return global::Components.ComplexFabricators.Items
-                .FirstOrDefault(fabricator => fabricator != null && GetInstanceId(fabricator) == instanceId);
+            return ProductionOrderCenterCatalog.FindFabricatorByInstanceId(instanceId);
         }
 
         private static int GetInstanceId(Component component)
         {
-            KPrefabID prefabId = component != null ? component.GetComponent<KPrefabID>() : null;
-            return prefabId != null ? prefabId.InstanceID : KPrefabID.InvalidInstanceID;
+            return ProductionOrderCenterCatalog.GetInstanceId(component);
         }
 
         [Serializable]

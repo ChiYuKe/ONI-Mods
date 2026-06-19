@@ -39,6 +39,7 @@ namespace StorageNetwork.Gameplay
         private static void InstallStorageBuildings()
         {
             Add(BaseCategory, StorageNetworkCoreConfig.ID);
+            Add(BaseCategory, StorageNetworkOrderProductionCenterConfig.ID);
             Add(BaseCategory, SmallSolidServerConfig.ID);
             Add(BaseCategory, MediumSolidServerConfig.ID);
             Add(BaseCategory, LargeSolidServerConfig.ID);

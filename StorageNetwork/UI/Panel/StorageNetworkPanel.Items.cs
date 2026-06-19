@@ -69,7 +69,9 @@ namespace StorageNetwork.UI
             selectedItemStorage = null;
             selectedItemKey = null;
             lastListSignature = null;
+            StorageSceneCollector.InvalidateCache();
             RefreshStoragePanel(StoragePanelRefreshMode.Structure);
+            RequestDeferredStoragePanelStructureRefresh();
         }
 
         private void TransferSelectedItem(Storage source, string itemKey, Storage destination, float requestedMass)
@@ -115,7 +117,12 @@ namespace StorageNetwork.UI
             selectedItemStorage = null;
             selectedItemKey = null;
             lastListSignature = null;
+            StorageSceneCollector.InvalidateCache();
             RefreshStoragePanel(StoragePanelRefreshMode.Structure);
+            if (transferred > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+            {
+                RequestDeferredStoragePanelStructureRefresh();
+            }
         }
 
         private static float GetStoredItemsMass(IEnumerable<GameObject> items)

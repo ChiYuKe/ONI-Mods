@@ -228,6 +228,55 @@ namespace StorageNetwork.Services
             return moved;
         }
 
+        public static float TransferMatchingItemsFromStorage(
+            Storage source,
+            Storage destination,
+            Tag tag,
+            float amount)
+        {
+            if (source == null ||
+                destination == null ||
+                source.items == null ||
+                tag == Tag.Invalid ||
+                amount <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ||
+                destination.RemainingCapacity() <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+            {
+                return 0f;
+            }
+
+            float moved = 0f;
+            List<GameObject> items = new List<GameObject>();
+            foreach (GameObject item in source.items)
+            {
+                if (item != null && StorageItemUtility.MatchesStorageTag(item, tag))
+                {
+                    items.Add(item);
+                }
+            }
+
+            foreach (GameObject item in items)
+            {
+                if (amount - moved <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ||
+                    destination.RemainingCapacity() <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+                {
+                    break;
+                }
+
+                float transferAmount = Mathf.Min(
+                    amount - moved,
+                    StorageItemUtility.GetMass(item),
+                    Mathf.Max(0f, destination.RemainingCapacity()));
+                if (transferAmount <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+                {
+                    continue;
+                }
+
+                moved += TransferStoredObject(source, destination, item, transferAmount);
+            }
+
+            return moved;
+        }
+
         public static StorageTransferResult TransferAnyLiquidFromNetworkToStorage(
             Storage destination,
             float amount,

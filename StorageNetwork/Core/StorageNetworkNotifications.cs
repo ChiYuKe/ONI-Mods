@@ -81,6 +81,42 @@ namespace StorageNetwork.Core
             notifier?.Add(notification, string.Empty);
         }
 
+        public static void ShowInfo(string message)
+        {
+            ShowSimple(message, NotificationType.Neutral);
+        }
+
+        public static void ShowWarning(string message)
+        {
+            ShowSimple(message, NotificationType.BadMinor);
+        }
+
+        private static void ShowSimple(string message, NotificationType type)
+        {
+            if (string.IsNullOrEmpty(message))
+            {
+                return;
+            }
+
+            Notification notification = new Notification(
+                message,
+                type,
+                (notifications, data) => message,
+                null,
+                false,
+                0f,
+                null,
+                null,
+                null,
+                true,
+                false,
+                false);
+            Notifier notifier = NotificationScreen.Instance != null
+                ? NotificationScreen.Instance.gameObject.AddOrGet<Notifier>()
+                : null;
+            notifier?.Add(notification, string.Empty);
+        }
+
         private static void ConfigureCustomPrefab(GameObject prefab)
         {
             HierarchyReferences references = prefab.GetComponent<HierarchyReferences>();

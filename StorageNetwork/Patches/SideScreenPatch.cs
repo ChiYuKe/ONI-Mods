@@ -58,6 +58,21 @@ namespace StorageNetwork.Patches
             }
         }
 
+        [HarmonyPatch(typeof(ComplexFabricatorSideScreen), "IsValidForTarget")]
+        public static class ComplexFabricatorSideScreenIsValidForTargetPatch
+        {
+            public static bool Prefix(GameObject target, ref bool __result)
+            {
+                if (target != null && target.GetComponent<StorageNetworkOrderProductionCenter>() != null)
+                {
+                    __result = false;
+                    return false;
+                }
+
+                return true;
+            }
+        }
+
         [HarmonyPatch(typeof(DetailsScreen), "OnPrefabInit")]
         public static class DetailsScreenOnPrefabInitPatch
         {
@@ -71,6 +86,7 @@ namespace StorageNetwork.Patches
                 try
                 {
                     StorageNetworkCoreSideScreenInstaller.Install(__instance);
+                    StorageNetworkOrderProductionCenterSideScreenInstaller.Install(__instance);
                 }
                 catch (System.Exception exception)
                 {

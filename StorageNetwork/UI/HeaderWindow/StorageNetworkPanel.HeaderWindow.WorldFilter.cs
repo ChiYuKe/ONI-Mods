@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using StorageNetwork.Components;
 using StorageNetwork.Core;
 using StorageNetwork.ProductionOrders;
 using TMPro;
@@ -33,6 +34,11 @@ namespace StorageNetwork.UI
             for (int i = orderWorldFilterContent.childCount - 1; i >= 0; i--)
             {
                 Destroy(orderWorldFilterContent.GetChild(i).gameObject);
+            }
+
+            if (boundOrderProductionCenter != null)
+            {
+                return;
             }
 
             GameObject dropdownButton = CreateStyledButton(
@@ -162,6 +168,12 @@ namespace StorageNetwork.UI
 
         private void EnsureValidOrderWorldFilter()
         {
+            if (boundOrderProductionCenter != null)
+            {
+                orderWorldFilterId = AllEnrollableWorldsFilterId;
+                return;
+            }
+
             bool relayOnline = StorageSceneRegistry.IsCrossPlanetRelayOnline();
             int activeWorldId = GetActiveWorldFilterId();
             if (orderWorldFilterId == UnsetEnrollableWorldFilterId)
@@ -211,6 +223,11 @@ namespace StorageNetwork.UI
 
         private List<ProductDisplayGroup> GetFilteredOrderProductGroups()
         {
+            if (boundOrderProductionCenter != null)
+            {
+                return ProductionRecipeCatalog.BuildProductGroups(craftableRecipes);
+            }
+
             bool relayOnline = StorageSceneRegistry.IsCrossPlanetRelayOnline();
             IEnumerable<RecipeDisplayInfo> recipes = craftableRecipes.SelectMany(recipe => BuildReachableOrderRoutes(recipe, relayOnline));
             return ProductionRecipeCatalog.BuildProductGroups(recipes.ToList());
@@ -246,7 +263,7 @@ namespace StorageNetwork.UI
 
         private bool IsOrderFabricatorReachable(ComplexFabricator fabricator, bool relayOnline)
         {
-            if (fabricator == null)
+            if (!ProductionOrderService.IsOrderProductionFabricator(fabricator))
             {
                 return false;
             }
@@ -268,13 +285,21 @@ namespace StorageNetwork.UI
 
         private List<int> GetOrderWorldIds(bool relayOnline)
         {
-            return GetEnrollableWorldIds(StorageSceneRegistry
-                .GetEnrollments()
-                .Where(enrollment => enrollment != null && enrollment.CanShowInEnrollableList()));
+            return ProductionOrderCenterCatalog.GetCenters()
+                .Select(center => StorageNetworkWorldUtility.GetObjectWorldId(center.gameObject))
+                .Where(worldId => StorageNetworkWorldDisplay.IsWorldDiscovered(worldId))
+                .Distinct()
+                .OrderBy(worldId => worldId)
+                .ToList();
         }
 
         private bool IsOrderWorldFilterBlockedByRelay()
         {
+            if (boundOrderProductionCenter != null)
+            {
+                return false;
+            }
+
             int activeWorldId = GetActiveWorldFilterId();
             return orderWorldFilterId != AllEnrollableWorldsFilterId &&
                    orderWorldFilterId != activeWorldId &&

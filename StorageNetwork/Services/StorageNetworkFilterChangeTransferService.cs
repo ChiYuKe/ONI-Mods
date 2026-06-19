@@ -13,6 +13,7 @@ namespace StorageNetwork.Services
             if (source == null ||
                 source.items == null ||
                 !StorageNetworkMembership.IsCollectableStorage(source) ||
+                !StorageNetworkStorageRules.IsServerStorage(source) ||
                 StorageNetworkStorageRules.IsNetworkPortStorage(source) ||
                 StorageNetworkStorageRules.IsProductionStorage(source))
             {

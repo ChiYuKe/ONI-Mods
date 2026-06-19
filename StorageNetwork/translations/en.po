@@ -1508,8 +1508,8 @@ msgid "成品设备 {0} 台等待材料，{1} 台设备补产缺口。"
 msgstr "{0} product machines are waiting for materials; {1} machines are producing shortages."
 
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_MACHINES_RUNNING"
-msgid "{0} 台设备正在处理该订单。"
-msgstr "{0} machines are processing this order."
+msgid "{0} 台设备正在以 {1} 核处理该订单。"
+msgstr "{0} machines are processing this order with {1} cores."
 
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_STATE_CREATED"
 msgid "{0}，创建于 {1} 周期。"

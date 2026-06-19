@@ -34,6 +34,7 @@ namespace StorageNetwork.UI
             orderTrackingRows.Begin();
             int activeCount = records.Count(StorageNetworkOrderTrackingRules.IsActive);
             UpdateTrackingHeaderRow(GetTrackingScopeTitle(product), activeCount, records.Count);
+            UpdateTrackingBulkActionsRow(records);
             if (records.Count == 0)
             {
                 UpdateTrackingInfoRow("empty", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_EMPTY), 58f);
@@ -197,12 +198,20 @@ namespace StorageNetwork.UI
 
             AddTrackingStateBadge(side.transform, StorageNetworkOrderTrackingRules.GetOrderStateLabel(record.State), stateColor, 52f, 94f);
             AddTrackingDottedLine(side.transform);
-            AddPlanLine(side.transform, string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_CYCLE_VALUE), ProductionOrderFormatting.FormatCycle(record.CreatedCycle)), 10, FontStyles.Bold, NeutralTextColor(), 20f);
-            AddPlanLine(side.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_CREATED_CYCLE), 8, FontStyles.Normal, MutedTextColor(), 15f);
+            AddTrackingCyclePair(
+                side.transform,
+                ProductionOrderFormatting.FormatCycleStamp(record.CreatedCycle),
+                Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_CREATED_CYCLE));
+            AddTrackingCyclePair(
+                side.transform,
+                GetTrackingEstimatedFinishCycle(record),
+                record.State == ProductionOrderState.Completed
+                    ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_FINISHED_CYCLE)
+                    : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_ESTIMATED_FINISH_CYCLE));
 
             if (record.MergeCount > 0)
             {
-                AddPlanLine(main.transform, string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_MERGED_ACTIVITY), record.MergeCount, ProductionOrderFormatting.FormatCycle(record.LastActivityCycle)), 8, FontStyles.Italic, MutedTextColor(), 15f);
+                AddPlanLine(main.transform, string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_MERGED_ACTIVITY), record.MergeCount, ProductionOrderFormatting.FormatCycleStamp(record.LastActivityCycle)), 8, FontStyles.Italic, MutedTextColor(), 15f);
                 cardElement.preferredHeight += 18f;
             }
 
@@ -213,6 +222,185 @@ namespace StorageNetwork.UI
                 cancelLayout.preferredWidth = 24f;
                 cancelLayout.preferredHeight = 24f;
             }
+            else if (record.State == ProductionOrderState.Abnormal)
+            {
+                AddTrackingRetryButton(card.transform, () => RetryTrackedOrder(record.Key));
+            }
+        }
+
+        private void AddTrackingCyclePair(Transform parent, string value, string label)
+        {
+            AddPlanLine(parent, string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_CYCLE_VALUE), value), 9, FontStyles.Bold, NeutralTextColor(), 17f);
+            AddPlanLine(parent, label, 7, FontStyles.Normal, MutedTextColor(), 12f);
+        }
+
+        private static string GetTrackingEstimatedFinishCycle(ProductionOrderRecord record)
+        {
+            if (record == null)
+            {
+                return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_CYCLE_UNKNOWN);
+            }
+
+            if (record.State == ProductionOrderState.Completed && record.CompletedCycle > 0f)
+            {
+                return ProductionOrderFormatting.FormatCycleStamp(record.CompletedCycle);
+            }
+
+            if (!StorageNetworkOrderTrackingRules.IsActive(record))
+            {
+                return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_CYCLE_UNKNOWN);
+            }
+
+            if (!TryEstimateRemainingSeconds(record, out float remainingSeconds))
+            {
+                return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_CYCLE_UNKNOWN);
+            }
+
+            float currentCycle = StorageNetworkCycleTime.GetCurrent();
+            return ProductionOrderFormatting.FormatCycleStamp(currentCycle + remainingSeconds / 600f);
+        }
+
+        private static bool TryEstimateRemainingSeconds(ProductionOrderRecord record, out float remainingSeconds)
+        {
+            remainingSeconds = 0f;
+            if (record?.QueueAssignments == null || record.QueueAssignments.Count == 0)
+            {
+                return false;
+            }
+
+            bool hasEstimate = false;
+            foreach (IGrouping<ComplexFabricator, ProductionOrderQueueAssignment> group in record.QueueAssignments
+                         .Where(assignment => assignment?.Fabricator != null && assignment.Recipe != null)
+                         .GroupBy(assignment => assignment.Fabricator))
+            {
+                float fabricatorSeconds = 0f;
+                foreach (ProductionOrderQueueAssignment assignment in group)
+                {
+                    int queued = StorageNetworkFabricatorProgress.GetRecipeQueueCountSafe(assignment.Fabricator, assignment.Recipe);
+                    if (queued == ComplexFabricator.QUEUE_INFINITE)
+                    {
+                        return false;
+                    }
+
+                    int pending = assignment.Primary
+                        ? GetRemainingPrimaryBatchCount(record, assignment)
+                        : Mathf.Min(Mathf.Max(0, queued), Mathf.Max(0, assignment.OrderCount));
+                    float recipeTime = Mathf.Max(0f, assignment.Recipe.time);
+                    int workingCount = ProductionOrderRuntimeAllocation.GetRunningCountForAssignment(record, assignment);
+                    float runningProgress = workingCount > 0
+                        ? ProductionOrderRuntimeAllocation.GetProgressForAssignment(record, assignment)
+                        : 0f;
+                    int pendingNotRunning = Mathf.Max(0, pending - workingCount);
+                    fabricatorSeconds += (pendingNotRunning + workingCount * Mathf.Max(0f, 1f - runningProgress)) * recipeTime;
+
+                    StorageNetwork.Components.StorageNetworkOrderProductionCenterFabricator orderCenter = assignment.Fabricator as StorageNetwork.Components.StorageNetworkOrderProductionCenterFabricator;
+                    if (orderCenter != null)
+                    {
+                        fabricatorSeconds /= Mathf.Max(1, orderCenter.ActiveCoreCount);
+                    }
+
+                    hasEstimate = true;
+                }
+
+                remainingSeconds = Mathf.Max(remainingSeconds, fabricatorSeconds);
+            }
+
+            return hasEstimate;
+        }
+
+        private static int GetRemainingPrimaryBatchCount(ProductionOrderRecord record, ProductionOrderQueueAssignment assignment)
+        {
+            float outputAmount = GetRecipeOutputAmount(assignment.Recipe, record.ProductTag);
+            if (outputAmount <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+            {
+                return Mathf.Max(0, assignment.OrderCount);
+            }
+
+            int totalAssigned = record.QueueAssignments
+                .Where(candidate => candidate != null &&
+                                    candidate.Primary &&
+                                    candidate.Recipe == assignment.Recipe &&
+                                    GetRecipeOutputAmount(candidate.Recipe, record.ProductTag) > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+                .Sum(candidate => Mathf.Max(0, candidate.OrderCount));
+            if (totalAssigned <= 0)
+            {
+                return Mathf.Max(0, assignment.OrderCount);
+            }
+
+            float remainingAmount = Mathf.Max(0f, record.RequestedAmount - record.ProducedAtSubmit);
+            int totalRemaining = Mathf.CeilToInt(remainingAmount / outputAmount);
+            int remainingForAssignment = Mathf.CeilToInt(totalRemaining * assignment.OrderCount / (float)totalAssigned);
+            return Mathf.Clamp(remainingForAssignment, 0, Mathf.Max(0, assignment.OrderCount));
+        }
+
+        private static float GetRecipeOutputAmount(ComplexRecipe recipe, Tag productTag)
+        {
+            ComplexRecipe.RecipeElement result = ProductionRecipeCatalog.GetRecipeResultForProduct(recipe, productTag);
+            return result != null ? Mathf.Max(0f, result.amount) : 0f;
+        }
+
+        private void UpdateTrackingBulkActionsRow(List<ProductionOrderRecord> records)
+        {
+            if (records == null ||
+                (!records.Any(record => record.State == ProductionOrderState.Abnormal) &&
+                 !records.Any(record => record.State == ProductionOrderState.Completed)))
+            {
+                return;
+            }
+
+            GameObject row = orderTrackingRows.Use("bulk-actions", () =>
+            {
+                GameObject created = new GameObject("TrackingBulkActions");
+                created.transform.SetParent(orderTrackingContent, false);
+                created.AddComponent<RectTransform>();
+                created.AddComponent<LayoutElement>().preferredHeight = 24f;
+                HorizontalLayoutGroup layout = created.AddComponent<HorizontalLayoutGroup>();
+                layout.spacing = 5f;
+                layout.childAlignment = TextAnchor.MiddleLeft;
+                layout.childControlWidth = false;
+                layout.childControlHeight = true;
+                layout.childForceExpandWidth = false;
+                layout.childForceExpandHeight = false;
+                return created;
+            });
+
+            RectTransform rowRect = row.GetComponent<RectTransform>();
+            if (rowRect != null)
+            {
+                ClearChildren(rowRect);
+            }
+            if (records.Any(record => record.State == ProductionOrderState.Abnormal))
+            {
+                AddTrackingBulkButton(row.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_ACTION_CLEAR_ABNORMAL), () => ClearTrackedOrders(ProductionOrderState.Abnormal));
+            }
+
+            if (records.Any(record => record.State == ProductionOrderState.Completed))
+            {
+                AddTrackingBulkButton(row.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_ACTION_CLEAR_COMPLETED), () => ClearTrackedOrders(ProductionOrderState.Completed));
+            }
+
+            row.SetActive(true);
+        }
+
+        private void AddTrackingBulkButton(Transform parent, string label, System.Action onClick)
+        {
+            GameObject button = CreateStyledButton("TrackingBulkButton", parent, label, onClick, KleiBlueStyle());
+            LayoutElement layout = button.AddComponent<LayoutElement>();
+            layout.preferredWidth = 62f;
+            layout.preferredHeight = 22f;
+        }
+
+        private void AddTrackingRetryButton(Transform parent, System.Action onClick)
+        {
+            GameObject button = CreateStyledButton(
+                "RetryOrderButton",
+                parent,
+                Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_ACTION_RETRY),
+                onClick,
+                KleiBlueStyle());
+            LayoutElement layout = button.AddComponent<LayoutElement>();
+            layout.preferredWidth = 42f;
+            layout.preferredHeight = 24f;
         }
 
         private void UpdateTrackingHeaderRow(string productName, int activeCount, int recordCount)
@@ -279,6 +467,20 @@ namespace StorageNetwork.UI
         private void CancelTrackedOrder(string orderKey)
         {
             lastOrderStatus = productionOrderService.CancelOrder(orderKey, StorageNetworkCycleTime.GetCurrent());
+            productionOrderService.Refresh();
+            RebuildOrderDetails();
+        }
+
+        private void RetryTrackedOrder(string orderKey)
+        {
+            lastOrderStatus = productionOrderService.RetryOrder(orderKey, StorageNetworkCycleTime.GetCurrent());
+            productionOrderService.Refresh();
+            RebuildOrderDetails();
+        }
+
+        private void ClearTrackedOrders(ProductionOrderState state)
+        {
+            lastOrderStatus = productionOrderService.ClearOrdersByState(state);
             productionOrderService.Refresh();
             RebuildOrderDetails();
         }

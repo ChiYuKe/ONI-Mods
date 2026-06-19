@@ -35,7 +35,10 @@ namespace StorageNetwork.ProductionOrders
             FabricatorName = fabricatorName;
             Details = details;
             Recipe = recipe;
-            Fabricators = fabricators ?? new List<ComplexFabricator>();
+            Fabricators = fabricators?
+                .Where(ProductionOrderCenterCatalog.IsOrderProductionFabricator)
+                .Distinct()
+                .ToList() ?? new List<ComplexFabricator>();
             Icon = icon;
             ProductKey = productKey;
             ProductName = productName;
@@ -88,7 +91,10 @@ namespace StorageNetwork.ProductionOrders
         public ProductionPlanNode(ComplexRecipe recipe, List<ComplexFabricator> fabricators, Tag productTag, float outputAmount, int orderCount)
         {
             Recipe = recipe;
-            Fabricators = fabricators?.Where(fabricator => fabricator != null).ToList() ?? new List<ComplexFabricator>();
+            Fabricators = fabricators?
+                .Where(ProductionOrderCenterCatalog.IsOrderProductionFabricator)
+                .Distinct()
+                .ToList() ?? new List<ComplexFabricator>();
             ProductTag = productTag;
             OutputAmount = outputAmount;
             OrderCount = orderCount;

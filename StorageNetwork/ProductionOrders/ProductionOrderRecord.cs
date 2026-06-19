@@ -157,7 +157,7 @@ namespace StorageNetwork.ProductionOrders
             LastSubmittedAmount = requestedAmount;
             OrderCount += orderCount;
             MergeCount++;
-            IsAutomatic = IsAutomatic && isAutomatic;
+            IsAutomatic = IsAutomatic || isAutomatic;
             State = ProductionOrderState.Submitted;
             LastActivityCycle = currentCycle;
             foreach (KeyValuePair<Tag, float> pair in reservedMaterials)

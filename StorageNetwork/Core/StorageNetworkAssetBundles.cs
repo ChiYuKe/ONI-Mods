@@ -8,6 +8,7 @@ namespace StorageNetwork.Core
     {
         public const string StorageNetworkUiBundleName = "storagenetwork_ui";
         public const string StorageNetworkBindSelectionScreenPrefabName = "StorageNetworkBindSelectionScreen";
+        public const string EngravingOrderPanelPrefabName = "EngravingOrderPanel";
 
         private static readonly string[] BundleSearchFolders =
         {
@@ -25,6 +26,7 @@ namespace StorageNetwork.Core
         public static void SetModPath(string path)
         {
             modPath = path;
+            Debug.Log("[StorageNetwork][AB] Mod path set: " + (modPath ?? "<null>"));
             LoadedPrefabs.Clear();
             foreach (AssetBundle bundle in LoadedBundles.Values)
             {
@@ -42,6 +44,11 @@ namespace StorageNetwork.Core
             return LoadPrefab(StorageNetworkUiBundleName, StorageNetworkBindSelectionScreenPrefabName);
         }
 
+        public static GameObject GetEngravingOrderPanelPrefab()
+        {
+            return LoadPrefab(StorageNetworkUiBundleName, EngravingOrderPanelPrefabName);
+        }
+
         public static GameObject LoadPrefab(string bundleName, string prefabName)
         {
             if (string.IsNullOrWhiteSpace(bundleName) || string.IsNullOrWhiteSpace(prefabName))
@@ -52,6 +59,7 @@ namespace StorageNetwork.Core
             string cacheKey = bundleName + ":" + prefabName;
             if (LoadedPrefabs.TryGetValue(cacheKey, out GameObject prefab))
             {
+                Debug.Log("[StorageNetwork][AB] Prefab cache hit: " + cacheKey);
                 return prefab;
             }
 
@@ -65,9 +73,11 @@ namespace StorageNetwork.Core
             if (prefab == null)
             {
                 Debug.LogWarning("[StorageNetwork] Failed to load prefab '" + prefabName + "' from bundle '" + bundleName + "'.");
+                Debug.LogWarning("[StorageNetwork][AB] Available assets in '" + bundleName + "': " + string.Join(", ", bundle.GetAllAssetNames()));
                 return null;
             }
 
+            Debug.Log("[StorageNetwork][AB] Loaded prefab '" + prefabName + "' from bundle '" + bundleName + "'.");
             LoadedPrefabs[cacheKey] = prefab;
             return prefab;
         }
@@ -76,6 +86,7 @@ namespace StorageNetwork.Core
         {
             if (LoadedBundles.TryGetValue(bundleName, out AssetBundle bundle))
             {
+                Debug.Log("[StorageNetwork][AB] Bundle cache hit: " + bundleName);
                 return bundle;
             }
 
@@ -86,6 +97,7 @@ namespace StorageNetwork.Core
                 return null;
             }
 
+            Debug.Log("[StorageNetwork][AB] Loading AssetBundle '" + bundleName + "' from: " + bundlePath);
             bundle = AssetBundle.LoadFromFile(bundlePath);
             if (bundle == null)
             {
@@ -93,6 +105,7 @@ namespace StorageNetwork.Core
                 return null;
             }
 
+            Debug.Log("[StorageNetwork][AB] Loaded AssetBundle '" + bundleName + "' from: " + bundlePath);
             LoadedBundles[bundleName] = bundle;
             return bundle;
         }

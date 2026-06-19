@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Reflection;
+using StorageNetwork.Components;
 
 namespace StorageNetwork.ProductionOrders
 {
@@ -14,10 +15,27 @@ namespace StorageNetwork.ProductionOrders
         private readonly ProductionNetworkInventoryCache networkInventory = new ProductionNetworkInventoryCache();
         private List<RecipeDisplayInfo> craftableRecipes = new List<RecipeDisplayInfo>();
         private string ignoredReservationOrderKey;
+        private StorageNetworkOrderProductionCenter orderCenterScope;
 
         public IReadOnlyCollection<ProductionOrderRecord> Orders => ActiveOrders.Values;
 
         public List<Storage> NetworkSourceStorages => networkInventory.SourceStorages;
+
+        internal static bool IsOrderProductionFabricator(ComplexFabricator fabricator)
+        {
+            return ProductionOrderCenterCatalog.IsOrderProductionFabricator(fabricator);
+        }
+
+        public void SetOrderCenterScope(StorageNetworkOrderProductionCenter center)
+        {
+            if (orderCenterScope == center)
+            {
+                return;
+            }
+
+            orderCenterScope = center;
+            craftableRecipes = new List<RecipeDisplayInfo>();
+        }
 
         public void LoadOrdersForDisplay()
         {
@@ -28,7 +46,9 @@ namespace StorageNetwork.ProductionOrders
         {
             EnsureOrdersLoaded();
             networkInventory.Refresh();
-            craftableRecipes = ProductionRecipeCatalog.GetCraftableRecipeDisplayInfos();
+            craftableRecipes = orderCenterScope != null
+                ? ProductionRecipeCatalog.GetCraftableRecipeDisplayInfos(orderCenterScope)
+                : ProductionRecipeCatalog.GetCraftableRecipeDisplayInfos();
             UpdateProductionOrderStates();
             PurgeExpiredFinishedOrders();
             RunKeepRules();

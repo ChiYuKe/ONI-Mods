@@ -68,7 +68,7 @@ namespace StorageNetwork.UI
             content.anchoredPosition = Vector2.zero;
 
             List<ProductionOrderQueueAssignment> assignments = (record.QueueAssignments ?? new List<ProductionOrderQueueAssignment>())
-                .Where(assignment => assignment != null && assignment.Fabricator != null && assignment.Recipe != null)
+                .Where(assignment => assignment != null && ProductionOrderService.IsOrderProductionFabricator(assignment.Fabricator) && assignment.Recipe != null)
                 .OrderByDescending(assignment => assignment.Primary)
                 .ThenBy(assignment => assignment.Fabricator.GetProperName())
                 .ToList();
@@ -132,17 +132,17 @@ namespace StorageNetwork.UI
 
             AddPlanLine(card.transform, StorageNetworkOrderTrackingRules.GetOrderStateLabel(record.State), 10, FontStyles.Bold, GetOrderStateColor(record.State), 20f);
             AddPlanLine(card.transform, string.Format("{0} / {1}", GameUtil.GetFormattedMass(record.ProducedAtSubmit), GameUtil.GetFormattedMass(record.RequestedAmount)), 9, FontStyles.Bold, NeutralTextColor(), 18f);
-            AddPlanLine(card.transform, string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_CYCLE_VALUE), ProductionOrderFormatting.FormatCycle(record.LastActivityCycle)), 8, FontStyles.Normal, MutedTextColor(), 16f);
+            AddPlanLine(card.transform, string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_CYCLE_VALUE), ProductionOrderFormatting.FormatCycleStamp(record.LastActivityCycle)), 8, FontStyles.Normal, MutedTextColor(), 16f);
         }
 
         private void AddTrackingDetailFabricatorNode(Transform parent, ProductionOrderRecord record, ProductionOrderQueueAssignment assignment, Vector2 position)
         {
             ComplexFabricator fabricator = assignment.Fabricator;
-            int queued = fabricator.GetRecipeQueueCount(assignment.Recipe);
-            bool working = fabricator.CurrentWorkingOrder == assignment.Recipe;
-            float progress = working ? Mathf.Clamp01(fabricator.OrderProgress) : 0f;
+            int queued = StorageNetworkFabricatorProgress.GetRecipeQueueCountSafe(fabricator, assignment.Recipe);
+            bool working = ProductionOrderRuntimeAllocation.GetRunningCountForAssignment(record, assignment) > 0;
+            float progress = working ? ProductionOrderRuntimeAllocation.GetProgressForAssignment(record, assignment) : 0f;
             string queuedText = queued == ComplexFabricator.QUEUE_INFINITE ? "∞" : Mathf.Max(0, queued).ToString();
-            Color stateColor = GetBuildingStateColor(assignment);
+            Color stateColor = GetBuildingStateColor(record, assignment);
 
             GameObject card = CreatePlainImage("TrackingDetailFabricatorNode", parent, new Color(0.78f, 0.79f, 0.73f, 1f));
             ApplyOniInputSlotStyle(card.GetComponent<Image>());
@@ -172,9 +172,9 @@ namespace StorageNetwork.UI
             AddVerticalContainer(text, 2f, 0, 0, 0, 0);
 
             AddPlanLine(text.transform, fabricator.GetProperName(), 10, FontStyles.Bold, NeutralTextColor(), 17f);
-            AddPlanLine(text.transform, string.Format("{0}  {1}", GetBuildingStateLabel(assignment), assignment.Recipe != null ? assignment.Recipe.GetUIName(false) : "?"), 8, FontStyles.Bold, stateColor, 15f);
+            AddPlanLine(text.transform, string.Format("{0}  {1}", GetBuildingStateLabel(record, assignment), assignment.Recipe != null ? assignment.Recipe.GetUIName(false) : "?"), 8, FontStyles.Bold, stateColor, 15f);
             AddPlanLine(text.transform, StorageNetworkOrderTrackingRules.BuildBuildingQueueLine(assignment, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_PRODUCT_DISPATCH), Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_DISPATCH_AUTO), queuedText), 8, FontStyles.Normal, MutedTextColor(), 15f);
-            AddPlanLine(text.transform, BuildBuildingDetailLine(assignment, progress), 8, FontStyles.Bold, stateColor, 15f);
+            AddPlanLine(text.transform, BuildBuildingDetailLine(record, assignment, progress), 8, FontStyles.Bold, stateColor, 15f);
         }
 
         private void AddTrackingDetailMaterialNodes(Transform parent, ProductionOrderRecord record, ProductionOrderQueueAssignment assignment, Vector2 position)

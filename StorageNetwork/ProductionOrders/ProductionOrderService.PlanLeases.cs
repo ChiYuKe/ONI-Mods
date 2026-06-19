@@ -76,7 +76,7 @@ namespace StorageNetwork.ProductionOrders
         {
             List<ProductionOrderOutputLease> leases = new List<ProductionOrderOutputLease>();
             List<ProductionOrderQueueAssignment> primaryAssignments = (assignments ?? new List<ProductionOrderQueueAssignment>())
-                .Where(assignment => assignment != null && assignment.Primary && assignment.Fabricator != null)
+                .Where(assignment => assignment != null && assignment.Primary && IsOrderProductionFabricator(assignment.Fabricator))
                 .ToList();
             int totalCount = primaryAssignments.Sum(assignment => Mathf.Max(0, assignment.OrderCount));
             foreach (ProductionOrderQueueAssignment assignment in primaryAssignments)
@@ -93,7 +93,7 @@ namespace StorageNetwork.ProductionOrders
             List<ProductionOrderQueueAssignment> assignments = new List<ProductionOrderQueueAssignment>();
             AddQueueAssignments(node, assignments, null, true);
             return assignments
-                .Where(assignment => assignment.Fabricator != null && assignment.Recipe != null && assignment.OrderCount > 0)
+                .Where(assignment => IsOrderProductionFabricator(assignment.Fabricator) && assignment.Recipe != null && assignment.OrderCount > 0)
                 .GroupBy(assignment => string.Format(
                     "{0}|{1}|{2}|{3}|{4}",
                     assignment.Fabricator.GetInstanceID(),
@@ -128,7 +128,7 @@ namespace StorageNetwork.ProductionOrders
             string outputName = ProductionOrderFormatting.GetTagDisplayName(outputTag);
             foreach (ProductionPlanAssignment assignment in node.Assignments)
             {
-                if (assignment.Fabricator != null && node.Recipe != null && assignment.OrderCount > 0)
+                if (IsOrderProductionFabricator(assignment.Fabricator) && node.Recipe != null && assignment.OrderCount > 0)
                 {
                     assignments.Add(new ProductionOrderQueueAssignment(
                         assignment.Fabricator,
