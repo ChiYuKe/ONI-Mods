@@ -172,7 +172,7 @@ namespace StorageNetwork.UI
             bool forceRebuild = mode == StoragePanelRefreshMode.Structure;
             bool checkStructure = forceRebuild || mode == StoragePanelRefreshMode.StructureCheck;
             EnsureValidMainWorldFilter();
-            currentSnapshot = CollectMainSnapshot(checkStructure);
+            currentSnapshot = CollectMainSnapshot(false);
             UpdateStorageSummaryText();
 
             if (IsMainWorldFilterBlockedByRelay())

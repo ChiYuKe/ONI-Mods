@@ -10,7 +10,9 @@ namespace StorageNetwork.Services
     internal static class StorageNetworkFabricatorSupplyService
     {
         private const float RetrySeconds = 2f;
+        private const float DemandSnapshotSeconds = 0.75f;
         private static readonly Dictionary<int, float> NextTryByPort = new Dictionary<int, float>();
+        private static readonly Dictionary<int, FabricatorDemandSnapshot> DemandSnapshotsByWorld = new Dictionary<int, FabricatorDemandSnapshot>();
         private static readonly List<GameObject> MatchingItems = new List<GameObject>();
 
         public static StorageTransferResult SupplyNextFabricator(Storage portStorage, Storage specificSource, IEnumerable<Tag> allowedTags)
@@ -35,9 +37,10 @@ namespace StorageNetwork.Services
             }
 
             HashSet<Tag> allowed = BuildAllowedTagSet(allowedTags);
-            ReconcileFabricatorReservations(portStorage, allowed, worldId);
+            FabricatorDemandSnapshot snapshot = GetDemandSnapshot(worldId);
+            ReconcileFabricatorReservations(portStorage, allowed, snapshot);
 
-            FabricatorDemand demand = FindNearestDemand(portStorage, worldId, allowed);
+            FabricatorDemand demand = FindNearestDemand(portStorage, allowed, snapshot);
             if (!demand.IsValid)
             {
                 SetRetry(portId);
@@ -62,33 +65,29 @@ namespace StorageNetwork.Services
             return StorageTransferResult.Blocked(StorageItemUtility.GetTagDisplayName(demand.Tag));
         }
 
-        private static FabricatorDemand FindNearestDemand(Storage portStorage, int worldId, HashSet<Tag> allowedTags)
+        private static FabricatorDemand FindNearestDemand(Storage portStorage, HashSet<Tag> allowedTags, FabricatorDemandSnapshot snapshot)
         {
             FabricatorDemand best = FabricatorDemand.Invalid;
             float bestDistance = float.MaxValue;
             Vector3 portPosition = portStorage.transform.GetPosition();
 
-            foreach (ComplexFabricator fabricator in Object.FindObjectsByType<ComplexFabricator>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+            if (snapshot == null)
             {
-                if (!IsEligibleFabricator(fabricator, worldId))
+                return best;
+            }
+
+            foreach (FabricatorDemand demand in snapshot.Demands)
+            {
+                if (!demand.IsValid || !IsAllowed(demand.Tag, allowedTags))
                 {
                     continue;
                 }
 
-                foreach (ComplexRecipe recipe in GetQueuedRecipes(fabricator))
+                float distance = Vector3.SqrMagnitude(demand.Position - portPosition);
+                if (distance < bestDistance)
                 {
-                    FabricatorDemand demand = GetMissingIngredient(fabricator, recipe, allowedTags);
-                    if (!demand.IsValid)
-                    {
-                        continue;
-                    }
-
-                    float distance = Vector3.SqrMagnitude(fabricator.transform.GetPosition() - portPosition);
-                    if (distance < bestDistance)
-                    {
-                        bestDistance = distance;
-                        best = demand;
-                    }
+                    bestDistance = distance;
+                    best = demand;
                 }
             }
 
@@ -147,11 +146,50 @@ namespace StorageNetwork.Services
                 float missing = target - available;
                 if (missing > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
                 {
-                    return new FabricatorDemand(ingredient.material, missing);
+                    return new FabricatorDemand(fabricator, ingredient.material, missing, fabricator.transform.GetPosition());
                 }
             }
 
             return FabricatorDemand.Invalid;
+        }
+
+        private static FabricatorDemandSnapshot GetDemandSnapshot(int worldId)
+        {
+            if (DemandSnapshotsByWorld.TryGetValue(worldId, out FabricatorDemandSnapshot snapshot) &&
+                Time.time - snapshot.CreatedAt <= DemandSnapshotSeconds)
+            {
+                return snapshot;
+            }
+
+            snapshot = BuildDemandSnapshot(worldId);
+            DemandSnapshotsByWorld[worldId] = snapshot;
+            return snapshot;
+        }
+
+        private static FabricatorDemandSnapshot BuildDemandSnapshot(int worldId)
+        {
+            FabricatorDemandSnapshot snapshot = new FabricatorDemandSnapshot(Time.time);
+            foreach (ComplexFabricator fabricator in Object.FindObjectsByType<ComplexFabricator>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+            {
+                if (!IsEligibleFabricator(fabricator, worldId))
+                {
+                    continue;
+                }
+
+                foreach (ComplexRecipe recipe in GetQueuedRecipes(fabricator))
+                {
+                    FabricatorDemand demand = GetMissingIngredient(fabricator, recipe, null);
+                    if (!demand.IsValid)
+                    {
+                        continue;
+                    }
+
+                    snapshot.Demands.Add(demand);
+                    AddDictionaryValue(snapshot.DemandByTag, demand.Tag, demand.Amount);
+                }
+            }
+
+            return snapshot;
         }
 
         private static int GetRequestOrderCount(ComplexFabricator fabricator, ComplexRecipe recipe)
@@ -264,14 +302,14 @@ namespace StorageNetwork.Services
             return null;
         }
 
-        private static void ReconcileFabricatorReservations(Storage portStorage, HashSet<Tag> allowedTags, int worldId)
+        private static void ReconcileFabricatorReservations(Storage portStorage, HashSet<Tag> allowedTags, FabricatorDemandSnapshot snapshot)
         {
             if (portStorage?.items == null)
             {
                 return;
             }
 
-            Dictionary<Tag, float> demandByTag = GetDemandByTag(worldId, allowedTags);
+            Dictionary<Tag, float> demandByTag = GetDemandByTag(snapshot, allowedTags);
             Dictionary<Tag, float> keptByTag = new Dictionary<Tag, float>();
             List<GameObject> reservedItems = GetReservedItems(portStorage);
 
@@ -295,23 +333,24 @@ namespace StorageNetwork.Services
             }
         }
 
-        private static Dictionary<Tag, float> GetDemandByTag(int worldId, HashSet<Tag> allowedTags)
+        private static Dictionary<Tag, float> GetDemandByTag(FabricatorDemandSnapshot snapshot, HashSet<Tag> allowedTags)
         {
-            Dictionary<Tag, float> demandByTag = new Dictionary<Tag, float>();
-            foreach (ComplexFabricator fabricator in Object.FindObjectsByType<ComplexFabricator>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+            if (snapshot == null)
             {
-                if (!IsEligibleFabricator(fabricator, worldId))
-                {
-                    continue;
-                }
+                return null;
+            }
 
-                foreach (ComplexRecipe recipe in GetQueuedRecipes(fabricator))
+            if (allowedTags == null || allowedTags.Count == 0)
+            {
+                return snapshot.DemandByTag;
+            }
+
+            Dictionary<Tag, float> demandByTag = new Dictionary<Tag, float>();
+            foreach (FabricatorDemand demand in snapshot.Demands)
+            {
+                if (demand.IsValid && IsAllowed(demand.Tag, allowedTags))
                 {
-                    FabricatorDemand demand = GetMissingIngredient(fabricator, recipe, allowedTags);
-                    if (demand.IsValid)
-                    {
-                        AddDictionaryValue(demandByTag, demand.Tag, demand.Amount);
-                    }
+                    AddDictionaryValue(demandByTag, demand.Tag, demand.Amount);
                 }
             }
 
@@ -489,19 +528,39 @@ namespace StorageNetwork.Services
 
         private struct FabricatorDemand
         {
-            public static readonly FabricatorDemand Invalid = new FabricatorDemand(Tag.Invalid, 0f);
+            public static readonly FabricatorDemand Invalid = new FabricatorDemand(null, Tag.Invalid, 0f, Vector3.zero);
 
-            public FabricatorDemand(Tag tag, float amount)
+            public FabricatorDemand(ComplexFabricator fabricator, Tag tag, float amount, Vector3 position)
             {
+                Fabricator = fabricator;
                 Tag = tag;
                 Amount = amount;
+                Position = position;
             }
+
+            public ComplexFabricator Fabricator { get; }
 
             public Tag Tag { get; }
 
             public float Amount { get; }
 
+            public Vector3 Position { get; }
+
             public bool IsValid => Tag != Tag.Invalid && Amount > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT;
+        }
+
+        private sealed class FabricatorDemandSnapshot
+        {
+            public FabricatorDemandSnapshot(float createdAt)
+            {
+                CreatedAt = createdAt;
+            }
+
+            public float CreatedAt { get; }
+
+            public List<FabricatorDemand> Demands { get; } = new List<FabricatorDemand>();
+
+            public Dictionary<Tag, float> DemandByTag { get; } = new Dictionary<Tag, float>();
         }
     }
 }

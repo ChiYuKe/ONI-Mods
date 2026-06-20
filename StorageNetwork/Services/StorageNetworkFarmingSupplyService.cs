@@ -9,7 +9,10 @@ namespace StorageNetwork.Services
     internal static class StorageNetworkFarmingSupplyService
     {
         private const float RetrySeconds = 2f;
+        private const float FarmingSnapshotSeconds = 0.5f;
         private static readonly Dictionary<int, float> NextTryByPort = new Dictionary<int, float>();
+        private static readonly Dictionary<int, PlantingDemandSnapshot> PlantingDemandSnapshotsByWorld = new Dictionary<int, PlantingDemandSnapshot>();
+        private static readonly Dictionary<int, FarmingReservationSnapshot> ReservationSnapshotsByWorld = new Dictionary<int, FarmingReservationSnapshot>();
         private static readonly List<GameObject> MatchingItems = new List<GameObject>();
 
         public static StorageTransferResult SupplyNextPlanting(Storage portStorage, Storage specificSource, IEnumerable<Tag> allowedTags)
@@ -34,16 +37,18 @@ namespace StorageNetwork.Services
             }
 
             HashSet<Tag> allowed = BuildAllowedTagSet(allowedTags);
-            ReconcileFarmingReservations(portStorage, allowed, worldId);
+            PlantingDemandSnapshot demandSnapshot = GetPlantingDemandSnapshot(worldId);
+            FarmingReservationSnapshot reservationSnapshot = GetReservationSnapshot(worldId);
+            ReconcileFarmingReservations(portStorage, allowed, demandSnapshot, reservationSnapshot);
 
-            Dictionary<Tag, float> demandByTag = GetPlantingDemandByTag(worldId, allowed);
+            Dictionary<Tag, float> demandByTag = GetPlantingDemandByTag(demandSnapshot, allowed);
             if (demandByTag.Count == 0)
             {
                 SetRetry(portId);
                 return StorageTransferResult.Idle;
             }
 
-            Dictionary<Tag, float> earlierReservedByTag = GetEarlierPortReservedByTag(portStorage, worldId, allowed);
+            Dictionary<Tag, float> earlierReservedByTag = GetEarlierPortReservedByTag(portStorage, allowed, reservationSnapshot);
             foreach (KeyValuePair<Tag, float> demand in demandByTag)
             {
                 Tag tag = demand.Key;
@@ -96,6 +101,43 @@ namespace StorageNetwork.Services
                 }
 
                 AddDictionaryValue(demandByTag, seedTag, Mathf.Max(1f, request.originalAmount));
+            }
+
+            return demandByTag;
+        }
+
+        private static PlantingDemandSnapshot GetPlantingDemandSnapshot(int worldId)
+        {
+            if (PlantingDemandSnapshotsByWorld.TryGetValue(worldId, out PlantingDemandSnapshot snapshot) &&
+                Time.time - snapshot.CreatedAt <= FarmingSnapshotSeconds)
+            {
+                return snapshot;
+            }
+
+            snapshot = new PlantingDemandSnapshot(Time.time, GetPlantingDemandByTag(worldId, null));
+            PlantingDemandSnapshotsByWorld[worldId] = snapshot;
+            return snapshot;
+        }
+
+        private static Dictionary<Tag, float> GetPlantingDemandByTag(PlantingDemandSnapshot snapshot, HashSet<Tag> allowedTags)
+        {
+            if (snapshot == null || snapshot.DemandByTag == null)
+            {
+                return new Dictionary<Tag, float>();
+            }
+
+            if (allowedTags == null || allowedTags.Count == 0)
+            {
+                return snapshot.DemandByTag;
+            }
+
+            Dictionary<Tag, float> demandByTag = new Dictionary<Tag, float>();
+            foreach (KeyValuePair<Tag, float> pair in snapshot.DemandByTag)
+            {
+                if (IsAllowed(pair.Key, allowedTags))
+                {
+                    demandByTag[pair.Key] = pair.Value;
+                }
             }
 
             return demandByTag;
@@ -191,15 +233,19 @@ namespace StorageNetwork.Services
             return null;
         }
 
-        private static void ReconcileFarmingReservations(Storage portStorage, HashSet<Tag> allowedTags, int worldId)
+        private static void ReconcileFarmingReservations(
+            Storage portStorage,
+            HashSet<Tag> allowedTags,
+            PlantingDemandSnapshot demandSnapshot,
+            FarmingReservationSnapshot reservationSnapshot)
         {
             if (portStorage?.items == null)
             {
                 return;
             }
 
-            Dictionary<Tag, float> demandByTag = GetPlantingDemandByTag(worldId, allowedTags);
-            Dictionary<Tag, float> earlierReservedByTag = GetEarlierPortReservedByTag(portStorage, worldId, allowedTags);
+            Dictionary<Tag, float> demandByTag = GetPlantingDemandByTag(demandSnapshot, allowedTags);
+            Dictionary<Tag, float> earlierReservedByTag = GetEarlierPortReservedByTag(portStorage, allowedTags, reservationSnapshot);
             Dictionary<Tag, float> keptByTag = new Dictionary<Tag, float>();
             List<GameObject> reservedItems = GetReservedItems(portStorage);
 
@@ -226,13 +272,55 @@ namespace StorageNetwork.Services
             }
         }
 
-        private static Dictionary<Tag, float> GetEarlierPortReservedByTag(Storage currentPortStorage, int worldId, HashSet<Tag> allowedTags)
+        private static Dictionary<Tag, float> GetEarlierPortReservedByTag(Storage currentPortStorage, HashSet<Tag> allowedTags, FarmingReservationSnapshot snapshot)
         {
-            Dictionary<Tag, float> reservedByTag = new Dictionary<Tag, float>();
+            if (currentPortStorage == null || snapshot == null)
+            {
+                return new Dictionary<Tag, float>();
+            }
+
             int currentId = StorageItemUtility.GetStorageInstanceId(currentPortStorage);
+            if (!snapshot.EarlierReservedByPortId.TryGetValue(currentId, out Dictionary<Tag, float> reservedByTag))
+            {
+                return new Dictionary<Tag, float>();
+            }
+
+            if (allowedTags == null || allowedTags.Count == 0)
+            {
+                return reservedByTag;
+            }
+
+            Dictionary<Tag, float> filtered = new Dictionary<Tag, float>();
+            foreach (KeyValuePair<Tag, float> pair in reservedByTag)
+            {
+                if (IsAllowed(pair.Key, allowedTags))
+                {
+                    filtered[pair.Key] = pair.Value;
+                }
+            }
+
+            return filtered;
+        }
+
+        private static FarmingReservationSnapshot GetReservationSnapshot(int worldId)
+        {
+            if (ReservationSnapshotsByWorld.TryGetValue(worldId, out FarmingReservationSnapshot snapshot) &&
+                Time.time - snapshot.CreatedAt <= FarmingSnapshotSeconds)
+            {
+                return snapshot;
+            }
+
+            snapshot = BuildReservationSnapshot(worldId);
+            ReservationSnapshotsByWorld[worldId] = snapshot;
+            return snapshot;
+        }
+
+        private static FarmingReservationSnapshot BuildReservationSnapshot(int worldId)
+        {
+            List<FarmingPortReservation> reservations = new List<FarmingPortReservation>();
             foreach (Storage storage in StorageSceneCollector.CollectLightweightForWorld(worldId).Storages)
             {
-                if (storage == null || storage == currentPortStorage || storage.items == null)
+                if (storage == null || storage.items == null)
                 {
                     continue;
                 }
@@ -243,28 +331,72 @@ namespace StorageNetwork.Services
                     continue;
                 }
 
-                int otherId = StorageItemUtility.GetStorageInstanceId(storage);
-                if (otherId > currentId)
+                Dictionary<Tag, float> reservedByTag = GetReservedByTag(storage);
+                if (reservedByTag.Count > 0)
+                {
+                    reservations.Add(new FarmingPortReservation(StorageItemUtility.GetStorageInstanceId(storage), reservedByTag));
+                }
+            }
+
+            reservations.Sort((left, right) => left.PortId.CompareTo(right.PortId));
+            FarmingReservationSnapshot snapshot = new FarmingReservationSnapshot(Time.time);
+            Dictionary<Tag, float> prefix = new Dictionary<Tag, float>();
+            foreach (FarmingPortReservation reservation in reservations)
+            {
+                snapshot.EarlierReservedByPortId[reservation.PortId] = CopyDictionary(prefix);
+                foreach (KeyValuePair<Tag, float> pair in reservation.ReservedByTag)
+                {
+                    AddDictionaryValue(prefix, pair.Key, pair.Value);
+                }
+            }
+
+            return snapshot;
+        }
+
+        private static Dictionary<Tag, float> GetReservedByTag(Storage storage)
+        {
+            Dictionary<Tag, float> reservedByTag = new Dictionary<Tag, float>();
+            if (storage?.items == null)
+            {
+                return reservedByTag;
+            }
+
+            foreach (GameObject item in storage.items)
+            {
+                if (!IsFarmingReserved(item))
                 {
                     continue;
                 }
 
-                foreach (GameObject item in storage.items)
+                Tag tag = StorageItemUtility.GetStorageTransferTag(item);
+                if (tag != Tag.Invalid)
                 {
-                    if (!IsFarmingReserved(item))
-                    {
-                        continue;
-                    }
-
-                    Tag tag = StorageItemUtility.GetStorageTransferTag(item);
-                    if (tag != Tag.Invalid && IsAllowed(tag, allowedTags))
-                    {
-                        AddDictionaryValue(reservedByTag, tag, StorageItemUtility.GetMass(item));
-                    }
+                    AddDictionaryValue(reservedByTag, tag, StorageItemUtility.GetMass(item));
                 }
             }
 
             return reservedByTag;
+        }
+
+        private static Dictionary<Tag, float> CopyDictionary(Dictionary<Tag, float> source)
+        {
+            Dictionary<Tag, float> copy = new Dictionary<Tag, float>();
+            if (source == null)
+            {
+                return copy;
+            }
+
+            foreach (KeyValuePair<Tag, float> pair in source)
+            {
+                copy[pair.Key] = pair.Value;
+            }
+
+            return copy;
+        }
+
+        private static void InvalidateReservationSnapshots()
+        {
+            ReservationSnapshotsByWorld.Clear();
         }
 
         private static List<GameObject> GetReservedItems(Storage storage)
@@ -315,6 +447,7 @@ namespace StorageNetwork.Services
         {
             item?.GetComponent<KPrefabID>()?.AddTag(StorageNetworkTags.ReservedForFarming, true);
             StorageNetworkConstructionSupplyService.ClearSolidOutputBufferMarker(item);
+            InvalidateReservationSnapshots();
         }
 
         private static void ReturnReservedItemToNetwork(Storage portStorage, GameObject item)
@@ -323,6 +456,7 @@ namespace StorageNetwork.Services
             if (prefabId != null && prefabId.HasTag(StorageNetworkTags.ReservedForFarming))
             {
                 prefabId.RemoveTag(StorageNetworkTags.ReservedForFarming);
+                InvalidateReservationSnapshots();
             }
 
             NetworkStorageTransferService.TransferStoredItemToNetwork(portStorage, item, new[] { portStorage });
@@ -372,6 +506,45 @@ namespace StorageNetwork.Services
         private static float GetDictionaryValue(Dictionary<Tag, float> values, Tag tag)
         {
             return values != null && values.TryGetValue(tag, out float value) ? value : 0f;
+        }
+
+        private sealed class PlantingDemandSnapshot
+        {
+            public PlantingDemandSnapshot(float createdAt, Dictionary<Tag, float> demandByTag)
+            {
+                CreatedAt = createdAt;
+                DemandByTag = demandByTag ?? new Dictionary<Tag, float>();
+            }
+
+            public float CreatedAt { get; }
+
+            public Dictionary<Tag, float> DemandByTag { get; }
+        }
+
+        private readonly struct FarmingPortReservation
+        {
+            public FarmingPortReservation(int portId, Dictionary<Tag, float> reservedByTag)
+            {
+                PortId = portId;
+                ReservedByTag = reservedByTag;
+            }
+
+            public int PortId { get; }
+
+            public Dictionary<Tag, float> ReservedByTag { get; }
+        }
+
+        private sealed class FarmingReservationSnapshot
+        {
+            public FarmingReservationSnapshot(float createdAt)
+            {
+                CreatedAt = createdAt;
+            }
+
+            public float CreatedAt { get; }
+
+            public Dictionary<int, Dictionary<Tag, float>> EarlierReservedByPortId { get; } =
+                new Dictionary<int, Dictionary<Tag, float>>();
         }
     }
 }

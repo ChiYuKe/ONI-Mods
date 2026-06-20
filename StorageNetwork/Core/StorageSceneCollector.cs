@@ -17,7 +17,6 @@ namespace StorageNetwork.Core
         private static readonly List<WorldSnapshotKey> ExpiredWorldSnapshotKeys = new List<WorldSnapshotKey>();
         private static readonly List<WorldSnapshotKey> ExpiredLightweightSnapshotKeys = new List<WorldSnapshotKey>();
         private static int cachedWorldRegistryVersion = -1;
-        private const float WorldSnapshotCacheSeconds = 2f;
 
         /// <summary>
         /// 扫描当前场景中的储存网络成员，并返回带缓存的快照。UI 高频刷新时优先使用这个入口。
@@ -66,7 +65,7 @@ namespace StorageNetwork.Core
             WorldSnapshotKey key = new WorldSnapshotKey(worldId, includeReachableWorlds);
             if (!force &&
                 WorldSnapshots.TryGetValue(key, out WorldSnapshotCacheEntry cached) &&
-                (cached.Frame == Time.frameCount || Time.unscaledTime - cached.CreatedAt <= WorldSnapshotCacheSeconds))
+                (cached.Frame == Time.frameCount || Time.unscaledTime - cached.CreatedAt <= GetWorldSnapshotCacheSeconds()))
             {
                 return cached.Snapshot;
             }
@@ -94,7 +93,7 @@ namespace StorageNetwork.Core
             PruneWorldCaches();
             WorldSnapshotKey key = new WorldSnapshotKey(worldId, includeReachableWorlds);
             if (LightweightSnapshots.TryGetValue(key, out LightweightSnapshotCacheEntry cached) &&
-                (cached.Frame == Time.frameCount || Time.unscaledTime - cached.CreatedAt <= WorldSnapshotCacheSeconds))
+                (cached.Frame == Time.frameCount || Time.unscaledTime - cached.CreatedAt <= GetWorldSnapshotCacheSeconds()))
             {
                 return cached.Snapshot;
             }
@@ -224,7 +223,7 @@ namespace StorageNetwork.Core
                 return;
             }
 
-            float cutoff = Time.unscaledTime - WorldSnapshotCacheSeconds;
+            float cutoff = Time.unscaledTime - GetWorldSnapshotCacheSeconds();
             ExpiredWorldSnapshotKeys.Clear();
             foreach (KeyValuePair<WorldSnapshotKey, WorldSnapshotCacheEntry> pair in WorldSnapshots)
             {
@@ -285,6 +284,11 @@ namespace StorageNetwork.Core
                     return (worldId * 397) ^ includeReachableWorlds.GetHashCode();
                 }
             }
+        }
+
+        private static float GetWorldSnapshotCacheSeconds()
+        {
+            return Mathf.Clamp(Config.Instance.SceneScanCacheSeconds, 0.25f, 0.5f);
         }
 
         private readonly struct WorldSnapshotCacheEntry
