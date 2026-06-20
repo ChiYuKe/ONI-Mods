@@ -114,29 +114,38 @@
 
 ## Patches
 
-Harmony 补丁，把仓储网络接进 ONI 原生流程。
+Harmony 补丁，把仓储网络接进 ONI 原生流程，按建筑、生产、UI、游戏系统和火箭中继分组。
 
 | 文件 | 作用 |
 | --- | --- |
-| `Patches/BuildingRegistrationPatch.cs` | 建筑注册/初始化相关补丁。 |
-| `Patches/ComplexFabricatorOutputStorePatch.cs` | 生产建筑产物输出补丁，接入网络输出处理。 |
-| `Patches/ComplexRecipeBuildingEnrollmentPatch.cs` | 制造站类建筑登记接入补丁。 |
-| `Patches/EnergyGeneratorEnrollmentPatch.cs` | 发电机登记接入补丁。 |
-| `Patches/GeyserElementEmitterPatch.cs` | 间歇泉元素喷发补丁，用于捕获产物。 |
-| `Patches/GeyserEnrollmentPatch.cs` | 间歇泉登记接入补丁。 |
-| `Patches/LifecyclePatch.cs` | 游戏生命周期补丁，触发运行时状态重置。 |
-| `Patches/NotificationScreenPatch.cs` | 通知系统补丁，注册仓储网络通知。 |
-| `Patches/ProductionOrderPersistencePatch.cs` | 生产订单存档/读档补丁。 |
-| `Patches/RocketRelayLaunchConditionPatch.cs` | 火箭中继发射条件补丁。 |
-| `Patches/SelectToolPatch.cs` | 选择工具补丁，处理 UI/世界面板点击交互。 |
-| `Patches/SideScreenPatch.cs` | 详情侧边栏补丁，安装仓储网络侧屏。 |
-| `Patches/StorageLockerEnrollmentPatch.cs` | 储物箱登记接入补丁。 |
-| `Patches/StorageNetworkFetchBridgePatch.cs` | FetchChore 桥接补丁，让复制人可从网络输出端口取货。 |
-| `Patches/StorageNetworkLargeStorageMassPatch.cs` | 大容量仓储质量显示/逻辑相关补丁。 |
-| `Patches/StorageNetworkPanelInputPatch.cs` | 仓储网络面板输入框相关补丁。 |
-| `Patches/StorageNetworkPortPlacementPatch.cs` | 端口放置/建造相关补丁。 |
-| `Patches/StorageNetworkWorldInventoryMirrorPatch.cs` | WorldInventory 镜像补丁，让网络库存参与世界库存查询。 |
-| `Patches/TreeFilterableNetworkBypassPatch.cs` | 过滤器旁路补丁，处理网络自动搬运时的过滤行为。 |
+| `Patches/Buildings/BuildingRegistrationPatch.cs` | 建筑注册/初始化相关补丁。 |
+| `Patches/Buildings/ColdStorageSliderSetPatch.cs` | 冷库温度滑条接入原生 SliderSet。 |
+| `Patches/Buildings/EnergyGeneratorEnrollmentPatch.cs` | 发电机登记接入补丁。 |
+| `Patches/Buildings/GeyserEnrollmentPatch.cs` | 间歇泉登记接入补丁。 |
+| `Patches/Buildings/HighEnergyParticleDirectionSideScreenPatch.cs` | 高能粒子端口方向侧屏补丁。 |
+| `Patches/Buildings/StorageLockerEnrollmentPatch.cs` | 储物箱登记接入补丁。 |
+| `Patches/Buildings/StorageNetworkBatteryDescriptorPatch.cs` | 隐藏电池服务器伪原生电池的原版效果描述。 |
+| `Patches/Buildings/StorageNetworkInputPortFetchLoopPatch.cs` | 输入端口取货循环相关补丁。 |
+| `Patches/Buildings/StorageNetworkLargeStorageMassPatch.cs` | 大容量仓储质量显示/逻辑相关补丁。 |
+| `Patches/Buildings/StorageNetworkPortPlacementPreviewPatch.cs` | 端口放置/建造相关补丁。 |
+| `Patches/Buildings/StorageNetworkPowerOverlayBatterySyncPatch.cs` | 电池服务器电力概览 UI 同步和颜色处理。 |
+| `Patches/Buildings/TelepadBonusDeliveryPatch.cs` | 打印舱奖励交付与网络交互补丁。 |
+| `Patches/Production/ComplexFabricatorOutputStorePatch.cs` | 生产建筑产物输出补丁，接入网络输出处理。 |
+| `Patches/Production/ComplexRecipeBuildingEnrollmentPatch.cs` | 制造站类建筑登记接入补丁。 |
+| `Patches/Production/ConstructableSupplyPatch.cs` | 建造材料从储存网络供料的补丁。 |
+| `Patches/Production/OrderProductionCenterEngraveCopyToolPatch.cs` | 订单生产中心刻录复制工具补丁。 |
+| `Patches/Production/OrderProductionCenterParallelFabricatorPatch.cs` | 订单生产中心并行制造补丁。 |
+| `Patches/Production/ProductionOrderPersistencePatch.cs` | 生产订单存档/读档补丁。 |
+| `Patches/Production/SolidOutputConstructionReservePatch.cs` | 材料出网端口供建造取货时防止轨道/其它逻辑抢走材料。 |
+| `Patches/UI/SelectToolPatch.cs` | 选择工具补丁，处理 UI/世界面板点击交互。 |
+| `Patches/UI/SideScreenPatch.cs` | 详情侧边栏补丁，安装仓储网络侧屏。 |
+| `Patches/UI/StorageNetworkPanelInputPatch.cs` | 仓储网络面板输入框相关补丁。 |
+| `Patches/Game/LifecyclePatch.cs` | 游戏生命周期补丁，触发运行时状态重置。 |
+| `Patches/Game/StorageNetworkCodexPatch.cs` | 给数据库/索引添加储存网络分类和建筑条目。 |
+| `Patches/Game/StorageNetworkRationTrackerPatch.cs` | 网络库存参与食物追踪补丁。 |
+| `Patches/Game/StorageNetworkWorldInventoryMirrorPatch.cs` | WorldInventory 镜像补丁，让网络库存参与世界库存查询。 |
+| `Patches/Game/TreeFilterableNetworkBypassPatch.cs` | 过滤器旁路补丁，处理网络自动搬运时的过滤行为。 |
+| `Patches/RocketRelay/RocketRelayLaunchConditionPatch.cs` | 火箭中继发射条件补丁。 |
 
 ## ProductionOrders
 
@@ -177,30 +186,29 @@ Harmony 补丁，把仓储网络接进 ONI 原生流程。
 
 ## Services
 
-无状态或缓存型服务，负责搬运、索引、过滤器、端口取货、世界库存镜像等核心业务。
+无状态或缓存型服务，负责搬运、索引、过滤器、供料、世界库存镜像等核心业务，按职责分组。
 
 | 文件 | 作用 |
 | --- | --- |
-| `Services/NetworkStorageTransferService.cs` | 网络仓储搬运服务：物品进网络、从网络出到仓库、输出目标选择和状态格式。 |
-| `Services/StorageItemUtility.cs` | 物品工具：标签匹配、物品 key、质量、储存质量、可匹配标签集合。 |
-| `Services/StorageNetworkFetchBridgeCache.cs` | Fetch 桥接缓存：失败冷却、端口查找缓存、清理缓存。 |
-| `Services/StorageNetworkFetchBridgeRequest.cs` | 从 `FetchChore` 构建网络取货请求，包含目标、标签、数量和防循环判断。 |
-| `Services/StorageNetworkFetchBridgeService.cs` | 给 FetchChore 提供网络输出端口里的可取物。 |
-| `Services/StorageNetworkFilterBypass.cs` | 判断并应用过滤器旁路。 |
-| `Services/StorageNetworkFilterChangeTransferService.cs` | 过滤器变化后，把不再接受的物品移回网络。 |
-| `Services/StorageNetworkFilterConfigurator.cs` | 配置 `TreeFilterable`。 |
-| `Services/StorageNetworkFilterSelectionNormalizer.cs` | 规范化过滤器选择，把大类展开成具体 tag。 |
-| `Services/StorageNetworkInventoryIndexService.cs` | 网络库存索引缓存，按世界/跨世界查询物品数量。 |
-| `Services/StorageNetworkPerformanceCounters.cs` | 性能计数器：记录索引重建、扫描、端口请求等次数。 |
-| `Services/StorageNetworkPortPickupBuffer.cs` | 输出端口取货缓冲：把网络物品提供成复制人可捡的 `Pickupable`。 |
-| `Services/StorageNetworkPortPickupSelector.cs` | 为 Fetch 请求选择可达的输出端口缓冲。 |
-| `Services/StorageNetworkPortPickupState.cs` | 同步端口缓冲仓库和其中物品的可捡取状态。 |
-| `Services/StorageNetworkProductionStorageCollector.cs` | 收集制造站相关的输入/输出仓库。 |
-| `Services/StorageNetworkRocketRelayService.cs` | 判断火箭模块是否具备仓储网络中继。 |
-| `Services/StorageNetworkSourceIndexService.cs` | 网络来源仓库索引，按标签、世界、排除列表查找可用来源。 |
-| `Services/StorageNetworkWorldInventoryMirrorService.cs` | 把网络库存镜像给 `WorldInventory` 查询。 |
-| `Services/StorageTargetSelector.cs` | 目标选择主逻辑：寻找输出目标、网络来源、排除集、世界 ID。 |
-| `Services/StorageTargetSelector.Filters.cs` | 目标选择过滤细节：可用目标、过滤器接受、世界可达、排序。 |
+| `Services/Supply/StorageNetworkConstructionSupplyService.cs` | 建造材料从网络调拨到材料出网端口。 |
+| `Services/Supply/StorageNetworkFabricatorSupplyService.cs` | 制造站材料从网络调拨到材料出网端口。 |
+| `Services/Supply/StorageNetworkFarmingSupplyService.cs` | 农业种植材料从网络调拨到材料出网端口。 |
+| `Services/Inventory/StorageItemUtility.cs` | 物品工具：标签匹配、物品 key、质量、储存质量、可匹配标签集合。 |
+| `Services/Inventory/StorageNetworkInventoryIndexService.cs` | 网络库存索引缓存，按世界/跨世界查询物品数量。 |
+| `Services/Inventory/StorageNetworkParticleStorageService.cs` | 高能粒子网络存储服务。 |
+| `Services/Inventory/StorageNetworkProductionStorageCollector.cs` | 收集制造站相关的输入/输出仓库。 |
+| `Services/Inventory/StorageNetworkSourceIndexService.cs` | 网络来源仓库索引，按标签、世界、排除列表查找可用来源。 |
+| `Services/Inventory/StorageNetworkWorldInventoryMirrorService.cs` | 把网络库存镜像给 `WorldInventory` 查询。 |
+| `Services/Filters/StorageNetworkFetchTargetResolver.cs` | 解析 FetchChore 可用目标和网络供料目标。 |
+| `Services/Filters/StorageNetworkFilterBypass.cs` | 判断并应用过滤器旁路。 |
+| `Services/Filters/StorageNetworkFilterConfigurator.cs` | 配置 `TreeFilterable`。 |
+| `Services/Filters/StorageNetworkFilterSelectionNormalizer.cs` | 规范化过滤器选择，把大类展开成具体 tag。 |
+| `Services/Filters/StorageTargetSelector.cs` | 目标选择主逻辑：寻找输出目标、网络来源、排除集、世界 ID。 |
+| `Services/Filters/StorageTargetSelector.Filters.cs` | 目标选择过滤细节：可用目标、过滤器接受、世界可达、排序。 |
+| `Services/Transfer/NetworkStorageTransferService.cs` | 网络仓储搬运服务：物品进网络、从网络出到仓库、输出目标选择和状态格式。 |
+| `Services/Transfer/StorageNetworkFilterChangeTransferService.cs` | 过滤器变化后，把不再接受的物品移回网络。 |
+| `Services/Diagnostics/StorageNetworkPerformanceCounters.cs` | 性能计数器：记录索引重建、扫描、端口请求等次数。 |
+| `Services/RocketRelay/StorageNetworkRocketRelayService.cs` | 判断火箭模块是否具备仓储网络中继。 |
 
 ## Properties
 

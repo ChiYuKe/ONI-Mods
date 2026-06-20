@@ -13,10 +13,10 @@
 | `Core/` | 场景注册表、快照收集、分类规则、本地化、资源加载、生命周期和网络规则。 |
 | `Game/` | 把建筑、接入能力、生产输出处理接入 ONI 原生系统。 |
 | `ModConfig/` | 模组配置窗口、字段绑定、JSON 配置读写。 |
-| `Patches/` | Harmony 补丁，连接 ONI 原生流程。 |
+| `Patches/` | Harmony 补丁，按建筑接入、生产、UI、游戏系统和火箭中继分组。 |
 | `ProductionOrders/` | 生产订单系统：配方扫描、计划、提交、执行、持久化、库存保持。 |
 | `Research/` | 科技树节点和建筑解锁注册。 |
-| `Services/` | 网络搬运、目标选择、库存索引、过滤器、建造供料、性能计数等服务。 |
+| `Services/` | 网络搬运、库存索引、过滤器、供料、性能计数等服务，按职责分组。 |
 | `UI/` | 主面板、订单窗口、生产设置、可接入窗口、输入控件、世界浮动面板等 UI。 |
 
 ## 根目录
@@ -131,34 +131,58 @@
 | `ModConfig/ModConfigOptionAttribute.cs` | 配置项元数据特性。 |
 | `ModConfig/ModsScreenOptionsButton.cs` | Mods 页面设置按钮。 |
 
-## Patches
+## Patches/Buildings
 
 | 文件 | 功能 |
 | --- | --- |
-| `Patches/BuildingRegistrationPatch.cs` | 建筑、研究和本地化注册补丁。 |
-| `Patches/ColdStorageSliderSetPatch.cs` | 冷库温度滑条接入原生 SliderSet。 |
-| `Patches/ComplexFabricatorOutputStorePatch.cs` | 制造站成品生成时转交网络输出处理。 |
-| `Patches/ComplexRecipeBuildingEnrollmentPatch.cs` | 给制造站类建筑安装网络接入组件。 |
-| `Patches/ConstructableSupplyPatch.cs` | 建造材料从储存网络供料的补丁。 |
-| `Patches/EnergyGeneratorEnrollmentPatch.cs` | 给发电机安装燃料请求组件。 |
-| `Patches/GeyserElementEmitterPatch.cs` | 喷泉 ElementEmitter 激活后刷新自动入网状态。 |
-| `Patches/GeyserEnrollmentPatch.cs` | 喷泉创建/游戏生成后安装接入组件。 |
-| `Patches/LifecyclePatch.cs` | 游戏加载、清理、销毁时重置模组运行时状态。 |
-| `Patches/NotificationScreenPatch.cs` | 注册异常订单等通知类型。 |
-| `Patches/ProductionOrderPersistencePatch.cs` | 游戏保存时写入生产订单数据。 |
-| `Patches/RocketRelayLaunchConditionPatch.cs` | 火箭中继模块发射条件补丁。 |
-| `Patches/SelectToolPatch.cs` | 选择工具交互补丁。 |
-| `Patches/SideScreenPatch.cs` | 安装储存网络相关侧屏和详情按钮。 |
-| `Patches/SolidOutputConstructionReservePatch.cs` | 材料出网端口供建造取货时防止轨道/其它逻辑抢走材料。 |
-| `Patches/StorageLockerEnrollmentPatch.cs` | 给储物箱、冰箱、液库、气库安装接入组件。 |
-| `Patches/StorageNetworkBatteryDescriptorPatch.cs` | 隐藏电池服务器伪原生电池的原版效果描述。 |
-| `Patches/StorageNetworkCodexPatch.cs` | 给数据库/索引添加储存网络分类和建筑条目。 |
-| `Patches/StorageNetworkLargeStorageMassPatch.cs` | 大容量服务器质量显示相关补丁。 |
-| `Patches/StorageNetworkPanelInputPatch.cs` | 面板输入框、右键关闭、拖动和快捷键处理补丁。 |
-| `Patches/StorageNetworkPortPlacementPreviewPatch.cs` | 端口建造预览/放置相关补丁。 |
-| `Patches/StorageNetworkPowerOverlayBatterySyncPatch.cs` | 电池服务器电力概览 UI 同步和颜色处理。 |
-| `Patches/StorageNetworkWorldInventoryMirrorPatch.cs` | 把网络库存镜像到 `WorldInventory` 查询。 |
-| `Patches/TreeFilterableNetworkBypassPatch.cs` | 过滤器更新时旁路网络搬运造成的误判。 |
+| `Patches/Buildings/BuildingRegistrationPatch.cs` | 建筑、研究和本地化注册补丁。 |
+| `Patches/Buildings/ColdStorageSliderSetPatch.cs` | 冷库温度滑条接入原生 SliderSet。 |
+| `Patches/Buildings/EnergyGeneratorEnrollmentPatch.cs` | 给发电机安装燃料请求组件。 |
+| `Patches/Buildings/GeyserEnrollmentPatch.cs` | 喷泉创建/游戏生成后安装接入组件。 |
+| `Patches/Buildings/HighEnergyParticleDirectionSideScreenPatch.cs` | 高能粒子端口方向侧屏补丁。 |
+| `Patches/Buildings/StorageLockerEnrollmentPatch.cs` | 给储物箱、冰箱、液库、气库安装接入组件。 |
+| `Patches/Buildings/StorageNetworkBatteryDescriptorPatch.cs` | 隐藏电池服务器伪原生电池的原版效果描述。 |
+| `Patches/Buildings/StorageNetworkInputPortFetchLoopPatch.cs` | 输入端口取货循环相关补丁。 |
+| `Patches/Buildings/StorageNetworkLargeStorageMassPatch.cs` | 大容量服务器质量显示相关补丁。 |
+| `Patches/Buildings/StorageNetworkPortPlacementPreviewPatch.cs` | 端口建造预览/放置相关补丁。 |
+| `Patches/Buildings/StorageNetworkPowerOverlayBatterySyncPatch.cs` | 电池服务器电力概览 UI 同步和颜色处理。 |
+| `Patches/Buildings/TelepadBonusDeliveryPatch.cs` | 打印舱奖励交付与网络交互补丁。 |
+
+## Patches/Production
+
+| 文件 | 功能 |
+| --- | --- |
+| `Patches/Production/ComplexFabricatorOutputStorePatch.cs` | 制造站成品生成时转交网络输出处理。 |
+| `Patches/Production/ComplexRecipeBuildingEnrollmentPatch.cs` | 给制造站类建筑安装网络接入组件。 |
+| `Patches/Production/ConstructableSupplyPatch.cs` | 建造材料从储存网络供料的补丁。 |
+| `Patches/Production/OrderProductionCenterEngraveCopyToolPatch.cs` | 订单生产中心刻录复制工具补丁。 |
+| `Patches/Production/OrderProductionCenterParallelFabricatorPatch.cs` | 订单生产中心并行制造补丁。 |
+| `Patches/Production/ProductionOrderPersistencePatch.cs` | 游戏保存时写入生产订单数据。 |
+| `Patches/Production/SolidOutputConstructionReservePatch.cs` | 材料出网端口供建造取货时防止轨道/其它逻辑抢走材料。 |
+
+## Patches/UI
+
+| 文件 | 功能 |
+| --- | --- |
+| `Patches/UI/SelectToolPatch.cs` | 选择工具交互补丁。 |
+| `Patches/UI/SideScreenPatch.cs` | 安装储存网络相关侧屏和详情按钮。 |
+| `Patches/UI/StorageNetworkPanelInputPatch.cs` | 面板输入框、右键关闭、拖动和快捷键处理补丁。 |
+
+## Patches/Game
+
+| 文件 | 功能 |
+| --- | --- |
+| `Patches/Game/LifecyclePatch.cs` | 游戏加载、清理、销毁时重置模组运行时状态。 |
+| `Patches/Game/StorageNetworkCodexPatch.cs` | 给数据库/索引添加储存网络分类和建筑条目。 |
+| `Patches/Game/StorageNetworkRationTrackerPatch.cs` | 网络库存参与食物追踪补丁。 |
+| `Patches/Game/StorageNetworkWorldInventoryMirrorPatch.cs` | 把网络库存镜像到 `WorldInventory` 查询。 |
+| `Patches/Game/TreeFilterableNetworkBypassPatch.cs` | 过滤器更新时旁路网络搬运造成的误判。 |
+
+## Patches/RocketRelay
+
+| 文件 | 功能 |
+| --- | --- |
+| `Patches/RocketRelay/RocketRelayLaunchConditionPatch.cs` | 火箭中继模块发射条件补丁。 |
 
 ## ProductionOrders
 
@@ -193,26 +217,54 @@
 | --- | --- |
 | `Research/StorageNetworkResearchInstaller.cs` | 注册储存网络科技节点、解锁项和科技树位置。 |
 
-## Services
+## Services/Supply
 
 | 文件 | 功能 |
 | --- | --- |
-| `Services/NetworkStorageTransferService.cs` | 网络物品转移、输入输出目标选择和移动结果。 |
-| `Services/StorageItemUtility.cs` | 物品 key、标签、温度、质量和匹配工具。 |
-| `Services/StorageNetworkConstructionSupplyService.cs` | 建造材料从网络调拨到材料出网端口。 |
-| `Services/StorageNetworkFetchTargetResolver.cs` | 解析 FetchChore 可用目标和网络供料目标。 |
-| `Services/StorageNetworkFilterBypass.cs` | 网络搬运时的过滤器旁路判断。 |
-| `Services/StorageNetworkFilterChangeTransferService.cs` | 过滤器变化后迁出不再接受的物品。 |
-| `Services/StorageNetworkFilterConfigurator.cs` | 配置 `TreeFilterable` 和过滤器默认项。 |
-| `Services/StorageNetworkFilterSelectionNormalizer.cs` | 把过滤器大类展开成具体 tag。 |
-| `Services/StorageNetworkInventoryIndexService.cs` | 网络库存索引，按世界和 tag 查询数量。 |
-| `Services/StorageNetworkPerformanceCounters.cs` | 性能计数器和调试统计。 |
-| `Services/StorageNetworkProductionStorageCollector.cs` | 收集生产建筑输入/输出仓库。 |
-| `Services/StorageNetworkRocketRelayService.cs` | 判断跨星球中继状态。 |
-| `Services/StorageNetworkSourceIndexService.cs` | 来源仓库索引，快速查找可取材料。 |
-| `Services/StorageNetworkWorldInventoryMirrorService.cs` | 网络库存参与世界库存查询。 |
-| `Services/StorageTargetSelector.cs` | 选择存入目标、取出来源和喷泉输出目标。 |
-| `Services/StorageTargetSelector.Filters.cs` | 目标选择过滤条件、排序和世界可达性。 |
+| `Services/Supply/StorageNetworkConstructionSupplyService.cs` | 建造材料从网络调拨到材料出网端口。 |
+| `Services/Supply/StorageNetworkFabricatorSupplyService.cs` | 制造站材料从网络调拨到材料出网端口。 |
+| `Services/Supply/StorageNetworkFarmingSupplyService.cs` | 农业种植材料从网络调拨到材料出网端口。 |
+
+## Services/Inventory
+
+| 文件 | 功能 |
+| --- | --- |
+| `Services/Inventory/StorageItemUtility.cs` | 物品 key、标签、温度、质量和匹配工具。 |
+| `Services/Inventory/StorageNetworkInventoryIndexService.cs` | 网络库存索引，按世界和 tag 查询数量。 |
+| `Services/Inventory/StorageNetworkParticleStorageService.cs` | 高能粒子网络存储服务。 |
+| `Services/Inventory/StorageNetworkProductionStorageCollector.cs` | 收集生产建筑输入/输出仓库。 |
+| `Services/Inventory/StorageNetworkSourceIndexService.cs` | 来源仓库索引，快速查找可取材料。 |
+| `Services/Inventory/StorageNetworkWorldInventoryMirrorService.cs` | 网络库存参与世界库存查询。 |
+
+## Services/Filters
+
+| 文件 | 功能 |
+| --- | --- |
+| `Services/Filters/StorageNetworkFetchTargetResolver.cs` | 解析 FetchChore 可用目标和网络供料目标。 |
+| `Services/Filters/StorageNetworkFilterBypass.cs` | 网络搬运时的过滤器旁路判断。 |
+| `Services/Filters/StorageNetworkFilterConfigurator.cs` | 配置 `TreeFilterable` 和过滤器默认项。 |
+| `Services/Filters/StorageNetworkFilterSelectionNormalizer.cs` | 把过滤器大类展开成具体 tag。 |
+| `Services/Filters/StorageTargetSelector.cs` | 选择存入目标、取出来源和喷泉输出目标。 |
+| `Services/Filters/StorageTargetSelector.Filters.cs` | 目标选择过滤条件、排序和世界可达性。 |
+
+## Services/Transfer
+
+| 文件 | 功能 |
+| --- | --- |
+| `Services/Transfer/NetworkStorageTransferService.cs` | 网络物品转移、输入输出目标选择和移动结果。 |
+| `Services/Transfer/StorageNetworkFilterChangeTransferService.cs` | 过滤器变化后迁出不再接受的物品。 |
+
+## Services/Diagnostics
+
+| 文件 | 功能 |
+| --- | --- |
+| `Services/Diagnostics/StorageNetworkPerformanceCounters.cs` | 性能计数器和调试统计。 |
+
+## Services/RocketRelay
+
+| 文件 | 功能 |
+| --- | --- |
+| `Services/RocketRelay/StorageNetworkRocketRelayService.cs` | 判断跨星球中继状态。 |
 
 ## UI/Common
 
