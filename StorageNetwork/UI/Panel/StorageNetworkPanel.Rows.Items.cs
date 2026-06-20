@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using StorageNetwork.Components;
 using StorageNetwork.Core;
+using StorageNetwork.Services;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -233,6 +234,75 @@ namespace StorageNetwork.UI
             detailText.textWrappingMode = TextWrappingModes.NoWrap;
             detailText.overflowMode = TextOverflowModes.Ellipsis;
             detailText.gameObject.AddComponent<LayoutElement>().preferredWidth = 262f;
+        }
+
+        private void CreateParticlePortStorageRow(Transform parent, Storage storage)
+        {
+            GameObject row = new GameObject("ParticlePortStorageRow");
+            row.transform.SetParent(parent, false);
+            row.AddComponent<RectTransform>();
+            row.AddComponent<LayoutElement>().preferredHeight = 24f;
+
+            HorizontalLayoutGroup layout = row.AddComponent<HorizontalLayoutGroup>();
+            layout.spacing = 6f;
+            layout.childAlignment = TextAnchor.MiddleLeft;
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.childForceExpandWidth = false;
+            layout.childForceExpandHeight = false;
+
+            KImage background = row.AddComponent<KImage>();
+            background.color = new Color(0.84f, 0.84f, 0.78f, 1f);
+
+            GameObject iconObject = new GameObject("Icon");
+            iconObject.transform.SetParent(row.transform, false);
+            iconObject.AddComponent<RectTransform>();
+            iconObject.AddComponent<LayoutElement>().preferredWidth = 22f;
+
+            Image icon = iconObject.AddComponent<Image>();
+            icon.raycastTarget = false;
+            icon.preserveAspect = true;
+            icon.sprite = GetSpriteByName("status_item_high_energy_particle") ?? GetSpriteByName("ui_icon_radbolt") ?? GetSpriteByName("unknown");
+            icon.color = icon.sprite != null ? Color.white : Color.clear;
+
+            TextMeshProUGUI itemText = CreateText(
+                "Text",
+                row.transform,
+                Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PARTICLE_PORT_ITEM_NAME),
+                12,
+                TextAlignmentOptions.MidlineLeft);
+            itemText.color = new Color(0.18f, 0.19f, 0.19f, 1f);
+            itemText.textWrappingMode = TextWrappingModes.NoWrap;
+            itemText.overflowMode = TextOverflowModes.Ellipsis;
+            LayoutElement itemTextLayout = itemText.gameObject.AddComponent<LayoutElement>();
+            itemTextLayout.preferredWidth = 85f;
+            itemTextLayout.flexibleWidth = 0f;
+
+            float stored = GetDisplayedParticleStored(storage);
+            float capacity = GetDisplayedParticleCapacity(storage);
+            TextMeshProUGUI particlesText = CreateText(
+                "Particles",
+                row.transform,
+                FormatParticles(stored),
+                12,
+                TextAlignmentOptions.MidlineLeft);
+            particlesText.color = new Color(0.30f, 0.31f, 0.31f, 1f);
+            particlesText.textWrappingMode = TextWrappingModes.NoWrap;
+            particlesText.gameObject.AddComponent<LayoutElement>().preferredWidth = 80f;
+
+            TextMeshProUGUI detailText = CreateText(
+                "Details",
+                row.transform,
+                string.Format("{0} / {1}", FormatParticles(stored), FormatParticles(capacity)),
+                12,
+                TextAlignmentOptions.MidlineLeft);
+            detailText.color = new Color(0.36f, 0.38f, 0.38f, 1f);
+            detailText.textWrappingMode = TextWrappingModes.NoWrap;
+            detailText.overflowMode = TextOverflowModes.Ellipsis;
+            detailText.gameObject.AddComponent<LayoutElement>().preferredWidth = 262f;
+
+            ToolTip tooltip = row.AddComponent<ToolTip>();
+            tooltip.toolTip = Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PARTICLE_PORT_ITEM_TOOLTIP);
         }
 
         private static string FormatStoredItemTemperature(IEnumerable<GameObject> items)

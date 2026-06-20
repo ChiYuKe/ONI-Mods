@@ -34,10 +34,36 @@ namespace StorageNetwork.UI
             bool isPowerPortGroup = storages.All(storage => storage?.Storage != null &&
                 (StorageNetworkStorageRules.IsPowerInputPort(storage.Storage) ||
                  StorageNetworkStorageRules.IsPowerOutputPort(storage.Storage)));
+            bool isPowerStorageGroup = storages.All(storage => storage?.Storage != null &&
+                StorageNetworkStorageRules.IsPowerStorageServer(storage.Storage));
+            bool isParticlePortGroup = storages.All(storage => storage?.Storage != null &&
+                (StorageNetworkStorageRules.IsParticleInputPort(storage.Storage) ||
+                 StorageNetworkStorageRules.IsParticleOutputPort(storage.Storage)));
+            bool isParticleServerGroup = storages.All(storage => storage?.Storage != null &&
+                StorageNetworkStorageRules.IsParticleStorageServer(storage.Storage));
             int offlineServerCount = storages.Count(StorageNetworkStorageRules.IsOfflineNetworkServer);
             float storedKg = storages.Sum(storage => storage.StoredKg);
             float capacityKg = storages.Sum(storage => storage.CapacityKg);
-            float percent = capacityKg > 0f ? storedKg / capacityKg : 0f;
+            float powerStored = isPowerStorageGroup
+                ? storages.Sum(info => GetDisplayedPowerStoredJoules(info.Storage))
+                : isPowerPortGroup ? storages.Sum(info => GetDisplayedPowerStoredJoules(info.Storage)) : 0f;
+            float powerCapacity = isPowerStorageGroup
+                ? storages.Sum(info => GetDisplayedPowerCapacityJoules(info.Storage))
+                : isPowerPortGroup ? storages.Sum(info => GetDisplayedPowerCapacityJoules(info.Storage)) : 0f;
+            Storage particleSample = isParticlePortGroup
+                ? storages.Select(info => info.Storage).FirstOrDefault(storage => storage != null)
+                : null;
+            float particleStored = isParticleServerGroup
+                ? storages.Sum(info => GetDisplayedParticleStored(info.Storage))
+                : isParticlePortGroup ? GetDisplayedParticleStored(particleSample) : 0f;
+            float particleCapacity = isParticleServerGroup
+                ? storages.Sum(info => GetDisplayedParticleCapacity(info.Storage))
+                : isParticlePortGroup ? GetDisplayedParticleCapacity(particleSample) : 0f;
+            float percent = isParticlePortGroup || isParticleServerGroup
+                ? particleCapacity > 0f ? particleStored / particleCapacity : 0f
+                : isPowerPortGroup || isPowerStorageGroup
+                    ? powerCapacity > 0f ? powerStored / powerCapacity : 0f
+                : capacityKg > 0f ? storedKg / capacityKg : 0f;
             string groupInfo = offlineServerCount > 0
                 ? string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SERVER_OFFLINE_COUNT), offlineServerCount)
                 : null;
@@ -51,10 +77,15 @@ namespace StorageNetwork.UI
                 typeName,
                 isGeyserGroup
                     ? string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_COUNT), storages.Count)
-                    : isPowerPortGroup
+                    : isPowerPortGroup || isPowerStorageGroup
                     ? string.Format("{0} / {1}  {2}%",
-                        GameUtil.GetFormattedJoules(storedKg, "F1", GameUtil.TimeSlice.None),
-                        GameUtil.GetFormattedJoules(capacityKg, "F1", GameUtil.TimeSlice.None),
+                        GameUtil.GetFormattedJoules(powerStored, "F1", GameUtil.TimeSlice.None),
+                        GameUtil.GetFormattedJoules(powerCapacity, "F1", GameUtil.TimeSlice.None),
+                        Mathf.RoundToInt(percent * 100f))
+                    : isParticlePortGroup || isParticleServerGroup
+                    ? string.Format("{0} / {1}  {2}%",
+                        FormatParticles(particleStored),
+                        FormatParticles(particleCapacity),
                         Mathf.RoundToInt(percent * 100f))
                     : string.Format("{0} / {1}  {2}%",
                     GameUtil.GetFormattedMass(storedKg),
@@ -115,6 +146,10 @@ namespace StorageNetwork.UI
             StorageNetworkEnrollment enrollment = storage.GetComponent<StorageNetworkEnrollment>();
             bool powerPort = StorageNetworkStorageRules.IsPowerInputPort(storage) ||
                              StorageNetworkStorageRules.IsPowerOutputPort(storage);
+            bool powerStorageServer = StorageNetworkStorageRules.IsPowerStorageServer(storage);
+            bool particlePort = StorageNetworkStorageRules.IsParticleInputPort(storage) ||
+                                StorageNetworkStorageRules.IsParticleOutputPort(storage);
+            bool particleServer = StorageNetworkStorageRules.IsParticleStorageServer(storage);
             bool showSettingsButton = StorageNetworkStorageRules.IsProductionStorage(storage, enrollment) ||
                                       StorageNetworkStorageRules.IsConfigurablePort(storage) ||
                                       StorageNetworkStorageRules.HasSettingsButtonTag(storage) ||
@@ -126,15 +161,26 @@ namespace StorageNetwork.UI
                 ? StorageNetworkModInfoResolver.GetSourceModName(storage)
                 : null;
             bool serverOffline = StorageNetworkStorageRules.IsOfflineNetworkServer(storageInfo);
-            float displayedStored = powerPort ? GetPowerPortStoredJoules(storage) : storageInfo.StoredKg;
-            float displayedCapacity = powerPort ? GetPowerPortCapacityJoules(storage) : storageInfo.CapacityKg;
+            float displayedStored = powerPort
+                ? GetDisplayedPowerStoredJoules(storage)
+                : powerStorageServer ? GetDisplayedPowerStoredJoules(storage)
+                : particlePort || particleServer ? GetDisplayedParticleStored(storage) : storageInfo.StoredKg;
+            float displayedCapacity = powerPort
+                ? GetDisplayedPowerCapacityJoules(storage)
+                : powerStorageServer ? GetDisplayedPowerCapacityJoules(storage)
+                : particlePort || particleServer ? GetDisplayedParticleCapacity(storage) : storageInfo.CapacityKg;
             percent = displayedCapacity > 0f ? displayedStored / displayedCapacity : 0f;
             string amountText = serverOffline
                 ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SERVER_OFFLINE)
-                : powerPort
+                : powerPort || powerStorageServer
                 ? string.Format("{0} / {1}  {2}%",
                     GameUtil.GetFormattedJoules(displayedStored, "F1", GameUtil.TimeSlice.None),
                     GameUtil.GetFormattedJoules(displayedCapacity, "F1", GameUtil.TimeSlice.None),
+                    Mathf.RoundToInt(percent * 100f))
+                : particlePort || particleServer
+                ? string.Format("{0} / {1}  {2}%",
+                    FormatParticles(displayedStored),
+                    FormatParticles(displayedCapacity),
                     Mathf.RoundToInt(percent * 100f))
                 : string.Format("{0} / {1}  {2}%",
                     GameUtil.GetFormattedMass(storageInfo.StoredKg),
@@ -187,8 +233,11 @@ namespace StorageNetwork.UI
             StorageNetworkPowerStorage powerStorage = storage.GetComponent<StorageNetworkPowerStorage>();
             bool powerPortDetails = StorageNetworkStorageRules.IsPowerInputPort(storage) ||
                                     StorageNetworkStorageRules.IsPowerOutputPort(storage);
+            bool particlePortDetails = StorageNetworkStorageRules.IsParticleInputPort(storage) ||
+                                       StorageNetworkStorageRules.IsParticleOutputPort(storage);
+            bool particleServerDetails = StorageNetworkStorageRules.IsParticleStorageServer(storage);
             List<GameObject> items = storageInfo.StoredItems.ToList();
-            if (items.Count == 0 && powerStorage == null && !powerPortDetails)
+            if (items.Count == 0 && powerStorage == null && !powerPortDetails && !particlePortDetails && !particleServerDetails)
             {
                 TextMeshProUGUI empty = CreateText("Empty", details.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.NO_STORAGE_CONTENT), 12, TextAlignmentOptions.MidlineLeft);
                 empty.color = new Color(0.34f, 0.35f, 0.35f, 1f);
@@ -199,6 +248,11 @@ namespace StorageNetwork.UI
                 if (powerPortDetails)
                 {
                     CreatePowerPortBatteryRow(details.transform, storage);
+                }
+
+                if (particlePortDetails || particleServerDetails)
+                {
+                    CreateParticlePortStorageRow(details.transform, storage);
                 }
 
                 if (powerStorage != null)
@@ -233,6 +287,34 @@ namespace StorageNetwork.UI
             text.color = new Color(0.18f, 0.19f, 0.19f, 1f);
             Stretch(text.rectTransform(), 12f, 6f);
             RebuildLayout();
+        }
+
+        private static float GetDisplayedParticleStored(Storage storage)
+        {
+            HighEnergyParticleStorage particleStorage = storage != null ? storage.GetComponent<HighEnergyParticleStorage>() : null;
+            return particleStorage != null
+                ? Mathf.Max(0f, particleStorage.Particles)
+                : StorageNetworkParticleStorageService.GetAvailable(storage != null ? storage.gameObject : null);
+        }
+
+        private static float GetDisplayedParticleCapacity(Storage storage)
+        {
+            HighEnergyParticleStorage particleStorage = storage != null ? storage.GetComponent<HighEnergyParticleStorage>() : null;
+            return particleStorage != null
+                ? Mathf.Max(0f, particleStorage.Capacity())
+                : StorageNetworkParticleStorageService.GetCapacity(storage != null ? storage.gameObject : null);
+        }
+
+        private static float GetDisplayedPowerStoredJoules(Storage storage)
+        {
+            StorageNetworkPowerStorage powerStorage = storage != null ? storage.GetComponent<StorageNetworkPowerStorage>() : null;
+            return powerStorage != null ? powerStorage.RawJoulesAvailable : GetPowerPortStoredJoules(storage);
+        }
+
+        private static float GetDisplayedPowerCapacityJoules(Storage storage)
+        {
+            StorageNetworkPowerStorage powerStorage = storage != null ? storage.GetComponent<StorageNetworkPowerStorage>() : null;
+            return powerStorage != null ? powerStorage.CapacityJoules : GetPowerPortCapacityJoules(storage);
         }
 
         private void CreateCategoryButton(StorageNetworkCategoryGroup group)

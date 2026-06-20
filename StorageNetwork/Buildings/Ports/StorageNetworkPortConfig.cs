@@ -72,10 +72,12 @@ namespace StorageNetwork.Buildings
             {
                 if (spec.Direction == StorageNetworkPortDirection.Input)
                 {
+                    buildingDef.UseHighEnergyParticleInputPort = true;
                     buildingDef.HighEnergyParticleInputOffset = spec.ParticleOffset;
                 }
                 else
                 {
+                    buildingDef.UseHighEnergyParticleOutputPort = true;
                     buildingDef.HighEnergyParticleOutputOffset = spec.ParticleOffset;
                 }
             }
@@ -213,6 +215,12 @@ namespace StorageNetwork.Buildings
                 port.particleInputEnabled = true;
                 port.particleInputOffset = spec.ParticleOffset;
                 port.requireOperational = false;
+                HighEnergyParticleStorage particleStorage = go.AddOrGet<HighEnergyParticleStorage>();
+                particleStorage.capacity = 0f;
+                particleStorage.showInUI = false;
+                particleStorage.showCapacityStatusItem = false;
+                particleStorage.showCapacityAsMainStatus = false;
+                particleStorage.autoStore = false;
                 go.AddOrGet<CopyBuildingSettings>();
                 go.AddOrGet<StorageNetworkParticleInputPortIngress>();
             }

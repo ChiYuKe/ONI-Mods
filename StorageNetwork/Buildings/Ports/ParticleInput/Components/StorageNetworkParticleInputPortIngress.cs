@@ -5,6 +5,8 @@ namespace StorageNetwork.Components
 {
     public sealed class StorageNetworkParticleInputPortIngress : KMonoBehaviour
     {
+        public bool InputStoreEnabled = true;
+
         [MyCmpReq]
         private HighEnergyParticlePort port;
 
@@ -30,7 +32,7 @@ namespace StorageNetwork.Components
 
         private void OnParticleCapture(HighEnergyParticle particle)
         {
-            if (particle == null || particle.payload <= 0f)
+            if (!InputStoreEnabled || particle == null || particle.payload <= 0f)
             {
                 return;
             }

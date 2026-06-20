@@ -465,7 +465,7 @@ namespace StorageNetwork.Buildings
         private const string SmallSolidServerAnim = "storagenetwork_small_solid_server_kanim";
         private const string SmallLiquidServerAnim = "storagenetwork_small_liquid_server_kanim";
         private const string SmallGasServerAnim = "storagenetwork_small_gas_server_kanim";
-        private const string SmallParticleServerAnim = SmallGasServerAnim;
+        private const string SmallParticleServerAnim = "storagenetwork_small_particle_server_kanim";
         private const string SmallBatteryServerAnim = "storagenetwork_small_battery_server_kanim";
         private const string SmallColdStorageServerAnim = "storagenetwork_small_cold_storage_server_kanim";
         private const string MediumSolidServerAnim = "storagenetwork_medium_solid_server_kanim";
@@ -485,9 +485,6 @@ namespace StorageNetwork.Buildings
         private const float MeltingPoint = 1600f;
         private const float ServerSelfHeatKilowatts = 0.1f;
         private const float BatteryServerJoulesLostPerSecond = 100f;
-        private const float SmallParticleServerCapacity = 500f;
-        private const float MediumParticleServerCapacity = 2000f;
-        private const float LargeParticleServerCapacity = 10000f;
         private const float SmallBatteryServerSelfHeatKilowatts = ServerSelfHeatKilowatts;
         private const float MediumBatteryServerSelfHeatKilowatts = ServerSelfHeatKilowatts;
         private const float LargeBatteryServerSelfHeatKilowatts = ServerSelfHeatKilowatts;
@@ -538,7 +535,7 @@ namespace StorageNetwork.Buildings
             1,
             3,
             SmallParticleServerAnim,
-            SmallParticleServerCapacity,
+            1000f,
             60f,
             new List<Tag> { GameTags.HighEnergyParticle },
             BUILDINGS.CONSTRUCTION_MASS_KG.TIER3);
@@ -560,7 +557,7 @@ namespace StorageNetwork.Buildings
             1,
             3,
             SmallColdStorageServerAnim,
-            25000f,
+            300f,
             60f,
             STORAGEFILTERS.FOOD,
             BUILDINGS.CONSTRUCTION_MASS_KG.TIER3,
@@ -601,7 +598,7 @@ namespace StorageNetwork.Buildings
             2,
             2,
             MediumParticleServerAnim,
-            MediumParticleServerCapacity,
+            5000f,
             120f,
             new List<Tag> { GameTags.HighEnergyParticle },
             BUILDINGS.CONSTRUCTION_MASS_KG.TIER4);
@@ -623,7 +620,7 @@ namespace StorageNetwork.Buildings
             2,
             2,
             MediumColdStorageServerAnim,
-            100000f,
+            600f,
             120f,
             STORAGEFILTERS.FOOD,
             BUILDINGS.CONSTRUCTION_MASS_KG.TIER4,
@@ -664,7 +661,7 @@ namespace StorageNetwork.Buildings
             2,
             4,
             LargeParticleServerAnim,
-            LargeParticleServerCapacity,
+            20000f,
             240f,
             new List<Tag> { GameTags.HighEnergyParticle },
             BUILDINGS.CONSTRUCTION_MASS_KG.TIER5);
@@ -686,7 +683,7 @@ namespace StorageNetwork.Buildings
             2,
             4,
             LargeColdStorageServerAnim,
-            2500000f,
+            2000f,
             240f,
             STORAGEFILTERS.FOOD,
             BUILDINGS.CONSTRUCTION_MASS_KG.TIER5,

@@ -21,6 +21,12 @@ namespace StorageNetwork.UI
                 return;
             }
 
+            if (StorageNetworkStorageRules.IsParticleInputPort(storage) || StorageNetworkStorageRules.IsParticleOutputPort(storage))
+            {
+                AddParticleInventoryCard(storage);
+                return;
+            }
+
             StorageNetworkPowerStorage powerStorage = storage != null ? storage.GetComponent<StorageNetworkPowerStorage>() : null;
             if (powerStorage != null)
             {
@@ -70,6 +76,29 @@ namespace StorageNetwork.UI
             if (row.Icon != null)
             {
                 row.Icon.sprite = GetSpriteByName("oni_sprite_assets_5") ?? GetSpriteByName("status_item_electricity") ?? GetSpriteByName("icon_power") ?? GetSpriteByName("unknown");
+                row.Icon.color = row.Icon.sprite != null ? Color.white : Color.clear;
+            }
+
+            productionInventoryView = null;
+        }
+
+        private void AddParticleInventoryCard(Storage storage)
+        {
+            float stored = StorageNetworkParticleStorageService.GetAvailable(storage != null ? storage.gameObject : null);
+            float capacity = StorageNetworkParticleStorageService.GetCapacity(storage != null ? storage.gameObject : null);
+            GameObject card = CreateProductionCard("InventoryCard", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PARTICLE_PORT_STORAGE_TITLE), 0f);
+            MakeProductionCardAutoHeight(card, 86f);
+            ProductionInventoryRowView row = CreateProductionSettingsItemRow(
+                card.transform,
+                Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PARTICLE_PORT_ITEM_NAME),
+                string.Format(
+                    "{0} / {1}",
+                    string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PARTICLE_PORT_AMOUNT_VALUE), Mathf.FloorToInt(Mathf.Max(0f, stored))),
+                    string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PARTICLE_PORT_AMOUNT_VALUE), Mathf.FloorToInt(Mathf.Max(0f, capacity)))),
+                null);
+            if (row.Icon != null)
+            {
+                row.Icon.sprite = GetSpriteByName("status_item_high_energy_particle") ?? GetSpriteByName("ui_icon_radbolt") ?? GetSpriteByName("unknown");
                 row.Icon.color = row.Icon.sprite != null ? Color.white : Color.clear;
             }
 
@@ -181,6 +210,11 @@ namespace StorageNetwork.UI
         private void UpdateProductionInventoryCard(Storage storage, ComplexFabricator fabricator)
         {
             if (StorageNetworkStorageRules.IsPowerInputPort(storage) || StorageNetworkStorageRules.IsPowerOutputPort(storage))
+            {
+                return;
+            }
+
+            if (StorageNetworkStorageRules.IsParticleInputPort(storage) || StorageNetworkStorageRules.IsParticleOutputPort(storage))
             {
                 return;
             }
