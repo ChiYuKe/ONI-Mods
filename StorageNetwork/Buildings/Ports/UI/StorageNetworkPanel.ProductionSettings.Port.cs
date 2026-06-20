@@ -72,6 +72,20 @@ namespace StorageNetwork.UI
                 return;
             }
 
+            StorageNetworkParticleInputPortIngress particleInput = storage.GetComponent<StorageNetworkParticleInputPortIngress>();
+            if (particleInput != null)
+            {
+                AddParticleInputPortSettingsCard(storage, particleInput);
+                return;
+            }
+
+            StorageNetworkParticleOutputPortEgress particleOutput = storage.GetComponent<StorageNetworkParticleOutputPortEgress>();
+            if (particleOutput != null)
+            {
+                AddParticleOutputPortSettingsCard(storage, particleOutput);
+                return;
+            }
+
             GameObject card = CreateProductionCard("PortSettingsCard", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_PORT_SETTINGS_TITLE), 0f);
             MakeProductionCardAutoHeight(card, 88f);
             bool online = StorageSceneRegistry.HasOnlineCoreInWorld(GetStorageWorldId(storage));
@@ -116,6 +130,8 @@ namespace StorageNetwork.UI
             StorageNetworkSolidOutputPortEgress solidOutput = storage.GetComponent<StorageNetworkSolidOutputPortEgress>();
             StorageNetworkPowerInputPortConsumer powerInput = storage.GetComponent<StorageNetworkPowerInputPortConsumer>();
             StorageNetworkPowerOutputPortGenerator powerOutput = storage.GetComponent<StorageNetworkPowerOutputPortGenerator>();
+            StorageNetworkParticleInputPortIngress particleInput = storage.GetComponent<StorageNetworkParticleInputPortIngress>();
+            StorageNetworkParticleOutputPortEgress particleOutput = storage.GetComponent<StorageNetworkParticleOutputPortEgress>();
             bool online = StorageSceneRegistry.HasOnlineCoreInWorld(GetStorageWorldId(storage));
             bool enabled = liquidInput != null
                 ? liquidInput.InputStoreEnabled
@@ -129,13 +145,21 @@ namespace StorageNetwork.UI
                                     ? solidInput.InputStoreEnabled
                                     : solidOutput != null
                                         ? solidOutput.OutputRequestEnabled
-                                        : powerInput != null
-                                            ? powerInput.GetInputWattsSetting() > 0f
-                                            : powerOutput == null || powerOutput.GetOutputWattsSetting() > 0f;
+                                    : powerInput != null
+                                        ? powerInput.GetInputWattsSetting() > 0f
+                                            : powerOutput != null
+                                                ? powerOutput.GetOutputWattsSetting() > 0f
+                                                : particleInput != null
+                                                    ? particleInput.InputStoreEnabled
+                                                    : particleOutput == null || particleOutput.OutputRequestEnabled;
             bool running = online && enabled;
-            string automationLabel = liquidOutput != null || gasOutput != null || solidOutput != null || powerOutput != null
-                ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_PORT_REQUEST_ENABLED)
-                : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.INPUT_PORT_STORE_ENABLED);
+            string automationLabel = particleOutput != null
+                ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PARTICLE_OUTPUT_PORT_REQUEST_ENABLED)
+                : particleInput != null
+                    ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PARTICLE_INPUT_PORT_STORE_ENABLED)
+                    : liquidOutput != null || gasOutput != null || solidOutput != null || powerOutput != null
+                        ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_PORT_REQUEST_ENABLED)
+                        : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.INPUT_PORT_STORE_ENABLED);
             string automationValue = liquidInput != null
                 ? liquidInput.InputStoreEnabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STATUS_ENABLED) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STATUS_DISABLED)
                 : liquidOutput != null
@@ -152,7 +176,11 @@ namespace StorageNetwork.UI
                                         ? powerInput.GetInputWattsSetting() > 0f ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STATUS_ENABLED) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STATUS_DISABLED)
                                         : powerOutput != null
                                             ? powerOutput.GetOutputWattsSetting() > 0f ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STATUS_ENABLED) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STATUS_DISABLED)
-                                            : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.NO_COMPONENT);
+                                            : particleInput != null
+                                                ? particleInput.InputStoreEnabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STATUS_ENABLED) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STATUS_DISABLED)
+                                                : particleOutput != null
+                                                    ? particleOutput.OutputRequestEnabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STATUS_ENABLED) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STATUS_DISABLED)
+                                                    : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.NO_COMPONENT);
             string policyValue = liquidInput != null
                 ? GetInputPortStoreModeName(liquidInput)
                 : liquidOutput != null
@@ -167,7 +195,11 @@ namespace StorageNetwork.UI
                                     ? GetOutputPortSourceModeName(solidOutput)
                                     : powerInput != null
                                         ? GetPowerInputRateName(powerInput)
-                                        : powerOutput != null ? GetPowerOutputRateName(powerOutput) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.NONE);
+                                        : powerOutput != null
+                                            ? GetPowerOutputRateName(powerOutput)
+                                            : particleOutput != null
+                                                ? GetParticleThresholdName(particleOutput)
+                                                : particleInput != null ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PARTICLE_PORT_CAPTURE_MODE) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.NONE);
 
             if (powerInput != null || powerOutput != null)
             {
@@ -178,6 +210,14 @@ namespace StorageNetwork.UI
                     string.Format("{0} / {1}",
                         GameUtil.GetFormattedJoules(StorageNetworkPowerService.GetStoredJoules(worldId), "F1", GameUtil.TimeSlice.None),
                         GameUtil.GetFormattedJoules(StorageNetworkPowerService.GetCapacityJoules(worldId), "F1", GameUtil.TimeSlice.None)),
+                    new Color(0.35f, 0.40f, 0.43f, 1f));
+            }
+            else if (particleInput != null || particleOutput != null)
+            {
+                CreateMetricTile(
+                    metrics.transform,
+                    Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PARTICLE_PORT_STORAGE_TITLE),
+                    GetParticleNetworkStorageName(storage),
                     new Color(0.35f, 0.40f, 0.43f, 1f));
             }
             else
@@ -202,7 +242,9 @@ namespace StorageNetwork.UI
                 metrics.transform,
                 powerInput != null || powerOutput != null
                     ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.POWER_PORT_RATE)
-                    : liquidOutput != null || gasOutput != null || solidOutput != null ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_PORT_SOURCE_POLICY) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_POLICY),
+                    : particleOutput != null
+                        ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PARTICLE_OUTPUT_PORT_THRESHOLD)
+                        : liquidOutput != null || gasOutput != null || solidOutput != null ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_PORT_SOURCE_POLICY) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_POLICY),
                 policyValue,
                 new Color(0.39f, 0.42f, 0.45f, 1f));
         }
@@ -662,6 +704,89 @@ namespace StorageNetwork.UI
             CreateFinePrint(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.POWER_OUTPUT_PORT_REQUEST_DESC));
         }
 
+        private void AddParticleInputPortSettingsCard(Storage storage, StorageNetworkParticleInputPortIngress input)
+        {
+            GameObject card = CreateProductionCard("ParticleInputPortSettingsCard", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PARTICLE_INPUT_PORT_STORE_TITLE), 0f);
+            MakeProductionCardAutoHeight(card, 142f);
+            bool online = StorageSceneRegistry.HasOnlineCoreInWorld(GetStorageWorldId(storage));
+            bool enabled = input.InputStoreEnabled;
+
+            CreateStatusStrip(
+                card.transform,
+                enabled && online ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STATUS_ENABLED) : online ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STATUS_DISABLED) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PORT_STATUS_OFFLINE),
+                enabled && online ? new Color(0.28f, 0.48f, 0.34f, 1f) : online ? new Color(0.50f, 0.42f, 0.34f, 1f) : new Color(0.62f, 0.24f, 0.24f, 1f));
+
+            CreateToggleActionRow(
+                card.transform,
+                Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PARTICLE_INPUT_PORT_STORE_ENABLED),
+                enabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ACTION_CLOSE) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ON),
+                () =>
+                {
+                    input.InputStoreEnabled = !enabled;
+                    UpdateProductionSettingsPanel(true);
+                },
+                enabled);
+            CreateProductionReadOnlyRow(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PARTICLE_PORT_STORAGE_TITLE), GetParticleNetworkStorageName(storage));
+            CreateProductionReadOnlyRow(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PARTICLE_INPUT_PORT_MODE), Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PARTICLE_PORT_CAPTURE_MODE));
+            CreateFinePrint(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PARTICLE_INPUT_PORT_STORE_DESC));
+        }
+
+        private void AddParticleOutputPortSettingsCard(Storage storage, StorageNetworkParticleOutputPortEgress output)
+        {
+            GameObject card = CreateProductionCard("ParticleOutputPortSettingsCard", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PARTICLE_OUTPUT_PORT_REQUEST_TITLE), 0f);
+            MakeProductionCardAutoHeight(card, output.OutputLimitEnabled ? 300f : 264f);
+            bool online = StorageSceneRegistry.HasOnlineCoreInWorld(GetStorageWorldId(storage));
+            bool enabled = output.OutputRequestEnabled;
+            bool ready = enabled && online && output.AvailableParticles >= output.ParticleThreshold && !output.OutputLimitReached;
+
+            CreateStatusStrip(
+                card.transform,
+                ready
+                    ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STATUS_ENABLED)
+                    : online ? enabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PRODUCTION_SHORT_IDLE) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STATUS_DISABLED) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PORT_STATUS_OFFLINE),
+                ready
+                    ? new Color(0.28f, 0.48f, 0.34f, 1f)
+                    : online ? new Color(0.50f, 0.42f, 0.34f, 1f) : new Color(0.62f, 0.24f, 0.24f, 1f));
+
+            CreateToggleActionRow(
+                card.transform,
+                Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PARTICLE_OUTPUT_PORT_REQUEST_ENABLED),
+                enabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ACTION_CLOSE) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ON),
+                () =>
+                {
+                    output.OutputRequestEnabled = !enabled;
+                    UpdateProductionSettingsPanel(true);
+                },
+                enabled);
+            CreateProductionReadOnlyRow(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PARTICLE_PORT_STORAGE_TITLE), GetParticleNetworkStorageName(storage));
+            CreateProductionActionRow(
+                card.transform,
+                Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_PORT_SOURCE_POLICY),
+                GetParticleOutputSourceModeName(output),
+                () => ShowParticleOutputSourcePicker(storage, output));
+            CreateProductionActionRow(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PARTICLE_OUTPUT_PORT_THRESHOLD), GetParticleThresholdName(output), () => ShowParticleThresholdDialog(output));
+            CreateProductionActionRow(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PARTICLE_OUTPUT_PORT_DIRECTION), GetParticleDirectionName(output.Direction), () => ShowParticleDirectionPicker(output));
+            CreateToggleActionRow(
+                card.transform,
+                Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_PORT_LIMIT_ENABLED),
+                output.OutputLimitEnabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ACTION_CLOSE) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ON),
+                () =>
+                {
+                    output.SetOutputLimitEnabled(!output.OutputLimitEnabled);
+                    UpdateProductionSettingsPanel(true);
+                },
+                output.OutputLimitEnabled);
+            if (output.OutputLimitEnabled)
+            {
+                CreateProductionActionRow(
+                    card.transform,
+                    string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PARTICLE_OUTPUT_PORT_LIMIT), FormatParticles(output.OutputLimitUsedParticles), FormatParticles(output.OutputLimitParticles)),
+                    Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_PORT_SET_LIMIT),
+                    () => ShowParticleOutputLimitDialog(output));
+            }
+            CreateFinePrint(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PARTICLE_OUTPUT_PORT_REQUEST_DESC));
+        }
+
         private static int GetStorageWorldId(Storage storage)
         {
             if (storage == null)
@@ -719,6 +844,16 @@ namespace StorageNetwork.UI
             if (StorageNetworkStorageRules.IsPowerOutputPort(storage))
             {
                 return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.POWER_PORT_OUTPUT_STATUS);
+            }
+
+            if (StorageNetworkStorageRules.IsParticleInputPort(storage))
+            {
+                return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PARTICLE_PORT_INPUT_STATUS);
+            }
+
+            if (StorageNetworkStorageRules.IsParticleOutputPort(storage))
+            {
+                return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PARTICLE_PORT_OUTPUT_STATUS);
             }
 
             return storage != null ? storage.GetProperName() : string.Empty;
@@ -891,9 +1026,71 @@ namespace StorageNetwork.UI
             return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_MODE_SEARCH);
         }
 
+        private static string GetParticleOutputSourceModeName(StorageNetworkParticleOutputPortEgress output)
+        {
+            if (output.CurrentSourceMode == StorageNetworkMaterialRequester.RequestMode.SpecificStorage)
+            {
+                Storage source = output.ResolveSourceStorage();
+                return source != null
+                    ? string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_SOURCE), source.GetProperName())
+                    : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_MODE_SPECIFIC);
+            }
+
+            return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_MODE_SEARCH);
+        }
+
         private static string FormatPowerRate(float watts)
         {
             return GameUtil.GetFormattedWattage(watts, GameUtil.WattageFormatterUnit.Automatic, true);
+        }
+
+        private static string GetParticleNetworkStorageName(Storage storage)
+        {
+            StorageNetworkParticleOutputPortEgress output = storage != null
+                ? storage.GetComponent<StorageNetworkParticleOutputPortEgress>()
+                : null;
+            Storage source = output != null && output.CurrentSourceMode == StorageNetworkMaterialRequester.RequestMode.SpecificStorage
+                ? output.ResolveSourceStorage()
+                : null;
+            return string.Format(
+                "{0} / {1}",
+                FormatParticles(StorageNetworkParticleStorageService.GetAvailable(storage != null ? storage.gameObject : null, source)),
+                FormatParticles(StorageNetworkParticleStorageService.GetCapacity(storage != null ? storage.gameObject : null, source)));
+        }
+
+        private static string GetParticleThresholdName(StorageNetworkParticleOutputPortEgress output)
+        {
+            return FormatParticles(output != null ? output.ParticleThreshold : 0f);
+        }
+
+        private static string FormatParticles(float particles)
+        {
+            return string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PARTICLE_PORT_AMOUNT_VALUE), Mathf.FloorToInt(Mathf.Max(0f, particles)));
+        }
+
+        private static string GetParticleDirectionName(EightDirection direction)
+        {
+            switch (direction)
+            {
+                case EightDirection.Up:
+                    return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PARTICLE_DIRECTION_UP);
+                case EightDirection.Down:
+                    return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PARTICLE_DIRECTION_DOWN);
+                case EightDirection.Left:
+                    return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PARTICLE_DIRECTION_LEFT);
+                case EightDirection.Right:
+                    return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PARTICLE_DIRECTION_RIGHT);
+                case EightDirection.UpLeft:
+                    return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PARTICLE_DIRECTION_UP_LEFT);
+                case EightDirection.UpRight:
+                    return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PARTICLE_DIRECTION_UP_RIGHT);
+                case EightDirection.DownLeft:
+                    return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PARTICLE_DIRECTION_DOWN_LEFT);
+                case EightDirection.DownRight:
+                    return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PARTICLE_DIRECTION_DOWN_RIGHT);
+                default:
+                    return direction.ToString();
+            }
         }
 
         private static string GetPortFilterSummary(Storage storage)

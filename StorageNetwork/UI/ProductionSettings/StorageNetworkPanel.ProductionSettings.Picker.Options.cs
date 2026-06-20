@@ -577,6 +577,40 @@ namespace StorageNetwork.UI
             ShowProductionPicker(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_SELECT_SOURCE), options);
         }
 
+        private void ShowParticleOutputSourcePicker(Storage ownerStorage, StorageNetworkParticleOutputPortEgress output)
+        {
+            List<ProductionPickerOption> options = new List<ProductionPickerOption>
+            {
+                new ProductionPickerOption(
+                    Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_MODE_SEARCH),
+                    Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PARTICLE_OUTPUT_PORT_SOURCE_AUTO_DESC),
+                    output.CurrentSourceMode == StorageNetworkMaterialRequester.RequestMode.SearchNetwork,
+                    () =>
+                    {
+                        output.UseAutomaticSourceStorage();
+                        CloseProductionPicker();
+                        UpdateProductionSettingsPanel(true);
+                    })
+            };
+
+            foreach (Storage source in GetParticleStorageTargets(ownerStorage))
+            {
+                Storage captured = source;
+                options.Add(new ProductionPickerOption(
+                    string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_SOURCE), captured.GetProperName()),
+                    FormatParticleStorageOptionDetails(captured),
+                    output.CurrentSourceMode == StorageNetworkMaterialRequester.RequestMode.SpecificStorage && output.ResolveSourceStorage() == captured,
+                    () =>
+                    {
+                        output.SetSourceStorage(captured);
+                        CloseProductionPicker();
+                        UpdateProductionSettingsPanel(true);
+                    }));
+            }
+
+            ShowProductionPicker(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_SELECT_SOURCE), options);
+        }
+
         private void ShowPowerInputStorePicker(Storage ownerStorage, StorageNetworkPowerInputPortConsumer input)
         {
             List<ProductionPickerOption> options = new List<ProductionPickerOption>
@@ -678,6 +712,26 @@ namespace StorageNetwork.UI
             }
         }
 
+        private static IEnumerable<Storage> GetParticleStorageTargets(Storage ownerStorage)
+        {
+            int worldId = StorageTargetSelector.GetObjectWorldId(ownerStorage?.gameObject);
+            foreach (Storage storage in StorageSceneCollector.CollectLightweightForWorld(worldId).Storages)
+            {
+                if (storage == null ||
+                    storage == ownerStorage ||
+                    !StorageNetworkStorageRules.IsParticleStorageServer(storage) ||
+                    storage.GetComponent<HighEnergyParticleStorage>() == null)
+                {
+                    continue;
+                }
+
+                if (StorageNetworkStorageRules.IsConnectedNetworkStorage(storage))
+                {
+                    yield return storage;
+                }
+            }
+        }
+
         private static string FormatPowerStorageOptionDetails(Storage storage)
         {
             StorageNetworkPowerStorage powerStorage = storage != null ? storage.GetComponent<StorageNetworkPowerStorage>() : null;
@@ -690,6 +744,20 @@ namespace StorageNetwork.UI
                 "{0} / {1}",
                 GameUtil.GetFormattedJoules(powerStorage.RawJoulesAvailable, "F2", GameUtil.TimeSlice.None),
                 GameUtil.GetFormattedJoules(powerStorage.CapacityJoules, "F2", GameUtil.TimeSlice.None));
+        }
+
+        private static string FormatParticleStorageOptionDetails(Storage storage)
+        {
+            HighEnergyParticleStorage particleStorage = storage != null ? storage.GetComponent<HighEnergyParticleStorage>() : null;
+            if (particleStorage == null)
+            {
+                return string.Empty;
+            }
+
+            return string.Format(
+                "{0} / {1}",
+                FormatParticles(particleStorage.Particles),
+                FormatParticles(particleStorage.Capacity()));
         }
     }
 }

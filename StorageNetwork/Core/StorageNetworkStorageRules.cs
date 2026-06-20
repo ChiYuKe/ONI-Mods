@@ -241,7 +241,7 @@ namespace StorageNetwork.Core
 
         public static bool CountsTowardNetworkCapacity(Storage storage)
         {
-            return IsServerStorage(storage) && !IsPowerStorageServer(storage);
+            return IsServerStorage(storage) && !IsPowerStorageServer(storage) && !IsParticleStorageServer(storage);
         }
 
         /// <summary>

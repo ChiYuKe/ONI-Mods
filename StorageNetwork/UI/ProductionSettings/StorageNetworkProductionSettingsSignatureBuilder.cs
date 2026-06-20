@@ -19,6 +19,8 @@ namespace StorageNetwork.UI
             StorageNetworkSolidOutputPortEgress solidOutput = storage != null ? storage.GetComponent<StorageNetworkSolidOutputPortEgress>() : null;
             StorageNetworkPowerInputPortConsumer powerInput = storage != null ? storage.GetComponent<StorageNetworkPowerInputPortConsumer>() : null;
             StorageNetworkPowerOutputPortGenerator powerOutput = storage != null ? storage.GetComponent<StorageNetworkPowerOutputPortGenerator>() : null;
+            StorageNetworkParticleInputPortIngress particleInput = storage != null ? storage.GetComponent<StorageNetworkParticleInputPortIngress>() : null;
+            StorageNetworkParticleOutputPortEgress particleOutput = storage != null ? storage.GetComponent<StorageNetworkParticleOutputPortEgress>() : null;
             StorageNetworkColdStorageCooling coldStorageCooling = storage != null ? storage.GetComponent<StorageNetworkColdStorageCooling>() : null;
             string itemSignature = BuildItemSignature(storage, fabricator);
 
@@ -91,6 +93,17 @@ namespace StorageNetwork.UI
                 powerOutput != null && powerOutput.OutputLimitEnabled ? "powerOutLimit1" : "powerOutLimit0",
                 powerOutput != null ? powerOutput.OutputLimitJoules.ToString("0.###") : "0",
                 powerOutput != null ? powerOutput.OutputLimitUsedJoules.ToString("0.###") : "0",
+                particleInput != null && particleInput.InputStoreEnabled ? "particleIn1" : "particleIn0",
+                particleOutput != null && particleOutput.OutputRequestEnabled ? "particleOut1" : "particleOut0",
+                particleOutput != null ? particleOutput.SourceModeValue.ToString() : "particleOutMode0",
+                particleOutput != null ? particleOutput.SourceStorageInstanceId.ToString() : "particleOutSource0",
+                particleOutput != null ? particleOutput.Direction.ToString() : "particleDirection0",
+                particleOutput != null ? particleOutput.ParticleThreshold.ToString("0.###") : "particleThreshold0",
+                particleOutput != null && particleOutput.OutputLimitEnabled ? "particleLimit1" : "particleLimit0",
+                particleOutput != null ? particleOutput.OutputLimitParticles.ToString("0.###") : "particleLimitAmount0",
+                particleOutput != null ? particleOutput.OutputLimitUsedParticles.ToString("0.###") : "particleLimitUsed0",
+                particleInput != null || particleOutput != null ? StorageNetworkParticleStorageService.GetAvailable(storage.gameObject).ToString("0.###") : "particleAvailable0",
+                particleInput != null || particleOutput != null ? StorageNetworkParticleStorageService.GetCapacity(storage.gameObject).ToString("0.###") : "particleCapacity0",
                 coldStorageCooling != null ? coldStorageCooling.TargetTemperature.ToString("0.###") : "cold0",
                 itemSignature);
         }

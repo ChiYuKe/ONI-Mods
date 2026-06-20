@@ -15,7 +15,7 @@ namespace StorageNetwork
             Config.SetModPath(mod.ContentPath);
             Config.Load();
             StorageNetworkOptions.Register();
-            // StorageNetworkHarmonyProfileTool.DumpIfEnabled(mod.ContentPath);
+            StorageNetworkHarmonyProfileTool.DumpIfEnabled(mod.ContentPath);
         }
     }
 }

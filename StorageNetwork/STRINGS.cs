@@ -247,7 +247,7 @@ namespace StorageNetwork
                 {
                     public static LocString NAME = "刻录盘";
                     public static LocString DESC = "用于保存 <link=\"STORAGENETWORKORDERPRODUCTIONCENTER\">订单生产中心</link> 刻录出的配方数据，并为订单生产中心提供 1 个生产核心。";
-                    public static LocString RECIPEDESC = "制造一张空白刻录盘，可放入 <link=\"STORAGENETWORKORDERPRODUCTIONCENTER\">订单生产中心</link>，保存刻录出的生产配方，并提供 1 个生产核心。";
+                    public static LocString RECIPEDESC = "制造一张空白刻录盘，可放入 <link=\"STORAGENETWORKORDERPRODUCTIONCENTER\">订单生产中心</link>，保存刻录出的生产配方，并提供 1 个生产核心。\n\n生产方：<link=\"CRAFTINGTABLE\">工作台</link>、<link=\"SUPERMATERIALREFINERY\">分子熔炉</link>。";
                 }
             }
         }
@@ -474,6 +474,8 @@ namespace StorageNetwork
                 public static LocString GAS_PORT_OUTPUT_STATUS = "气体输出端口";
                 public static LocString POWER_PORT_INPUT_STATUS = "电力输入端口";
                 public static LocString POWER_PORT_OUTPUT_STATUS = "电力输出端口";
+                public static LocString PARTICLE_PORT_INPUT_STATUS = "粒子输入端口";
+                public static LocString PARTICLE_PORT_OUTPUT_STATUS = "粒子输出端口";
                 public static LocString MATERIAL_PORT_DIRECTION = "端口方向";
                 public static LocString MATERIAL_PORT_DIRECTION_INPUT = "输入网络";
                 public static LocString MATERIAL_PORT_DIRECTION_OUTPUT = "输出网络";
@@ -555,6 +557,39 @@ namespace StorageNetwork
                 public static LocString POWER_INPUT_PORT_STATUS_TOOLTIP = "向网络输入：{0}\n网络：{1}\n存放策略：{2}\n输入速率：{3}\n端口缓存：{4} / {5}\n入网状态：{6}";
                 public static LocString POWER_OUTPUT_PORT_STATUS_ITEM = "电力出网端口：{0}";
                 public static LocString POWER_OUTPUT_PORT_STATUS_TOOLTIP = "向电路输出：{0}\n网络：{1}\n来源策略：{2}\n输出限额：{3}\n输出速率：{4}\n端口缓存：{5} / {6}\n出网状态：{7}";
+                public static LocString PARTICLE_PORT_STORAGE_TITLE = "网络粒子储存";
+                public static LocString PARTICLE_PORT_ITEM_NAME = "高能粒子";
+                public static LocString PARTICLE_PORT_AMOUNT_VALUE = "{0} 粒子";
+                public static LocString PARTICLE_PORT_ITEM_TOOLTIP = "粒子服务器中的高能粒子，不是可搬运的实体物品。";
+                public static LocString PARTICLE_INPUT_PORT_STORE_TITLE = "粒子入网";
+                public static LocString PARTICLE_INPUT_PORT_STORE_ENABLED = "向网络输入";
+                public static LocString PARTICLE_INPUT_PORT_MODE = "接收模式";
+                public static LocString PARTICLE_PORT_CAPTURE_MODE = "捕获经过端口的高能粒子";
+                public static LocString PARTICLE_INPUT_PORT_STORE_DESC = "端口会捕获经过的高能粒子，并存入同星球已接入网络的粒子服务器。";
+                public static LocString PARTICLE_OUTPUT_PORT_REQUEST_TITLE = "粒子出网";
+                public static LocString PARTICLE_OUTPUT_PORT_REQUEST_ENABLED = "向管线发射";
+                public static LocString PARTICLE_OUTPUT_PORT_THRESHOLD = "发射阈值";
+                public static LocString PARTICLE_OUTPUT_PORT_SET_THRESHOLD = "设置发射阈值";
+                public static LocString PARTICLE_OUTPUT_PORT_DIRECTION = "发射方向";
+                public static LocString PARTICLE_OUTPUT_PORT_SELECT_DIRECTION = "选择发射方向";
+                public static LocString PARTICLE_OUTPUT_PORT_DIRECTION_DESC = "选择粒子出网端口发射高能粒子的方向。";
+                public static LocString PARTICLE_OUTPUT_PORT_LIMIT = "输出限额：{0} / {1}";
+                public static LocString PARTICLE_OUTPUT_PORT_SET_LIMIT = "设置粒子限额";
+                public static LocString PARTICLE_OUTPUT_PORT_LIMIT_LABEL = "粒子限额";
+                public static LocString PARTICLE_OUTPUT_PORT_ENABLE_BUTTON = "开启粒子发射";
+                public static LocString PARTICLE_OUTPUT_PORT_DISABLE_BUTTON = "关闭粒子发射";
+                public static LocString PARTICLE_OUTPUT_PORT_ENABLE_TOOLTIP = "允许粒子出网端口从网络中取出高能粒子并发射。";
+                public static LocString PARTICLE_OUTPUT_PORT_DISABLE_TOOLTIP = "停止粒子出网端口发射高能粒子。";
+                public static LocString PARTICLE_OUTPUT_PORT_SOURCE_AUTO_DESC = "自动从已接入网络的粒子服务器中取出高能粒子。";
+                public static LocString PARTICLE_OUTPUT_PORT_REQUEST_DESC = "端口会从同星球的粒子服务器取出高能粒子，并按当前方向发射。方向、阈值和限额可在这里或建筑侧屏调整。";
+                public static LocString PARTICLE_DIRECTION_UP = "上";
+                public static LocString PARTICLE_DIRECTION_DOWN = "下";
+                public static LocString PARTICLE_DIRECTION_LEFT = "左";
+                public static LocString PARTICLE_DIRECTION_RIGHT = "右";
+                public static LocString PARTICLE_DIRECTION_UP_LEFT = "左上";
+                public static LocString PARTICLE_DIRECTION_UP_RIGHT = "右上";
+                public static LocString PARTICLE_DIRECTION_DOWN_LEFT = "左下";
+                public static LocString PARTICLE_DIRECTION_DOWN_RIGHT = "右下";
                 public static LocString POWER_STATUS_WAITING_EXTERNAL = "等待外部供电";
                 public static LocString POWER_STATUS_NO_CAPACITY = "电池服务器已满";
                 public static LocString POWER_STATUS_NO_STORED = "网络电力不足";
@@ -640,8 +675,6 @@ namespace StorageNetwork
                 public static LocString CONFIG_TOGGLE_OFF = "关闭";
                 public static LocString CONFIG_RESTART_DIALOG_TITLE = "信息";
                 public static LocString CONFIG_RESTART_CONTINUE = "继续";
-                public static LocString CONFIG_SCENE_SCAN_CACHE = "场景扫描缓存秒数";
-                public static LocString CONFIG_SCENE_SCAN_CACHE_DESC = "数值越小刷新越快，但遍历储存建筑更频繁。";
                 public static LocString CONFIG_DEFAULT_MATERIAL_LIMIT = "材料请求默认限额 kg";
                 public static LocString CONFIG_DEFAULT_MATERIAL_LIMIT_DESC = "新接入生产建筑的默认请求限额。";
                 public static LocString CONFIG_REQUEST_SUCCESS_COOLDOWN = "请求成功冷却秒数";
