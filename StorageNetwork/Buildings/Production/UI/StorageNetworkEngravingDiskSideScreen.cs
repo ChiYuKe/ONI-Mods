@@ -367,7 +367,7 @@ namespace StorageNetwork.UI
             }
 
             return string.Format(
-                "{0}\n材料：{1}\n产出：{2}",
+                Loc.Get(Loc.UI.STORAGE_NETWORK.ORDER_CENTER_DISK_RECIPE_DETAIL),
                 recipe.GetUIName(false),
                 ProductionOrderFormatting.FormatRecipeElements(recipe.ingredients),
                 ProductionOrderFormatting.FormatRecipeElements(recipe.results));

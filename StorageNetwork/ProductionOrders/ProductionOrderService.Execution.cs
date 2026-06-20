@@ -107,6 +107,7 @@ namespace StorageNetwork.ProductionOrders
 
                 int queued = StorageNetworkFabricatorProgress.GetRecipeQueueCountSafe(assignment.Fabricator, node.Recipe);
                 assignment.Fabricator.SetRecipeQueueCount(node.Recipe, (queued == ComplexFabricator.QUEUE_INFINITE ? 0 : Mathf.Max(0, queued)) + assignment.OrderCount);
+                StorageNetworkFabricatorProgress.Invalidate(assignment.Fabricator);
                 EnsureOrderAutomationEnabled(assignment.Fabricator, orderKey);
                 DispatchRecipeIngredients(node, assignment, materialLeases);
             }

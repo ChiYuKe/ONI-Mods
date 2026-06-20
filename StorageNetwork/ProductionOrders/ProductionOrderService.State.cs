@@ -68,9 +68,9 @@ namespace StorageNetwork.ProductionOrders
                    order.State != ProductionOrderState.Cancelled;
         }
 
-        internal static List<ProductionOrderRecord> OrdersSnapshot()
+        internal static IEnumerable<ProductionOrderRecord> OrdersSnapshot()
         {
-            return ActiveOrders.Values.ToList();
+            return ActiveOrders.Values;
         }
 
         private static string FormatOrderUsage(ProductionOrderRecord order, ComplexFabricator fabricator)

@@ -112,13 +112,25 @@ namespace StorageNetwork.ProductionOrders
                     continue;
                 }
 
+                StorageNetwork.Components.StorageNetworkOrderProductionCenterFabricator orderCenterFabricator =
+                    target.Fabricator as StorageNetwork.Components.StorageNetworkOrderProductionCenterFabricator;
+                if (orderCenterFabricator != null)
+                {
+                    int finalQueuedForOrderCenter = Mathf.Max(protectedQueued, queued - Mathf.Max(0, cancelCount - (cancelCurrentWorkingOrder ? 1 : 0)));
+                    orderCenterFabricator.CancelOrderCenterRecipe(target.Recipe, finalQueuedForOrderCenter, cancelCurrentWorkingOrder);
+                    StorageNetworkFabricatorProgress.Invalidate(target.Fabricator);
+                    continue;
+                }
+
                 if (cancelCurrentWorkingOrder)
                 {
                     target.Fabricator.SetRecipeQueueCount(target.Recipe, 0);
+                    StorageNetworkFabricatorProgress.Invalidate(target.Fabricator);
                 }
 
                 int finalQueued = Mathf.Max(protectedQueued, queued - Mathf.Max(0, cancelCount - (cancelCurrentWorkingOrder ? 1 : 0)));
                 target.Fabricator.SetRecipeQueueCount(target.Recipe, finalQueued);
+                StorageNetworkFabricatorProgress.Invalidate(target.Fabricator);
             }
         }
 

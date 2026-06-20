@@ -251,6 +251,11 @@ namespace StorageNetwork.UI
                 return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_CYCLE_UNKNOWN);
             }
 
+            if (TryEstimateTotalOrderSeconds(record, out float totalSeconds))
+            {
+                return ProductionOrderFormatting.FormatCycleStamp(record.CreatedCycle + totalSeconds / 600f);
+            }
+
             if (!TryEstimateRemainingSeconds(record, out float remainingSeconds))
             {
                 return Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_CYCLE_UNKNOWN);
@@ -306,6 +311,47 @@ namespace StorageNetwork.UI
             }
 
             return hasEstimate;
+        }
+
+        private static bool TryEstimateTotalOrderSeconds(ProductionOrderRecord record, out float totalSeconds)
+        {
+            totalSeconds = 0f;
+            if (record?.QueueAssignments == null)
+            {
+                return false;
+            }
+
+            Dictionary<string, int> busiestAssignmentCounts = new Dictionary<string, int>();
+            Dictionary<string, ComplexRecipe> recipesByKey = new Dictionary<string, ComplexRecipe>();
+            foreach (ProductionOrderQueueAssignment assignment in record.QueueAssignments)
+            {
+                if (assignment == null || assignment.Fabricator == null || assignment.Recipe == null)
+                {
+                    continue;
+                }
+
+                int queued = StorageNetworkFabricatorProgress.GetRecipeQueueCountSafe(assignment.Fabricator, assignment.Recipe);
+                if (queued == ComplexFabricator.QUEUE_INFINITE)
+                {
+                    return false;
+                }
+
+                string recipeKey = string.Format("{0}|{1}|{2}", ProductionRecipeCatalog.GetRecipeKey(assignment.Recipe), assignment.OutputTag.Name, assignment.Primary);
+                recipesByKey[recipeKey] = assignment.Recipe;
+                busiestAssignmentCounts[recipeKey] = busiestAssignmentCounts.TryGetValue(recipeKey, out int existing)
+                    ? Mathf.Max(existing, Mathf.Max(0, assignment.OrderCount))
+                    : Mathf.Max(0, assignment.OrderCount);
+            }
+
+            foreach (KeyValuePair<string, int> pair in busiestAssignmentCounts)
+            {
+                if (recipesByKey.TryGetValue(pair.Key, out ComplexRecipe recipe))
+                {
+                    totalSeconds += Mathf.Max(0f, recipe.time) * pair.Value;
+                }
+            }
+
+            return totalSeconds > 0f;
         }
 
         private static int GetRemainingPrimaryBatchCount(ProductionOrderRecord record, ProductionOrderQueueAssignment assignment)

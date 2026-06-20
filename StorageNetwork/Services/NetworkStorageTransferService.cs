@@ -367,7 +367,7 @@ namespace StorageNetwork.Services
                 foreach (GameObject item in source.items)
                 {
                     PrimaryElement primaryElement = item != null ? item.GetComponent<PrimaryElement>() : null;
-                    if (IsSolidItem(primaryElement))
+                    if (IsSolidOutputItem(item, primaryElement))
                     {
                         StorageItemUtility.StorageMatchTags matchTags = StorageItemUtility.GetStorageMatchTagsNonAlloc(item);
                         if (StorageTargetSelector.MatchesAllowedTags(item, allowed, matchTags))
@@ -387,7 +387,7 @@ namespace StorageNetwork.Services
 
                     float transferAmount = Mathf.Min(
                         amount - moved,
-                        StorageItemUtility.GetMass(item),
+                        GetTransferableAmount(item),
                         Mathf.Max(0f, destination.RemainingCapacity()));
                     if (transferAmount <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
                     {
@@ -416,7 +416,9 @@ namespace StorageNetwork.Services
             KPrefabID prefabId = item != null ? item.GetComponent<KPrefabID>() : null;
             return prefabId != null &&
                 (prefabId.HasTag(StorageNetwork.API.StorageNetworkTags.SolidOutputPortBufferedItem) ||
-                 prefabId.HasTag(StorageNetwork.API.StorageNetworkTags.ReservedForConstruction));
+                 prefabId.HasTag(StorageNetwork.API.StorageNetworkTags.ReservedForConstruction) ||
+                 prefabId.HasTag(StorageNetwork.API.StorageNetworkTags.ReservedForFarming) ||
+                 prefabId.HasTag(StorageNetwork.API.StorageNetworkTags.ReservedForFabricator));
         }
 
         private static StorageTransferResult TransferAnyElementStateFromNetworkToStorage(
@@ -629,7 +631,7 @@ namespace StorageNetwork.Services
                 foreach (GameObject item in source.items)
                 {
                     PrimaryElement primaryElement = item != null ? item.GetComponent<PrimaryElement>() : null;
-                    if (primaryElement == null || !IsSolidItem(primaryElement) || primaryElement.Mass <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+                    if (primaryElement == null || !IsSolidOutputItem(item, primaryElement) || primaryElement.Mass <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
                     {
                         continue;
                     }
@@ -705,7 +707,7 @@ namespace StorageNetwork.Services
             int sourceWorldId,
             bool preferColdStorageForFood = false)
         {
-            float mass = StorageItemUtility.GetMass(item);
+            float mass = GetTransferableAmount(item);
             if (mass <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
             {
                 return StorageTransferResult.Idle;
@@ -757,7 +759,7 @@ namespace StorageNetwork.Services
                 return 0f;
             }
 
-            float mass = StorageItemUtility.GetMass(item);
+            float mass = GetTransferableAmount(item);
             if (mass <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
             {
                 return 0f;
@@ -776,7 +778,7 @@ namespace StorageNetwork.Services
                 return 0f;
             }
 
-            float moved = StorageItemUtility.GetMass(taken.gameObject);
+            float moved = GetTransferableAmount(taken.gameObject);
             if (moved <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
             {
                 return 0f;
@@ -829,6 +831,31 @@ namespace StorageNetwork.Services
 
             Element element = ElementLoader.FindElementByHash(primaryElement.ElementID);
             return element != null && (element.IsSolid || !Mathf.Approximately(primaryElement.MassPerUnit, 1f));
+        }
+
+        private static bool IsSolidOutputItem(GameObject item, PrimaryElement primaryElement)
+        {
+            if (IsSolidItem(primaryElement))
+            {
+                return true;
+            }
+
+            return item != null &&
+                   item.GetComponent<Pickupable>() != null &&
+                   (item.HasTag(GameTags.Seed) ||
+                    item.HasTag(GameTags.CropSeed) ||
+                    item.GetComponent<PlantableSeed>() != null);
+        }
+
+        private static float GetTransferableAmount(GameObject item)
+        {
+            Pickupable pickupable = item != null ? item.GetComponent<Pickupable>() : null;
+            if (pickupable != null)
+            {
+                return Mathf.Max(0f, pickupable.TotalAmount);
+            }
+
+            return StorageItemUtility.GetMass(item);
         }
 
         private static HashSet<Tag> BuildAllowedTagSet(IEnumerable<Tag> tags)

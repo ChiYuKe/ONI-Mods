@@ -38,18 +38,17 @@ namespace StorageNetwork.ProductionOrders
             List<ProductionOrderMaterialLease> leases = new List<ProductionOrderMaterialLease>();
             Dictionary<Tag, float> reservations = BuildReservedMaterials(node);
             List<Storage> sources = new List<Storage>();
+            foreach (Storage storage in networkInventory.SourceStorages)
+            {
+                if (storage != null && !StorageNetworkStorageRules.IsProductionStorage(storage))
+                {
+                    sources.Add(storage);
+                }
+            }
+
             foreach (KeyValuePair<Tag, float> pair in reservations)
             {
                 float remaining = pair.Value;
-                sources.Clear();
-                foreach (Storage storage in networkInventory.SourceStorages)
-                {
-                    if (storage != null && !StorageNetworkStorageRules.IsProductionStorage(storage))
-                    {
-                        sources.Add(storage);
-                    }
-                }
-
                 sources.Sort((left, right) => right.GetAmountAvailable(pair.Key).CompareTo(left.GetAmountAvailable(pair.Key)));
                 foreach (Storage storage in sources)
                 {
@@ -90,29 +89,18 @@ namespace StorageNetwork.ProductionOrders
 
         private static List<ProductionOrderQueueAssignment> BuildQueueAssignments(ProductionPlanNode node)
         {
-            List<ProductionOrderQueueAssignment> assignments = new List<ProductionOrderQueueAssignment>();
+            Dictionary<string, QueueAssignmentAccumulator> assignments = new Dictionary<string, QueueAssignmentAccumulator>();
             AddQueueAssignments(node, assignments, null, true);
-            return assignments
-                .Where(assignment => IsOrderProductionFabricator(assignment.Fabricator) && assignment.Recipe != null && assignment.OrderCount > 0)
-                .GroupBy(assignment => string.Format(
-                    "{0}|{1}|{2}|{3}|{4}",
-                    assignment.Fabricator.GetInstanceID(),
-                    assignment.Recipe.id,
-                    assignment.OutputTag.Name,
-                    assignment.ConsumerName,
-                    assignment.Primary))
-                .Select(group => new ProductionOrderQueueAssignment(
-                    group.First().Fabricator,
-                    group.First().Recipe,
-                    group.Sum(assignment => assignment.OrderCount),
-                    group.First().OutputTag,
-                    group.First().OutputName,
-                    group.First().ConsumerName,
-                    group.First().Primary))
-                .ToList();
+            List<ProductionOrderQueueAssignment> result = new List<ProductionOrderQueueAssignment>(assignments.Count);
+            foreach (QueueAssignmentAccumulator accumulator in assignments.Values)
+            {
+                result.Add(accumulator.ToAssignment());
+            }
+
+            return result;
         }
 
-        private static void AddQueueAssignments(ProductionPlanNode node, List<ProductionOrderQueueAssignment> assignments, string consumerName, bool primary)
+        private static void AddQueueAssignments(ProductionPlanNode node, Dictionary<string, QueueAssignmentAccumulator> assignments, string consumerName, bool primary)
         {
             if (node == null)
             {
@@ -130,14 +118,29 @@ namespace StorageNetwork.ProductionOrders
             {
                 if (IsOrderProductionFabricator(assignment.Fabricator) && node.Recipe != null && assignment.OrderCount > 0)
                 {
-                    assignments.Add(new ProductionOrderQueueAssignment(
+                    ProductionOrderQueueAssignment queueAssignment = new ProductionOrderQueueAssignment(
                         assignment.Fabricator,
                         node.Recipe,
                         assignment.OrderCount,
                         outputTag,
                         outputName,
                         primary ? assignment.Fabricator.GetProperName() : consumerName,
-                        primary));
+                        primary);
+                    string key = string.Format(
+                        "{0}|{1}|{2}|{3}|{4}",
+                        queueAssignment.Fabricator.GetInstanceID(),
+                        queueAssignment.Recipe.id,
+                        queueAssignment.OutputTag.Name,
+                        queueAssignment.ConsumerName,
+                        queueAssignment.Primary);
+                    if (assignments.TryGetValue(key, out QueueAssignmentAccumulator existing))
+                    {
+                        existing.OrderCount += queueAssignment.OrderCount;
+                    }
+                    else
+                    {
+                        assignments[key] = new QueueAssignmentAccumulator(queueAssignment);
+                    }
                 }
             }
         }
@@ -147,6 +150,33 @@ namespace StorageNetwork.ProductionOrders
             ComplexRecipe.RecipeElement result = ProductionRecipeCatalog.GetRecipeResultForProduct(node?.Recipe, node != null ? node.ProductTag : Tag.Invalid) ??
                                                  ProductionRecipeCatalog.GetPrimaryResult(node?.Recipe);
             return result != null && result.material != Tag.Invalid ? result.material : Tag.Invalid;
+        }
+
+        private sealed class QueueAssignmentAccumulator
+        {
+            public readonly ComplexFabricator Fabricator;
+            public readonly ComplexRecipe Recipe;
+            public readonly Tag OutputTag;
+            public readonly string OutputName;
+            public readonly string ConsumerName;
+            public readonly bool Primary;
+            public int OrderCount;
+
+            public QueueAssignmentAccumulator(ProductionOrderQueueAssignment assignment)
+            {
+                Fabricator = assignment.Fabricator;
+                Recipe = assignment.Recipe;
+                OrderCount = assignment.OrderCount;
+                OutputTag = assignment.OutputTag;
+                OutputName = assignment.OutputName;
+                ConsumerName = assignment.ConsumerName;
+                Primary = assignment.Primary;
+            }
+
+            public ProductionOrderQueueAssignment ToAssignment()
+            {
+                return new ProductionOrderQueueAssignment(Fabricator, Recipe, OrderCount, OutputTag, OutputName, ConsumerName, Primary);
+            }
         }
     }
 }

@@ -90,12 +90,34 @@ namespace StorageNetwork.ProductionOrders
                 return assignments;
             }
 
-            List<ComplexFabricator> orderedFabricators = fabricators
-                .Where(IsOrderProductionFabricator)
-                .OrderBy(GetFiniteTotalQueueCount)
-                .ThenBy(fabricator => GetFiniteRecipeQueueCount(fabricator, recipe))
-                .ThenBy(fabricator => fabricator.gameObject.GetProperName())
-                .ToList();
+            List<FabricatorQueueSortKey> sortKeys = new List<FabricatorQueueSortKey>();
+            foreach (ComplexFabricator fabricator in fabricators)
+            {
+                if (!IsOrderProductionFabricator(fabricator))
+                {
+                    continue;
+                }
+
+                sortKeys.Add(new FabricatorQueueSortKey(
+                    fabricator,
+                    StorageNetworkFabricatorProgress.GetFiniteTotalQueueCountSafe(fabricator),
+                    StorageNetworkFabricatorProgress.GetFiniteRecipeQueueCountSafe(fabricator, recipe),
+                    fabricator.gameObject.GetProperName()));
+            }
+
+            sortKeys.Sort((left, right) =>
+            {
+                int compare = left.TotalQueueCount.CompareTo(right.TotalQueueCount);
+                if (compare != 0)
+                {
+                    return compare;
+                }
+
+                compare = left.RecipeQueueCount.CompareTo(right.RecipeQueueCount);
+                return compare != 0 ? compare : string.Compare(left.Name, right.Name, System.StringComparison.Ordinal);
+            });
+
+            List<ComplexFabricator> orderedFabricators = sortKeys.Select(item => item.Fabricator).ToList();
             if (orderedFabricators.Count == 0)
             {
                 return assignments;
@@ -115,44 +137,6 @@ namespace StorageNetwork.ProductionOrders
             return assignments;
         }
 
-        private static int GetFiniteTotalQueueCount(ComplexFabricator fabricator)
-        {
-            int queued = GetTotalRecipeQueueCount(fabricator);
-            return queued == ComplexFabricator.QUEUE_INFINITE ? int.MaxValue : Mathf.Max(0, queued);
-        }
-
-        private static int GetTotalRecipeQueueCount(ComplexFabricator fabricator)
-        {
-            if (fabricator == null || RecipeQueueCountsField == null)
-            {
-                return 0;
-            }
-
-            Dictionary<string, int> queueCounts = RecipeQueueCountsField.GetValue(fabricator) as Dictionary<string, int>;
-            if (queueCounts == null)
-            {
-                return 0;
-            }
-
-            int total = 0;
-            foreach (int count in queueCounts.Values)
-            {
-                if (count == ComplexFabricator.QUEUE_INFINITE)
-                {
-                    return ComplexFabricator.QUEUE_INFINITE;
-                }
-
-                total += Mathf.Max(0, count);
-            }
-
-            if (fabricator.CurrentWorkingOrder != null)
-            {
-                total++;
-            }
-
-            return total;
-        }
-
         private Tag GetPreferredMaterial(ComplexRecipe.RecipeElement element, int orderCount, int depth, HashSet<string> recipePath, HashSet<ComplexFabricator> reservedFabricators)
         {
             if (element.material != Tag.Invalid)
@@ -166,22 +150,46 @@ namespace StorageNetwork.ProductionOrders
             }
 
             float required = element.amount * orderCount;
-            return element.possibleMaterials
-                .Select(tag => new
+            bool hasBest = false;
+            Tag bestTag = Tag.Invalid;
+            float bestAvailable = 0f;
+            int bestBlocked = 0;
+            int bestMissingChild = 0;
+            float bestMissingAmount = 0f;
+            string bestName = string.Empty;
+
+            foreach (Tag tag in element.possibleMaterials)
+            {
+                float available = GetNetworkAvailableAmount(tag);
+                ProductionPlanNode child = available + PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT < required
+                    ? BuildBestChildPlan(tag, required - available, depth + 1, recipePath, reservedFabricators)
+                    : null;
+                int blocked = CountBlockedRequirements(child);
+                int missingChild = child == null && available + PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT < required ? 1 : 0;
+                float missingAmount = EstimateMissingAmount(child);
+                string name = ProductionOrderFormatting.GetTagDisplayName(tag);
+
+                bool better = !hasBest ||
+                    blocked < bestBlocked ||
+                    (blocked == bestBlocked && missingChild < bestMissingChild) ||
+                    (blocked == bestBlocked && missingChild == bestMissingChild && missingAmount < bestMissingAmount) ||
+                    (blocked == bestBlocked && missingChild == bestMissingChild && Mathf.Approximately(missingAmount, bestMissingAmount) && available > bestAvailable) ||
+                    (blocked == bestBlocked && missingChild == bestMissingChild && Mathf.Approximately(missingAmount, bestMissingAmount) && Mathf.Approximately(available, bestAvailable) && string.Compare(name, bestName, System.StringComparison.Ordinal) < 0);
+                if (!better)
                 {
-                    Tag = tag,
-                    Available = GetNetworkAvailableAmount(tag),
-                    Child = GetNetworkAvailableAmount(tag) + PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT < required
-                        ? BuildBestChildPlan(tag, required - GetNetworkAvailableAmount(tag), depth + 1, recipePath, reservedFabricators)
-                        : null
-                })
-                .OrderBy(candidate => CountBlockedRequirements(candidate.Child))
-                .ThenBy(candidate => candidate.Child == null && candidate.Available + PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT < required ? 1 : 0)
-                .ThenBy(candidate => EstimateMissingAmount(candidate.Child))
-                .ThenByDescending(candidate => candidate.Available)
-                .ThenBy(candidate => ProductionOrderFormatting.GetTagDisplayName(candidate.Tag))
-                .Select(candidate => candidate.Tag)
-                .FirstOrDefault();
+                    continue;
+                }
+
+                hasBest = true;
+                bestTag = tag;
+                bestAvailable = available;
+                bestBlocked = blocked;
+                bestMissingChild = missingChild;
+                bestMissingAmount = missingAmount;
+                bestName = name;
+            }
+
+            return bestTag;
         }
 
         private ProductionPlanNode BuildBestChildPlan(Tag productTag, float missingAmount, int depth, HashSet<string> recipePath, HashSet<ComplexFabricator> reservedFabricators)
@@ -223,6 +231,22 @@ namespace StorageNetwork.ProductionOrders
         private static int GetFiniteRecipeQueueCount(ComplexFabricator fabricator, ComplexRecipe recipe)
         {
             return StorageNetworkFabricatorProgress.GetFiniteRecipeQueueCountSafe(fabricator, recipe);
+        }
+
+        private sealed class FabricatorQueueSortKey
+        {
+            public readonly ComplexFabricator Fabricator;
+            public readonly int TotalQueueCount;
+            public readonly int RecipeQueueCount;
+            public readonly string Name;
+
+            public FabricatorQueueSortKey(ComplexFabricator fabricator, int totalQueueCount, int recipeQueueCount, string name)
+            {
+                Fabricator = fabricator;
+                TotalQueueCount = totalQueueCount;
+                RecipeQueueCount = recipeQueueCount;
+                Name = name ?? string.Empty;
+            }
         }
     }
 }

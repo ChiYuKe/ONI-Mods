@@ -15,7 +15,9 @@ namespace StorageNetwork.Buildings
         GasInput,
         GasOutput,
         PowerInput,
-        PowerOutput
+        PowerOutput,
+        ParticleInput,
+        ParticleOutput
     }
 
     public abstract class StorageNetworkPortBuildingBase : IBuildingConfig
@@ -63,6 +65,18 @@ namespace StorageNetwork.Buildings
                 {
                     buildingDef.OutputConduitType = spec.ConduitType;
                     buildingDef.UtilityOutputOffset = spec.OutputOffset;
+                }
+            }
+
+            if (spec.ParticlePort)
+            {
+                if (spec.Direction == StorageNetworkPortDirection.Input)
+                {
+                    buildingDef.HighEnergyParticleInputOffset = spec.ParticleOffset;
+                }
+                else
+                {
+                    buildingDef.HighEnergyParticleOutputOffset = spec.ParticleOffset;
                 }
             }
 
@@ -144,6 +158,10 @@ namespace StorageNetwork.Buildings
                     {
                         GeneratedBuildings.RegisterWithOverlay(OverlayScreen.WireIDs, spec.Id);
                     }
+                    else if (spec.ParticlePort)
+                    {
+                        GeneratedBuildings.RegisterWithOverlay(OverlayScreen.RadiationIDs, spec.Id);
+                    }
 
                     break;
             }
@@ -188,6 +206,24 @@ namespace StorageNetwork.Buildings
             {
                 go.AddOrGet<CopyBuildingSettings>();
                 go.AddOrGet<StorageNetworkPowerOutputPortGenerator>();
+            }
+            else if (spec.Kind == StorageNetworkPortKind.ParticleInput)
+            {
+                HighEnergyParticlePort port = go.AddOrGet<HighEnergyParticlePort>();
+                port.particleInputEnabled = true;
+                port.particleInputOffset = spec.ParticleOffset;
+                port.requireOperational = false;
+                go.AddOrGet<CopyBuildingSettings>();
+                go.AddOrGet<StorageNetworkParticleInputPortIngress>();
+            }
+            else if (spec.Kind == StorageNetworkPortKind.ParticleOutput)
+            {
+                HighEnergyParticlePort port = go.AddOrGet<HighEnergyParticlePort>();
+                port.particleOutputEnabled = true;
+                port.particleOutputOffset = spec.ParticleOffset;
+                port.requireOperational = false;
+                go.AddOrGet<CopyBuildingSettings>();
+                go.AddOrGet<StorageNetworkParticleOutputPortEgress>();
             }
             else if (spec.Kind == StorageNetworkPortKind.SolidInput)
             {
@@ -262,6 +298,14 @@ namespace StorageNetwork.Buildings
                     prefabId.AddTag(StorageSceneTags.CategoryPowerPort);
                     prefabId.AddTag(StorageSceneTags.CategoryPowerOutputPort);
                     break;
+                case StorageNetworkPortKind.ParticleInput:
+                    prefabId.AddTag(StorageSceneTags.CategoryParticlePort);
+                    prefabId.AddTag(StorageSceneTags.CategoryParticleInputPort);
+                    break;
+                case StorageNetworkPortKind.ParticleOutput:
+                    prefabId.AddTag(StorageSceneTags.CategoryParticlePort);
+                    prefabId.AddTag(StorageSceneTags.CategoryParticleOutputPort);
+                    break;
             }
         }
 
@@ -322,6 +366,18 @@ namespace StorageNetwork.Buildings
         protected override StorageNetworkPortSpec Spec => StorageNetworkPortSpecs.PowerOutput;
     }
 
+    public sealed class StorageNetworkParticleInputPortConfig : StorageNetworkPortBuildingBase
+    {
+        public const string ID = "StorageNetworkParticleInputPort";
+        protected override StorageNetworkPortSpec Spec => StorageNetworkPortSpecs.ParticleInput;
+    }
+
+    public sealed class StorageNetworkParticleOutputPortConfig : StorageNetworkPortBuildingBase
+    {
+        public const string ID = "StorageNetworkParticleOutputPort";
+        protected override StorageNetworkPortSpec Spec => StorageNetworkPortSpecs.ParticleOutput;
+    }
+
     public enum StorageNetworkPortDirection
     {
         Input,
@@ -339,9 +395,11 @@ namespace StorageNetwork.Buildings
         public HashedString ViewMode { get; set; }
         public ConduitType ConduitType { get; set; }
         public bool PowerPort { get; set; }
+        public bool ParticlePort { get; set; }
         public CellOffset InputOffset { get; set; }
         public CellOffset OutputOffset { get; set; }
         public CellOffset PowerOffset { get; set; }
+        public CellOffset ParticleOffset { get; set; }
         public float CapacityKg { get; set; }
         public List<Tag> Filters { get; set; }
     }
@@ -351,6 +409,7 @@ namespace StorageNetwork.Buildings
         private static readonly CellOffset AccessoryInputOffset = new CellOffset(0, 0);
         private static readonly CellOffset AccessoryOutputOffset = new CellOffset(0, 0);
         private static readonly CellOffset AccessoryPowerOffset = new CellOffset(0, 0);
+        private static readonly CellOffset AccessoryParticleOffset = new CellOffset(0, 0);
 
         private const string SolidInputPortAnimFile = "StorageNetworkSolidInputPort_kanim";
         private const string SolidOutputPortAnimFile = "StorageNetworkSolidOutputPort_kanim";
@@ -360,6 +419,8 @@ namespace StorageNetwork.Buildings
         private const string GasOutputPortAnimFile = "StorageNetworkGasOutputPort_kanim";
         private const string PowerInputPortAnimFile = "StorageNetworkPowerInputPort_kanim";
         private const string PowerOutputPortAnimFile = "StorageNetworkPowerOutputPort_kanim";
+        private const string ParticleInputPortAnimFile = PowerInputPortAnimFile;
+        private const string ParticleOutputPortAnimFile = PowerOutputPortAnimFile;
         private const float PowerInputPortCapacityJoules = 10000f;
         private const float PowerOutputPortCapacityJoules = 10000f;
 
@@ -369,7 +430,8 @@ namespace StorageNetwork.Buildings
             StorageNetworkPortDirection.Input,
             SolidInputPortAnimFile,
             OverlayModes.SolidConveyor.ID,
-            ConduitType.Solid);
+            ConduitType.Solid,
+            20000f);
 
         public static readonly StorageNetworkPortSpec SolidOutput = Create(
             StorageNetworkSolidOutputPortConfig.ID,
@@ -430,6 +492,18 @@ namespace StorageNetwork.Buildings
             PowerOutputPortAnimFile,
             PowerOutputPortCapacityJoules);
 
+        public static readonly StorageNetworkPortSpec ParticleInput = CreateParticle(
+            StorageNetworkParticleInputPortConfig.ID,
+            StorageNetworkPortKind.ParticleInput,
+            StorageNetworkPortDirection.Input,
+            ParticleInputPortAnimFile);
+
+        public static readonly StorageNetworkPortSpec ParticleOutput = CreateParticle(
+            StorageNetworkParticleOutputPortConfig.ID,
+            StorageNetworkPortKind.ParticleOutput,
+            StorageNetworkPortDirection.Output,
+            ParticleOutputPortAnimFile);
+
         public static IEnumerable<string> AllIds
         {
             get
@@ -442,6 +516,8 @@ namespace StorageNetwork.Buildings
                 yield return StorageNetworkGasOutputPortConfig.ID;
                 yield return StorageNetworkPowerInputPortConfig.ID;
                 yield return StorageNetworkPowerOutputPortConfig.ID;
+                yield return StorageNetworkParticleInputPortConfig.ID;
+                yield return StorageNetworkParticleOutputPortConfig.ID;
             }
         }
 
@@ -467,6 +543,7 @@ namespace StorageNetwork.Buildings
                 InputOffset = AccessoryInputOffset,
                 OutputOffset = AccessoryOutputOffset,
                 PowerOffset = AccessoryPowerOffset,
+                ParticleOffset = AccessoryParticleOffset,
                 CapacityKg = capacityKg,
                 Filters = GetStorageFilters(kind, conduitType)
             };
@@ -488,7 +565,30 @@ namespace StorageNetwork.Buildings
                 InputOffset = AccessoryInputOffset,
                 OutputOffset = AccessoryOutputOffset,
                 PowerOffset = AccessoryPowerOffset,
+                ParticleOffset = AccessoryParticleOffset,
                 CapacityKg = capacityJoules,
+                Filters = new List<Tag>()
+            };
+        }
+
+        private static StorageNetworkPortSpec CreateParticle(string id, StorageNetworkPortKind kind, StorageNetworkPortDirection direction, string animFile)
+        {
+            return new StorageNetworkPortSpec
+            {
+                Id = id,
+                Kind = kind,
+                Direction = direction,
+                Width = 1,
+                Height = 1,
+                AnimFile = animFile,
+                ViewMode = OverlayModes.Radiation.ID,
+                ConduitType = ConduitType.None,
+                ParticlePort = true,
+                InputOffset = AccessoryInputOffset,
+                OutputOffset = AccessoryOutputOffset,
+                PowerOffset = AccessoryPowerOffset,
+                ParticleOffset = AccessoryParticleOffset,
+                CapacityKg = 0f,
                 Filters = new List<Tag>()
             };
         }

@@ -31,8 +31,8 @@ namespace StorageNetwork.Patches
                 Strings.Add(
                     "STRINGS.ITEMS.INDUSTRIAL_PRODUCTS.STORAGE_NETWORK_ENGRAVING_DISK.RECIPEDESC",
                     STRINGS.Get(STRINGS.ITEMS.INDUSTRIAL_PRODUCTS.STORAGE_NETWORK_ENGRAVING_DISK.RECIPEDESC));
-                StorageNetworkEngravingDiskConfig.RegisterRecipe();
             }
+
         }
 
         [HarmonyPatch(typeof(Db), "Initialize")]
@@ -40,6 +40,7 @@ namespace StorageNetwork.Patches
         {
             public static void Postfix()
             {
+                StorageNetworkEngravingDiskConfig.RegisterRecipe();
                 StorageNetworkResearchInstaller.RefreshUnlockedItems();
             }
         }

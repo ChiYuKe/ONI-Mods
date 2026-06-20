@@ -138,6 +138,7 @@ namespace StorageNetwork.Components
             InputStoreEnabled = source.InputStoreEnabled;
             InputStoreModeValue = source.InputStoreModeValue;
             InputStorageInstanceId = source.InputStorageInstanceId;
+            StorageNetworkFilterCopyHelper.CopyFilters(gameObject, sourceObject);
             retryTimer = 0f;
             lastStatus = string.Empty;
             cachedStatusText = null;

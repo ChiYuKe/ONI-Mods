@@ -19,6 +19,18 @@ msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKCORE.EFFECT"
 msgid "提供大容量通用储存，并作为储存网络的主要基础设施。"
 msgstr "Provides large general-purpose storage and acts as the main Storage Network infrastructure."
 
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKORDERPRODUCTIONCENTER.NAME"
+msgid "订单生产中心"
+msgstr "Order Production Center"
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKORDERPRODUCTIONCENTER.DESC"
+msgid "用于刻录制造台配方并承接订单生产的网络建筑。"
+msgstr "A network building that engraves production building recipes and handles production orders."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKORDERPRODUCTIONCENTER.EFFECT"
+msgid "点击“刻录”后选择一个带配方的生产建筑，将它的配方刻录到订单生产中心；源建筑会被销毁，同一配方只能刻录一次。"
+msgstr "Click \"Engrave\" and select a production building with recipes to engrave its recipes into the Order Production Center. The source building is destroyed, and each recipe can only be engraved once."
+
 msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKSMALLSOLIDSERVER.NAME"
 msgid "小型固体服务器"
 msgstr "Small Solid Server"
@@ -319,6 +331,18 @@ msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKRELAYMODULE.EFFE
 msgid "火箭发射到太空后，允许储存网络跨星球传输物品。"
 msgstr "When the rocket is in space, allows the Storage Network to transfer items between planetoids."
 
+msgctxt "StorageNetwork.STRINGS.ITEMS.INDUSTRIAL_PRODUCTS.STORAGE_NETWORK_ENGRAVING_DISK.NAME"
+msgid "刻录盘"
+msgstr "Engraving Disk"
+
+msgctxt "StorageNetwork.STRINGS.ITEMS.INDUSTRIAL_PRODUCTS.STORAGE_NETWORK_ENGRAVING_DISK.DESC"
+msgid "用于保存 <link=\"STORAGENETWORKORDERPRODUCTIONCENTER\">订单生产中心</link> 刻录出的配方数据，并为订单生产中心提供 1 个生产核心。"
+msgstr "Stores recipe data engraved by an <link=\"STORAGENETWORKORDERPRODUCTIONCENTER\">Order Production Center</link> and provides 1 production core for the center."
+
+msgctxt "StorageNetwork.STRINGS.ITEMS.INDUSTRIAL_PRODUCTS.STORAGE_NETWORK_ENGRAVING_DISK.RECIPEDESC"
+msgid "制造一张空白刻录盘，可放入 <link=\"STORAGENETWORKORDERPRODUCTIONCENTER\">订单生产中心</link>，保存刻录出的生产配方，并提供 1 个生产核心。"
+msgstr "Produces a blank Engraving Disk. Insert it into an <link=\"STORAGENETWORKORDERPRODUCTIONCENTER\">Order Production Center</link> to store engraved production recipes and provide 1 production core."
+
 msgctxt "StorageNetwork.STRINGS.RESEARCH.TECHS.STORAGENETWORK.NAME"
 msgid "储存网络"
 msgstr "Storage Network"
@@ -358,6 +382,14 @@ msgstr "Medium Storage"
 msgctxt "StorageNetwork.STRINGS.RESEARCH.TECHS.STORAGENETWORKMEDIUMSTORAGE.DESC"
 msgid "解锁中型固体、液体、气体、电池和冷库服务器。"
 msgstr "Unlocks medium solid, liquid, gas, battery, and cold storage servers."
+
+msgctxt "StorageNetwork.STRINGS.RESEARCH.TECHS.STORAGENETWORKORDERPRODUCTION.NAME"
+msgid "订单生产中心"
+msgstr "Order Production Center"
+
+msgctxt "StorageNetwork.STRINGS.RESEARCH.TECHS.STORAGENETWORKORDERPRODUCTION.DESC"
+msgid "解锁可刻录制造台配方并承接订单生产的订单生产中心。"
+msgstr "Unlocks the Order Production Center for engraving production building recipes and fulfilling production orders."
 
 msgctxt "StorageNetwork.STRINGS.RESEARCH.TECHS.STORAGENETWORKLARGESTORAGE.NAME"
 msgid "高级储存"
@@ -2718,4 +2750,252 @@ msgstr "Current output: {0}"
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LIQUID_OUTPUT_SIDE_SCREEN_HINT"
 msgid "快速选择液体出网端口要输出的液体。列表来自当前网络服务器中已有的液体，切换后会替换端口缓存并立即尝试输出。"
 msgstr "Quickly choose which liquid the liquid output port should output. The list comes from liquids currently stored in network servers; switching replaces the port buffer and immediately attempts output."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_PRODUCTION_CENTER_TITLE"
+msgid "订单生产中心"
+msgstr "Order Production Center"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CENTER_ENGRAVE_SECTION_TITLE"
+msgid "刻录"
+msgstr "Engraving"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CENTER_ORDER_SECTION_TITLE"
+msgid "订单"
+msgstr "Orders"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CENTER_OPEN_BUTTON"
+msgid "订单"
+msgstr "Orders"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CENTER_OPEN_TOOLTIP"
+msgid "打开此订单生产中心的专属订单面板；只显示并提交刻录到该建筑的配方。"
+msgstr "Open this Order Production Center's dedicated order panel. Only recipes engraved into this building are shown and submitted."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CENTER_ENGRAVE_BUTTON"
+msgid "刻录"
+msgstr "Engrave"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CENTER_ENGRAVE_TOOLTIP"
+msgid "选择一个或多个带配方的建筑进行刻录"
+msgstr "Select one or more buildings with recipes to engrave."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CENTER_ENGRAVE_TOOLNAME"
+msgid "刻录工具"
+msgstr "Engraving Tool"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CENTER_ENGRAVE_ACTION"
+msgid "刻录"
+msgstr "Engrave"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CENTER_ENGRAVE_STARTED"
+msgid "刻录模式：请选择一个带有配方的生产建筑。"
+msgstr "Engraving mode: select a production building with recipes."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CENTER_ENGRAVE_SUCCESS"
+msgid "订单生产中心：已刻录 {0} 个新配方。"
+msgstr "Order Production Center: engraved {0} new recipes."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CENTER_ENGRAVE_DUPLICATE"
+msgid "订单生产中心：目标建筑的配方都已经刻录过。"
+msgstr "Order Production Center: all recipes from the target building have already been engraved."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CENTER_ENGRAVE_NO_RECIPES"
+msgid "订单生产中心：请选择一个带有配方的生产建筑。"
+msgstr "Order Production Center: select a production building with recipes."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CENTER_ENGRAVE_NO_DISK"
+msgid "订单生产中心：请先放入一张空刻录盘。"
+msgstr "Order Production Center: insert a blank Engraving Disk first."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CENTER_DISK_CONFIG_TITLE"
+msgid "刻录盘"
+msgstr "Engraving Disk"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CENTER_DISK_CONFIG_TOOLTIP"
+msgid "配置订单生产中心的 3 个刻录盘槽。刻录出的配方会写入空刻录盘；每张刻录盘还会提供 1 个生产核心。"
+msgstr "Configure the Order Production Center's 3 Engraving Disk slots. Engraved recipes are written to blank disks, and each disk provides 1 production core."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CENTER_DISK_SLOT_EMPTY"
+msgid "空槽"
+msgstr "Empty Slot"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CENTER_DISK_SLOT_BLANK"
+msgid "空白刻录盘"
+msgstr "Blank Engraving Disk"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CENTER_DISK_SLOT_WRITTEN"
+msgid "刻录盘：{0} 个配方"
+msgstr "Engraving Disk: {0} recipes"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CENTER_DISK_WAITING_DELIVERY"
+msgid "等待运送"
+msgstr "Waiting Delivery"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CENTER_DISK_WAITING_DELIVERY_TOOLTIP"
+msgid "已选择刻录盘，等待复制人运送到该槽位。"
+msgstr "An Engraving Disk has been selected and is waiting for a Duplicant to deliver it to this slot."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CENTER_DISK_CANCEL_DELIVERY"
+msgid "取消"
+msgstr "Cancel"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CENTER_DISK_INSERT"
+msgid "放入"
+msgstr "Insert"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CENTER_DISK_EJECT"
+msgid "弹出"
+msgstr "Eject"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CENTER_DISK_INSERTED"
+msgid "已放入刻录盘。"
+msgstr "Engraving Disk inserted."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CENTER_DISK_EJECTED"
+msgid "已弹出刻录盘。"
+msgstr "Engraving Disk ejected."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CENTER_DISK_NO_AVAILABLE"
+msgid "附近没有可用的刻录盘。"
+msgstr "No available Engraving Disks nearby."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CENTER_DISK_RECORDED_TITLE"
+msgid "已刻录配方"
+msgstr "Engraved Recipes"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CENTER_DISK_RECIPE_REMOVE"
+msgid "删除"
+msgstr "Remove"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CENTER_DISK_RECIPE_REMOVED"
+msgid "已删除刻录配方。"
+msgstr "Engraved recipe removed."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CENTER_DISK_PICKER_TITLE"
+msgid "选择刻录盘"
+msgstr "Select Engraving Disk"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CENTER_DISK_PICKER_COUNT"
+msgid "可选刻录盘：{0} 个"
+msgstr "Available Engraving Disks: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CENTER_DISK_PICKER_HINT"
+msgid "选择一个刻录盘后，复制人会前往订单生产中心完成装盘；只有完成任务后刻录盘才会放入对应槽位。"
+msgstr "After an Engraving Disk is selected, a Duplicant will deliver it to the Order Production Center. The disk is inserted only after the errand is complete."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CENTER_DISK_PICKER_ANY"
+msgid "任意刻录盘"
+msgstr "Any Engraving Disk"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CENTER_DISK_PICKER_ANY_DESC"
+msgid "选择当前可用刻录盘列表中的一张盘"
+msgstr "Choose one disk from the currently available Engraving Disks."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CENTER_DISK_PICKER_ASSIGNED"
+msgid "已安排复制人装盘。"
+msgstr "Disk delivery has been assigned."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CENTER_DISK_PICKER_ASSIGN_FAILED"
+msgid "无法安排装盘，目标槽位或刻录盘已不可用。"
+msgstr "Could not assign disk delivery. The target slot or disk is no longer available."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CENTER_DISK_PICKER_STORAGE_FALLBACK"
+msgid "储存网络"
+msgstr "Storage Network"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CENTER_DISK_PICKER_DETAIL_STORAGE"
+msgid "{0}  ·  {1}"
+msgstr "{0}  ·  {1}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CENTER_DISK_PICKER_DETAIL_DISTANCE"
+msgid "{0}  ·  距离 {1:0.0}"
+msgstr "{0}  ·  Distance {1:0.0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CENTER_DISK_SUMMARY_MORE"
+msgid "{0} 等 {1} 个配方"
+msgstr "{0} and {1} recipes"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CENTER_DISK_INFO_CORE_TITLE"
+msgid "核心能力"
+msgstr "Core Capacity"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CENTER_DISK_INFO_CORE_DESC"
+msgid "提供 1 个生产核心"
+msgstr "Provides 1 production core"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CENTER_DISK_INFO_RECORDED_TITLE"
+msgid "已刻录配方"
+msgstr "Engraved Recipes"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CENTER_DISK_INFO_RECORDED_COUNT"
+msgid "共 {0} 个配方"
+msgstr "{0} recipes total"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CENTER_DISK_INFO_DESCRIPTION"
+msgid "{0}\n\n<b>{1}</b>\n{2}\n\n<b>{3}</b>\n{4}\n\n{5}"
+msgstr "{0}\n\n<b>{1}</b>\n{2}\n\n<b>{3}</b>\n{4}\n\n{5}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CENTER_DISK_RECIPE_DETAIL"
+msgid "<b>{0}</b>\n  材料：{1}\n  产出：{2}"
+msgstr "<b>{0}</b>\n  Materials: {1}\n  Output: {2}"
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKPARTICLEINPUTPORT.NAME"
+msgid "粒子入网端口"
+msgstr "Particle Network Input Port"
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKPARTICLEINPUTPORT.DESC"
+msgid "将高能粒子接入储存网络的输入端口。"
+msgstr "An input port that connects high-energy particles to the storage network."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKPARTICLEINPUTPORT.EFFECT"
+msgid "捕获经过端口的高能粒子，并将粒子存入同星球的粒子服务器。"
+msgstr "Captures high-energy particles passing through the port and stores them in particle servers on the same asteroid."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKPARTICLEOUTPUTPORT.NAME"
+msgid "粒子出网端口"
+msgstr "Particle Network Output Port"
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKPARTICLEOUTPUTPORT.DESC"
+msgid "将储存网络中的高能粒子发射出去的输出端口。"
+msgstr "An output port that fires high-energy particles from the storage network."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKPARTICLEOUTPUTPORT.EFFECT"
+msgid "从同星球的粒子服务器中取出高能粒子，并向右发射。"
+msgstr "Draws high-energy particles from particle servers on the same asteroid and fires them to the right."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKSMALLPARTICLESERVER.NAME"
+msgid "小型粒子服务器"
+msgstr "Small Particle Server"
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKSMALLPARTICLESERVER.DESC"
+msgid "用于接入储存网络的小型高能粒子储存服务器。"
+msgstr "A small high-energy particle storage server for the storage network."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKSMALLPARTICLESERVER.EFFECT"
+msgid "储存高能粒子，并供粒子出网端口发射。"
+msgstr "Stores high-energy particles for particle output ports."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKMEDIUMPARTICLESERVER.NAME"
+msgid "中型粒子服务器"
+msgstr "Medium Particle Server"
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKMEDIUMPARTICLESERVER.DESC"
+msgid "用于接入储存网络的中型高能粒子储存服务器。"
+msgstr "A medium high-energy particle storage server for the storage network."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKMEDIUMPARTICLESERVER.EFFECT"
+msgid "储存更多高能粒子，并供粒子出网端口发射。"
+msgstr "Stores more high-energy particles for particle output ports."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKLARGEPARTICLESERVER.NAME"
+msgid "大型粒子服务器"
+msgstr "Large Particle Server"
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKLARGEPARTICLESERVER.DESC"
+msgid "用于接入储存网络的大型高能粒子储存服务器。"
+msgstr "A large high-energy particle storage server for the storage network."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKLARGEPARTICLESERVER.EFFECT"
+msgid "储存大量高能粒子，并供粒子出网端口发射。"
+msgstr "Stores a large amount of high-energy particles for particle output ports."
 

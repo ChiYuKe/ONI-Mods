@@ -48,6 +48,28 @@ namespace StorageNetwork.Services
             return false;
         }
 
+        public static int GetCountWithAdditionalTag(int worldId, bool includeRelatedWorlds, Tag tag, Tag additionalTag)
+        {
+            if (worldId < 0 || tag == Tag.Invalid)
+            {
+                return 0;
+            }
+
+            InventoryIndexSnapshot snapshot = GetSnapshot(worldId, includeRelatedWorlds);
+            return snapshot != null ? snapshot.GetCountWithAdditionalTag(tag, additionalTag) : 0;
+        }
+
+        public static bool HasPlantableSeed(int worldId, bool includeRelatedWorlds, Tag seedTag, Tag additionalTag)
+        {
+            if (worldId < 0 || seedTag == Tag.Invalid)
+            {
+                return false;
+            }
+
+            InventoryIndexSnapshot snapshot = GetSnapshot(worldId, includeRelatedWorlds);
+            return snapshot != null && snapshot.HasPlantableSeed(seedTag, additionalTag);
+        }
+
         public static float GetEdibleCalories(int worldId, bool includeRelatedWorlds, Dictionary<string, float> unitsById = null)
         {
             if (worldId < 0)
@@ -321,6 +343,38 @@ namespace StorageNetwork.Services
                 return calories;
             }
 
+            public int GetCountWithAdditionalTag(Tag tag, Tag additionalTag)
+            {
+                int count = 0;
+                foreach (InventoryIndexItem item in items)
+                {
+                    if (!item.Matches(tag) ||
+                        (additionalTag.IsValid && !item.HasTag(additionalTag)))
+                    {
+                        continue;
+                    }
+
+                    count += Mathf.CeilToInt(item.Amount);
+                }
+
+                return count;
+            }
+
+            public bool HasPlantableSeed(Tag seedTag, Tag additionalTag)
+            {
+                foreach (InventoryIndexItem item in items)
+                {
+                    if (item.IsPlantableSeed &&
+                        item.Matches(seedTag) &&
+                        (!additionalTag.IsValid || item.HasTag(additionalTag)))
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+
             private static string BuildForbiddenSignature(IEnumerable<Tag> forbiddenTags)
             {
                 return string.Join(
@@ -342,6 +396,7 @@ namespace StorageNetwork.Services
                 this.tags = tags ?? new HashSet<Tag>();
                 this.prefabId = prefabId;
                 Amount = amount;
+                IsPlantableSeed = prefabId != null && prefabId.GetComponent<PlantableSeed>() != null;
                 FoodId = edible != null ? edible.FoodID : null;
                 EdibleCalories = edible != null ? edible.Calories : 0f;
                 EdibleUnits = edible != null ? edible.Units : 0f;
@@ -350,6 +405,8 @@ namespace StorageNetwork.Services
             public IEnumerable<Tag> Tags => tags;
 
             public float Amount { get; }
+
+            public bool IsPlantableSeed { get; }
 
             public string FoodId { get; }
 
@@ -365,6 +422,11 @@ namespace StorageNetwork.Services
             public bool HasAnyForbiddenTag(Tag[] forbiddenTags)
             {
                 return prefabId != null && forbiddenTags != null && prefabId.HasAnyTags(forbiddenTags);
+            }
+
+            public bool HasTag(Tag tag)
+            {
+                return tag != Tag.Invalid && prefabId != null && prefabId.HasTag(tag);
             }
         }
     }

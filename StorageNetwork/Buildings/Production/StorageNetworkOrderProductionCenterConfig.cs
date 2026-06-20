@@ -9,6 +9,8 @@ namespace StorageNetwork.Buildings
     {
         public const string ID = "StorageNetworkOrderProductionCenter";
         private const string Anim = "StorageNetwork_OrderProductionCenter_kanim";
+        public const float BasePowerWatts = 1200f;
+        public const float ExtraCorePowerWatts = 120f;
 
         public override BuildingDef CreateBuildingDef()
         {
@@ -29,7 +31,9 @@ namespace StorageNetwork.Buildings
 
             buildingDef.AudioCategory = "Metal";
             buildingDef.Overheatable = false;
-            buildingDef.RequiresPowerInput = false;
+            buildingDef.RequiresPowerInput = true;
+            buildingDef.EnergyConsumptionWhenActive = BasePowerWatts;
+            buildingDef.SelfHeatKilowattsWhenActive = 1f;
             buildingDef.AddSearchTerms(global::STRINGS.SEARCH_TERMS.AUTOMATION);
             return buildingDef;
         }
@@ -40,6 +44,7 @@ namespace StorageNetwork.Buildings
             go.AddOrGet<StorageNetworkSceneMember>();
             StorageNetworkEnrollment enrollment = go.AddOrGet<StorageNetworkEnrollment>();
             enrollment.IncludedInSceneNetwork = true;
+            GeneratedBuildings.MakeBuildingAlwaysOperational(go);
             ComplexFabricator fabricator = go.AddOrGet<StorageNetworkOrderProductionCenterFabricator>();
             fabricator.duplicantOperated = false;
             fabricator.showProgressBar = false;
@@ -57,6 +62,8 @@ namespace StorageNetwork.Buildings
             go.AddOrGet<StorageNetworkOrderProductionCenter>();
             go.AddOrGet<StorageNetworkOrderProductionCenterController>();
             go.AddOrGet<StorageNetworkOrderProductionCenterDiskInstallWorkable>();
+            go.AddOrGet<Operational>();
+            go.AddOrGet<EnergyConsumer>();
             go.AddOrGet<CopyBuildingSettings>();
             go.AddOrGet<UserNameable>();
             Prioritizable.AddRef(go);
@@ -66,6 +73,7 @@ namespace StorageNetwork.Buildings
         {
             SymbolOverrideControllerUtil.AddToPrefab(go);
             go.AddOrGet<ComplexFabricatorSM>();
+            go.AddOrGetDef<PoweredController.Def>();
         }
     }
 }

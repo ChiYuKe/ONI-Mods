@@ -4,6 +4,8 @@ using KSerialization;
 using StorageNetwork.API;
 using StorageNetwork.Buildings;
 using StorageNetwork.Core;
+using StorageNetwork.ProductionOrders;
+using StorageNetwork.Services;
 using UnityEngine;
 using Loc = StorageNetwork.STRINGS;
 
@@ -33,9 +35,12 @@ namespace StorageNetwork.Components
 
         public bool HasPendingDiskInstall => pendingDiskInstalls.Count > 0;
 
+        public float CurrentPowerWatts => GetPowerWattsForCoreCount(fabricator != null ? fabricator.ActiveCoreCount : 0);
+
         protected override void OnSpawn()
         {
             base.OnSpawn();
+            ProductionOrderCenterCatalog.Register(this);
             RemoveDynamicRecipeUnsafeStatusManager();
             EnsureDiskSlots();
             StorageNetworkOrderProductionCenterStorageHelper.RestoreFabricatorStorageCapacity(fabricator);
@@ -44,10 +49,12 @@ namespace StorageNetwork.Components
             MigrateLegacyRecipesToDisk();
             RefreshFabricatorRecipes();
             RefreshDiskMeter();
+            RefreshPowerDemand();
         }
 
         protected override void OnCleanUp()
         {
+            ProductionOrderCenterCatalog.Unregister(this);
             StorageNetworkOrderProductionCenterEngraveTool.CancelIfOwner(this);
             base.OnCleanUp();
         }
@@ -56,7 +63,7 @@ namespace StorageNetwork.Components
         {
             if (!HasBlankDiskSlot)
             {
-                StorageNetworkNotifications.ShowWarning(Loc.Get(Loc.UI.STORAGE_NETWORK.ORDER_CENTER_ENGRAVE_NO_DISK));
+                StorageNetworkNotifications.ShowWarning(gameObject, Loc.Get(Loc.UI.STORAGE_NETWORK.ORDER_CENTER_ENGRAVE_NO_DISK));
                 return;
             }
 
@@ -105,6 +112,7 @@ namespace StorageNetwork.Components
             RefreshFabricatorRecipes();
             DropSourceContents(source);
             DestroySourceBuilding(target);
+            RefreshPowerDemand();
             message = string.Format(Loc.Get(Loc.UI.STORAGE_NETWORK.ORDER_CENTER_ENGRAVE_SUCCESS), newRecipeIds.Count);
             return true;
         }
@@ -142,6 +150,7 @@ namespace StorageNetwork.Components
             Util.KDestroyGameObject(disk.gameObject);
             RefreshFabricatorRecipes();
             RefreshDiskMeter();
+            RefreshPowerDemand();
             return true;
         }
 
@@ -170,6 +179,11 @@ namespace StorageNetwork.Components
                 return false;
             }
 
+            if (!PrepareDiskForMinionPickup(disk, pickupable))
+            {
+                return false;
+            }
+
             PendingDiskInstall pending = new PendingDiskInstall(slotIndex, disk);
             pendingDiskInstalls.Add(pending);
             KPrefabID prefabID = disk.GetComponent<KPrefabID>();
@@ -177,6 +191,64 @@ namespace StorageNetwork.Components
             prefabID?.AddTag(pending.RequiredTag, false);
             gameObject.AddOrGet<StorageNetworkOrderProductionCenterDiskInstallWorkable>()?.CreateInstallChore();
             return true;
+        }
+
+        private bool PrepareDiskForMinionPickup(StorageNetworkEngravingDisk disk, Pickupable pickupable)
+        {
+            if (disk == null || pickupable == null)
+            {
+                return false;
+            }
+
+            Storage sourceStorage = pickupable.storage;
+            if (sourceStorage == null)
+            {
+                return true;
+            }
+
+            if (!StorageNetworkStorageRules.IsServerStorage(sourceStorage))
+            {
+                return true;
+            }
+
+            Storage outputPort = FindDiskDeliveryOutputPort(sourceStorage);
+            if (outputPort == null)
+            {
+                return false;
+            }
+
+            return sourceStorage.Transfer(disk.gameObject, outputPort, block_events: false, hide_popups: true);
+        }
+
+        private Storage FindDiskDeliveryOutputPort(Storage sourceStorage)
+        {
+            int worldId = StorageTargetSelector.GetObjectWorldId(gameObject);
+            foreach (Storage storage in StorageSceneCollector.CollectLightweightForWorld(worldId).Storages)
+            {
+                if (storage == null ||
+                    storage == sourceStorage ||
+                    !StorageNetworkStorageRules.IsSolidOutputPort(storage) ||
+                    storage.RemainingCapacity() <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+                {
+                    continue;
+                }
+
+                StorageNetworkSolidOutputPortEgress egress = storage.GetComponent<StorageNetworkSolidOutputPortEgress>();
+                if (egress == null || !egress.AllowManualOperation)
+                {
+                    continue;
+                }
+
+                Tag selected = egress.GetSelectedOutputTag() ?? Tag.Invalid;
+                if (selected != Tag.Invalid && selected != StorageNetworkEngravingDiskConfig.ID)
+                {
+                    continue;
+                }
+
+                return storage;
+            }
+
+            return null;
         }
 
         public bool CompleteDeliveredDiskInstall()
@@ -209,6 +281,19 @@ namespace StorageNetwork.Components
             pendingDiskInstalls.Clear();
         }
 
+        public bool CancelPendingDiskInstall(int slotIndex)
+        {
+            PendingDiskInstall pending = pendingDiskInstalls.FirstOrDefault(item => item != null && item.SlotIndex == slotIndex);
+            if (pending == null)
+            {
+                return false;
+            }
+
+            RemovePendingTags(pending);
+            pendingDiskInstalls.Remove(pending);
+            return true;
+        }
+
         public bool IsQueuedDiskStillValid()
         {
             PruneInvalidPendingDiskInstalls();
@@ -230,6 +315,12 @@ namespace StorageNetwork.Components
             return pendingDiskInstalls
                 .Select(pending => pending.RequiredTag)
                 .ToList();
+        }
+
+        public bool IsSlotWaitingForDiskDelivery(int slotIndex)
+        {
+            PruneInvalidPendingDiskInstalls();
+            return IsSlotPendingDiskInstall(slotIndex);
         }
 
         private bool IsPendingDiskInstallValid(PendingDiskInstall pending)
@@ -316,6 +407,7 @@ namespace StorageNetwork.Components
             slot.Clear();
             RefreshFabricatorRecipes();
             RefreshDiskMeter();
+            RefreshPowerDemand();
             return true;
         }
 
@@ -462,7 +554,32 @@ namespace StorageNetwork.Components
             Util.KDestroyGameObject(disk.gameObject);
             RefreshFabricatorRecipes();
             RefreshDiskMeter();
+            RefreshPowerDemand();
             return true;
+        }
+
+        private void RefreshPowerDemand()
+        {
+            EnergyConsumer energyConsumer = GetComponent<EnergyConsumer>();
+            if (energyConsumer == null)
+            {
+                return;
+            }
+
+            float watts = CurrentPowerWatts;
+            energyConsumer.BaseWattageRating = watts;
+            Building building = GetComponent<Building>();
+            if (building?.Def != null)
+            {
+                building.Def.EnergyConsumptionWhenActive = watts;
+            }
+        }
+
+        private static float GetPowerWattsForCoreCount(int coreCount)
+        {
+            int extraCoreCount = Mathf.Max(0, coreCount - 1);
+            return StorageNetworkOrderProductionCenterConfig.BasePowerWatts +
+                extraCoreCount * StorageNetworkOrderProductionCenterConfig.ExtraCorePowerWatts;
         }
 
         private StorageNetworkEngravingDisk FindDeliveredPendingDisk()

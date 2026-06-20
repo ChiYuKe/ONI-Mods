@@ -18,17 +18,19 @@ namespace StorageNetwork.Research
         private const float NodeWidth = 250f;
         private const float NodeHeight = 110f;
         private const float BranchOffsetY = 260f;
+        private const float NodeOffsetColumns = -2f;
 
         private const string CoreTechId = "StorageNetworkResearchCore";
         private const string PortsTechId = "StorageNetworkResearchPorts";
         private const string SmallStorageTechId = "StorageNetworkResearchSmallStorage";
         private const string MediumStorageTechId = "StorageNetworkResearchMediumStorage";
+        public const string OrderProductionTechId = "StorageNetworkResearchOrderProduction";
         private const string LargeStorageTechId = "StorageNetworkResearchLargeStorage";
         private const string RelayTechId = "StorageNetworkResearchRelay";
 
         private static readonly StorageNetworkTechSpec[] TechSpecs =
         {
-            new StorageNetworkTechSpec(CoreTechId, "STORAGENETWORKRESEARCHCORE", null, 0, 0, new[] { StorageNetworkCoreConfig.ID, StorageNetworkOrderProductionCenterConfig.ID }, 35f, 0f, 0f),
+            new StorageNetworkTechSpec(CoreTechId, "STORAGENETWORKRESEARCHCORE", new string[0], 0, 0, new[] { StorageNetworkCoreConfig.ID }, 35f, 0f, 0f),
             new StorageNetworkTechSpec(PortsTechId, "STORAGENETWORKRESEARCHPORTS", CoreTechId, 1, 1, new[]
             {
                 StorageNetworkSolidInputPortConfig.ID,
@@ -38,17 +40,21 @@ namespace StorageNetwork.Research
                 StorageNetworkGasInputPortConfig.ID,
                 StorageNetworkGasOutputPortConfig.ID,
                 StorageNetworkPowerInputPortConfig.ID,
-                StorageNetworkPowerOutputPortConfig.ID
+                StorageNetworkPowerOutputPortConfig.ID,
+                StorageNetworkParticleInputPortConfig.ID,
+                StorageNetworkParticleOutputPortConfig.ID
             }, 50f, 0f, 0f),
-            new StorageNetworkTechSpec(SmallStorageTechId, "STORAGENETWORKRESEARCHSMALLSTORAGE", CoreTechId, 1, 0, new[] { SmallSolidServerConfig.ID, SmallLiquidServerConfig.ID, SmallGasServerConfig.ID, SmallBatteryServerConfig.ID, SmallColdStorageServerConfig.ID }, 50f, 0f, 0f),
-            new StorageNetworkTechSpec(MediumStorageTechId, "STORAGENETWORKRESEARCHMEDIUMSTORAGE", SmallStorageTechId, 2, 0, new[] { MediumSolidServerConfig.ID, MediumLiquidServerConfig.ID, MediumGasServerConfig.ID, MediumBatteryServerConfig.ID, MediumColdStorageServerConfig.ID }, 50f, 30f, 0f),
-            new StorageNetworkTechSpec(LargeStorageTechId, "STORAGENETWORKRESEARCHLARGESTORAGE", MediumStorageTechId, 3, 0, new[] { LargeSolidServerConfig.ID, LargeLiquidServerConfig.ID, LargeGasServerConfig.ID, LargeBatteryServerConfig.ID, LargeColdStorageServerConfig.ID }, 70f, 50f, 0f),
+            new StorageNetworkTechSpec(SmallStorageTechId, "STORAGENETWORKRESEARCHSMALLSTORAGE", CoreTechId, 1, 0, new[] { SmallSolidServerConfig.ID, SmallLiquidServerConfig.ID, SmallGasServerConfig.ID, SmallParticleServerConfig.ID, SmallBatteryServerConfig.ID, SmallColdStorageServerConfig.ID }, 50f, 0f, 0f),
+            new StorageNetworkTechSpec(MediumStorageTechId, "STORAGENETWORKRESEARCHMEDIUMSTORAGE", SmallStorageTechId, 2, 0, new[] { MediumSolidServerConfig.ID, MediumLiquidServerConfig.ID, MediumGasServerConfig.ID, MediumParticleServerConfig.ID, MediumBatteryServerConfig.ID, MediumColdStorageServerConfig.ID }, 50f, 30f, 0f),
+            new StorageNetworkTechSpec(OrderProductionTechId, "STORAGENETWORKRESEARCHORDERPRODUCTION", new[] { MediumStorageTechId, PortsTechId }, 3, 1, new[] { StorageNetworkOrderProductionCenterConfig.ID, StorageNetworkEngravingDiskConfig.ID }, 50f, 30f, 50f),
+            new StorageNetworkTechSpec(LargeStorageTechId, "STORAGENETWORKRESEARCHLARGESTORAGE", MediumStorageTechId, 3, 0, new[] { LargeSolidServerConfig.ID, LargeLiquidServerConfig.ID, LargeGasServerConfig.ID, LargeParticleServerConfig.ID, LargeBatteryServerConfig.ID, LargeColdStorageServerConfig.ID }, 70f, 50f, 50f),
             new StorageNetworkTechSpec(RelayTechId, "STORAGENETWORKRESEARCHRELAY", LargeStorageTechId, 4, 0, new[] { StorageNetworkRelayModuleConfig.ID }, 70f, 100f, 200f)
         };
 
         public static void Install(Database.Techs techs)
         {
             EnsureResearchStrings();
+            EnsureEngravingDiskTechItem();
             RemoveOldStorageNetworkUnlocks(techs);
 
             Vector2 titleCenter = GetTitleCenter(techs);
@@ -66,6 +72,7 @@ namespace StorageNetwork.Research
 
         public static void RefreshUnlockedItems()
         {
+            EnsureEngravingDiskTechItem();
             RemoveOldStorageNetworkUnlocks(Db.Get().Techs);
 
             foreach (StorageNetworkTechSpec spec in TechSpecs)
@@ -97,10 +104,13 @@ namespace StorageNetwork.Research
 
         private static void RemoveOldStorageNetworkUnlocks(Database.Techs techs)
         {
-            HashSet<string> storageNetworkIds = new HashSet<string>(StorageNetworkStorageBuildingSpecs.UnlockIds);
-            foreach (string portId in StorageNetworkPortSpecs.AllIds)
+            HashSet<string> storageNetworkIds = new HashSet<string>();
+            foreach (StorageNetworkTechSpec spec in TechSpecs)
             {
-                storageNetworkIds.Add(portId);
+                foreach (string id in spec.BuildingIds)
+                {
+                    storageNetworkIds.Add(id);
+                }
             }
 
             foreach (Tech tech in techs.resources)
@@ -108,6 +118,40 @@ namespace StorageNetwork.Research
                 tech.unlockedItemIDs.RemoveAll(storageNetworkIds.Contains);
                 tech.unlockedItems.RemoveAll(item => item != null && storageNetworkIds.Contains(item.Id));
             }
+        }
+
+        private static void EnsureEngravingDiskTechItem()
+        {
+            Database.TechItems techItems = Db.Get().TechItems;
+            if (techItems == null || techItems.TryGet(StorageNetworkEngravingDiskConfig.ID) != null)
+            {
+                return;
+            }
+
+            techItems.AddTechItem(
+                StorageNetworkEngravingDiskConfig.ID,
+                STRINGS.Get(Loc.ITEMS.INDUSTRIAL_PRODUCTS.STORAGE_NETWORK_ENGRAVING_DISK.NAME),
+                STRINGS.Get(Loc.ITEMS.INDUSTRIAL_PRODUCTS.STORAGE_NETWORK_ENGRAVING_DISK.RECIPEDESC),
+                GetEngravingDiskTechSprite,
+                null,
+                null,
+                false);
+        }
+
+        private static Sprite GetEngravingDiskTechSprite(string name, bool active)
+        {
+            GameObject prefab = Assets.GetPrefab(StorageNetworkEngravingDiskConfig.ID);
+            if (prefab != null)
+            {
+                Tuple<Sprite, Color> uiSprite = Def.GetUISprite(prefab, "ui", false);
+                if (uiSprite != null && uiSprite.first != null)
+                {
+                    return uiSprite.first;
+                }
+            }
+
+            Sprite sprite = Assets.GetSprite(StorageNetworkEngravingDiskConfig.ID);
+            return sprite != null ? sprite : Assets.GetSprite("unknown");
         }
 
         private static Tech GetOrCreateTech(Database.Techs techs, StorageNetworkTechSpec spec)
@@ -137,9 +181,9 @@ namespace StorageNetwork.Research
                 candidate.unlockedTech.Remove(tech);
             }
 
-            if (!string.IsNullOrEmpty(spec.ParentTechId))
+            foreach (string parentTechId in spec.ParentTechIds)
             {
-                Tech parent = techs.TryGet(spec.ParentTechId);
+                Tech parent = techs.TryGet(parentTechId);
                 if (parent != null)
                 {
                     tech.requiredTech.Add(parent);
@@ -192,7 +236,7 @@ namespace StorageNetwork.Research
 
                 foreach (StorageNetworkTechSpec childSpec in TechSpecs)
                 {
-                    if (childSpec.ParentTechId != spec.TechId)
+                    if (!childSpec.HasParentTechId(spec.TechId))
                     {
                         continue;
                     }
@@ -226,7 +270,7 @@ namespace StorageNetwork.Research
         {
             float x = GetAutomationStartX(techs);
             float spacing = GetAutomationColumnSpacing(techs);
-            return new Vector2(x + spec.Column * spacing, titleCenter.y - NodeOffsetY - spec.Row * BranchOffsetY);
+            return new Vector2(x + (spec.Column + NodeOffsetColumns) * spacing, titleCenter.y - NodeOffsetY - spec.Row * BranchOffsetY);
         }
 
         // 对齐自动化行最左侧卡片，避免不同 DLC 研究树里固定节点不在同一列。
@@ -323,10 +367,24 @@ namespace StorageNetwork.Research
         private sealed class StorageNetworkTechSpec
         {
             public StorageNetworkTechSpec(string techId, string stringId, string parentTechId, int column, int row, string[] buildingIds, float basicCost, float advancedCost, float orbitalCost)
+                : this(
+                    techId,
+                    stringId,
+                    string.IsNullOrEmpty(parentTechId) ? new string[0] : new[] { parentTechId },
+                    column,
+                    row,
+                    buildingIds,
+                    basicCost,
+                    advancedCost,
+                    orbitalCost)
+            {
+            }
+
+            public StorageNetworkTechSpec(string techId, string stringId, string[] parentTechIds, int column, int row, string[] buildingIds, float basicCost, float advancedCost, float orbitalCost)
             {
                 TechId = techId;
                 StringId = stringId;
-                ParentTechId = parentTechId;
+                ParentTechIds = parentTechIds ?? new string[0];
                 Column = column;
                 Row = row;
                 BuildingIds = buildingIds;
@@ -337,13 +395,26 @@ namespace StorageNetwork.Research
 
             public string TechId { get; }
             public string StringId { get; }
-            public string ParentTechId { get; }
+            public string[] ParentTechIds { get; }
             public int Column { get; }
             public int Row { get; }
             public string[] BuildingIds { get; }
             public float BasicCost { get; }
             public float AdvancedCost { get; }
             public float OrbitalCost { get; }
+
+            public bool HasParentTechId(string techId)
+            {
+                foreach (string parentTechId in ParentTechIds)
+                {
+                    if (parentTechId == techId)
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
 
             public LocString Name
             {
@@ -359,6 +430,8 @@ namespace StorageNetwork.Research
                             return Loc.RESEARCH.TECHS.STORAGENETWORKSMALLSTORAGE.NAME;
                         case "STORAGENETWORKRESEARCHMEDIUMSTORAGE":
                             return Loc.RESEARCH.TECHS.STORAGENETWORKMEDIUMSTORAGE.NAME;
+                        case "STORAGENETWORKRESEARCHORDERPRODUCTION":
+                            return Loc.RESEARCH.TECHS.STORAGENETWORKORDERPRODUCTION.NAME;
                         case "STORAGENETWORKRESEARCHLARGESTORAGE":
                             return Loc.RESEARCH.TECHS.STORAGENETWORKLARGESTORAGE.NAME;
                         default:
@@ -381,6 +454,8 @@ namespace StorageNetwork.Research
                             return Loc.RESEARCH.TECHS.STORAGENETWORKSMALLSTORAGE.DESC;
                         case "STORAGENETWORKRESEARCHMEDIUMSTORAGE":
                             return Loc.RESEARCH.TECHS.STORAGENETWORKMEDIUMSTORAGE.DESC;
+                        case "STORAGENETWORKRESEARCHORDERPRODUCTION":
+                            return Loc.RESEARCH.TECHS.STORAGENETWORKORDERPRODUCTION.DESC;
                         case "STORAGENETWORKRESEARCHLARGESTORAGE":
                             return Loc.RESEARCH.TECHS.STORAGENETWORKLARGESTORAGE.DESC;
                         default:

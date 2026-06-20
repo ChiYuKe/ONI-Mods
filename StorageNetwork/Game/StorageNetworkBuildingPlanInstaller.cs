@@ -5,6 +5,7 @@ namespace StorageNetwork.Gameplay
     internal static class StorageNetworkBuildingPlanInstaller
     {
         private const string BaseCategory = "Base";
+        private const string EquipmentCategory = "Equipment";
         private const string FoodCategory = "Food";
         private const string GasCategory = "HVAC";
         private const string LiquidCategory = "Plumbing";
@@ -39,12 +40,13 @@ namespace StorageNetwork.Gameplay
         private static void InstallStorageBuildings()
         {
             Add(BaseCategory, StorageNetworkCoreConfig.ID);
-            Add(BaseCategory, StorageNetworkOrderProductionCenterConfig.ID);
             Add(BaseCategory, SmallSolidServerConfig.ID);
             Add(BaseCategory, MediumSolidServerConfig.ID);
             Add(BaseCategory, LargeSolidServerConfig.ID);
             Add(BaseCategory, StorageNetworkSolidInputPortConfig.ID);
             Add(BaseCategory, StorageNetworkSolidOutputPortConfig.ID);
+
+            Add(EquipmentCategory, StorageNetworkOrderProductionCenterConfig.ID);
 
             Add(LiquidCategory, SmallLiquidServerConfig.ID);
             Add(LiquidCategory, MediumLiquidServerConfig.ID);
@@ -57,6 +59,12 @@ namespace StorageNetwork.Gameplay
             Add(GasCategory, LargeGasServerConfig.ID);
             Add(GasCategory, StorageNetworkGasInputPortConfig.ID);
             Add(GasCategory, StorageNetworkGasOutputPortConfig.ID);
+
+            Add(PowerCategory, SmallParticleServerConfig.ID);
+            Add(PowerCategory, MediumParticleServerConfig.ID);
+            Add(PowerCategory, LargeParticleServerConfig.ID);
+            Add(PowerCategory, StorageNetworkParticleInputPortConfig.ID);
+            Add(PowerCategory, StorageNetworkParticleOutputPortConfig.ID);
 
             Add(PowerCategory, SmallBatteryServerConfig.ID);
             Add(PowerCategory, MediumBatteryServerConfig.ID);

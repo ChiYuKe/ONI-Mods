@@ -129,6 +129,7 @@ namespace StorageNetwork.Components
 
             storage.allowItemRemoval = AllowManualOperation;
             storage.allowUIItemRemoval = false;
+            storage.ignoreSourcePriority = AllowManualOperation;
             storage.fetchCategory = AllowManualOperation
                 ? Storage.FetchCategory.GeneralStorage
                 : Storage.FetchCategory.Building;
@@ -153,6 +154,16 @@ namespace StorageNetwork.Components
                 return;
             }
 
+            if (TrySupplyFarming(source))
+            {
+                return;
+            }
+
+            if (TrySupplyFabricator(source))
+            {
+                return;
+            }
+
             if (!OutputRequestEnabled)
             {
                 lastStatus = Loc.Get(Loc.UI.STORAGE_NETWORK.STATUS_DISABLED);
@@ -160,7 +171,7 @@ namespace StorageNetwork.Components
                 return;
             }
 
-            if (!AllowManualOperation && !IsSolidRailConnected())
+            if (!IsSolidRailConnected())
             {
                 lastStatus = Loc.Get(Loc.UI.STORAGE_NETWORK.MATERIAL_STATUS_WAITING_CONTENTS);
                 retryTimer = RetrySeconds;
@@ -187,6 +198,60 @@ namespace StorageNetwork.Components
                 if (OutputLimitEnabled)
                 {
                     OutputLimitUsedKg += constructionResult.MovedKg;
+                }
+
+                RefreshFetchableBufferedItems();
+                retryTimer = 0f;
+                return true;
+            }
+
+            return false;
+        }
+
+        private bool TrySupplyFarming(Storage source)
+        {
+            if (!AllowManualOperation)
+            {
+                return false;
+            }
+
+            StorageTransferResult farmingResult = StorageNetworkFarmingSupplyService.SupplyNextPlanting(
+                storage,
+                source,
+                GetSelectedOutputTags());
+            if (farmingResult.MovedKg > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+            {
+                lastStatus = NetworkStorageTransferService.FormatOutputStatus(farmingResult, Loc.Get(Loc.UI.STORAGE_NETWORK.MATERIAL_STATUS_WAITING_CONTENTS));
+                if (OutputLimitEnabled)
+                {
+                    OutputLimitUsedKg += farmingResult.MovedKg;
+                }
+
+                RefreshFetchableBufferedItems();
+                retryTimer = 0f;
+                return true;
+            }
+
+            return false;
+        }
+
+        private bool TrySupplyFabricator(Storage source)
+        {
+            if (!AllowManualOperation)
+            {
+                return false;
+            }
+
+            StorageTransferResult fabricatorResult = StorageNetworkFabricatorSupplyService.SupplyNextFabricator(
+                storage,
+                source,
+                GetSelectedOutputTags());
+            if (fabricatorResult.MovedKg > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+            {
+                lastStatus = NetworkStorageTransferService.FormatOutputStatus(fabricatorResult, Loc.Get(Loc.UI.STORAGE_NETWORK.MATERIAL_STATUS_WAITING_CONTENTS));
+                if (OutputLimitEnabled)
+                {
+                    OutputLimitUsedKg += fabricatorResult.MovedKg;
                 }
 
                 RefreshFetchableBufferedItems();
@@ -406,6 +471,7 @@ namespace StorageNetwork.Components
             }
 
             storage.allowItemRemoval = AllowManualOperation;
+            storage.ignoreSourcePriority = AllowManualOperation;
             storage.fetchCategory = AllowManualOperation
                 ? Storage.FetchCategory.GeneralStorage
                 : Storage.FetchCategory.Building;
@@ -433,7 +499,7 @@ namespace StorageNetwork.Components
                     continue;
                 }
 
-                item.GetComponent<KPrefabID>()?.AddTag(StorageNetworkTags.SolidOutputPortBufferedItem, false);
+                item.GetComponent<KPrefabID>()?.AddTag(StorageNetworkTags.SolidOutputPortBufferedItem, true);
             }
         }
 
@@ -482,31 +548,56 @@ namespace StorageNetwork.Components
 
         private void ReturnMismatchedBufferedItemsToNetwork(Tag? selected)
         {
-            if (storage == null || storage.items == null || !selected.HasValue || selected.Value == Tag.Invalid)
+            if (storage == null || storage.items == null)
             {
                 return;
             }
 
-            HashSet<Tag> mismatchedTags = new HashSet<Tag>();
+            List<GameObject> itemsToReturn = new List<GameObject>();
             foreach (GameObject item in storage.items)
             {
-                if (item == null || StorageItemUtility.MatchesStorageTag(item, selected.Value))
+                if (!IsNormalBufferedOutputItem(item))
                 {
                     continue;
                 }
 
-                Tag tag = StorageItemUtility.GetStorageTransferTag(item);
-                if (tag != Tag.Invalid)
+                if (!selected.HasValue ||
+                    selected.Value == Tag.Invalid ||
+                    !StorageItemUtility.MatchesStorageTag(item, selected.Value))
                 {
-                    mismatchedTags.Add(tag);
+                    itemsToReturn.Add(item);
                 }
             }
 
-            if (mismatchedTags.Count > 0)
+            foreach (GameObject item in itemsToReturn)
             {
-                ClearBufferedOutputMarkers();
-                NetworkStorageTransferService.TransferStoredItemsToNetwork(storage, new[] { storage }, null, mismatchedTags);
+                if (item == null || storage.items == null || !storage.items.Contains(item))
+                {
+                    continue;
+                }
+
+                StorageNetworkConstructionSupplyService.ClearSolidOutputBufferMarker(item);
+                NetworkStorageTransferService.TransferStoredItemToNetwork(
+                    storage,
+                    item,
+                    new[] { storage },
+                    null,
+                    preferColdStorageForFood: true);
             }
+        }
+
+        private static bool IsNormalBufferedOutputItem(GameObject item)
+        {
+            KPrefabID prefabId = item != null ? item.GetComponent<KPrefabID>() : null;
+            if (prefabId == null ||
+                !prefabId.HasTag(StorageNetworkTags.SolidOutputPortBufferedItem))
+            {
+                return false;
+            }
+
+            return !prefabId.HasTag(StorageNetworkTags.ReservedForConstruction) &&
+                !prefabId.HasTag(StorageNetworkTags.ReservedForFarming) &&
+                !prefabId.HasTag(StorageNetworkTags.ReservedForFabricator);
         }
 
         private bool IsOutputLimitSatisfied()

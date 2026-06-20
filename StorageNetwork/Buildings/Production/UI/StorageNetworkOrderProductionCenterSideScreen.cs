@@ -71,7 +71,7 @@ namespace StorageNetwork.UI
             }
 
             refreshTimer = 0f;
-            RefreshPrefabProgressBars();
+            RefreshPrefabPanel();
         }
 
         public override int GetSideScreenSortOrder()
@@ -319,7 +319,6 @@ namespace StorageNetwork.UI
             rect.offsetMax = Vector2.zero;
             rect.sizeDelta = Vector2.zero;
             rect.localScale = Vector3.one;
-            Debug.Log("[StorageNetwork][AB] Embedded prefab stretched to side screen holder. Size: " + BodyWidth.ToString("0.##") + "x" + prefabHeight.ToString("0.##"));
         }
 
         private void ApplyEmbeddedPrefabSize(GameObject holder, float height)
@@ -385,10 +384,13 @@ namespace StorageNetwork.UI
             for (int i = 0; i < slotLabels.Length; i++)
             {
                 StorageNetworkOrderProductionCenter.EngravingDiskSlot slot = i < center.DiskSlots.Count ? center.DiskSlots[i] : null;
-                slotLabels[i].text = string.Format("{0}. {1}", i + 1, GetSlotLabel(slot));
+                bool waitingDelivery = center.IsSlotWaitingForDiskDelivery(i);
+                slotLabels[i].text = string.Format("{0}. {1}", i + 1, GetSlotLabel(slot, waitingDelivery));
                 slotLabels[i].ForceMeshUpdate(true);
-                slotLabels[i].gameObject.GetComponent<ToolTip>()?.SetSimpleTooltip(GetSlotTooltip(slot));
-                slotButtonLabels[i].text = slot != null && slot.HasDisk
+                slotLabels[i].gameObject.GetComponent<ToolTip>()?.SetSimpleTooltip(GetSlotTooltip(slot, waitingDelivery));
+                slotButtonLabels[i].text = waitingDelivery
+                    ? Loc.Get(Loc.UI.STORAGE_NETWORK.ORDER_CENTER_DISK_CANCEL_DELIVERY)
+                    : slot != null && slot.HasDisk
                     ? Loc.Get(Loc.UI.STORAGE_NETWORK.ORDER_CENTER_DISK_EJECT)
                     : Loc.Get(Loc.UI.STORAGE_NETWORK.ORDER_CENTER_DISK_INSERT);
                 slotButtonLabels[i].ForceMeshUpdate(true);
@@ -580,11 +582,15 @@ namespace StorageNetwork.UI
             }
 
             StorageNetworkOrderProductionCenter.EngravingDiskSlot slot = center.DiskSlots[slotIndex];
-            if (slot != null && slot.HasDisk)
+            if (center.IsSlotWaitingForDiskDelivery(slotIndex))
+            {
+                center.CancelPendingDiskInstall(slotIndex);
+            }
+            else if (slot != null && slot.HasDisk)
             {
                 if (center.EjectDisk(slotIndex))
                 {
-                    StorageNetworkNotifications.ShowInfo(Loc.Get(Loc.UI.STORAGE_NETWORK.ORDER_CENTER_DISK_EJECTED));
+                    StorageNetworkNotifications.ShowSuccess(center.gameObject, Loc.Get(Loc.UI.STORAGE_NETWORK.ORDER_CENTER_DISK_EJECTED));
                 }
             }
             else
@@ -592,11 +598,17 @@ namespace StorageNetwork.UI
                 StorageNetworkPanel.ShowOrderCenterDiskPicker(center, slotIndex);
             }
 
+            refreshTimer = 0f;
             Refresh();
         }
 
-        private static string GetSlotLabel(StorageNetworkOrderProductionCenter.EngravingDiskSlot slot)
+        private static string GetSlotLabel(StorageNetworkOrderProductionCenter.EngravingDiskSlot slot, bool waitingDelivery)
         {
+            if (waitingDelivery)
+            {
+                return Loc.Get(Loc.UI.STORAGE_NETWORK.ORDER_CENTER_DISK_WAITING_DELIVERY);
+            }
+
             if (slot == null || !slot.HasDisk)
             {
                 return Loc.Get(Loc.UI.STORAGE_NETWORK.ORDER_CENTER_DISK_SLOT_EMPTY);
@@ -608,8 +620,13 @@ namespace StorageNetwork.UI
                 : StorageNetworkEngravingDisk.GetRecipeSummary(slot.RecipeIds);
         }
 
-        private static string GetSlotTooltip(StorageNetworkOrderProductionCenter.EngravingDiskSlot slot)
+        private static string GetSlotTooltip(StorageNetworkOrderProductionCenter.EngravingDiskSlot slot, bool waitingDelivery)
         {
+            if (waitingDelivery)
+            {
+                return Loc.Get(Loc.UI.STORAGE_NETWORK.ORDER_CENTER_DISK_WAITING_DELIVERY_TOOLTIP);
+            }
+
             if (slot == null || !slot.HasDisk)
             {
                 return Loc.Get(Loc.UI.STORAGE_NETWORK.ORDER_CENTER_DISK_SLOT_EMPTY);

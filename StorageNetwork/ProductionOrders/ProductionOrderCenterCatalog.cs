@@ -7,12 +7,33 @@ namespace StorageNetwork.ProductionOrders
 {
     internal static class ProductionOrderCenterCatalog
     {
+        private static readonly List<StorageNetworkOrderProductionCenter> Centers = new List<StorageNetworkOrderProductionCenter>();
+
+        public static void Register(StorageNetworkOrderProductionCenter center)
+        {
+            if (center != null && !Centers.Contains(center))
+            {
+                Centers.Add(center);
+            }
+        }
+
+        public static void Unregister(StorageNetworkOrderProductionCenter center)
+        {
+            Centers.Remove(center);
+        }
+
         public static List<StorageNetworkOrderProductionCenter> GetCenters()
         {
-            return Object.FindObjectsByType<StorageNetworkOrderProductionCenter>(FindObjectsInactive.Exclude, FindObjectsSortMode.None)
-                .Where(center => center != null)
-                .Distinct()
-                .ToList();
+            PruneInvalidCenters();
+            if (Centers.Count == 0)
+            {
+                foreach (StorageNetworkOrderProductionCenter center in Object.FindObjectsByType<StorageNetworkOrderProductionCenter>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+                {
+                    Register(center);
+                }
+            }
+
+            return new List<StorageNetworkOrderProductionCenter>(Centers);
         }
 
         public static IEnumerable<ComplexFabricator> GetFabricators()
@@ -53,6 +74,17 @@ namespace StorageNetwork.ProductionOrders
         {
             KPrefabID prefabId = component != null ? component.GetComponent<KPrefabID>() : null;
             return prefabId != null ? prefabId.InstanceID : KPrefabID.InvalidInstanceID;
+        }
+
+        private static void PruneInvalidCenters()
+        {
+            for (int i = Centers.Count - 1; i >= 0; i--)
+            {
+                if (Centers[i] == null)
+                {
+                    Centers.RemoveAt(i);
+                }
+            }
         }
     }
 }

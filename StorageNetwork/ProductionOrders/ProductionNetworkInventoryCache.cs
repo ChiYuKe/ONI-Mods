@@ -9,8 +9,11 @@ namespace StorageNetwork.ProductionOrders
     internal sealed class ProductionNetworkInventoryCache
     {
         private readonly Dictionary<Tag, float> amounts = new Dictionary<Tag, float>();
+        private readonly Dictionary<int, Storage> sourceStorageByInstanceId = new Dictionary<int, Storage>();
         private readonly List<Storage> sourceStorages = new List<Storage>();
         private readonly HashSet<Storage> sourceStorageSet = new HashSet<Storage>();
+        private static readonly Dictionary<int, Storage> sceneStorageByInstanceId = new Dictionary<int, Storage>();
+        private static int sceneStorageIndexVersion = -1;
 
         public List<Storage> SourceStorages => sourceStorages;
 
@@ -18,6 +21,7 @@ namespace StorageNetwork.ProductionOrders
         {
             sourceStorages.Clear();
             sourceStorageSet.Clear();
+            sourceStorageByInstanceId.Clear();
             foreach (StorageInfo info in StorageSceneCollector.Collect().Storages)
             {
                 if (info?.ContentStorages == null || !StorageNetworkStorageRules.IsServerStorage(info.Storage))
@@ -32,6 +36,7 @@ namespace StorageNetwork.ProductionOrders
                         sourceStorageSet.Add(storage))
                     {
                         sourceStorages.Add(storage);
+                        AddStorageIndex(sourceStorageByInstanceId, storage);
                     }
                 }
             }
@@ -60,7 +65,9 @@ namespace StorageNetwork.ProductionOrders
         {
             return instanceId == KPrefabID.InvalidInstanceID
                 ? null
-                : sourceStorages.FirstOrDefault(storage => GetComponentInstanceId(storage) == instanceId);
+                : sourceStorageByInstanceId.TryGetValue(instanceId, out Storage storage)
+                    ? storage
+                    : null;
         }
 
         public static Storage FindStorageByInstanceIdFromScene(int instanceId)
@@ -70,6 +77,25 @@ namespace StorageNetwork.ProductionOrders
                 return null;
             }
 
+            EnsureSceneStorageIndex();
+            return sceneStorageByInstanceId.TryGetValue(instanceId, out Storage storage) ? storage : null;
+        }
+
+        public static void InvalidateSceneStorageIndex()
+        {
+            sceneStorageIndexVersion = -1;
+            sceneStorageByInstanceId.Clear();
+        }
+
+        private static void EnsureSceneStorageIndex()
+        {
+            int version = StorageSceneRegistry.Version;
+            if (sceneStorageIndexVersion == version)
+            {
+                return;
+            }
+
+            sceneStorageByInstanceId.Clear();
             HashSet<Storage> visited = new HashSet<Storage>();
             int activeWorldId = ClusterManager.Instance != null ? ClusterManager.Instance.activeWorldId : -1;
             foreach (Storage storage in StorageSceneCollector.CollectLightweightForWorld(activeWorldId).Storages)
@@ -84,15 +110,14 @@ namespace StorageNetwork.ProductionOrders
                 foreach (Storage contentStorage in StorageNetworkProductionStorageCollector.GetProductionStorages(storage, storage.GetComponent<ComplexFabricator>()))
                 {
                     if (contentStorage != null &&
-                        StorageNetworkStorageRules.IsServerStorage(contentStorage) &&
-                        GetComponentInstanceId(contentStorage) == instanceId)
+                        StorageNetworkStorageRules.IsServerStorage(contentStorage))
                     {
-                        return contentStorage;
+                        AddStorageIndex(sceneStorageByInstanceId, contentStorage);
                     }
                 }
             }
 
-            return null;
+            sceneStorageIndexVersion = version;
         }
 
         public static int GetComponentInstanceId(Component component)
@@ -115,6 +140,15 @@ namespace StorageNetwork.ProductionOrders
             if (elementTag != Tag.Invalid && elementTag != storageTag)
             {
                 AddAmount(elementTag, primaryElement.Mass);
+            }
+        }
+
+        private static void AddStorageIndex(Dictionary<int, Storage> index, Storage storage)
+        {
+            int instanceId = GetComponentInstanceId(storage);
+            if (instanceId != KPrefabID.InvalidInstanceID)
+            {
+                index[instanceId] = storage;
             }
         }
 

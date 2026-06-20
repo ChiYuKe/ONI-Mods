@@ -30,7 +30,10 @@ namespace StorageNetwork.Components
                 PlayerController.Instance.ActivateTool(CopySettingsTool.Instance);
             }
 
-            StorageNetworkNotifications.ShowInfo(Loc.Get(Loc.UI.STORAGE_NETWORK.ORDER_CENTER_ENGRAVE_STARTED));
+            if (center != null)
+            {
+                StorageNetworkNotifications.ShowInfo(center.gameObject, Loc.Get(Loc.UI.STORAGE_NETWORK.ORDER_CENTER_ENGRAVE_STARTED));
+            }
         }
 
         public static void CancelIfOwner(StorageNetworkOrderProductionCenter center)
@@ -52,14 +55,14 @@ namespace StorageNetwork.Components
             if (center.TryEngraveFrom(target, out string message))
             {
                 successCount++;
-                StorageNetworkNotifications.ShowInfo(message);
+                StorageNetworkNotifications.ShowSuccess(center.gameObject, message);
                 return true;
             }
 
             if (!failureWarningShown && successCount == 0)
             {
                 failureWarningShown = true;
-                StorageNetworkNotifications.ShowWarning(message);
+                StorageNetworkNotifications.ShowWarning(center.gameObject, message);
             }
 
             return true;

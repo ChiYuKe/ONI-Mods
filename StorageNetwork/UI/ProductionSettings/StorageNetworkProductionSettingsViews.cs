@@ -49,12 +49,18 @@ namespace StorageNetwork.UI
         }
 
         public ProductionPickerOption(string title, string details, bool selected, System.Action onClick, Tag? iconTag)
+            : this(title, details, selected, onClick, iconTag, null)
+        {
+        }
+
+        public ProductionPickerOption(string title, string details, bool selected, System.Action onClick, Tag? iconTag, string tooltip)
         {
             Title = title;
             Details = details;
             Selected = selected;
             OnClick = onClick;
             IconTag = iconTag;
+            Tooltip = tooltip;
         }
 
         public string Title { get; }
@@ -66,5 +72,7 @@ namespace StorageNetwork.UI
         public System.Action OnClick { get; }
 
         public Tag? IconTag { get; }
+
+        public string Tooltip { get; }
     }
 }

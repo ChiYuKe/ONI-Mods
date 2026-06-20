@@ -19,6 +19,7 @@ namespace StorageNetwork.Buildings
         protected virtual bool ShowStorageSettingsButton => true;
         protected virtual bool UsesRefrigeratedStorage => false;
         protected virtual bool StoresPower => false;
+        protected virtual bool StoresParticles => false;
         protected virtual Tag? StorageStateCategoryTag => null;
 
         public override BuildingDef CreateBuildingDef()
@@ -90,14 +91,14 @@ namespace StorageNetwork.Buildings
 
                 Storage storage = go.AddOrGet<Storage>();
                 storage.capacityKg = spec.CapacityKg * Config.Instance.ServerCapacityMultiplier;
-                storage.showInUI = !StoresPower;
+                storage.showInUI = !StoresPower && !StoresParticles;
                 storage.allowItemRemoval = AllowManualRemoval;
-                storage.showDescriptor = !StoresPower;
+                storage.showDescriptor = !StoresPower && !StoresParticles;
                 storage.storageFilters = spec.Filters;
                 storage.storageFullMargin = STORAGE.STORAGE_LOCKER_FILLED_MARGIN;
                 storage.fetchCategory = FetchCategory;
-                storage.showCapacityStatusItem = !StoresPower;
-                storage.showCapacityAsMainStatus = !StoresPower && !UsesRefrigeratedStorage;
+                storage.showCapacityStatusItem = !StoresPower && !StoresParticles;
+                storage.showCapacityAsMainStatus = !StoresPower && !StoresParticles && !UsesRefrigeratedStorage;
                 storage.SetDefaultStoredItemModifiers(Storage.StandardInsulatedStorage);
 
                 if (UsesRefrigeratedStorage)
@@ -112,6 +113,11 @@ namespace StorageNetwork.Buildings
                     ConfigurePowerStorage(go, spec);
                 }
 
+                if (StoresParticles)
+                {
+                    ConfigureParticleStorage(go, spec);
+                }
+
                 if (SupportsStorageConnector)
                 {
                     go.AddOrGet<StorageNetworkStorageConnector>();
@@ -123,6 +129,9 @@ namespace StorageNetwork.Buildings
                 {
                     StorageNetworkFilterConfigurator.Configure(go.AddOrGet<TreeFilterable>());
                     go.AddOrGet<StorageNetworkDefaultFilterInitializer>();
+                    CopyBuildingSettings copySettings = go.AddOrGet<CopyBuildingSettings>();
+                    copySettings.copyGroupTag = StorageStateCategoryTag ?? prefabTag;
+                    go.AddOrGet<StorageNetworkServerCopySettings>();
                 }
             }
             else
@@ -133,8 +142,14 @@ namespace StorageNetwork.Buildings
 
             go.AddOrGet<UserNameable>();
             go.AddOrGetDef<RocketUsageRestriction.Def>();
+            if (spec.SelfHeatKilowatts > 0f && !UsesRefrigeratedStorage)
+            {
+                go.AddOrGet<StorageNetworkServerHeat>();
+            }
+
             if (spec.PowerWatts > 0f && !StoresPower)
             {
+                go.AddOrGet<Operational>();
                 go.AddOrGet<EnergyConsumer>();
             }
         }
@@ -172,6 +187,17 @@ namespace StorageNetwork.Buildings
             powerStorage.joulesLostPerSecond = spec.PowerStorageJoulesLostPerSecond;
             go.AddOrGet<StorageNetworkPowerOverlayBattery>();
         }
+
+        private static void ConfigureParticleStorage(GameObject go, StorageNetworkStorageBuildingSpec spec)
+        {
+            HighEnergyParticleStorage particleStorage = go.AddOrGet<HighEnergyParticleStorage>();
+            particleStorage.capacity = spec.CapacityKg * Config.Instance.ServerCapacityMultiplier;
+            particleStorage.showInUI = true;
+            particleStorage.showCapacityStatusItem = true;
+            particleStorage.showCapacityAsMainStatus = true;
+            particleStorage.autoStore = false;
+            go.AddOrGet<StorageNetworkParticleServer>();
+        }
     }
 
     public sealed class StorageNetworkCoreConfig : StorageNetworkStorageBuildingBase
@@ -203,6 +229,15 @@ namespace StorageNetwork.Buildings
         protected override StorageNetworkStorageBuildingSpec Spec => StorageNetworkStorageBuildingSpecs.SmallGas;
         protected override bool SupportsFilterUi => false;
         protected override Tag? StorageStateCategoryTag => StorageSceneTags.CategoryGasPort;
+    }
+
+    public sealed class SmallParticleServerConfig : StorageNetworkStorageBuildingBase
+    {
+        public const string ID = "StorageNetworkSmallParticleServer";
+        protected override StorageNetworkStorageBuildingSpec Spec => StorageNetworkStorageBuildingSpecs.SmallParticle;
+        protected override bool SupportsFilterUi => false;
+        protected override bool StoresParticles => true;
+        protected override Tag? StorageStateCategoryTag => StorageSceneTags.CategoryParticlePort;
     }
 
     public sealed class SmallBatteryServerConfig : StorageNetworkStorageBuildingBase
@@ -245,6 +280,15 @@ namespace StorageNetwork.Buildings
         protected override Tag? StorageStateCategoryTag => StorageSceneTags.CategoryGasPort;
     }
 
+    public sealed class MediumParticleServerConfig : StorageNetworkStorageBuildingBase
+    {
+        public const string ID = "StorageNetworkMediumParticleServer";
+        protected override StorageNetworkStorageBuildingSpec Spec => StorageNetworkStorageBuildingSpecs.MediumParticle;
+        protected override bool SupportsFilterUi => false;
+        protected override bool StoresParticles => true;
+        protected override Tag? StorageStateCategoryTag => StorageSceneTags.CategoryParticlePort;
+    }
+
     public sealed class MediumBatteryServerConfig : StorageNetworkStorageBuildingBase
     {
         public const string ID = "StorageNetworkMediumBatteryServer";
@@ -283,6 +327,15 @@ namespace StorageNetwork.Buildings
         protected override StorageNetworkStorageBuildingSpec Spec => StorageNetworkStorageBuildingSpecs.LargeGas;
         protected override bool SupportsFilterUi => false;
         protected override Tag? StorageStateCategoryTag => StorageSceneTags.CategoryGasPort;
+    }
+
+    public sealed class LargeParticleServerConfig : StorageNetworkStorageBuildingBase
+    {
+        public const string ID = "StorageNetworkLargeParticleServer";
+        protected override StorageNetworkStorageBuildingSpec Spec => StorageNetworkStorageBuildingSpecs.LargeParticle;
+        protected override bool SupportsFilterUi => false;
+        protected override bool StoresParticles => true;
+        protected override Tag? StorageStateCategoryTag => StorageSceneTags.CategoryParticlePort;
     }
 
     public sealed class LargeBatteryServerConfig : StorageNetworkStorageBuildingBase
@@ -412,25 +465,32 @@ namespace StorageNetwork.Buildings
         private const string SmallSolidServerAnim = "storagenetwork_small_solid_server_kanim";
         private const string SmallLiquidServerAnim = "storagenetwork_small_liquid_server_kanim";
         private const string SmallGasServerAnim = "storagenetwork_small_gas_server_kanim";
+        private const string SmallParticleServerAnim = SmallGasServerAnim;
         private const string SmallBatteryServerAnim = "storagenetwork_small_battery_server_kanim";
         private const string SmallColdStorageServerAnim = "storagenetwork_small_cold_storage_server_kanim";
         private const string MediumSolidServerAnim = "storagenetwork_medium_solid_server_kanim";
         private const string MediumLiquidServerAnim = "storagenetwork_medium_liquid_server_kanim";
         private const string MediumGasServerAnim = "storagenetwork_medium_gas_server_kanim";
+        private const string MediumParticleServerAnim = MediumGasServerAnim;
         private const string MediumBatteryServerAnim = "storagenetwork_medium_battery_server_kanim";
         private const string MediumColdStorageServerAnim = "storagenetwork_medium_cold_storage_server_kanim";
         private const string LargeSolidServerAnim = "storagenetwork_large_solid_server_kanim";
         private const string LargeLiquidServerAnim = "storagenetwork_large_liquid_server_kanim";
         private const string LargeGasServerAnim = "storagenetwork_large_gas_server_kanim";
+        private const string LargeParticleServerAnim = LargeGasServerAnim;
         private const string LargeBatteryServerAnim = "storagenetwork_large_battery_server_kanim";
         private const string LargeColdStorageServerAnim = "storagenetwork_large_cold_storage_server_kanim";
         private const string LegacySceneStorageBoxId = "StorageNetworkSceneStorageBox";
         private const string LegacySceneStorageBoxAnim = "storagelocker_kanim";
         private const float MeltingPoint = 1600f;
+        private const float ServerSelfHeatKilowatts = 0.1f;
         private const float BatteryServerJoulesLostPerSecond = 100f;
-        private const float SmallBatteryServerSelfHeatKilowatts = 0.2f;
-        private const float MediumBatteryServerSelfHeatKilowatts = 0.4f;
-        private const float LargeBatteryServerSelfHeatKilowatts = 0.6f;
+        private const float SmallParticleServerCapacity = 500f;
+        private const float MediumParticleServerCapacity = 2000f;
+        private const float LargeParticleServerCapacity = 10000f;
+        private const float SmallBatteryServerSelfHeatKilowatts = ServerSelfHeatKilowatts;
+        private const float MediumBatteryServerSelfHeatKilowatts = ServerSelfHeatKilowatts;
+        private const float LargeBatteryServerSelfHeatKilowatts = ServerSelfHeatKilowatts;
 
         public static readonly StorageNetworkStorageBuildingSpec Core = Create(
             StorageNetworkCoreConfig.ID,
@@ -439,7 +499,7 @@ namespace StorageNetwork.Buildings
             CoreAnim,
             500000f,
             240f,
-            2f,
+            ServerSelfHeatKilowatts,
             STORAGEFILTERS.STORAGE_LOCKERS_STANDARD,
             BUILDINGS.CONSTRUCTION_MASS_KG.TIER5);
 
@@ -471,6 +531,16 @@ namespace StorageNetwork.Buildings
             25000f,
             60f,
             STORAGEFILTERS.GASES,
+            BUILDINGS.CONSTRUCTION_MASS_KG.TIER3);
+
+        public static readonly StorageNetworkStorageBuildingSpec SmallParticle = CreateServer(
+            SmallParticleServerConfig.ID,
+            1,
+            3,
+            SmallParticleServerAnim,
+            SmallParticleServerCapacity,
+            60f,
+            new List<Tag> { GameTags.HighEnergyParticle },
             BUILDINGS.CONSTRUCTION_MASS_KG.TIER3);
 
         public static readonly StorageNetworkStorageBuildingSpec SmallBattery = CreateServer(
@@ -526,6 +596,16 @@ namespace StorageNetwork.Buildings
             STORAGEFILTERS.GASES,
             BUILDINGS.CONSTRUCTION_MASS_KG.TIER4);
 
+        public static readonly StorageNetworkStorageBuildingSpec MediumParticle = CreateServer(
+            MediumParticleServerConfig.ID,
+            2,
+            2,
+            MediumParticleServerAnim,
+            MediumParticleServerCapacity,
+            120f,
+            new List<Tag> { GameTags.HighEnergyParticle },
+            BUILDINGS.CONSTRUCTION_MASS_KG.TIER4);
+
         public static readonly StorageNetworkStorageBuildingSpec MediumBattery = CreateServer(
             MediumBatteryServerConfig.ID,
             2,
@@ -579,6 +659,16 @@ namespace StorageNetwork.Buildings
             STORAGEFILTERS.GASES,
             BUILDINGS.CONSTRUCTION_MASS_KG.TIER5);
 
+        public static readonly StorageNetworkStorageBuildingSpec LargeParticle = CreateServer(
+            LargeParticleServerConfig.ID,
+            2,
+            4,
+            LargeParticleServerAnim,
+            LargeParticleServerCapacity,
+            240f,
+            new List<Tag> { GameTags.HighEnergyParticle },
+            BUILDINGS.CONSTRUCTION_MASS_KG.TIER5);
+
         public static readonly StorageNetworkStorageBuildingSpec LargeBattery = CreateServer(
             LargeBatteryServerConfig.ID,
             2,
@@ -624,16 +714,19 @@ namespace StorageNetwork.Buildings
                 yield return SmallSolidServerConfig.ID;
                 yield return SmallLiquidServerConfig.ID;
                 yield return SmallGasServerConfig.ID;
+                yield return SmallParticleServerConfig.ID;
                 yield return SmallBatteryServerConfig.ID;
                 yield return SmallColdStorageServerConfig.ID;
                 yield return MediumSolidServerConfig.ID;
                 yield return MediumLiquidServerConfig.ID;
                 yield return MediumGasServerConfig.ID;
+                yield return MediumParticleServerConfig.ID;
                 yield return MediumBatteryServerConfig.ID;
                 yield return MediumColdStorageServerConfig.ID;
                 yield return LargeSolidServerConfig.ID;
                 yield return LargeLiquidServerConfig.ID;
                 yield return LargeGasServerConfig.ID;
+                yield return LargeParticleServerConfig.ID;
                 yield return LargeBatteryServerConfig.ID;
                 yield return LargeColdStorageServerConfig.ID;
             }
@@ -673,7 +766,7 @@ namespace StorageNetwork.Buildings
             List<Tag> filters,
             float[] constructionMass,
             float powerStorageJoulesLostPerSecond = 0f,
-            float selfHeatKilowatts = 1f)
+            float selfHeatKilowatts = ServerSelfHeatKilowatts)
         {
             return Create(id, width, height, animFile, capacityKg, powerWatts, selfHeatKilowatts, filters, constructionMass, powerStorageJoulesLostPerSecond);
         }

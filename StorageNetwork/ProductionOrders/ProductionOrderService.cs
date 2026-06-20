@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Reflection;
 using StorageNetwork.Components;
 
 namespace StorageNetwork.ProductionOrders
@@ -9,10 +8,10 @@ namespace StorageNetwork.ProductionOrders
         private static readonly Dictionary<string, ProductionOrderRecord> ActiveOrders = new Dictionary<string, ProductionOrderRecord>();
         private static readonly Dictionary<int, OrderAutomationLease> AutomationLeases = new Dictionary<int, OrderAutomationLease>();
         private static readonly Dictionary<Tag, ProductionKeepRule> KeepRules = new Dictionary<Tag, ProductionKeepRule>();
-        private static readonly FieldInfo RecipeQueueCountsField = typeof(ComplexFabricator).GetField("recipeQueueCounts", BindingFlags.Instance | BindingFlags.NonPublic);
         private static string loadedStorePath;
 
         private readonly ProductionNetworkInventoryCache networkInventory = new ProductionNetworkInventoryCache();
+        private readonly Dictionary<Tag, float> connectedFabricatorOutputAmounts = new Dictionary<Tag, float>();
         private List<RecipeDisplayInfo> craftableRecipes = new List<RecipeDisplayInfo>();
         private string ignoredReservationOrderKey;
         private StorageNetworkOrderProductionCenter orderCenterScope;
@@ -45,7 +44,9 @@ namespace StorageNetwork.ProductionOrders
         public void Refresh()
         {
             EnsureOrdersLoaded();
+            StorageNetworkFabricatorProgress.BeginRefresh();
             networkInventory.Refresh();
+            RefreshConnectedFabricatorOutputAmounts();
             craftableRecipes = orderCenterScope != null
                 ? ProductionRecipeCatalog.GetCraftableRecipeDisplayInfos(orderCenterScope)
                 : ProductionRecipeCatalog.GetCraftableRecipeDisplayInfos();

@@ -1,4 +1,5 @@
 using StorageNetwork.Core;
+using UnityEngine;
 
 namespace StorageNetwork.Services
 {
@@ -32,6 +33,26 @@ namespace StorageNetwork.Services
             }
 
             return StorageNetworkInventoryIndexService.GetEdibleCalories(worldId, includeRelatedWorlds, unitsById);
+        }
+
+        public static int GetMirroredCountWithAdditionalTag(WorldInventory inventory, Tag tag, Tag additionalTag, bool includeRelatedWorlds)
+        {
+            if (inventory == null || tag == Tag.Invalid || !TryGetWorldId(inventory, out int worldId))
+            {
+                return 0;
+            }
+
+            if (!StorageSceneRegistry.HasOnlineCoreInWorld(worldId))
+            {
+                return 0;
+            }
+
+            return StorageNetworkInventoryIndexService.GetCountWithAdditionalTag(worldId, includeRelatedWorlds, tag, additionalTag);
+        }
+
+        public static float GetMirroredUnitAmount(WorldInventory inventory, Tag tag, bool includeRelatedWorlds)
+        {
+            return Mathf.CeilToInt(GetMirroredAmount(inventory, tag, includeRelatedWorlds));
         }
 
         public static float GetMirroredEdibleCaloriesForId(WorldInventory inventory, bool includeRelatedWorlds, string foodId)

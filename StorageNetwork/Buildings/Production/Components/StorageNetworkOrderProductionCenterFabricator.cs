@@ -3,6 +3,7 @@ using System.Linq;
 using System.Reflection;
 using HarmonyLib;
 using KSerialization;
+using StorageNetwork.Services;
 using UnityEngine;
 
 namespace StorageNetwork.Components
@@ -70,6 +71,7 @@ namespace StorageNetwork.Components
 
         protected override void OnCleanUp()
         {
+            SyncOperationalActive(false);
             ClearWorldProgressBars();
             base.OnCleanUp();
         }
@@ -131,6 +133,7 @@ namespace StorageNetwork.Components
             StopInvalidCores();
             SyncVanillaCurrentOrder();
             RefreshWorldProgressBars();
+            SyncOperationalActive(HasParallelWorkingOrder);
         }
 
         public void SetOrderCenterRecipeQueueCount(ComplexRecipe recipe, int count)
@@ -149,11 +152,31 @@ namespace StorageNetwork.Components
             Trigger(1721324763, this);
         }
 
+        public void CancelOrderCenterRecipe(ComplexRecipe recipe, int finalQueued, bool cancelWorkingCores)
+        {
+            if (recipe == null)
+            {
+                return;
+            }
+
+            SetOrderCenterRecipeQueueCount(recipe, Mathf.Max(0, finalQueued));
+            if (cancelWorkingCores)
+            {
+                StopCoresForRecipe(recipe);
+                ReturnRecipeMaterialsToNetwork(recipe);
+            }
+
+            SyncVanillaCurrentOrder();
+            RefreshWorldProgressBars();
+            SyncOperationalActive(HasParallelWorkingOrder);
+        }
+
         public void TickParallelCores(float dt)
         {
             EnsureCores();
             if (operational != null && !operational.IsOperational)
             {
+                SyncOperationalActive(false);
                 return;
             }
 
@@ -203,6 +226,7 @@ namespace StorageNetwork.Components
 
             SyncVanillaCurrentOrder();
             RefreshWorldProgressBars();
+            SyncOperationalActive(HasParallelWorkingOrder);
         }
 
         public float GetProgressForRecipe(ComplexRecipe recipe)
@@ -301,6 +325,23 @@ namespace StorageNetwork.Components
             }
         }
 
+        private void StopCoresForRecipe(ComplexRecipe recipe)
+        {
+            if (recipe == null)
+            {
+                return;
+            }
+
+            EnsureCores();
+            foreach (CoreState core in cores)
+            {
+                if (core.IsWorking && core.RecipeId == recipe.id)
+                {
+                    StopCore(core);
+                }
+            }
+        }
+
         private void StopCore(CoreState core)
         {
             if (core == null || !core.IsWorking)
@@ -309,6 +350,11 @@ namespace StorageNetwork.Components
             }
 
             core.Clear();
+        }
+
+        private void SyncOperationalActive(bool active)
+        {
+            operational?.SetActive(active, false);
         }
 
         private void TransferRecipeIngredientsForBuild(ComplexRecipe recipe)
@@ -341,6 +387,32 @@ namespace StorageNetwork.Components
             }
 
             SanitizeBuildStorageTemperatures(recipe);
+        }
+
+        private void ReturnRecipeMaterialsToNetwork(ComplexRecipe recipe)
+        {
+            if (recipe?.ingredients == null)
+            {
+                return;
+            }
+
+            HashSet<Tag> ingredientTags = new HashSet<Tag>();
+            foreach (ComplexRecipe.RecipeElement ingredient in recipe.ingredients)
+            {
+                if (ingredient.material != Tag.Invalid)
+                {
+                    ingredientTags.Add(ingredient.material);
+                }
+            }
+
+            if (ingredientTags.Count == 0)
+            {
+                return;
+            }
+
+            Storage[] excluded = { inStorage, buildStorage, outStorage };
+            NetworkStorageTransferService.TransferStoredItemsToNetwork(inStorage, excluded, null, ingredientTags, false, true);
+            NetworkStorageTransferService.TransferStoredItemsToNetwork(buildStorage, excluded, null, ingredientTags, false, true);
         }
 
         private void SanitizeBuildStorageTemperatures(ComplexRecipe recipe)

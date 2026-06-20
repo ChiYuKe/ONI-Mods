@@ -24,6 +24,7 @@ namespace StorageNetwork.Core
 
         public static void ResetRuntimeState()
         {
+            StorageNetworkParticleStorageService.Reset();
             Storages.Clear();
             Geysers.Clear();
             Enrollments.Clear();

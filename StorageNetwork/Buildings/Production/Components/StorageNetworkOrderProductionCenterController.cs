@@ -51,7 +51,6 @@ namespace StorageNetwork.Components
             {
                 float percent = Mathf.Clamp01((float)diskCount / MaxDiskCount);
                 diskMeter.SetPositionPercent(percent);
-                Debug.Log("[StorageNetwork] Order production center disk meter set to " + diskCount + "/" + MaxDiskCount + " (" + percent.ToString("0.###") + ").");
             }
         }
 
@@ -95,7 +94,6 @@ namespace StorageNetwork.Components
                 GreenLightSymbol,
                 RedLightSymbol);
             lastDiskCount = -1;
-            Debug.Log("[StorageNetwork] Order production center disk meter created. Target: " + MeterTarget + ", anim: " + MeterAnimation + ".");
         }
 
         private int GetDiskCount()

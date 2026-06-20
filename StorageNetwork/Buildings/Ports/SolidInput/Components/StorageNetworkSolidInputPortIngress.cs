@@ -60,7 +60,7 @@ namespace StorageNetwork.Components
             base.OnPrefabInit();
             filteredStorage = new FilteredStorage(
                 this,
-                new[] { StorageNetworkTags.SolidOutputPortBufferedItem, StorageNetworkTags.ReservedForConstruction },
+                new[] { StorageNetworkTags.SolidOutputPortBufferedItem, StorageNetworkTags.ReservedForConstruction, StorageNetworkTags.ReservedForFarming, StorageNetworkTags.ReservedForFabricator },
                 null,
                 false,
                 Db.Get().ChoreTypes.StorageFetch);
@@ -227,6 +227,7 @@ namespace StorageNetwork.Components
             AllowManualOperation = source.AllowManualOperation;
             InputStoreModeValue = source.InputStoreModeValue;
             InputStorageInstanceId = source.InputStorageInstanceId;
+            StorageNetworkFilterCopyHelper.CopyFilters(gameObject, sourceObject);
             if (automatable != null)
             {
                 automatable.SetAutomationOnly(source.automatable != null
@@ -250,7 +251,7 @@ namespace StorageNetwork.Components
 
             filteredStorage = new FilteredStorage(
                 this,
-                new[] { StorageNetworkTags.SolidOutputPortBufferedItem, StorageNetworkTags.ReservedForConstruction },
+                new[] { StorageNetworkTags.SolidOutputPortBufferedItem, StorageNetworkTags.ReservedForConstruction, StorageNetworkTags.ReservedForFarming, StorageNetworkTags.ReservedForFabricator },
                 null,
                 false,
                 Db.Get().ChoreTypes.StorageFetch);

@@ -33,9 +33,14 @@ namespace StorageNetwork.ProductionOrders
             return GetNetworkRawAmount(productTag) + GetConnectedFabricatorOutputAmount(productTag);
         }
 
-        private static float GetConnectedFabricatorOutputAmount(Tag productTag)
+        private float GetConnectedFabricatorOutputAmount(Tag productTag)
         {
-            float amount = 0f;
+            return connectedFabricatorOutputAmounts.TryGetValue(productTag, out float amount) ? amount : 0f;
+        }
+
+        private void RefreshConnectedFabricatorOutputAmounts()
+        {
+            connectedFabricatorOutputAmounts.Clear();
             foreach (ComplexFabricator fabricator in ProductionOrderCenterCatalog.GetFabricators())
             {
                 if (fabricator.outStorage == null || fabricator.outStorage.items == null)
@@ -57,16 +62,32 @@ namespace StorageNetwork.ProductionOrders
                     }
 
                     PrimaryElement primaryElement = item.GetComponent<PrimaryElement>();
-                    if (primaryElement == null || !StorageNetworkMaterialRequester.MatchesStorageTag(item, productTag))
+                    if (primaryElement == null)
                     {
                         continue;
                     }
 
-                    amount += primaryElement.Mass;
+                    Tag storageTag = StorageItemUtility.GetStorageTransferTag(item);
+                    AddConnectedFabricatorOutputAmount(storageTag, primaryElement.Mass);
+                    Tag elementTag = primaryElement.ElementID.CreateTag();
+                    if (elementTag != Tag.Invalid && elementTag != storageTag)
+                    {
+                        AddConnectedFabricatorOutputAmount(elementTag, primaryElement.Mass);
+                    }
                 }
             }
+        }
 
-            return amount;
+        private void AddConnectedFabricatorOutputAmount(Tag tag, float amount)
+        {
+            if (tag == Tag.Invalid || amount <= 0f)
+            {
+                return;
+            }
+
+            connectedFabricatorOutputAmounts[tag] = connectedFabricatorOutputAmounts.TryGetValue(tag, out float existing)
+                ? existing + amount
+                : amount;
         }
 
         public ProductionOrderRecord FindDuplicateOrder(Tag productTag, ComplexRecipe recipe, float requestedAmount)

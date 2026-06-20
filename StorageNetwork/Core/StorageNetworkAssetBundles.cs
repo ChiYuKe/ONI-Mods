@@ -12,6 +12,10 @@ namespace StorageNetwork.Core
 
         private static readonly string[] BundleSearchFolders =
         {
+            PlatformPath("Assets", "AssetBundles"),
+            PlatformPath("assets", "assetbundles"),
+            PlatformPath("AssetBundles"),
+            PlatformPath("assetbundles"),
             Path.Combine("Assets", "AssetBundles"),
             Path.Combine("assets", "assetbundles"),
             "AssetBundles",
@@ -26,7 +30,6 @@ namespace StorageNetwork.Core
         public static void SetModPath(string path)
         {
             modPath = path;
-            Debug.Log("[StorageNetwork][AB] Mod path set: " + (modPath ?? "<null>"));
             LoadedPrefabs.Clear();
             foreach (AssetBundle bundle in LoadedBundles.Values)
             {
@@ -59,7 +62,6 @@ namespace StorageNetwork.Core
             string cacheKey = bundleName + ":" + prefabName;
             if (LoadedPrefabs.TryGetValue(cacheKey, out GameObject prefab))
             {
-                Debug.Log("[StorageNetwork][AB] Prefab cache hit: " + cacheKey);
                 return prefab;
             }
 
@@ -77,7 +79,6 @@ namespace StorageNetwork.Core
                 return null;
             }
 
-            Debug.Log("[StorageNetwork][AB] Loaded prefab '" + prefabName + "' from bundle '" + bundleName + "'.");
             LoadedPrefabs[cacheKey] = prefab;
             return prefab;
         }
@@ -86,7 +87,6 @@ namespace StorageNetwork.Core
         {
             if (LoadedBundles.TryGetValue(bundleName, out AssetBundle bundle))
             {
-                Debug.Log("[StorageNetwork][AB] Bundle cache hit: " + bundleName);
                 return bundle;
             }
 
@@ -97,7 +97,6 @@ namespace StorageNetwork.Core
                 return null;
             }
 
-            Debug.Log("[StorageNetwork][AB] Loading AssetBundle '" + bundleName + "' from: " + bundlePath);
             bundle = AssetBundle.LoadFromFile(bundlePath);
             if (bundle == null)
             {
@@ -105,7 +104,6 @@ namespace StorageNetwork.Core
                 return null;
             }
 
-            Debug.Log("[StorageNetwork][AB] Loaded AssetBundle '" + bundleName + "' from: " + bundlePath);
             LoadedBundles[bundleName] = bundle;
             return bundle;
         }
@@ -130,6 +128,39 @@ namespace StorageNetwork.Core
             }
 
             return null;
+        }
+
+        private static string GetPlatformFolder()
+        {
+            switch (Application.platform)
+            {
+                case RuntimePlatform.WindowsPlayer:
+                    return "windows";
+                case RuntimePlatform.LinuxPlayer:
+                    return "linux";
+                case RuntimePlatform.OSXPlayer:
+                    return "mac";
+                default:
+                    return "";
+            }
+        }
+
+        private static string PlatformPath(params string[] parts)
+        {
+            string platformFolder = GetPlatformFolder();
+            if (string.IsNullOrEmpty(platformFolder))
+            {
+                return Path.Combine(parts);
+            }
+
+            string[] combined = new string[parts.Length + 1];
+            for (int i = 0; i < parts.Length; i++)
+            {
+                combined[i] = parts[i];
+            }
+
+            combined[parts.Length] = platformFolder;
+            return Path.Combine(combined);
         }
     }
 }

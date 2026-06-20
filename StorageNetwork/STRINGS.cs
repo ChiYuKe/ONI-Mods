@@ -97,6 +97,20 @@ namespace StorageNetwork
                     public static LocString EFFECT = "用于向电路输出电力，并作为后续电力出网逻辑的连接建筑。";
                 }
 
+                public class STORAGENETWORKPARTICLEINPUTPORT
+                {
+                    public static LocString NAME = "粒子入网端口";
+                    public static LocString DESC = "将高能粒子接入储存网络的输入端口。";
+                    public static LocString EFFECT = "捕获经过端口的高能粒子，并将粒子存入同星球的粒子服务器。";
+                }
+
+                public class STORAGENETWORKPARTICLEOUTPUTPORT
+                {
+                    public static LocString NAME = "粒子出网端口";
+                    public static LocString DESC = "将储存网络中的高能粒子发射出去的输出端口。";
+                    public static LocString EFFECT = "从同星球的粒子服务器中取出高能粒子，并向右发射。";
+                }
+
                 public class STORAGENETWORKSMALLLIQUIDSERVER
                 {
                     public static LocString NAME = "小型液体服务器";
@@ -109,6 +123,13 @@ namespace StorageNetwork
                     public static LocString NAME = "小型气体服务器";
                     public static LocString DESC = "用于接入储存网络的小型气体储存服务器。";
                     public static LocString EFFECT = "储存气体物品，并显示在储存网络窗口中。";
+                }
+
+                public class STORAGENETWORKSMALLPARTICLESERVER
+                {
+                    public static LocString NAME = "小型粒子服务器";
+                    public static LocString DESC = "用于接入储存网络的小型高能粒子储存服务器。";
+                    public static LocString EFFECT = "储存高能粒子，并供粒子出网端口发射。";
                 }
 
                 public class STORAGENETWORKSMALLBATTERYSERVER
@@ -146,6 +167,13 @@ namespace StorageNetwork
                     public static LocString EFFECT = "储存更多气体物品，并显示在储存网络窗口中。";
                 }
 
+                public class STORAGENETWORKMEDIUMPARTICLESERVER
+                {
+                    public static LocString NAME = "中型粒子服务器";
+                    public static LocString DESC = "用于接入储存网络的中型高能粒子储存服务器。";
+                    public static LocString EFFECT = "储存更多高能粒子，并供粒子出网端口发射。";
+                }
+
                 public class STORAGENETWORKMEDIUMBATTERYSERVER
                 {
                     public static LocString NAME = "中型电池服务器";
@@ -181,6 +209,13 @@ namespace StorageNetwork
                     public static LocString EFFECT = "储存大量气体物品，并显示在储存网络窗口中。";
                 }
 
+                public class STORAGENETWORKLARGEPARTICLESERVER
+                {
+                    public static LocString NAME = "大型粒子服务器";
+                    public static LocString DESC = "用于接入储存网络的大型高能粒子储存服务器。";
+                    public static LocString EFFECT = "储存大量高能粒子，并供粒子出网端口发射。";
+                }
+
                 public class STORAGENETWORKLARGEBATTERYSERVER
                 {
                     public static LocString NAME = "大型电池服务器";
@@ -211,8 +246,8 @@ namespace StorageNetwork
                 public class STORAGE_NETWORK_ENGRAVING_DISK
                 {
                     public static LocString NAME = "刻录盘";
-                    public static LocString DESC = "用于保存 <link=\"STORAGENETWORKORDERPRODUCTIONCENTER\">订单生产中心</link> 刻录出的配方数据。";
-                    public static LocString RECIPEDESC = "制造一张空白刻录盘，可放入 <link=\"STORAGENETWORKORDERPRODUCTIONCENTER\">订单生产中心</link> 并保存刻录出的生产配方。";
+                    public static LocString DESC = "用于保存 <link=\"STORAGENETWORKORDERPRODUCTIONCENTER\">订单生产中心</link> 刻录出的配方数据，并为订单生产中心提供 1 个生产核心。";
+                    public static LocString RECIPEDESC = "制造一张空白刻录盘，可放入 <link=\"STORAGENETWORKORDERPRODUCTIONCENTER\">订单生产中心</link>，保存刻录出的生产配方，并提供 1 个生产核心。";
                 }
             }
         }
@@ -254,6 +289,12 @@ namespace StorageNetwork
                 {
                     public static LocString NAME = "中级储存";
                     public static LocString DESC = "解锁中型固体、液体、气体、电池和冷库服务器。";
+                }
+
+                public class STORAGENETWORKORDERPRODUCTION
+                {
+                    public static LocString NAME = "订单生产中心";
+                    public static LocString DESC = "解锁可刻录制造台配方并承接订单生产的订单生产中心。";
                 }
 
                 public class STORAGENETWORKLARGESTORAGE
@@ -768,10 +809,13 @@ namespace StorageNetwork
                 public static LocString ORDER_CENTER_ENGRAVE_NO_RECIPES = "订单生产中心：请选择一个带有配方的生产建筑。";
                 public static LocString ORDER_CENTER_ENGRAVE_NO_DISK = "订单生产中心：请先放入一张空刻录盘。";
                 public static LocString ORDER_CENTER_DISK_CONFIG_TITLE = "刻录盘";
-                public static LocString ORDER_CENTER_DISK_CONFIG_TOOLTIP = "配置订单生产中心的 3 个刻录盘槽。刻录出的配方会写入空刻录盘。";
+                public static LocString ORDER_CENTER_DISK_CONFIG_TOOLTIP = "配置订单生产中心的 3 个刻录盘槽。刻录出的配方会写入空刻录盘；每张刻录盘还会提供 1 个生产核心。";
                 public static LocString ORDER_CENTER_DISK_SLOT_EMPTY = "空槽";
                 public static LocString ORDER_CENTER_DISK_SLOT_BLANK = "空白刻录盘";
                 public static LocString ORDER_CENTER_DISK_SLOT_WRITTEN = "刻录盘：{0} 个配方";
+                public static LocString ORDER_CENTER_DISK_WAITING_DELIVERY = "等待运送";
+                public static LocString ORDER_CENTER_DISK_WAITING_DELIVERY_TOOLTIP = "已选择刻录盘，等待复制人运送到该槽位。";
+                public static LocString ORDER_CENTER_DISK_CANCEL_DELIVERY = "取消";
                 public static LocString ORDER_CENTER_DISK_INSERT = "放入";
                 public static LocString ORDER_CENTER_DISK_EJECT = "弹出";
                 public static LocString ORDER_CENTER_DISK_INSERTED = "已放入刻录盘。";
@@ -780,6 +824,23 @@ namespace StorageNetwork
                 public static LocString ORDER_CENTER_DISK_RECORDED_TITLE = "已刻录配方";
                 public static LocString ORDER_CENTER_DISK_RECIPE_REMOVE = "删除";
                 public static LocString ORDER_CENTER_DISK_RECIPE_REMOVED = "已删除刻录配方。";
+                public static LocString ORDER_CENTER_DISK_PICKER_TITLE = "选择刻录盘";
+                public static LocString ORDER_CENTER_DISK_PICKER_COUNT = "可选刻录盘：{0} 个";
+                public static LocString ORDER_CENTER_DISK_PICKER_HINT = "选择一个刻录盘后，复制人会前往订单生产中心完成装盘；只有完成任务后刻录盘才会放入对应槽位。";
+                public static LocString ORDER_CENTER_DISK_PICKER_ANY = "任意刻录盘";
+                public static LocString ORDER_CENTER_DISK_PICKER_ANY_DESC = "选择当前可用刻录盘列表中的一张盘";
+                public static LocString ORDER_CENTER_DISK_PICKER_ASSIGNED = "已安排复制人装盘。";
+                public static LocString ORDER_CENTER_DISK_PICKER_ASSIGN_FAILED = "无法安排装盘，目标槽位或刻录盘已不可用。";
+                public static LocString ORDER_CENTER_DISK_PICKER_STORAGE_FALLBACK = "储存网络";
+                public static LocString ORDER_CENTER_DISK_PICKER_DETAIL_STORAGE = "{0}  ·  {1}";
+                public static LocString ORDER_CENTER_DISK_PICKER_DETAIL_DISTANCE = "{0}  ·  距离 {1:0.0}";
+                public static LocString ORDER_CENTER_DISK_SUMMARY_MORE = "{0} 等 {1} 个配方";
+                public static LocString ORDER_CENTER_DISK_INFO_CORE_TITLE = "核心能力";
+                public static LocString ORDER_CENTER_DISK_INFO_CORE_DESC = "提供 1 个生产核心";
+                public static LocString ORDER_CENTER_DISK_INFO_RECORDED_TITLE = "已刻录配方";
+                public static LocString ORDER_CENTER_DISK_INFO_RECORDED_COUNT = "共 {0} 个配方";
+                public static LocString ORDER_CENTER_DISK_INFO_DESCRIPTION = "{0}\n\n<b>{1}</b>\n{2}\n\n<b>{3}</b>\n{4}\n\n{5}";
+                public static LocString ORDER_CENTER_DISK_RECIPE_DETAIL = "<b>{0}</b>\n  材料：{1}\n  产出：{2}";
                 public static LocString TRACKING_BUILDING_RUNNING = "正常运行";
                 public static LocString TRACKING_BUILDING_WAITING_MATERIALS = "等待材料";
                 public static LocString TRACKING_BUILDING_NO_POWER = "缺电";

@@ -117,6 +117,11 @@ namespace StorageNetwork.Core
             return HasTag(storage, StorageNetworkTags.CategoryPowerPort);
         }
 
+        public static bool HasParticlePortTag(Storage storage)
+        {
+            return HasTag(storage, StorageNetworkTags.CategoryParticlePort);
+        }
+
         public static bool IsSolidInputPort(Storage storage)
         {
             return HasTag(storage, StorageNetworkTags.CategorySolidInputPort);
@@ -155,6 +160,16 @@ namespace StorageNetwork.Core
         public static bool IsPowerOutputPort(Storage storage)
         {
             return HasTag(storage, StorageNetworkTags.CategoryPowerOutputPort);
+        }
+
+        public static bool IsParticleInputPort(Storage storage)
+        {
+            return HasTag(storage, StorageNetworkTags.CategoryParticleInputPort);
+        }
+
+        public static bool IsParticleOutputPort(Storage storage)
+        {
+            return HasTag(storage, StorageNetworkTags.CategoryParticleOutputPort);
         }
 
         public static bool IsPowerStorageServer(Storage storage)
@@ -214,6 +229,14 @@ namespace StorageNetwork.Core
             return prefabId == SmallGasServerConfig.ID ||
                    prefabId == MediumGasServerConfig.ID ||
                    prefabId == LargeGasServerConfig.ID;
+        }
+
+        public static bool IsParticleStorageServer(Storage storage)
+        {
+            string prefabId = GetPrefabId(storage);
+            return prefabId == SmallParticleServerConfig.ID ||
+                   prefabId == MediumParticleServerConfig.ID ||
+                   prefabId == LargeParticleServerConfig.ID;
         }
 
         public static bool CountsTowardNetworkCapacity(Storage storage)

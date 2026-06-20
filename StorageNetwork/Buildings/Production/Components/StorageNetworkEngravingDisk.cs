@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using KSerialization;
 using StorageNetwork.ProductionOrders;
+using Loc = StorageNetwork.STRINGS;
 
 namespace StorageNetwork.Components
 {
@@ -60,6 +61,11 @@ namespace StorageNetwork.Components
             return GetRecipeDetails(engravedRecipeIds);
         }
 
+        public string GetCompactRecipeDetails()
+        {
+            return GetCompactRecipeDetails(engravedRecipeIds);
+        }
+
         public static string GetRecipeSummary(IEnumerable<string> recipeIds, int maxNames = 2)
         {
             List<string> names = GetRecipeNames(recipeIds);
@@ -71,7 +77,7 @@ namespace StorageNetwork.Components
             string summary = string.Join("、", names.Take(maxNames));
             if (names.Count > maxNames)
             {
-                summary += string.Format(" 等 {0} 个配方", names.Count);
+                summary = string.Format(Loc.Get(Loc.UI.STORAGE_NETWORK.ORDER_CENTER_DISK_SUMMARY_MORE), summary, names.Count);
             }
 
             return summary;
@@ -83,6 +89,14 @@ namespace StorageNetwork.Components
             return recipes.Count == 0
                 ? StorageNetwork.STRINGS.Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CENTER_DISK_SLOT_BLANK)
                 : string.Join("\n\n", recipes.Select(FormatRecipeDetail));
+        }
+
+        public static string GetCompactRecipeDetails(IEnumerable<string> recipeIds)
+        {
+            List<ComplexRecipe> recipes = GetRecipes(recipeIds);
+            return recipes.Count == 0
+                ? StorageNetwork.STRINGS.Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CENTER_DISK_SLOT_BLANK)
+                : string.Join("\n", recipes.Select(FormatCompactRecipeDetail));
         }
 
         private void RefreshInfoDescription()
@@ -97,7 +111,7 @@ namespace StorageNetwork.Components
                 return;
             }
 
-            string baseDescription = StorageNetwork.STRINGS.Get(StorageNetwork.STRINGS.ITEMS.INDUSTRIAL_PRODUCTS.STORAGE_NETWORK_ENGRAVING_DISK.DESC);
+            string baseDescription = Loc.Get(Loc.ITEMS.INDUSTRIAL_PRODUCTS.STORAGE_NETWORK_ENGRAVING_DISK.DESC);
             if (IsBlank)
             {
                 infoDescription.description = baseDescription;
@@ -105,9 +119,12 @@ namespace StorageNetwork.Components
             }
 
             infoDescription.description = string.Format(
-                "{0}\n\n<b>已刻录配方</b>\n共 {1} 个配方\n\n{2}",
+                Loc.Get(Loc.UI.STORAGE_NETWORK.ORDER_CENTER_DISK_INFO_DESCRIPTION),
                 baseDescription,
-                GetRecipes(engravedRecipeIds).Count,
+                Loc.Get(Loc.UI.STORAGE_NETWORK.ORDER_CENTER_DISK_INFO_CORE_TITLE),
+                Loc.Get(Loc.UI.STORAGE_NETWORK.ORDER_CENTER_DISK_INFO_CORE_DESC),
+                Loc.Get(Loc.UI.STORAGE_NETWORK.ORDER_CENTER_DISK_INFO_RECORDED_TITLE),
+                string.Format(Loc.Get(Loc.UI.STORAGE_NETWORK.ORDER_CENTER_DISK_INFO_RECORDED_COUNT), GetRecipes(engravedRecipeIds).Count),
                 GetRecipeDetails());
         }
 
@@ -141,7 +158,16 @@ namespace StorageNetwork.Components
         private static string FormatRecipeDetail(ComplexRecipe recipe)
         {
             return string.Format(
-                "<b>{0}</b>\n  材料：{1}\n  产出：{2}",
+                Loc.Get(Loc.UI.STORAGE_NETWORK.ORDER_CENTER_DISK_RECIPE_DETAIL),
+                recipe.GetUIName(false),
+                ProductionOrderFormatting.FormatRecipeElements(recipe.ingredients),
+                ProductionOrderFormatting.FormatRecipeElements(recipe.results));
+        }
+
+        private static string FormatCompactRecipeDetail(ComplexRecipe recipe)
+        {
+            return string.Format(
+                "<b>{0}</b>: {1} -> {2}",
                 recipe.GetUIName(false),
                 ProductionOrderFormatting.FormatRecipeElements(recipe.ingredients),
                 ProductionOrderFormatting.FormatRecipeElements(recipe.results));

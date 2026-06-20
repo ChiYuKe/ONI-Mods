@@ -270,7 +270,7 @@ namespace StorageNetwork.UI
                     continue;
                 }
 
-                CreateStorageOptionRow(content, option.Title, option.Details, option.Selected, option.OnClick, option.IconTag);
+                CreateStorageOptionRow(content, option.Title, option.Details, option.Selected, option.OnClick, option.IconTag, option.Tooltip);
                 visibleCount++;
             }
 
@@ -298,7 +298,7 @@ namespace StorageNetwork.UI
             }
         }
 
-        private static void CreateStorageOptionRow(Transform parent, string title, string details, bool selected, System.Action onClick, Tag? iconTag = null)
+        private static void CreateStorageOptionRow(Transform parent, string title, string details, bool selected, System.Action onClick, Tag? iconTag = null, string tooltipText = null)
         {
             GameObject row = new GameObject("StorageOptionRow");
             row.transform.SetParent(parent, false);
@@ -316,6 +316,11 @@ namespace StorageNetwork.UI
             button.additionalKImages = new KImage[0];
             button.soundPlayer = new ButtonSoundPlayer();
             button.onClick += () => onClick?.Invoke();
+            if (!string.IsNullOrEmpty(tooltipText))
+            {
+                ToolTip tooltip = row.AddComponent<ToolTip>();
+                tooltip.SetSimpleTooltip(tooltipText);
+            }
 
             HorizontalLayoutGroup layout = row.AddComponent<HorizontalLayoutGroup>();
             layout.padding = new RectOffset(10, 10, 3, 3);

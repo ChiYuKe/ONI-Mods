@@ -222,7 +222,7 @@ namespace StorageNetwork.Services
 
         private static void MarkConstructionReservedItem(GameObject item)
         {
-            item?.GetComponent<KPrefabID>()?.AddTag(StorageNetworkTags.ReservedForConstruction, false);
+            item?.GetComponent<KPrefabID>()?.AddTag(StorageNetworkTags.ReservedForConstruction, true);
             ClearSolidOutputBufferMarker(item);
         }
 
@@ -312,6 +312,7 @@ namespace StorageNetwork.Services
 
             Dictionary<Tag, float> demandByTag = GetConstructionDemandByTag(portWorldId, allowedTags);
             Dictionary<Tag, float> earlierReservedByTag = GetEarlierPortReservedByTag(portStorage, portWorldId, allowedTags);
+            RecoverUnmarkedConstructionReservations(portStorage, demandByTag, earlierReservedByTag, allowedTags);
             Dictionary<Tag, float> keptByTag = new Dictionary<Tag, float>();
             List<GameObject> reservedItems = GetReservedItems(portStorage);
 
@@ -342,6 +343,46 @@ namespace StorageNetwork.Services
 
                 ReturnReservedItemExcessToNetwork(portStorage, item, itemMass - remainingDemand);
                 AddDictionaryValue(keptByTag, tag, remainingDemand);
+            }
+        }
+
+        private static void RecoverUnmarkedConstructionReservations(
+            Storage portStorage,
+            Dictionary<Tag, float> demandByTag,
+            Dictionary<Tag, float> earlierReservedByTag,
+            HashSet<Tag> allowedTags)
+        {
+            if (portStorage?.items == null || demandByTag == null || demandByTag.Count == 0)
+            {
+                return;
+            }
+
+            Dictionary<Tag, float> currentReservedByTag = GetReservedByTag(portStorage, allowedTags);
+            Dictionary<Tag, float> recoveredByTag = new Dictionary<Tag, float>();
+            foreach (GameObject item in portStorage.items)
+            {
+                if (item == null || IsConstructionReserved(item))
+                {
+                    continue;
+                }
+
+                Tag tag = StorageItemUtility.GetStorageTransferTag(item);
+                if (tag == Tag.Invalid || !IsAllowed(tag, allowedTags))
+                {
+                    continue;
+                }
+
+                float demand = GetDictionaryValue(demandByTag, tag);
+                float alreadyReserved = GetDictionaryValue(earlierReservedByTag, tag) +
+                    GetDictionaryValue(currentReservedByTag, tag) +
+                    GetDictionaryValue(recoveredByTag, tag);
+                if (demand - alreadyReserved <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+                {
+                    continue;
+                }
+
+                MarkConstructionReservedItem(item);
+                AddDictionaryValue(recoveredByTag, tag, StorageItemUtility.GetMass(item));
             }
         }
 
@@ -466,6 +507,31 @@ namespace StorageNetwork.Services
             }
 
             return amount;
+        }
+
+        private static Dictionary<Tag, float> GetReservedByTag(Storage storage, HashSet<Tag> allowedTags)
+        {
+            Dictionary<Tag, float> reservedByTag = new Dictionary<Tag, float>();
+            if (storage?.items == null)
+            {
+                return reservedByTag;
+            }
+
+            foreach (GameObject item in storage.items)
+            {
+                if (!IsConstructionReserved(item))
+                {
+                    continue;
+                }
+
+                Tag tag = StorageItemUtility.GetStorageTransferTag(item);
+                if (tag != Tag.Invalid && IsAllowed(tag, allowedTags))
+                {
+                    AddDictionaryValue(reservedByTag, tag, StorageItemUtility.GetMass(item));
+                }
+            }
+
+            return reservedByTag;
         }
 
         private static void ReturnReservedItemExcessToNetwork(Storage portStorage, GameObject item, float excessAmount)

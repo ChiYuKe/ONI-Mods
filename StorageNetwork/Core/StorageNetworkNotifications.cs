@@ -2,50 +2,11 @@ using System.Collections.Generic;
 using System.Linq;
 using StorageNetwork.ProductionOrders;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace StorageNetwork.Core
 {
     internal static class StorageNetworkNotifications
     {
-        public const string AbnormalOrderNotificationId = "StorageNetwork.AbnormalOrder";
-
-        private static bool customNotificationRegistered;
-
-        public static void Register(NotificationScreen screen)
-        {
-            if (screen == null || screen.customNotificationPrefabs == null)
-            {
-                customNotificationRegistered = false;
-                return;
-            }
-
-            if (screen.customNotificationPrefabs.Any(prefab => prefab != null && prefab.ID == AbnormalOrderNotificationId))
-            {
-                customNotificationRegistered = true;
-                return;
-            }
-
-            if (screen.LabelPrefab == null || screen.LabelsFolder == null)
-            {
-                customNotificationRegistered = false;
-                return;
-            }
-
-            GameObject prefab = Object.Instantiate(screen.LabelPrefab, screen.transform, false);
-            prefab.name = "StorageNetworkAbnormalOrderNotificationPrefab";
-            prefab.SetActive(false);
-            ConfigureCustomPrefab(prefab);
-
-            screen.customNotificationPrefabs.Add(new NotificationScreen.CustomNotificationPrefabs
-            {
-                ID = AbnormalOrderNotificationId,
-                notificationPrefab = prefab,
-                parentFolder = screen.LabelsFolder
-            });
-            customNotificationRegistered = true;
-        }
-
         public static void ShowAbnormalOrder(ProductionOrderRecord order)
         {
             if (order == null)
@@ -54,12 +15,17 @@ namespace StorageNetwork.Core
             }
 
             Transform focus = GetOrderFocus(order);
+            if (focus == null)
+            {
+                return;
+            }
+
             Notification notification = new Notification(
                 STRINGS.Get(STRINGS.UI.STORAGE_NETWORK.ORDER_ABNORMAL_NOTIFICATION),
-                customNotificationRegistered ? NotificationType.Custom : NotificationType.BadMinor,
+                NotificationType.BadMinor,
                 BuildAbnormalOrderTooltip,
-                BuildAbnormalOrderDetails(order),
-                false,
+                "\t• " + BuildAbnormalOrderDetails(order),
+                true,
                 0f,
                 null,
                 null,
@@ -68,32 +34,33 @@ namespace StorageNetwork.Core
                 false,
                 true);
 
-            if (notification.Type == NotificationType.Custom)
-            {
-                notification.customNotificationID = AbnormalOrderNotificationId;
-            }
-
-            Notifier notifier = focus != null
-                ? focus.gameObject.AddOrGet<Notifier>()
-                : NotificationScreen.Instance != null
-                    ? NotificationScreen.Instance.gameObject.AddOrGet<Notifier>()
-                    : null;
-            notifier?.Add(notification, string.Empty);
+            Notifier notifier = focus.gameObject.AddOrGet<Notifier>();
+            notifier.Add(notification, string.Empty);
         }
 
-        public static void ShowInfo(string message)
+        public static void ShowInfo(GameObject owner, string message)
         {
-            ShowSimple(message, NotificationType.Neutral);
+            ShowSimple(owner, message, NotificationType.Neutral);
         }
 
-        public static void ShowWarning(string message)
+        public static void ShowSuccess(GameObject owner, string message)
         {
-            ShowSimple(message, NotificationType.BadMinor);
+            ShowSimple(owner, message, NotificationType.Good);
         }
 
-        private static void ShowSimple(string message, NotificationType type)
+        public static void ShowWarning(GameObject owner, string message)
         {
-            if (string.IsNullOrEmpty(message))
+            ShowSimple(owner, message, NotificationType.BadMinor);
+        }
+
+        public static void ShowError(GameObject owner, string message)
+        {
+            ShowSimple(owner, message, NotificationType.Bad);
+        }
+
+        private static void ShowSimple(GameObject owner, string message, NotificationType type)
+        {
+            if (owner == null || string.IsNullOrEmpty(message))
             {
                 return;
             }
@@ -101,9 +68,9 @@ namespace StorageNetwork.Core
             Notification notification = new Notification(
                 message,
                 type,
-                (notifications, data) => message,
-                null,
-                false,
+                (notifications, data) => message + notifications.ReduceMessages(false),
+                "\t• " + owner.GetProperName(),
+                true,
                 0f,
                 null,
                 null,
@@ -111,47 +78,8 @@ namespace StorageNetwork.Core
                 true,
                 false,
                 false);
-            Notifier notifier = NotificationScreen.Instance != null
-                ? NotificationScreen.Instance.gameObject.AddOrGet<Notifier>()
-                : null;
-            notifier?.Add(notification, string.Empty);
-        }
-
-        private static void ConfigureCustomPrefab(GameObject prefab)
-        {
-            HierarchyReferences references = prefab.GetComponent<HierarchyReferences>();
-            if (references == null)
-            {
-                return;
-            }
-
-            Color textColor = GlobalAssets.Instance != null
-                ? GlobalAssets.Instance.colorSet.NotificationBad
-                : new Color(0.88f, 0.25f, 0.25f, 1f);
-            Color backgroundColor = GlobalAssets.Instance != null
-                ? GlobalAssets.Instance.colorSet.NotificationBadBG
-                : new Color(0.42f, 0.18f, 0.18f, 1f);
-
-            KImage icon = references.GetReference<KImage>("Icon");
-            if (icon != null)
-            {
-                icon.sprite = StorageNetworkSprites.GetOverviewIcon() ?? Assets.GetSprite("status_item_exclamation");
-                icon.color = textColor;
-            }
-
-            LocText text = references.GetReference<LocText>("Text");
-            if (text != null)
-            {
-                text.color = textColor;
-            }
-
-            Button button = references.GetReference<Button>("MainButton");
-            if (button != null)
-            {
-                ColorBlock colors = button.colors;
-                colors.normalColor = backgroundColor;
-                button.colors = colors;
-            }
+            Notifier notifier = owner.AddOrGet<Notifier>();
+            notifier.Add(notification, string.Empty);
         }
 
         private static Transform GetOrderFocus(ProductionOrderRecord order)
