@@ -24,6 +24,7 @@ namespace StorageNetwork.Core
             StorageNetworkInventoryIndexService.ResetRuntimeState();
             StorageNetworkSourceIndexService.ResetRuntimeState();
             StorageNetworkPerformanceCounters.ResetRuntimeState();
+            StorageNetworkFrameProfileTool.ResetRuntimeState();
         }
     }
 }

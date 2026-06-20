@@ -355,25 +355,6 @@ namespace StorageNetwork.Buildings
         protected override Storage.FetchCategory FetchCategory => Storage.FetchCategory.GeneralStorage;
     }
 
-    [System.Obsolete("Compatibility prefab for old saves only. It may be removed in a future StorageNetwork update.")]
-    public sealed class SceneStorageBoxConfig : StorageNetworkStorageBuildingBase
-    {
-        public const string ID = "StorageNetworkSceneStorageBox";
-        protected override StorageNetworkStorageBuildingSpec Spec => StorageNetworkStorageBuildingSpecs.LegacySceneStorageBox;
-        protected override bool AllowManualRemoval => true;
-        protected override Storage.FetchCategory FetchCategory => Storage.FetchCategory.GeneralStorage;
-        protected override bool SupportsStorageConnector => true;
-        protected override Tag? StorageStateCategoryTag => StorageSceneTags.CategorySolidPort;
-        public override void ConfigureBuildingTemplate(GameObject go, Tag prefabTag)
-        {
-            base.ConfigureBuildingTemplate(go, prefabTag);
-            go.GetComponent<KPrefabID>()?.AddTag(StorageSceneTags.SceneStorageBox);
-            go.AddOrGet<SceneStorageBoxMarker>();
-            go.AddOrGet<CopyBuildingSettings>().copyGroupTag = GameTags.StorageLocker;
-            go.AddOrGet<StorageLocker>();
-        }
-    }
-
     public sealed class StorageNetworkRelayModuleConfig : IBuildingConfig
     {
         public const string ID = "StorageNetworkRelayModule";
@@ -471,17 +452,15 @@ namespace StorageNetwork.Buildings
         private const string MediumSolidServerAnim = "storagenetwork_medium_solid_server_kanim";
         private const string MediumLiquidServerAnim = "storagenetwork_medium_liquid_server_kanim";
         private const string MediumGasServerAnim = "storagenetwork_medium_gas_server_kanim";
-        private const string MediumParticleServerAnim = MediumGasServerAnim;
+        private const string MediumParticleServerAnim = "storagenetwork_medium_particle_server_kanim";
         private const string MediumBatteryServerAnim = "storagenetwork_medium_battery_server_kanim";
         private const string MediumColdStorageServerAnim = "storagenetwork_medium_cold_storage_server_kanim";
         private const string LargeSolidServerAnim = "storagenetwork_large_solid_server_kanim";
         private const string LargeLiquidServerAnim = "storagenetwork_large_liquid_server_kanim";
         private const string LargeGasServerAnim = "storagenetwork_large_gas_server_kanim";
-        private const string LargeParticleServerAnim = LargeGasServerAnim;
+        private const string LargeParticleServerAnim = "storagenetwork_large_particle_server_kanim";
         private const string LargeBatteryServerAnim = "storagenetwork_large_battery_server_kanim";
         private const string LargeColdStorageServerAnim = "storagenetwork_large_cold_storage_server_kanim";
-        private const string LegacySceneStorageBoxId = "StorageNetworkSceneStorageBox";
-        private const string LegacySceneStorageBoxAnim = "storagelocker_kanim";
         private const float MeltingPoint = 1600f;
         private const float ServerSelfHeatKilowatts = 0.1f;
         private const float BatteryServerJoulesLostPerSecond = 100f;
@@ -688,19 +667,6 @@ namespace StorageNetwork.Buildings
             STORAGEFILTERS.FOOD,
             BUILDINGS.CONSTRUCTION_MASS_KG.TIER5,
             selfHeatKilowatts: 0f);
-
-        public static readonly StorageNetworkStorageBuildingSpec LegacySceneStorageBox = Create(
-            LegacySceneStorageBoxId,
-            1,
-            2,
-            LegacySceneStorageBoxAnim,
-            500000f,
-            0f,
-            0f,
-            STORAGEFILTERS.STORAGE_LOCKERS_STANDARD,
-            BUILDINGS.CONSTRUCTION_MASS_KG.TIER4,
-            MATERIALS.RAW_MINERALS_OR_METALS,
-            10f);
 
         public static IEnumerable<string> AllIds
         {

@@ -40,7 +40,6 @@
 
 | 文件 | 作用 |
 | --- | --- |
-| `Components/SceneStorageBoxMarker.cs` | 场景储物箱标记组件。 |
 | `Components/StorageNetworkCore.cs` | 仓储网络核心建筑标记/核心组件。 |
 | `Components/StorageNetworkDefaultFilterInitializer.cs` | 初始化默认过滤器，避免用户未配置时过滤条件为空或不合理。 |
 | `Components/StorageNetworkEnergyGeneratorRequester.cs` | 发电机材料请求器：从网络取燃料、选择来源、限制请求量。 |

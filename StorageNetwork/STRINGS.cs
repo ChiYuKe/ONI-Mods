@@ -34,13 +34,6 @@ namespace StorageNetwork
                     public static LocString EFFECT = "储存固体物品，并显示在储存网络窗口中。";
                 }
 
-                public class STORAGENETWORKSCENESTORAGEBOX
-                {
-                    public static LocString NAME = "场景储存箱（已弃用）";
-                    public static LocString DESC = "旧版本储存网络使用的兼容储存箱，已弃用。";
-                    public static LocString EFFECT = "此建筑仅用于保护旧存档中的材料，可能会在将来的模组更新中被移除。请尽快取出或转移箱子中的材料，并拆除该箱子。";
-                }
-
                 public class STORAGENETWORKSOLIDINPUTPORT
                 {
                     public static LocString NAME = "材料入网端口";

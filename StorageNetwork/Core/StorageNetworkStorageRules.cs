@@ -211,8 +211,7 @@ namespace StorageNetwork.Core
             string prefabId = GetPrefabId(storage);
             return prefabId == SmallSolidServerConfig.ID ||
                    prefabId == MediumSolidServerConfig.ID ||
-                   prefabId == LargeSolidServerConfig.ID ||
-                   prefabId == "StorageNetworkSceneStorageBox";
+                   prefabId == LargeSolidServerConfig.ID;
         }
 
         private static bool IsLiquidStorageServer(Storage storage)

@@ -82,7 +82,6 @@
 
 | 文件 | 功能 |
 | --- | --- |
-| `Components/SceneStorageBoxMarker.cs` | 旧存档场景储物箱标记。 |
 | `Components/StorageNetworkDefaultFilterInitializer.cs` | 初始化储存过滤器默认状态。 |
 | `Components/StorageNetworkEnrollment.cs` | 建筑接入/移出网络、喷泉自动入网开关、用户菜单按钮。 |
 | `Components/StorageNetworkFilterState.cs` | 记录过滤器是否默认、是否用户修改。 |

@@ -10,6 +10,7 @@ namespace StorageNetwork.Gameplay
         private const string GasCategory = "HVAC";
         private const string LiquidCategory = "Plumbing";
         private const string PowerCategory = "Power";
+        private const string RadiationCategory = "HEP";
         private const string StorageNetworkSubcategory = "StorageNetwork";
 
         public static void Install()
@@ -60,11 +61,11 @@ namespace StorageNetwork.Gameplay
             Add(GasCategory, StorageNetworkGasInputPortConfig.ID);
             Add(GasCategory, StorageNetworkGasOutputPortConfig.ID);
 
-            Add(PowerCategory, SmallParticleServerConfig.ID);
-            Add(PowerCategory, MediumParticleServerConfig.ID);
-            Add(PowerCategory, LargeParticleServerConfig.ID);
-            Add(PowerCategory, StorageNetworkParticleInputPortConfig.ID);
-            Add(PowerCategory, StorageNetworkParticleOutputPortConfig.ID);
+            Add(RadiationCategory, SmallParticleServerConfig.ID);
+            Add(RadiationCategory, MediumParticleServerConfig.ID);
+            Add(RadiationCategory, LargeParticleServerConfig.ID);
+            Add(RadiationCategory, StorageNetworkParticleInputPortConfig.ID);
+            Add(RadiationCategory, StorageNetworkParticleOutputPortConfig.ID);
 
             Add(PowerCategory, SmallBatteryServerConfig.ID);
             Add(PowerCategory, MediumBatteryServerConfig.ID);

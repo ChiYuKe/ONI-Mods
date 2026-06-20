@@ -25,7 +25,6 @@ namespace StorageNetwork.Core
         public const string CategoryPowerOutputPortTagName = StorageNetworkTags.CategoryPowerOutputPortTagName;
         public const string CategoryParticleInputPortTagName = StorageNetworkTags.CategoryParticleInputPortTagName;
         public const string CategoryParticleOutputPortTagName = StorageNetworkTags.CategoryParticleOutputPortTagName;
-        public const string SceneStorageBoxTagName = "StorageNetwork_SceneStorageBox";
 
         public static readonly Tag ModStorage = StorageNetworkTags.ModStorage;
         public static readonly Tag ServerStorage = StorageNetworkTags.ServerStorage;
@@ -48,6 +47,5 @@ namespace StorageNetwork.Core
         public static readonly Tag CategoryPowerOutputPort = StorageNetworkTags.CategoryPowerOutputPort;
         public static readonly Tag CategoryParticleInputPort = StorageNetworkTags.CategoryParticleInputPort;
         public static readonly Tag CategoryParticleOutputPort = StorageNetworkTags.CategoryParticleOutputPort;
-        public static readonly Tag SceneStorageBox = new Tag(SceneStorageBoxTagName);
     }
 }

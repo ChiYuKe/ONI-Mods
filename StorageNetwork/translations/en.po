@@ -43,18 +43,6 @@ msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKSMALLSOLIDSERVER
 msgid "储存固体物品，并显示在储存网络窗口中。"
 msgstr "Stores solid items and appears in the Storage Network window."
 
-msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKSCENESTORAGEBOX.NAME"
-msgid "场景储存箱（已弃用）"
-msgstr "Scene Storage Box (Deprecated)"
-
-msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKSCENESTORAGEBOX.DESC"
-msgid "旧版本储存网络使用的兼容储存箱，已弃用。"
-msgstr "A deprecated compatibility storage box used by older versions of Storage Network."
-
-msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKSCENESTORAGEBOX.EFFECT"
-msgid "此建筑仅用于保护旧存档中的材料，可能会在将来的模组更新中被移除。请尽快取出或转移箱子中的材料，并拆除该箱子。"
-msgstr "This building only protects materials in old saves and may be removed in a future mod update. Remove or transfer its stored materials as soon as possible, then deconstruct the box."
-
 msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKSOLIDINPUTPORT.NAME"
 msgid "材料入网端口"
 msgstr "Material Network Input Port"

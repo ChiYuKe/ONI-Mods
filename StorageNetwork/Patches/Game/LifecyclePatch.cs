@@ -14,6 +14,11 @@ namespace StorageNetwork.Patches
                 StorageNetworkLifecycle.ResetRuntimeState();
                 StorageNetworkConstructionSupplyService.Reset();
             }
+
+            public static void Postfix(Game __instance)
+            {
+                StorageNetworkFrameProfileTool.InstallIfEnabled(__instance);
+            }
         }
 
         [HarmonyPatch(typeof(Game), "OnCleanUp")]

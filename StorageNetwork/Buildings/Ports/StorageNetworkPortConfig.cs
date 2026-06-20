@@ -427,8 +427,8 @@ namespace StorageNetwork.Buildings
         private const string GasOutputPortAnimFile = "StorageNetworkGasOutputPort_kanim";
         private const string PowerInputPortAnimFile = "StorageNetworkPowerInputPort_kanim";
         private const string PowerOutputPortAnimFile = "StorageNetworkPowerOutputPort_kanim";
-        private const string ParticleInputPortAnimFile = PowerInputPortAnimFile;
-        private const string ParticleOutputPortAnimFile = PowerOutputPortAnimFile;
+        private const string ParticleInputPortAnimFile = "StorageNetworkParticleInputPort_kanim";
+        private const string ParticleOutputPortAnimFile = "StorageNetworkParticleOutputPort_kanim";
         private const float PowerInputPortCapacityJoules = 10000f;
         private const float PowerOutputPortCapacityJoules = 10000f;
 
