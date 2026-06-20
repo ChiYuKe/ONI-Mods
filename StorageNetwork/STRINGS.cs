@@ -640,8 +640,6 @@ namespace StorageNetwork
                 public static LocString CONFIG_TOGGLE_OFF = "关闭";
                 public static LocString CONFIG_RESTART_DIALOG_TITLE = "信息";
                 public static LocString CONFIG_RESTART_CONTINUE = "继续";
-                public static LocString CONFIG_SCENE_SCAN_CACHE = "场景扫描缓存秒数";
-                public static LocString CONFIG_SCENE_SCAN_CACHE_DESC = "数值越小刷新越快，但遍历储存建筑更频繁。";
                 public static LocString CONFIG_DEFAULT_MATERIAL_LIMIT = "材料请求默认限额 kg";
                 public static LocString CONFIG_DEFAULT_MATERIAL_LIMIT_DESC = "新接入生产建筑的默认请求限额。";
                 public static LocString CONFIG_REQUEST_SUCCESS_COOLDOWN = "请求成功冷却秒数";

@@ -1919,14 +1919,6 @@ msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_RESTART_CONTINUE"
 msgid "继续"
 msgstr "Continue"
 
-msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_SCENE_SCAN_CACHE"
-msgid "场景扫描缓存秒数"
-msgstr "Scene Scan Cache Seconds"
-
-msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_SCENE_SCAN_CACHE_DESC"
-msgid "数值越小刷新越快，但遍历储存建筑更频繁。"
-msgstr "Lower values refresh faster but scan storage buildings more often."
-
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_DEFAULT_MATERIAL_LIMIT"
 msgid "材料请求默认限额 kg"
 msgstr "Default Material Request Limit kg"

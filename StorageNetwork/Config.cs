@@ -12,16 +12,6 @@ namespace StorageNetwork
     public class Config
     {
         [ModConfigOption(
-            "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_SCENE_SCAN_CACHE",
-            "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_SCENE_SCAN_CACHE_DESC",
-            "场景扫描缓存秒数",
-            "数值越小刷新越快，但遍历储存建筑更频繁。",
-            0.05f,
-            5f)]
-        [JsonProperty]
-        public float SceneScanCacheSeconds { get; set; }
-
-        [ModConfigOption(
             "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_DEFAULT_MATERIAL_LIMIT",
             "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_DEFAULT_MATERIAL_LIMIT_DESC",
             "材料请求默认限额 kg",
@@ -281,7 +271,6 @@ namespace StorageNetwork
 
         public Config()
         {
-            SceneScanCacheSeconds = 1f;
             DefaultMaterialRequestLimitKg = 1000f;
             StoragesEnabledOutputStoreToNetwork = new List<int>();
             WindowLayouts = new Dictionary<string, StorageNetworkWindowLayout>();
@@ -379,7 +368,6 @@ namespace StorageNetwork
                 StoragesEnabledOutputStoreToNetwork = new List<int>();
             }
 
-            SceneScanCacheSeconds = Clamp(SceneScanCacheSeconds, 0.5f, 5f);
             DefaultMaterialRequestLimitKg = Clamp(DefaultMaterialRequestLimitKg, 1f, 1000000f);
             MaterialRequestSuccessCooldownSeconds = Clamp(MaterialRequestSuccessCooldownSeconds, 0.5f, 60f);
             MaterialRequestRetryCooldownSeconds = Clamp(MaterialRequestRetryCooldownSeconds, 0.5f, 60f);

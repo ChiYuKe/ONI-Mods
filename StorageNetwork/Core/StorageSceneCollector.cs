@@ -7,6 +7,9 @@ namespace StorageNetwork.Core
 {
     public static class StorageSceneCollector
     {
+        private const float MainSnapshotCacheSeconds = 0.5f;
+        private const float WorldSnapshotCacheSeconds = 0.5f;
+
         private static StorageSceneSnapshot cachedSnapshot;
         private static float cachedAtUnscaledTime = -1f;
         private static int cachedFrame = -1;
@@ -30,7 +33,7 @@ namespace StorageNetwork.Core
                 cachedSnapshot != null &&
                 cachedRegistryVersion == registryVersion &&
                 cachedNetworkOnline == networkOnline &&
-                (cachedFrame == Time.frameCount || Time.unscaledTime - cachedAtUnscaledTime <= Config.Instance.SceneScanCacheSeconds))
+                (cachedFrame == Time.frameCount || Time.unscaledTime - cachedAtUnscaledTime <= MainSnapshotCacheSeconds))
             {
                 return cachedSnapshot;
             }
@@ -288,7 +291,7 @@ namespace StorageNetwork.Core
 
         private static float GetWorldSnapshotCacheSeconds()
         {
-            return Mathf.Clamp(Config.Instance.SceneScanCacheSeconds, 0.25f, 0.5f);
+            return WorldSnapshotCacheSeconds;
         }
 
         private readonly struct WorldSnapshotCacheEntry
