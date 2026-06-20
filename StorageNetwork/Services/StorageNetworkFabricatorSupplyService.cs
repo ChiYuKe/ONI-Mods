@@ -10,9 +10,12 @@ namespace StorageNetwork.Services
     internal static class StorageNetworkFabricatorSupplyService
     {
         private const float RetrySeconds = 2f;
-        private const float DemandSnapshotSeconds = 0.75f;
+        private const float DemandSnapshotSeconds = 1f;
+        private const float FabricatorListSnapshotSeconds = 5f;
         private static readonly Dictionary<int, float> NextTryByPort = new Dictionary<int, float>();
         private static readonly Dictionary<int, FabricatorDemandSnapshot> DemandSnapshotsByWorld = new Dictionary<int, FabricatorDemandSnapshot>();
+        private static readonly Dictionary<int, FabricatorListSnapshot> FabricatorListsByWorld = new Dictionary<int, FabricatorListSnapshot>();
+        private static readonly Dictionary<int, RecipeMapSnapshot> RecipeMapsByFabricator = new Dictionary<int, RecipeMapSnapshot>();
         private static readonly List<GameObject> MatchingItems = new List<GameObject>();
 
         public static StorageTransferResult SupplyNextFabricator(Storage portStorage, Storage specificSource, IEnumerable<Tag> allowedTags)
@@ -107,23 +110,64 @@ namespace StorageNetwork.Services
 
         private static IEnumerable<ComplexRecipe> GetQueuedRecipes(ComplexFabricator fabricator)
         {
+            HashSet<string> emittedRecipeIds = null;
             if (fabricator.CurrentWorkingOrder != null)
             {
+                AddEmittedRecipeId(ref emittedRecipeIds, fabricator.CurrentWorkingOrder);
                 yield return fabricator.CurrentWorkingOrder;
             }
 
             if (fabricator.NextOrder != null && fabricator.NextOrder != fabricator.CurrentWorkingOrder)
             {
+                AddEmittedRecipeId(ref emittedRecipeIds, fabricator.NextOrder);
                 yield return fabricator.NextOrder;
             }
 
-            foreach (ComplexRecipe recipe in fabricator.GetRecipes())
+            Dictionary<string, int> queueCounts = StorageNetworkFabricatorProgress.GetRecipeQueueCountsSafe(fabricator);
+            if (queueCounts == null || queueCounts.Count == 0)
             {
-                if (recipe != null && fabricator.IsRecipeQueued(recipe))
+                yield break;
+            }
+
+            Dictionary<string, ComplexRecipe> recipeById = GetRecipeMap(fabricator);
+            if (recipeById == null || recipeById.Count == 0)
+            {
+                yield break;
+            }
+
+            foreach (KeyValuePair<string, int> pair in queueCounts)
+            {
+                if (pair.Value == 0 || string.IsNullOrEmpty(pair.Key))
                 {
+                    continue;
+                }
+
+                if (emittedRecipeIds != null && emittedRecipeIds.Contains(pair.Key))
+                {
+                    continue;
+                }
+
+                if (recipeById.TryGetValue(pair.Key, out ComplexRecipe recipe) && recipe != null)
+                {
+                    AddEmittedRecipeId(ref emittedRecipeIds, recipe);
                     yield return recipe;
                 }
             }
+        }
+
+        private static void AddEmittedRecipeId(ref HashSet<string> emittedRecipeIds, ComplexRecipe recipe)
+        {
+            if (recipe == null || string.IsNullOrEmpty(recipe.id))
+            {
+                return;
+            }
+
+            if (emittedRecipeIds == null)
+            {
+                emittedRecipeIds = new HashSet<string>();
+            }
+
+            emittedRecipeIds.Add(recipe.id);
         }
 
         private static FabricatorDemand GetMissingIngredient(ComplexFabricator fabricator, ComplexRecipe recipe, HashSet<Tag> allowedTags)
@@ -156,7 +200,7 @@ namespace StorageNetwork.Services
         private static FabricatorDemandSnapshot GetDemandSnapshot(int worldId)
         {
             if (DemandSnapshotsByWorld.TryGetValue(worldId, out FabricatorDemandSnapshot snapshot) &&
-                Time.time - snapshot.CreatedAt <= DemandSnapshotSeconds)
+                Time.unscaledTime - snapshot.CreatedAt <= DemandSnapshotSeconds)
             {
                 return snapshot;
             }
@@ -168,8 +212,8 @@ namespace StorageNetwork.Services
 
         private static FabricatorDemandSnapshot BuildDemandSnapshot(int worldId)
         {
-            FabricatorDemandSnapshot snapshot = new FabricatorDemandSnapshot(Time.time);
-            foreach (ComplexFabricator fabricator in Object.FindObjectsByType<ComplexFabricator>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+            FabricatorDemandSnapshot snapshot = new FabricatorDemandSnapshot(Time.unscaledTime);
+            foreach (ComplexFabricator fabricator in GetFabricatorsForWorld(worldId))
             {
                 if (!IsEligibleFabricator(fabricator, worldId))
                 {
@@ -190,6 +234,101 @@ namespace StorageNetwork.Services
             }
 
             return snapshot;
+        }
+
+        private static List<ComplexFabricator> GetFabricatorsForWorld(int worldId)
+        {
+            int registryVersion = StorageSceneRegistry.Version;
+            if (FabricatorListsByWorld.TryGetValue(worldId, out FabricatorListSnapshot snapshot) &&
+                snapshot.RegistryVersion == registryVersion &&
+                Time.unscaledTime - snapshot.CreatedAt <= FabricatorListSnapshotSeconds)
+            {
+                return snapshot.Fabricators;
+            }
+
+            List<ComplexFabricator> fabricators = new List<ComplexFabricator>();
+            HashSet<ComplexFabricator> seen = new HashSet<ComplexFabricator>();
+            AddFabricatorsFromEnrollments(worldId, fabricators, seen);
+            foreach (Storage storage in StorageSceneRegistry.GetStorages())
+            {
+                ComplexFabricator fabricator = storage != null ? storage.GetComponent<ComplexFabricator>() : null;
+                if (IsEligibleFabricator(fabricator, worldId) && seen.Add(fabricator))
+                {
+                    fabricators.Add(fabricator);
+                }
+            }
+
+            if (fabricators.Count == 0)
+            {
+                AddFabricatorsFromUnitySearch(worldId, fabricators, seen);
+            }
+
+            FabricatorListsByWorld[worldId] = new FabricatorListSnapshot(Time.unscaledTime, registryVersion, fabricators);
+            return fabricators;
+        }
+
+        private static void AddFabricatorsFromEnrollments(int worldId, List<ComplexFabricator> fabricators, HashSet<ComplexFabricator> seen)
+        {
+            foreach (StorageNetworkEnrollment enrollment in StorageSceneRegistry.GetEnrollments())
+            {
+                ComplexFabricator fabricator = enrollment != null ? enrollment.GetComponent<ComplexFabricator>() : null;
+                if (IsEligibleFabricator(fabricator, worldId) && seen.Add(fabricator))
+                {
+                    fabricators.Add(fabricator);
+                }
+            }
+        }
+
+        private static void AddFabricatorsFromUnitySearch(int worldId, List<ComplexFabricator> fabricators, HashSet<ComplexFabricator> seen)
+        {
+            foreach (ComplexFabricator fabricator in Object.FindObjectsByType<ComplexFabricator>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+            {
+                if (IsEligibleFabricator(fabricator, worldId) && seen.Add(fabricator))
+                {
+                    fabricators.Add(fabricator);
+                }
+            }
+        }
+
+        private static Dictionary<string, ComplexRecipe> GetRecipeMap(ComplexFabricator fabricator)
+        {
+            int fabricatorId = StorageItemUtility.GetStorageInstanceId(fabricator?.inStorage);
+            if (fabricatorId == KPrefabID.InvalidInstanceID)
+            {
+                KPrefabID prefabId = fabricator != null ? fabricator.GetComponent<KPrefabID>() : null;
+                fabricatorId = prefabId != null ? prefabId.InstanceID : KPrefabID.InvalidInstanceID;
+            }
+
+            if (fabricatorId != KPrefabID.InvalidInstanceID &&
+                RecipeMapsByFabricator.TryGetValue(fabricatorId, out RecipeMapSnapshot snapshot) &&
+                snapshot.Fabricator == fabricator)
+            {
+                return snapshot.RecipeById;
+            }
+
+            Dictionary<string, ComplexRecipe> recipeById = new Dictionary<string, ComplexRecipe>();
+            if (fabricator != null)
+            {
+                foreach (ComplexRecipe recipe in fabricator.GetRecipes())
+                {
+                    if (recipe != null && !string.IsNullOrEmpty(recipe.id) && !recipeById.ContainsKey(recipe.id))
+                    {
+                        recipeById[recipe.id] = recipe;
+                    }
+                }
+            }
+
+            if (fabricatorId != KPrefabID.InvalidInstanceID)
+            {
+                RecipeMapsByFabricator[fabricatorId] = new RecipeMapSnapshot(fabricator, recipeById);
+            }
+
+            return recipeById;
+        }
+
+        private static void InvalidateDemandSnapshots()
+        {
+            DemandSnapshotsByWorld.Clear();
         }
 
         private static int GetRequestOrderCount(ComplexFabricator fabricator, ComplexRecipe recipe)
@@ -440,6 +579,7 @@ namespace StorageNetwork.Services
         {
             item?.GetComponent<KPrefabID>()?.AddTag(StorageNetworkTags.ReservedForFabricator, true);
             StorageNetworkConstructionSupplyService.ClearSolidOutputBufferMarker(item);
+            InvalidateDemandSnapshots();
         }
 
         private static void ReturnReservedItemToNetwork(Storage portStorage, GameObject item)
@@ -448,6 +588,7 @@ namespace StorageNetwork.Services
             if (prefabId != null && prefabId.HasTag(StorageNetworkTags.ReservedForFabricator))
             {
                 prefabId.RemoveTag(StorageNetworkTags.ReservedForFabricator);
+                InvalidateDemandSnapshots();
             }
 
             NetworkStorageTransferService.TransferStoredItemToNetwork(portStorage, item, new[] { portStorage }, null, true);
@@ -561,6 +702,35 @@ namespace StorageNetwork.Services
             public List<FabricatorDemand> Demands { get; } = new List<FabricatorDemand>();
 
             public Dictionary<Tag, float> DemandByTag { get; } = new Dictionary<Tag, float>();
+        }
+
+        private sealed class FabricatorListSnapshot
+        {
+            public FabricatorListSnapshot(float createdAt, int registryVersion, List<ComplexFabricator> fabricators)
+            {
+                CreatedAt = createdAt;
+                RegistryVersion = registryVersion;
+                Fabricators = fabricators ?? new List<ComplexFabricator>();
+            }
+
+            public float CreatedAt { get; }
+
+            public int RegistryVersion { get; }
+
+            public List<ComplexFabricator> Fabricators { get; }
+        }
+
+        private sealed class RecipeMapSnapshot
+        {
+            public RecipeMapSnapshot(ComplexFabricator fabricator, Dictionary<string, ComplexRecipe> recipeById)
+            {
+                Fabricator = fabricator;
+                RecipeById = recipeById ?? new Dictionary<string, ComplexRecipe>();
+            }
+
+            public ComplexFabricator Fabricator { get; }
+
+            public Dictionary<string, ComplexRecipe> RecipeById { get; }
         }
     }
 }

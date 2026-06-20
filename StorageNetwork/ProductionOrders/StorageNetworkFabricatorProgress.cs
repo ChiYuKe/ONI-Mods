@@ -81,6 +81,11 @@ namespace StorageNetwork.ProductionOrders
             return total;
         }
 
+        public static Dictionary<string, int> GetRecipeQueueCountsSafe(ComplexFabricator fabricator)
+        {
+            return GetQueueCounts(fabricator);
+        }
+
         public static bool IsWorkingOnRecipe(ComplexFabricator fabricator, ComplexRecipe recipe)
         {
             if (fabricator == null || recipe == null)
