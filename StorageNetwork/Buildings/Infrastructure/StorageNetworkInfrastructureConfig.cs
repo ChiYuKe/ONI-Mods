@@ -16,6 +16,7 @@ namespace StorageNetwork.Buildings
         protected virtual Storage.FetchCategory FetchCategory => Storage.FetchCategory.Building;
         protected virtual bool SupportsFilterUi => true;
         protected virtual bool SupportsStorageConnector => false;
+        protected virtual bool SupportsManualOperationToggle => false;
         protected virtual bool ShowStorageSettingsButton => true;
         protected virtual bool UsesRefrigeratedStorage => false;
         protected virtual bool StoresPower => false;
@@ -123,6 +124,12 @@ namespace StorageNetwork.Buildings
                     go.AddOrGet<StorageNetworkStorageConnector>();
                 }
 
+                if (SupportsManualOperationToggle)
+                {
+                    go.AddOrGet<Automatable>();
+                    go.AddOrGet<StorageNetworkSolidServerManualOperation>();
+                }
+
                 go.AddOrGet<StorageNetworkServerStatus>();
 
                 if (SupportsFilterUi)
@@ -212,6 +219,9 @@ namespace StorageNetwork.Buildings
     {
         public const string ID = "StorageNetworkSmallSolidServer";
         protected override StorageNetworkStorageBuildingSpec Spec => StorageNetworkStorageBuildingSpecs.SmallSolid;
+        protected override bool AllowManualRemoval => true;
+        protected override Storage.FetchCategory FetchCategory => Storage.FetchCategory.GeneralStorage;
+        protected override bool SupportsManualOperationToggle => true;
         protected override Tag? StorageStateCategoryTag => StorageSceneTags.CategorySolidPort;
     }
 
@@ -261,6 +271,9 @@ namespace StorageNetwork.Buildings
     {
         public const string ID = "StorageNetworkMediumSolidServer";
         protected override StorageNetworkStorageBuildingSpec Spec => StorageNetworkStorageBuildingSpecs.MediumSolid;
+        protected override bool AllowManualRemoval => true;
+        protected override Storage.FetchCategory FetchCategory => Storage.FetchCategory.GeneralStorage;
+        protected override bool SupportsManualOperationToggle => true;
         protected override Tag? StorageStateCategoryTag => StorageSceneTags.CategorySolidPort;
     }
 
@@ -310,6 +323,9 @@ namespace StorageNetwork.Buildings
     {
         public const string ID = "StorageNetworkLargeSolidServer";
         protected override StorageNetworkStorageBuildingSpec Spec => StorageNetworkStorageBuildingSpecs.LargeSolid;
+        protected override bool AllowManualRemoval => true;
+        protected override Storage.FetchCategory FetchCategory => Storage.FetchCategory.GeneralStorage;
+        protected override bool SupportsManualOperationToggle => true;
         protected override Tag? StorageStateCategoryTag => StorageSceneTags.CategorySolidPort;
     }
 

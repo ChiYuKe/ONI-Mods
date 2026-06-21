@@ -328,11 +328,6 @@ namespace StorageNetwork.UI
             CreateProductionActionRow(controlCard.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_PORT_SOURCE_POLICY), GetOutputPortSourceModeName(egress), () => ShowOutputPortSourcePicker(storage, egress));
             CreateProductionActionRow(controlCard.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_PORT_FILTER), GetOutputPortFilterName(egress), () => ShowOutputPortMaterialFilterPicker(storage, egress));
             CreateProductionActionRow(controlCard.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_PORT_REQUEST_RATE), GetOutputPortRequestRateName(egress), () => ShowOutputPortRequestRateDialog(egress));
-            CreateToggleActionRow(controlCard.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_PORT_MANUAL_OPERATION_ALLOWED), egress.AllowManualOperation ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ACTION_CLOSE) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ON), () =>
-            {
-                egress.SetAllowManualOperation(!egress.AllowManualOperation);
-                UpdateProductionSettingsPanel(true);
-            }, egress.AllowManualOperation);
             CreateFinePrint(controlCard.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_OUTPUT_PORT_REQUEST_DESC));
             if (!string.IsNullOrEmpty(egress.LastStatus))
             {

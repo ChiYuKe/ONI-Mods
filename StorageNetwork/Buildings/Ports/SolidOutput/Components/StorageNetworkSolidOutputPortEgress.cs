@@ -42,9 +42,6 @@ namespace StorageNetwork.Components
         [Serialize]
         public float RequestRateKgPerSecond = DefaultRequestRateKgPerSecond;
 
-        [Serialize]
-        public bool AllowManualOperation = true;
-
         [MyCmpGet]
         private Storage storage = null;
 
@@ -83,9 +80,8 @@ namespace StorageNetwork.Components
         protected override void OnSpawn()
         {
             base.OnSpawn();
-            gameObject.AddOrGet<StorageNetworkSolidOutputPortManualOperationButton>();
             Destroy(gameObject.GetComponent<RequireOutputs>());
-            ConfigureFetchableOutputStorage();
+            ConfigureRailOutputStorage();
             storage?.SetDefaultStoredItemModifiers(Storage.StandardInsulatedStorage);
             InitializeOutputLimitUsage();
             SyncDispenserState();
@@ -120,19 +116,17 @@ namespace StorageNetwork.Components
             UpdateCachedStatusText();
         }
 
-        private void ConfigureFetchableOutputStorage()
+        private void ConfigureRailOutputStorage()
         {
             if (storage == null)
             {
                 return;
             }
 
-            storage.allowItemRemoval = AllowManualOperation;
+            storage.allowItemRemoval = false;
             storage.allowUIItemRemoval = false;
-            storage.ignoreSourcePriority = AllowManualOperation;
-            storage.fetchCategory = AllowManualOperation
-                ? Storage.FetchCategory.GeneralStorage
-                : Storage.FetchCategory.Building;
+            storage.ignoreSourcePriority = false;
+            storage.fetchCategory = Storage.FetchCategory.Building;
             if (storage.items == null)
             {
                 return;
@@ -149,21 +143,6 @@ namespace StorageNetwork.Components
         {
             Storage source = CurrentSourceMode == StorageNetworkMaterialRequester.RequestMode.SpecificStorage ? ResolveSourceStorage() : null;
 
-            if (TrySupplyConstruction(source))
-            {
-                return;
-            }
-
-            if (TrySupplyFarming(source))
-            {
-                return;
-            }
-
-            if (TrySupplyFabricator(source))
-            {
-                return;
-            }
-
             if (!OutputRequestEnabled)
             {
                 lastStatus = Loc.Get(Loc.UI.STORAGE_NETWORK.STATUS_DISABLED);
@@ -179,87 +158,6 @@ namespace StorageNetwork.Components
             }
 
             RequestBufferedOutput(source);
-        }
-
-        private bool TrySupplyConstruction(Storage source)
-        {
-            if (!AllowManualOperation)
-            {
-                return false;
-            }
-
-            StorageTransferResult constructionResult = StorageNetworkConstructionSupplyService.SupplyNextConstruction(
-                storage,
-                source,
-                GetSelectedOutputTags());
-            if (constructionResult.MovedKg > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
-            {
-                lastStatus = NetworkStorageTransferService.FormatOutputStatus(constructionResult, Loc.Get(Loc.UI.STORAGE_NETWORK.MATERIAL_STATUS_WAITING_CONTENTS));
-                if (OutputLimitEnabled)
-                {
-                    OutputLimitUsedKg += constructionResult.MovedKg;
-                }
-
-                RefreshFetchableBufferedItems();
-                retryTimer = 0f;
-                return true;
-            }
-
-            return false;
-        }
-
-        private bool TrySupplyFarming(Storage source)
-        {
-            if (!AllowManualOperation)
-            {
-                return false;
-            }
-
-            StorageTransferResult farmingResult = StorageNetworkFarmingSupplyService.SupplyNextPlanting(
-                storage,
-                source,
-                GetSelectedOutputTags());
-            if (farmingResult.MovedKg > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
-            {
-                lastStatus = NetworkStorageTransferService.FormatOutputStatus(farmingResult, Loc.Get(Loc.UI.STORAGE_NETWORK.MATERIAL_STATUS_WAITING_CONTENTS));
-                if (OutputLimitEnabled)
-                {
-                    OutputLimitUsedKg += farmingResult.MovedKg;
-                }
-
-                RefreshFetchableBufferedItems();
-                retryTimer = 0f;
-                return true;
-            }
-
-            return false;
-        }
-
-        private bool TrySupplyFabricator(Storage source)
-        {
-            if (!AllowManualOperation)
-            {
-                return false;
-            }
-
-            StorageTransferResult fabricatorResult = StorageNetworkFabricatorSupplyService.SupplyNextFabricator(
-                storage,
-                source,
-                GetSelectedOutputTags());
-            if (fabricatorResult.MovedKg > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
-            {
-                lastStatus = NetworkStorageTransferService.FormatOutputStatus(fabricatorResult, Loc.Get(Loc.UI.STORAGE_NETWORK.MATERIAL_STATUS_WAITING_CONTENTS));
-                if (OutputLimitEnabled)
-                {
-                    OutputLimitUsedKg += fabricatorResult.MovedKg;
-                }
-
-                RefreshFetchableBufferedItems();
-                retryTimer = 0f;
-                return true;
-            }
-
-            return false;
         }
 
         private void RequestBufferedOutput(Storage source)
@@ -287,7 +185,7 @@ namespace StorageNetwork.Components
 
             SyncDispenserState();
             MarkBufferedOutputItems();
-            RefreshFetchableBufferedItems();
+            RefreshRailOutputItems();
             retryTimer = result.MovedKg > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ? 0f : RetrySeconds;
         }
 
@@ -368,14 +266,6 @@ namespace StorageNetwork.Components
             return Mathf.Max(MinRequestRateKgPerSecond, Config.Instance.SolidOutputMaxKgPerSecond);
         }
 
-        public void SetAllowManualOperation(bool enabled)
-        {
-            AllowManualOperation = enabled;
-            ConfigureFetchableOutputStorage();
-            RefreshFetchableBufferedItems();
-            cachedStatusText = null;
-        }
-
         public void SetButtonTextOverride(ButtonMenuTextOverride textOverride)
         {
         }
@@ -445,11 +335,10 @@ namespace StorageNetwork.Components
             OutputLimitKg = source.OutputLimitKg;
             OutputLimitUsedKg = OutputLimitEnabled ? GetPortStoredMassKg() : 0f;
             RequestRateKgPerSecond = source.GetRequestRateKgPerSecond();
-            AllowManualOperation = source.AllowManualOperation;
             retryTimer = 0f;
             lastStatus = string.Empty;
             cachedStatusText = null;
-            ConfigureFetchableOutputStorage();
+            ConfigureRailOutputStorage();
             SyncDispenserState();
         }
 
@@ -463,18 +352,14 @@ namespace StorageNetwork.Components
             dispenser.alwaysDispense = OutputRequestEnabled && StorageSceneRegistry.HasOnlineCoreInWorld(GetWorldId());
         }
 
-        private void RefreshFetchableBufferedItems()
+        private void RefreshRailOutputItems()
         {
             if (storage == null || storage.items == null)
             {
                 return;
             }
 
-            storage.allowItemRemoval = AllowManualOperation;
-            storage.ignoreSourcePriority = AllowManualOperation;
-            storage.fetchCategory = AllowManualOperation
-                ? Storage.FetchCategory.GeneralStorage
-                : Storage.FetchCategory.Building;
+            ConfigureRailOutputStorage();
             foreach (GameObject item in storage.items)
             {
                 Pickupable pickupable = item != null ? item.GetComponent<Pickupable>() : null;
@@ -595,9 +480,7 @@ namespace StorageNetwork.Components
                 return false;
             }
 
-            return !prefabId.HasTag(StorageNetworkTags.ReservedForConstruction) &&
-                !prefabId.HasTag(StorageNetworkTags.ReservedForFarming) &&
-                !prefabId.HasTag(StorageNetworkTags.ReservedForFabricator);
+            return true;
         }
 
         private bool IsOutputLimitSatisfied()
@@ -693,7 +576,7 @@ namespace StorageNetwork.Components
         private string BuildStatusSignature()
         {
             return string.Format(
-                "{0}|{1}|{2}|{3}|{4:0.###}|{5:0.###}|{6:0.###}|{7:0.###}|{8}|{9}|{10}|{11:0.###}|{12:0.###}",
+                "{0}|{1}|{2}|{3}|{4:0.###}|{5:0.###}|{6:0.###}|{7:0.###}|{8}|{9}|{10:0.###}|{11:0.###}",
                 OutputRequestEnabled,
                 SourceModeValue,
                 SourceStorageInstanceId,
@@ -702,7 +585,6 @@ namespace StorageNetwork.Components
                 OutputLimitEnabled ? OutputLimitUsedKg : -1f,
                 RequestRateKgPerSecond,
                 retryTimer,
-                AllowManualOperation,
                 lastStatus,
                 StorageSceneRegistry.HasOnlineCoreInWorld(GetWorldId()),
                 GetPortStoredMassKg(),
@@ -723,8 +605,7 @@ namespace StorageNetwork.Components
                 ColorizeAmount(GetRequestRateStatusText()),
                 ColorizeAmount(GameUtil.GetFormattedMass(GetPortStoredMassKg())),
                 ColorizeAmount(GameUtil.GetFormattedMass(GetPortCapacityKg())),
-                ColorizeStatus(GetCurrentStatusText()),
-                ColorizeManual(AllowManualOperation));
+                ColorizeStatus(GetCurrentStatusText()));
         }
 
         private float GetPortStoredMassKg()
@@ -850,15 +731,6 @@ namespace StorageNetwork.Components
                 text.Contains(Loc.Get(Loc.UI.STORAGE_NETWORK.CORE_OFFLINE_TITLE)) ||
                 text.Contains(Loc.Get(Loc.UI.STORAGE_NETWORK.MATERIAL_STATUS_LIMIT_REACHED));
             return Colorize(text, warning ? "#d86a6a" : "#55d17a");
-        }
-
-        private static string ColorizeManual(bool enabled)
-        {
-            return Colorize(
-                enabled
-                    ? Loc.Get(Loc.UI.STORAGE_NETWORK.PORT_STATUS_MANUAL_ALLOWED)
-                    : Loc.Get(Loc.UI.STORAGE_NETWORK.PORT_STATUS_MANUAL_FORBIDDEN),
-                enabled ? "#55d17a" : "#9aa3ad");
         }
 
         private static string Colorize(string text, string color)

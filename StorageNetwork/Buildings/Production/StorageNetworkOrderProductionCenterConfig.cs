@@ -49,6 +49,7 @@ namespace StorageNetwork.Buildings
             fabricator.duplicantOperated = false;
             fabricator.showProgressBar = false;
             fabricator.sideScreenStyle = ComplexFabricatorSideScreen.StyleSetting.ListQueueHybrid;
+            fabricator.storeProduced = true;
             BuildingTemplates.CreateComplexFabricatorStorage(go, fabricator);
             go.AddOrGet<StorageNetworkMaterialRequester>();
             Storage diskInstallStorage = go.AddComponent<Storage>();

@@ -137,8 +137,6 @@ namespace StorageNetwork.ProductionOrders
 
                 requester.RequestEnabled = true;
                 requester.CurrentMode = StorageNetworkMaterialRequester.RequestMode.SearchNetwork;
-                requester.OutputStoreEnabled = true;
-                requester.CurrentOutputStoreMode = StorageNetworkMaterialRequester.OutputStoreMode.AutoNetwork;
             }
         }
 

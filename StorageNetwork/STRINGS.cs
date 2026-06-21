@@ -30,8 +30,8 @@ namespace StorageNetwork
                 public class STORAGENETWORKSMALLSOLIDSERVER
                 {
                     public static LocString NAME = "小型固体服务器";
-                    public static LocString DESC = "用于接入储存网络的小型固体储存服务器。";
-                    public static LocString EFFECT = "储存固体物品，并显示在储存网络窗口中。";
+                    public static LocString DESC = "用于接入 <link=\"STORAGENETWORK\">储存网络</link> 的小型固体储存服务器。固体物品需要通过 <link=\"STORAGENETWORKSOLIDINPUTPORT\">材料入网端口</link> 存入网络。";
+                    public static LocString EFFECT = "储存固体物品，并显示在 <link=\"STORAGENETWORK\">储存网络</link> 窗口中。复制人可以像普通储物箱一样从这里取出物品；关闭“允许人力操作”后将禁止复制人手动取物。";
                 }
 
                 public class STORAGENETWORKSOLIDINPUTPORT
@@ -142,8 +142,8 @@ namespace StorageNetwork
                 public class STORAGENETWORKMEDIUMSOLIDSERVER
                 {
                     public static LocString NAME = "中型固体服务器";
-                    public static LocString DESC = "用于接入储存网络的中型固体储存服务器。";
-                    public static LocString EFFECT = "储存更多固体物品，并显示在储存网络窗口中。";
+                    public static LocString DESC = "用于接入 <link=\"STORAGENETWORK\">储存网络</link> 的中型固体储存服务器。固体物品需要通过 <link=\"STORAGENETWORKSOLIDINPUTPORT\">材料入网端口</link> 存入网络。";
+                    public static LocString EFFECT = "储存更多固体物品，并显示在 <link=\"STORAGENETWORK\">储存网络</link> 窗口中。复制人可以像普通储物箱一样从这里取出物品；关闭“允许人力操作”后将禁止复制人手动取物。";
                 }
 
                 public class STORAGENETWORKMEDIUMLIQUIDSERVER
@@ -184,8 +184,8 @@ namespace StorageNetwork
                 public class STORAGENETWORKLARGESOLIDSERVER
                 {
                     public static LocString NAME = "大型固体服务器";
-                    public static LocString DESC = "用于接入储存网络的大型固体储存服务器。";
-                    public static LocString EFFECT = "储存大量固体物品，并显示在储存网络窗口中。";
+                    public static LocString DESC = "用于接入 <link=\"STORAGENETWORK\">储存网络</link> 的大型固体储存服务器。固体物品需要通过 <link=\"STORAGENETWORKSOLIDINPUTPORT\">材料入网端口</link> 存入网络。";
+                    public static LocString EFFECT = "储存大量固体物品，并显示在 <link=\"STORAGENETWORK\">储存网络</link> 窗口中。复制人可以像普通储物箱一样从这里取出物品；关闭“允许人力操作”后将禁止复制人手动取物。";
                 }
 
                 public class STORAGENETWORKLARGELIQUIDSERVER
@@ -594,7 +594,7 @@ namespace StorageNetwork
                 public static LocString SOLID_INPUT_PORT_STATUS_ITEM = "固体入网端口：{0}";
                 public static LocString SOLID_INPUT_PORT_STATUS_TOOLTIP = "向网络输入：{0}\n网络：{1}\n存放策略：{2}\n端口缓存：{3} / {4}\n入网状态：{5}";
                 public static LocString SOLID_OUTPUT_PORT_STATUS_ITEM = "固体出网端口：{0}";
-                public static LocString SOLID_OUTPUT_PORT_STATUS_TOOLTIP = "向轨道输出：{0}\n网络：{1}\n来源策略：{2}\n输出筛选：{3}\n输出限额：{4}\n请求速率：{5}\n端口缓存：{6} / {7}\n出网状态：{8}\n人力操作：{9}";
+                public static LocString SOLID_OUTPUT_PORT_STATUS_TOOLTIP = "向轨道输出：{0}\n网络：{1}\n来源策略：{2}\n输出筛选：{3}\n输出限额：{4}\n请求速率：{5}\n端口缓存：{6} / {7}\n出网状态：{8}";
                 public static LocString LIQUID_INPUT_PORT_STATUS_ITEM = "液体入网端口：{0}";
                 public static LocString LIQUID_INPUT_PORT_STATUS_TOOLTIP = "向网络输入：{0}\n网络：{1}\n存放策略：{2}\n端口缓存：{3} / {4}\n入网状态：{5}";
                 public static LocString LIQUID_OUTPUT_PORT_STATUS_ITEM = "液体出网端口：{0}";

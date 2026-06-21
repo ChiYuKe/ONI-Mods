@@ -10,6 +10,9 @@ namespace StorageNetwork.Components
         [MyCmpReq]
         private HighEnergyParticlePort port;
 
+        [MyCmpGet]
+        private Operational operational;
+
         protected override void OnSpawn()
         {
             base.OnSpawn();
@@ -32,7 +35,10 @@ namespace StorageNetwork.Components
 
         private void OnParticleCapture(HighEnergyParticle particle)
         {
-            if (!InputStoreEnabled || particle == null || particle.payload <= 0f)
+            if (!InputStoreEnabled ||
+                particle == null ||
+                particle.payload <= 0f ||
+                operational != null && !operational.IsOperational)
             {
                 return;
             }

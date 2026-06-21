@@ -27,6 +27,9 @@ namespace StorageNetwork.Components
         [MyCmpGet]
         private StorageNetworkOrderProductionCenter center = null;
 
+        [MyCmpGet]
+        private StorageNetworkMaterialRequester materialRequester = null;
+
         private readonly ProgressBar[] worldProgressBars = new ProgressBar[3];
 
         public int ActiveCoreCount => center != null
@@ -306,7 +309,8 @@ namespace StorageNetwork.Components
         {
             SanitizeBuildStorageTemperatures(recipe);
             EnsureSafeOutputTemperature();
-            SpawnOrderProduct(recipe);
+            List<GameObject> producedOutputs = SpawnOrderProduct(recipe);
+            materialRequester?.ForceStoreProducedOutputs(producedOutputs);
             core.Clear();
             Trigger(1355439576, recipe);
         }

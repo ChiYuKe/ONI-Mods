@@ -528,18 +528,6 @@ namespace StorageNetwork.UI
                     null));
             }
 
-            options.Add(new ProductionPickerOption(
-                Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_PORT_MANUAL_OPERATION_ALLOWED),
-                egress.AllowManualOperation
-                    ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PORT_STATUS_MANUAL_ALLOWED)
-                    : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PORT_STATUS_MANUAL_FORBIDDEN),
-                egress.AllowManualOperation,
-                () =>
-                {
-                    egress.SetAllowManualOperation(!egress.AllowManualOperation);
-                    refreshSettings?.Invoke();
-                }));
-
             return options;
         }
 

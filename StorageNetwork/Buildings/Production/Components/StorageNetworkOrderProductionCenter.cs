@@ -201,54 +201,12 @@ namespace StorageNetwork.Components
             }
 
             Storage sourceStorage = pickupable.storage;
-            if (sourceStorage == null)
+            if (sourceStorage == null || !StorageNetworkStorageRules.IsServerStorage(sourceStorage))
             {
                 return true;
             }
 
-            if (!StorageNetworkStorageRules.IsServerStorage(sourceStorage))
-            {
-                return true;
-            }
-
-            Storage outputPort = FindDiskDeliveryOutputPort(sourceStorage);
-            if (outputPort == null)
-            {
-                return false;
-            }
-
-            return sourceStorage.Transfer(disk.gameObject, outputPort, block_events: false, hide_popups: true);
-        }
-
-        private Storage FindDiskDeliveryOutputPort(Storage sourceStorage)
-        {
-            int worldId = StorageTargetSelector.GetObjectWorldId(gameObject);
-            foreach (Storage storage in StorageSceneCollector.CollectLightweightForWorld(worldId).Storages)
-            {
-                if (storage == null ||
-                    storage == sourceStorage ||
-                    !StorageNetworkStorageRules.IsSolidOutputPort(storage) ||
-                    storage.RemainingCapacity() <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
-                {
-                    continue;
-                }
-
-                StorageNetworkSolidOutputPortEgress egress = storage.GetComponent<StorageNetworkSolidOutputPortEgress>();
-                if (egress == null || !egress.AllowManualOperation)
-                {
-                    continue;
-                }
-
-                Tag selected = egress.GetSelectedOutputTag() ?? Tag.Invalid;
-                if (selected != Tag.Invalid && selected != StorageNetworkEngravingDiskConfig.ID)
-                {
-                    continue;
-                }
-
-                return storage;
-            }
-
-            return null;
+            return sourceStorage.allowItemRemoval;
         }
 
         public bool CompleteDeliveredDiskInstall()

@@ -70,6 +70,7 @@ namespace StorageNetwork.Buildings
 
             if (spec.ParticlePort)
             {
+                buildingDef.LogicInputPorts = LogicOperationalController.CreateSingleInputPortList(spec.ParticleOffset);
                 if (spec.Direction == StorageNetworkPortDirection.Input)
                 {
                     buildingDef.UseHighEnergyParticleInputPort = true;
@@ -104,7 +105,11 @@ namespace StorageNetwork.Buildings
 
         public override void ConfigureBuildingTemplate(GameObject go, Tag prefabTag)
         {
-            GeneratedBuildings.MakeBuildingAlwaysOperational(go);
+            if (!Spec.ParticlePort)
+            {
+                GeneratedBuildings.MakeBuildingAlwaysOperational(go);
+            }
+
             go.AddOrGet<CodexEntryRedirector>().CodexID = Spec.Id;
             KPrefabID prefabId = go.GetComponent<KPrefabID>();
             prefabId?.AddTag(RoomConstraints.ConstraintTags.IndustrialMachinery);
@@ -117,12 +122,10 @@ namespace StorageNetwork.Buildings
             Storage storage = go.AddOrGet<Storage>();
             storage.capacityKg = Spec.CapacityKg * GetCapacityMultiplier(Spec);
             storage.showInUI = !Spec.PowerPort;
-            storage.allowItemRemoval = Spec.Kind == StorageNetworkPortKind.SolidOutput;
+            storage.allowItemRemoval = false;
             storage.showDescriptor = false;
             storage.storageFilters = Spec.Filters ?? new List<Tag>();
-            storage.fetchCategory = Spec.Kind == StorageNetworkPortKind.SolidOutput
-                ? Storage.FetchCategory.GeneralStorage
-                : Storage.FetchCategory.Building;
+            storage.fetchCategory = Storage.FetchCategory.Building;
             storage.showCapacityStatusItem = false;
             storage.showCapacityAsMainStatus = false;
 
@@ -211,10 +214,11 @@ namespace StorageNetwork.Buildings
             }
             else if (spec.Kind == StorageNetworkPortKind.ParticleInput)
             {
+                go.AddOrGet<LogicOperationalController>();
                 HighEnergyParticlePort port = go.AddOrGet<HighEnergyParticlePort>();
                 port.particleInputEnabled = true;
                 port.particleInputOffset = spec.ParticleOffset;
-                port.requireOperational = false;
+                port.requireOperational = true;
                 HighEnergyParticleStorage particleStorage = go.AddOrGet<HighEnergyParticleStorage>();
                 particleStorage.capacity = 0f;
                 particleStorage.showInUI = false;
@@ -226,10 +230,11 @@ namespace StorageNetwork.Buildings
             }
             else if (spec.Kind == StorageNetworkPortKind.ParticleOutput)
             {
+                go.AddOrGet<LogicOperationalController>();
                 HighEnergyParticlePort port = go.AddOrGet<HighEnergyParticlePort>();
                 port.particleOutputEnabled = true;
                 port.particleOutputOffset = spec.ParticleOffset;
-                port.requireOperational = false;
+                port.requireOperational = true;
                 go.AddOrGet<CopyBuildingSettings>();
                 go.AddOrGet<StorageNetworkParticleOutputPortEgress>();
             }
@@ -261,7 +266,6 @@ namespace StorageNetwork.Buildings
                 dispenser.alwaysDispense = true;
                 go.AddOrGet<CopyBuildingSettings>();
                 go.AddOrGet<StorageNetworkSolidOutputPortEgress>();
-                go.AddOrGet<StorageNetworkSolidOutputPortManualOperationButton>();
             }
         }
 

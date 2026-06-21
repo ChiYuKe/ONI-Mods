@@ -66,8 +66,7 @@
 | `Buildings/Ports/Power/Components/StorageNetworkPowerOutputPortGenerator.cs` | 电力出网端口，把网络电力输出到电路。 |
 | `Buildings/Ports/Power/Components/StorageNetworkPowerService.cs` | 电力服务器聚合、平摊充电、平摊放电和容量查询。 |
 | `Buildings/Ports/SolidInput/Components/StorageNetworkSolidInputPortIngress.cs` | 材料入网端口，接收运输轨道/复制人投放并存入网络。 |
-| `Buildings/Ports/SolidOutput/Components/StorageNetworkSolidOutputPortEgress.cs` | 材料出网端口，从网络取货、缓存并供轨道/复制人取用。 |
-| `Buildings/Ports/SolidOutput/Components/StorageNetworkSolidOutputPortManualOperationButton.cs` | 材料出网端口手动取货按钮逻辑。 |
+| `Buildings/Ports/SolidOutput/Components/StorageNetworkSolidOutputPortEgress.cs` | 材料出网端口，从网络取货、缓存并输出到运输轨道。 |
 | `Buildings/Ports/StorageNetworkPortConfig.cs` | 材料/液体/气体/电力端口建筑配置和规格表。 |
 | `Buildings/Ports/UI/StorageNetworkPanel.ProductionSettings.Port.cs` | 端口在生产设置面板中的配置 UI。 |
 | `Buildings/Production/Components/StorageNetworkMaterialRequester.cs` | 生产建筑材料请求主组件。 |

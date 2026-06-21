@@ -326,7 +326,7 @@ namespace StorageNetwork.Services
                 }
 
                 StorageNetworkSolidOutputPortEgress egress = storage.GetComponent<StorageNetworkSolidOutputPortEgress>();
-                if (egress == null || !egress.AllowManualOperation)
+                if (egress == null)
                 {
                     continue;
                 }
