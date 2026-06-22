@@ -1,0 +1,7 @@
+title: WASD Minion Control
+description: Control the selected Follow Cam duplicant with WASD movement keys.
+staticID: WASDMinionControl
+supportedContent: ALL
+minimumSupportedBuild: 525812
+version: 0.1.0
+APIVersion: 2
