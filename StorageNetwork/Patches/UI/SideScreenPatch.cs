@@ -1,5 +1,6 @@
 using HarmonyLib;
 using System.Reflection;
+using StorageNetwork.API;
 using StorageNetwork.Core;
 using StorageNetwork.Components;
 using StorageNetwork.UI;
@@ -15,8 +16,6 @@ namespace StorageNetwork.Patches
         private static readonly FieldInfo DetailsCodexEntryButtonField = AccessTools.Field(typeof(DetailsScreen), "CodexEntryButton");
         private static readonly FieldInfo DetailsCloseButtonField = AccessTools.Field(typeof(DetailsScreen), "CloseButton");
         private static Sprite titleSettingsButtonSprite;
-        private static DetailsScreen lastTitleDetailsScreen;
-        private static GameObject lastTitleTarget;
 
         [HarmonyPatch(typeof(ManagementMenu), "OnPrefabInit")]
         public static class ManagementMenuOnPrefabInitPatch
@@ -118,14 +117,6 @@ namespace StorageNetwork.Patches
 
         private static void RefreshStorageNetworkTitleButton(DetailsScreen detailsScreen, GameObject target)
         {
-            if (lastTitleDetailsScreen == detailsScreen && lastTitleTarget == target)
-            {
-                return;
-            }
-
-            lastTitleDetailsScreen = detailsScreen;
-            lastTitleTarget = target;
-
             Storage storage = target != null ? target.GetComponent<Storage>() : null;
             KButton template = DetailsCodexEntryButtonField?.GetValue(detailsScreen) as KButton;
             if (template == null || template.transform.parent == null)
@@ -135,7 +126,10 @@ namespace StorageNetwork.Patches
 
             Transform parent = template.transform.parent;
             Transform existing = parent.Find(TitleSettingsButtonName);
-            bool shouldShow = StorageNetworkStorageRules.IsNetworkPortStorage(storage);
+            bool builtInButton = StorageNetworkStorageRules.IsNetworkPortStorage(storage) ||
+                                 StorageNetworkStorageRules.HasSettingsButtonTag(storage);
+            StorageNetworkSettingsButtonState settingsButtonState = StorageNetworkInterfaceResolver.GetSettingsButtonState(storage);
+            bool shouldShow = builtInButton || settingsButtonState.IsVisible;
             if (!shouldShow)
             {
                 if (existing != null)
@@ -159,7 +153,7 @@ namespace StorageNetwork.Patches
                 state.Initialize(buttonObject);
             }
 
-            state.SetTarget(storage);
+            state.SetTarget(storage, builtInButton);
             PlaceBeforeCloseButton(detailsScreen, buttonObject.transform);
         }
 
@@ -222,14 +216,23 @@ namespace StorageNetwork.Patches
                 }
             }
 
-            public void SetTarget(Storage storage)
+            public void SetTarget(Storage storage, bool builtInButton)
             {
                 targetStorage = storage;
+                StorageNetworkSettingsButtonState state = StorageNetworkInterfaceResolver.GetSettingsButtonState(storage);
+                bool enabled = builtInButton && !state.IsVisible
+                    ? true
+                    : state.IsEnabled;
                 RefreshIcon();
                 if (button != null)
                 {
-                    button.isInteractable = targetStorage != null;
+                    button.isInteractable = targetStorage != null && enabled;
                 }
+
+                string tooltipText = !string.IsNullOrEmpty(state.Tooltip)
+                    ? state.Tooltip
+                    : StorageNetwork.STRINGS.Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PORT_NETWORK_SETTINGS_TOOLTIP);
+                tooltip?.SetSimpleTooltip(tooltipText);
             }
 
             private void RefreshIcon()
@@ -267,6 +270,12 @@ namespace StorageNetwork.Patches
             {
                 if (targetStorage != null)
                 {
+                    StorageNetworkSettingsButtonState state = StorageNetworkInterfaceResolver.GetSettingsButtonState(targetStorage);
+                    if (!state.IsEnabled)
+                    {
+                        return;
+                    }
+
                     StorageNetworkPanel.ShowSettings(targetStorage);
                 }
             }

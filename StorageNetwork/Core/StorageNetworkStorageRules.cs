@@ -16,12 +16,12 @@ namespace StorageNetwork.Core
         /// </summary>
         public static bool HasModStorageTag(Storage storage)
         {
-            return HasTag(storage, StorageNetworkTags.ModStorage);
+            return HasFlag(storage, StorageNetworkStorageFlags.NetworkStorage);
         }
 
         public static bool HasServerStorageTag(Storage storage)
         {
-            return HasTag(storage, StorageNetworkTags.ServerStorage);
+            return HasFlag(storage, StorageNetworkStorageFlags.ServerStorage);
         }
 
         public static bool IsServerStorage(Storage storage)
@@ -89,87 +89,87 @@ namespace StorageNetwork.Core
 
         public static bool HasInputPortTag(Storage storage)
         {
-            return HasTag(storage, StorageNetworkTags.CategoryInputPort);
+            return HasFlag(storage, StorageNetworkStorageFlags.InputPort);
         }
 
         public static bool HasOutputPortTag(Storage storage)
         {
-            return HasTag(storage, StorageNetworkTags.CategoryOutputPort);
+            return HasFlag(storage, StorageNetworkStorageFlags.OutputPort);
         }
 
         public static bool HasSolidPortTag(Storage storage)
         {
-            return HasTag(storage, StorageNetworkTags.CategorySolidPort);
+            return HasFlag(storage, StorageNetworkStorageFlags.SolidPort);
         }
 
         public static bool HasLiquidPortTag(Storage storage)
         {
-            return HasTag(storage, StorageNetworkTags.CategoryLiquidPort);
+            return HasFlag(storage, StorageNetworkStorageFlags.LiquidPort);
         }
 
         public static bool HasGasPortTag(Storage storage)
         {
-            return HasTag(storage, StorageNetworkTags.CategoryGasPort);
+            return HasFlag(storage, StorageNetworkStorageFlags.GasPort);
         }
 
         public static bool HasPowerPortTag(Storage storage)
         {
-            return HasTag(storage, StorageNetworkTags.CategoryPowerPort);
+            return HasFlag(storage, StorageNetworkStorageFlags.PowerPort);
         }
 
         public static bool HasParticlePortTag(Storage storage)
         {
-            return HasTag(storage, StorageNetworkTags.CategoryParticlePort);
+            return HasFlag(storage, StorageNetworkStorageFlags.ParticlePort);
         }
 
         public static bool IsSolidInputPort(Storage storage)
         {
-            return HasTag(storage, StorageNetworkTags.CategorySolidInputPort);
+            return HasFlag(storage, StorageNetworkStorageFlags.SolidInputPort);
         }
 
         public static bool IsSolidOutputPort(Storage storage)
         {
-            return HasTag(storage, StorageNetworkTags.CategorySolidOutputPort);
+            return HasFlag(storage, StorageNetworkStorageFlags.SolidOutputPort);
         }
 
         public static bool IsLiquidInputPort(Storage storage)
         {
-            return HasTag(storage, StorageNetworkTags.CategoryLiquidInputPort);
+            return HasFlag(storage, StorageNetworkStorageFlags.LiquidInputPort);
         }
 
         public static bool IsLiquidOutputPort(Storage storage)
         {
-            return HasTag(storage, StorageNetworkTags.CategoryLiquidOutputPort);
+            return HasFlag(storage, StorageNetworkStorageFlags.LiquidOutputPort);
         }
 
         public static bool IsGasInputPort(Storage storage)
         {
-            return HasTag(storage, StorageNetworkTags.CategoryGasInputPort);
+            return HasFlag(storage, StorageNetworkStorageFlags.GasInputPort);
         }
 
         public static bool IsGasOutputPort(Storage storage)
         {
-            return HasTag(storage, StorageNetworkTags.CategoryGasOutputPort);
+            return HasFlag(storage, StorageNetworkStorageFlags.GasOutputPort);
         }
 
         public static bool IsPowerInputPort(Storage storage)
         {
-            return HasTag(storage, StorageNetworkTags.CategoryPowerInputPort);
+            return HasFlag(storage, StorageNetworkStorageFlags.PowerInputPort);
         }
 
         public static bool IsPowerOutputPort(Storage storage)
         {
-            return HasTag(storage, StorageNetworkTags.CategoryPowerOutputPort);
+            return HasFlag(storage, StorageNetworkStorageFlags.PowerOutputPort);
         }
 
         public static bool IsParticleInputPort(Storage storage)
         {
-            return HasTag(storage, StorageNetworkTags.CategoryParticleInputPort);
+            return HasFlag(storage, StorageNetworkStorageFlags.ParticleInputPort);
         }
 
         public static bool IsParticleOutputPort(Storage storage)
         {
-            return HasTag(storage, StorageNetworkTags.CategoryParticleOutputPort);
+            return HasFlag(storage, StorageNetworkStorageFlags.ParticleOutputPort);
         }
 
         public static bool IsPowerStorageServer(Storage storage)
@@ -251,7 +251,7 @@ namespace StorageNetwork.Core
             return storage != null &&
                    storage.GetComponent<Refrigerator>() == null &&
                    storage.GetComponent<Reservoir>() == null &&
-                   HasTag(storage, StorageNetworkTags.ShowSettingsButton);
+                   HasFlag(storage, StorageNetworkStorageFlags.ShowSettingsButton);
         }
 
         /// <summary>
@@ -374,9 +374,14 @@ namespace StorageNetwork.Core
             return fabricator.inStorage == null || fabricator.inStorage == storage;
         }
 
-        private static bool HasTag(Storage storage, Tag tag)
+        public static bool HasCategoryModStorage(Storage storage)
         {
-            return storage?.GetComponent<KPrefabID>()?.HasTag(tag) == true;
+            return HasFlag(storage, StorageNetworkStorageFlags.CategoryModStorage);
+        }
+
+        private static bool HasFlag(Storage storage, StorageNetworkStorageFlags flag)
+        {
+            return StorageNetworkInterfaceResolver.HasStorageFlag(storage, flag);
         }
 
         private static string GetPrefabId(Storage storage)

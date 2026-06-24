@@ -1,6 +1,7 @@
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using StorageNetwork.API;
 using static StorageNetwork.STRINGS;
 
 namespace StorageNetwork.UI
@@ -9,7 +10,7 @@ namespace StorageNetwork.UI
     {
         private void BuildWindow(Transform parent)
         {
-            GameObject window = CreateBox("Window", parent, new Color(0.78f, 0.79f, 0.80f, 0.98f));
+            GameObject window = CreateBox("Window", parent, StorageNetworkPanelPalette.WindowBackground);
             ApplyThinBoxSprite(window.GetComponent<Image>());
             windowRect = window.GetComponent<RectTransform>();
             windowRect.anchorMin = new Vector2(0.5f, 0.5f);
@@ -19,7 +20,7 @@ namespace StorageNetwork.UI
             windowRect.sizeDelta = new Vector2(960f, 850f); 
             StorageNetworkWindowDrag.TryApplyLayout("mainWindow", windowRect, new Vector2(760f, 520f), new Vector2(1400f, 1100f));
 
-            GameObject header = CreateBox("Header", window.transform, new Color(0.43f, 0.20f, 0.34f, 1f));
+            GameObject header = CreateBox("Header", window.transform, StorageNetworkPanelPalette.HeaderBackground);
             SetTopStretch(header.GetComponent<RectTransform>(), 6f, 6f, 6f, 28f);
             header.AddComponent<StorageNetworkWindowDrag>().Configure(windowRect, "mainWindow");
 
@@ -50,6 +51,8 @@ namespace StorageNetwork.UI
             ToolTip orderTooltip = orderButton.AddComponent<ToolTip>();
             orderTooltip.toolTip = Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CENTER_OPEN_TOOLTIP);
 
+            CreateHeaderAddonButtonPanel(window, header.transform);
+
             GameObject closeButton = CreateCloseIconButton("CloseButton", header.transform, Close);
             RectTransform closeRect = closeButton.GetComponent<RectTransform>();
             closeRect.anchorMin = new Vector2(1f, 0.5f);
@@ -58,7 +61,7 @@ namespace StorageNetwork.UI
             closeRect.anchoredPosition = new Vector2(-4f, 0f);
             closeRect.sizeDelta = new Vector2(24f, 22f);
 
-            GameObject content = CreateBox("Content", window.transform, new Color(0.88f, 0.89f, 0.91f, 0.98f));
+            GameObject content = CreateBox("Content", window.transform, StorageNetworkPanelPalette.ContentBackground);
             SetStretch(content.GetComponent<RectTransform>(), 8f, 8f, 8f, 42f);
 
             GameObject summary = CreateBox("Summary", content.transform, new Color(0.36f, 0.42f, 0.47f, 1f));
@@ -154,6 +157,74 @@ namespace StorageNetwork.UI
             scrollRect.verticalScrollbarSpacing = 4f;
 
             rightList.AddComponent<ScrollWheelBlocker>();
+        }
+
+        private void CreateHeaderAddonButtonPanel(GameObject panelRoot, Transform header)
+        {
+            GameObject panel = new GameObject("AddonButtonPanel");
+            panel.transform.SetParent(header, false);
+            RectTransform panelRect = panel.AddComponent<RectTransform>();
+            panelRect.anchorMin = new Vector2(0f, 0.5f);
+            panelRect.anchorMax = new Vector2(1f, 0.5f);
+            panelRect.pivot = new Vector2(0f, 0.5f);
+            panelRect.anchoredPosition = new Vector2(248f, 0f);
+            panelRect.offsetMin = new Vector2(248f, -11f);
+            panelRect.offsetMax = new Vector2(-36f, 11f);
+
+            HorizontalLayoutGroup layout = panel.AddComponent<HorizontalLayoutGroup>();
+            layout.spacing = 6f;
+            layout.padding = new RectOffset(0, 0, 0, 0);
+            layout.childAlignment = TextAnchor.MiddleLeft;
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.childForceExpandWidth = false;
+            layout.childForceExpandHeight = true;
+
+            foreach (StorageNetworkPanelHeaderButton descriptor in StorageNetworkPanelHeaderButtonRegistry.GetButtons())
+            {
+                CreateHeaderAddonButton(panelRoot, header, panel.transform, descriptor);
+            }
+        }
+
+        private void CreateHeaderAddonButton(GameObject panelRoot, Transform header, Transform parent, StorageNetworkPanelHeaderButton descriptor)
+        {
+            GameObject button = null;
+            button = CreateGameButton("AddonButton_" + descriptor.Id, parent, string.Empty, () =>
+            {
+                if (descriptor.OnClickWithContext != null)
+                {
+                    Transform canvas = panelRoot != null && panelRoot.transform.parent != null
+                        ? panelRoot.transform.parent
+                        : transform;
+                    descriptor.OnClickWithContext(new StorageNetworkPanelHeaderButtonContext(panelRoot, header, button, canvas));
+                    return;
+                }
+
+                descriptor.OnClick?.Invoke();
+            });
+            LayoutElement layout = button.AddComponent<LayoutElement>();
+            layout.preferredWidth = descriptor.Width;
+            layout.preferredHeight = 22f;
+            layout.flexibleWidth = 0f;
+
+            if (!string.IsNullOrEmpty(descriptor.IconName) || !string.IsNullOrEmpty(descriptor.FallbackIconText))
+            {
+                AddButtonIconLabel(button.transform, descriptor.IconName, descriptor.FallbackIconText, descriptor.Label);
+            }
+            else
+            {
+                TextMeshProUGUI label = CreateText("Label", button.transform, descriptor.Label, 11, TextAlignmentOptions.Center);
+                label.color = new Color(0.94f, 0.96f, 0.98f, 1f);
+                label.textWrappingMode = TextWrappingModes.NoWrap;
+                label.overflowMode = TextOverflowModes.Ellipsis;
+                Stretch(label.rectTransform(), 5f, 0f);
+            }
+
+            if (!string.IsNullOrEmpty(descriptor.Tooltip))
+            {
+                ToolTip tooltip = button.AddComponent<ToolTip>();
+                tooltip.toolTip = descriptor.Tooltip;
+            }
         }
 
     }

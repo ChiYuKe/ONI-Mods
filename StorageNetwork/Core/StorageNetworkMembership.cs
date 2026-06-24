@@ -20,6 +20,13 @@ namespace StorageNetwork.Core
                 return false;
             }
 
+            IStorageNetworkEnrollable enrollable = GetExternalEnrollable(candidate);
+            if (enrollable != null)
+            {
+                reason = enrollable.IsStorageNetworkIncluded() ? "api enrollment" : "api enrollment disabled";
+                return enrollable.IsStorageNetworkIncluded();
+            }
+
             KPrefabID prefabId = candidate.GetComponent<KPrefabID>();
             if (prefabId != null && prefabId.HasTag(StorageNetworkTags.ModStorage))
             {
@@ -42,6 +49,16 @@ namespace StorageNetwork.Core
 
             reason = "not StorageNetwork object";
             return false;
+        }
+
+        public static IStorageNetworkEnrollable GetExternalEnrollable(GameObject candidate)
+        {
+            return StorageNetworkInterfaceResolver.GetEnrollable(candidate);
+        }
+
+        public static bool HasExternalInterface(GameObject candidate)
+        {
+            return StorageNetworkInterfaceResolver.HasExternalStorageNetworkInterface(candidate);
         }
 
         /// <summary>

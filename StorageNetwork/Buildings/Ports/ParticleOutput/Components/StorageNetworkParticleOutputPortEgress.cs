@@ -43,7 +43,7 @@ namespace StorageNetwork.Components
         [MyCmpGet]
         private Operational operational;
 
-        [SerializeField]
+        [Serialize]
         private EightDirection direction = EightDirection.Right;
 
         [SerializeField]

@@ -1,4 +1,5 @@
 using StorageNetwork.Components;
+using StorageNetwork.API;
 using UnityEngine;
 
 namespace StorageNetwork.UI
@@ -34,23 +35,17 @@ namespace StorageNetwork.UI
 
         public static Color GetEnabledStatusColor(bool enabled)
         {
-            return enabled
-                ? new Color(0.28f, 0.48f, 0.34f, 1f)
-                : new Color(0.52f, 0.38f, 0.30f, 1f);
+            return StorageNetworkPanelPalette.GetEnabledStatusColor(enabled);
         }
 
         public static Color GetNetworkAutomationColor(bool enabled)
         {
-            return enabled
-                ? new Color(0.28f, 0.48f, 0.34f, 1f)
-                : new Color(0.50f, 0.42f, 0.34f, 1f);
+            return StorageNetworkPanelPalette.GetNetworkAutomationColor(enabled);
         }
 
         public static Color GetOutputStoreColor(bool enabled)
         {
-            return enabled
-                ? new Color(0.28f, 0.48f, 0.34f, 1f)
-                : new Color(0.48f, 0.45f, 0.36f, 1f);
+            return StorageNetworkPanelPalette.GetOutputStoreColor(enabled);
         }
     }
 }

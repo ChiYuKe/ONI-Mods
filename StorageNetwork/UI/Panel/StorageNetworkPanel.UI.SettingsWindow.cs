@@ -1,4 +1,5 @@
 using TMPro;
+using StorageNetwork.API;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -28,7 +29,7 @@ namespace StorageNetwork.UI
             bool withScrollbar = false,
             string layoutKey = null)
         {
-            GameObject root = CreateBox(rootName, transform, new Color(0.78f, 0.79f, 0.80f, 0.98f));
+            GameObject root = CreateBox(rootName, transform, StorageNetworkPanelPalette.WindowBackground);
             root.AddComponent<ScrollWheelBlocker>();
             ApplyThinBoxSprite(root.GetComponent<Image>());
             RectTransform rootRect = root.GetComponent<RectTransform>();
@@ -56,7 +57,7 @@ namespace StorageNetwork.UI
         // 创建设置窗口的顶部栏；标题文字不接收射线，避免挡住拖动事件。
         private TextMeshProUGUI CreateDraggableSettingsHeader(Transform parent, RectTransform targetRect, string titleName, System.Action closeAction, string layoutKey)
         {
-            GameObject header = CreateBox("Header", parent, new Color(0.36f, 0.42f, 0.47f, 1f));
+            GameObject header = CreateBox("Header", parent, StorageNetworkPanelPalette.SettingsHeaderBackground);
             SetTopStretch(header.GetComponent<RectTransform>(), 8f, 8f, 8f, 54f);
             header.AddComponent<StorageNetworkWindowDrag>().Configure(targetRect, layoutKey);
 

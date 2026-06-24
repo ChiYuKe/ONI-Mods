@@ -2,6 +2,7 @@ using System.Text;
 using System.Linq;
 using System.Collections.Generic;
 using System.Globalization;
+using StorageNetwork.API;
 using StorageNetwork.Components;
 using StorageNetwork.Core;
 using TMPro;
@@ -94,9 +95,9 @@ namespace StorageNetwork.UI
         private static ColorStyleSetting KleiBlueStyle()
         {
             ColorStyleSetting style = ScriptableObject.CreateInstance<ColorStyleSetting>();
-            style.activeColor = new Color(0.11f, 0.12f, 0.16f, 1f);
-            style.inactiveColor = new Color(0.17f, 0.19f, 0.25f, 1f);
-            style.hoverColor = new Color(0.25f, 0.28f, 0.35f, 1f);
+            style.activeColor = StorageNetworkPanelPalette.BlueButtonPressed;
+            style.inactiveColor = StorageNetworkPanelPalette.BlueButtonNormal;
+            style.hoverColor = StorageNetworkPanelPalette.BlueButtonHover;
             style.disabledColor = new Color(0.4156863f, 0.4117647f, 0.4f);
             style.disabledActiveColor = new Color(0.625f, 0.6158088f, 0.5882353f);
             style.disabledhoverColor = new Color(0.5f, 0.4898898f, 0.4595588f);
@@ -105,17 +106,17 @@ namespace StorageNetwork.UI
 
         private static Color OniPinkInactive()
         {
-            return new Color(0.5294118f, 0.2724914f, 0.4009516f, 1f);
+            return StorageNetworkPanelPalette.PinkButtonNormal;
         }
 
         private static Color OniPinkHover()
         {
-            return new Color(0.6176471f, 0.3315311f, 0.4745891f, 1f);
+            return StorageNetworkPanelPalette.PinkButtonHover;
         }
 
         private static Color OniPinkActive()
         {
-            return new Color(0.7941176f, 0.4496107f, 0.6242238f, 1f);
+            return StorageNetworkPanelPalette.PinkButtonPressed;
         }
 
         private static ColorStyleSetting KleiPinkStyle()

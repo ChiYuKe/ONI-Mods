@@ -107,6 +107,13 @@ namespace StorageNetwork.UI
                 return;
             }
 
+            if (StorageNetworkInterfaceResolver.GetSettingsPanelProvider(storage) != null)
+            {
+                CloseModal();
+                ShowProductionSettingsPanel(storage);
+                return;
+            }
+
             StorageNetworkEnrollment enrollment = storage.GetComponent<StorageNetworkEnrollment>();
             if (StorageNetworkStorageRules.IsProductionStorage(storage, enrollment) ||
                 StorageNetworkStorageRules.IsConfigurablePort(storage) ||

@@ -150,10 +150,14 @@ namespace StorageNetwork.UI
             bool particlePort = StorageNetworkStorageRules.IsParticleInputPort(storage) ||
                                 StorageNetworkStorageRules.IsParticleOutputPort(storage);
             bool particleServer = StorageNetworkStorageRules.IsParticleStorageServer(storage);
-            bool showSettingsButton = StorageNetworkStorageRules.IsProductionStorage(storage, enrollment) ||
-                                      StorageNetworkStorageRules.IsConfigurablePort(storage) ||
-                                      StorageNetworkStorageRules.HasSettingsButtonTag(storage) ||
-                                      ShowDeprecatedStorageSettingsButton;
+            StorageNetwork.API.StorageNetworkSettingsButtonState settingsButtonState =
+                StorageNetworkInterfaceResolver.GetSettingsButtonState(storage);
+            bool showSettingsButton =
+                StorageNetworkStorageRules.IsProductionStorage(storage, enrollment) ||
+                StorageNetworkStorageRules.IsConfigurablePort(storage) ||
+                StorageNetworkStorageRules.HasSettingsButtonTag(storage) ||
+                (settingsButtonState.IsVisible && settingsButtonState.IsEnabled) ||
+                ShowDeprecatedStorageSettingsButton;
             bool showSourceModName = StorageNetworkStorageRules.HasModStorageTag(storage) &&
                 !StorageNetworkStorageRules.IsServerStorage(storage) &&
                 !StorageNetworkStorageRules.IsNetworkPortStorage(storage);

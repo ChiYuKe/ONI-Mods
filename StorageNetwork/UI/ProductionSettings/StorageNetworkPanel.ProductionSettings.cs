@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using StorageNetwork.Components;
+using StorageNetwork.API;
 using StorageNetwork.Core;
 using StorageNetwork.Gameplay;
 using StorageNetwork.Services;
@@ -79,7 +80,10 @@ namespace StorageNetwork.UI
             }
 
             ComplexFabricator fabricator = storage.GetComponent<ComplexFabricator>();
-            string signature = StorageNetworkProductionSettingsSignatureBuilder.BuildProduction(storage, fabricator);
+            IStorageNetworkSettingsPanelProvider addonPanel = StorageNetworkInterfaceResolver.GetSettingsPanelProvider(storage);
+            string signature = addonPanel != null
+                ? "addon|" + (addonPanel.GetStorageNetworkSettingsPanelSignature(storage) ?? string.Empty)
+                : StorageNetworkProductionSettingsSignatureBuilder.BuildProduction(storage, fabricator);
             if (!force && signature == productionSettingsSignature)
             {
                 UpdateProductionSettingsLive(storage, fabricator);
@@ -94,6 +98,14 @@ namespace StorageNetwork.UI
             StorageNetworkMaterialRequester requester = storage.GetComponent<StorageNetworkMaterialRequester>();
             StorageNetworkStorageConnector connector = StorageNetworkStorageConnectorResolver.GetOrCreateForSettingsStorage(storage);
             StorageNetworkEnergyGeneratorRequester energyRequester = storage.GetComponent<StorageNetworkEnergyGeneratorRequester>();
+            if (addonPanel != null)
+            {
+                StorageNetworkSettingsPanelBuilder builder = CreateAddonSettingsPanelBuilder();
+                addonPanel.BuildStorageNetworkSettingsPanel(storage, builder);
+                LayoutRebuilder.MarkLayoutForRebuild(productionSettingsContent);
+                return;
+            }
+
             if (coldStorageCooling != null)
             {
                 AddColdStorageSettingsCard(storage, coldStorageCooling);
@@ -146,6 +158,11 @@ namespace StorageNetwork.UI
         private void UpdateProductionSettingsLive(Storage storage, ComplexFabricator fabricator)
         {
             if (storage == null)
+            {
+                return;
+            }
+
+            if (StorageNetworkInterfaceResolver.GetSettingsPanelProvider(storage) != null)
             {
                 return;
             }

@@ -1,4 +1,5 @@
 using KSerialization;
+using StorageNetwork.API;
 using StorageNetwork.Core;
 using StorageNetwork.Services;
 using System;
@@ -11,7 +12,7 @@ namespace StorageNetwork.Components
     /// <summary>
     /// 可接入储存网络的建筑标记组件。负责保存接入状态、用户菜单按钮和状态条提示。
     /// </summary>
-    public sealed class StorageNetworkEnrollment : KMonoBehaviour
+    public sealed class StorageNetworkEnrollment : KMonoBehaviour, IStorageNetworkEnrollable
     {
         [Serialize]
         public bool IncludedInSceneNetwork;
@@ -140,6 +141,26 @@ namespace StorageNetwork.Components
         public bool CanShowInEnrollableList()
         {
             return CanShowEnrollmentButton();
+        }
+
+        public bool CanShowStorageNetworkEnrollmentButton()
+        {
+            return CanShowEnrollmentButton();
+        }
+
+        public bool IsStorageNetworkIncluded()
+        {
+            return IncludedInSceneNetwork;
+        }
+
+        public void SetStorageNetworkIncluded(bool included)
+        {
+            SetIncludedInSceneNetwork(included);
+        }
+
+        public GameObject GetStorageNetworkEnrollmentTarget()
+        {
+            return gameObject;
         }
 
         private bool CanShowEnrollmentButton()

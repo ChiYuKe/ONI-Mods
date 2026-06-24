@@ -1,0 +1,9 @@
+title: "SN_DuplicantGenetics"
+description: "演示存储网络组件接口和主面板顶部按钮扩展的附属模组。"
+staticID: "SN_DuplicantGenetics"
+supportedContent: ALL
+minimumSupportedBuild: 525812
+version: 0.1.0
+APIVersion: 2
+
+

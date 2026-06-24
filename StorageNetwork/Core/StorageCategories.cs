@@ -21,7 +21,7 @@ namespace StorageNetwork.Core
                 return VanillaStorageKey;
             }
 
-            if (HasCategoryModStorageTag(storage))
+            if (StorageNetworkStorageRules.HasCategoryModStorage(storage))
             {
                 return ModStorageKey;
             }
@@ -155,15 +155,5 @@ namespace StorageNetwork.Core
             return StorageNetworkStorageRules.HasSettingsButtonTag(storage);
         }
 
-        private static bool HasCategoryModStorageTag(Storage storage)
-        {
-            return HasTag(storage, StorageSceneTags.CategoryModStorage);
-        }
-
-        private static bool HasTag(Storage storage, Tag tag)
-        {
-            KPrefabID prefabId = storage != null ? storage.GetComponent<KPrefabID>() : null;
-            return prefabId != null && prefabId.HasTag(tag);
-        }
     }
 }

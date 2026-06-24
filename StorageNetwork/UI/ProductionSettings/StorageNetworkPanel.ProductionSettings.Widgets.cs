@@ -1,4 +1,5 @@
 using TMPro;
+using StorageNetwork.API;
 using UnityEngine;
 using UnityEngine.UI;
 using static StorageNetwork.STRINGS;
@@ -69,7 +70,7 @@ namespace StorageNetwork.UI
 
         private GameObject CreateProductionCard(Transform parent, string name, string title, float preferredHeight)
         {
-            GameObject card = CreatePlainImage(name, parent, new Color(0.82f, 0.81f, 0.75f, 1f));
+            GameObject card = CreatePlainImage(name, parent, StorageNetworkPanelPalette.CardBackground);
             LayoutElement layoutElement = card.AddComponent<LayoutElement>();
             if (preferredHeight > 0f)
             {
@@ -86,7 +87,7 @@ namespace StorageNetwork.UI
             layout.childForceExpandHeight = false;
 
             TextMeshProUGUI heading = CreateText("CardTitle", card.transform, title, 12, TextAlignmentOptions.MidlineLeft);
-            heading.color = new Color(0.18f, 0.19f, 0.18f, 1f);
+            heading.color = StorageNetworkPanelPalette.HeadingText;
             heading.fontStyle = FontStyles.Bold;
             heading.textWrappingMode = TextWrappingModes.NoWrap;
             LayoutElement headingLayout = heading.gameObject.AddComponent<LayoutElement>();
@@ -97,7 +98,7 @@ namespace StorageNetwork.UI
 
         private TextMeshProUGUI CreateMetricTile(Transform parent, string label, string value, Color accent)
         {
-            GameObject tile = CreatePlainImage("MetricTile", parent, new Color(0.72f, 0.72f, 0.66f, 1f));
+            GameObject tile = CreatePlainImage("MetricTile", parent, StorageNetworkPanelPalette.MetricBackground);
             tile.AddComponent<LayoutElement>().flexibleWidth = 1f;
             VerticalLayoutGroup layout = tile.AddComponent<VerticalLayoutGroup>();
             layout.padding = new RectOffset(7, 7, 4, 4);
@@ -108,7 +109,7 @@ namespace StorageNetwork.UI
             layout.childForceExpandHeight = false;
 
             TextMeshProUGUI labelText = CreateText("Label", tile.transform, label, 9, TextAlignmentOptions.MidlineLeft);
-            labelText.color = new Color(0.30f, 0.32f, 0.31f, 1f);
+            labelText.color = StorageNetworkPanelPalette.MetricLabelText;
             labelText.gameObject.AddComponent<LayoutElement>().preferredHeight = 16f;
 
             TextMeshProUGUI valueText = CreateText("Value", tile.transform, value, 11, TextAlignmentOptions.MidlineLeft);
@@ -127,7 +128,7 @@ namespace StorageNetwork.UI
             stripLayout.minHeight = 24f;
             stripLayout.preferredHeight = 24f;
             TextMeshProUGUI label = CreateText("Status", strip.transform, text, 11, TextAlignmentOptions.Center);
-            label.color = new Color(0.96f, 0.96f, 0.90f, 1f);
+            label.color = StorageNetworkPanelPalette.StatusText;
             label.fontStyle = FontStyles.Bold;
             Stretch(label.rectTransform(), 4f, 0f);
         }
@@ -147,7 +148,7 @@ namespace StorageNetwork.UI
 
         private void CreateProductionActionRow(Transform parent, string label, string value, System.Action onClick, ColorStyleSetting buttonStyle = null)
         {
-            GameObject row = CreatePlainImage("ActionRow", parent, new Color(0.76f, 0.76f, 0.70f, 1f));
+            GameObject row = CreatePlainImage("ActionRow", parent, StorageNetworkPanelPalette.RowBackground);
             LayoutElement rowLayout = row.AddComponent<LayoutElement>();
             rowLayout.minHeight = 30f;
             rowLayout.preferredHeight = 30f;
@@ -161,7 +162,7 @@ namespace StorageNetwork.UI
             layout.childForceExpandHeight = false;
 
             TextMeshProUGUI labelText = CreateText("Label", row.transform, label, 10, TextAlignmentOptions.MidlineLeft);
-            labelText.color = new Color(0.20f, 0.21f, 0.20f, 1f);
+            labelText.color = StorageNetworkPanelPalette.BodyText;
             labelText.textWrappingMode = TextWrappingModes.NoWrap;
             labelText.overflowMode = TextOverflowModes.Ellipsis;
             LayoutElement labelLayout = labelText.gameObject.AddComponent<LayoutElement>();
@@ -180,7 +181,7 @@ namespace StorageNetwork.UI
 
         private void CreateProductionReadOnlyRow(Transform parent, string label, string value)
         {
-            GameObject row = CreatePlainImage("ReadOnlyRow", parent, new Color(0.76f, 0.76f, 0.70f, 1f));
+            GameObject row = CreatePlainImage("ReadOnlyRow", parent, StorageNetworkPanelPalette.RowBackground);
             row.AddComponent<LayoutElement>().preferredHeight = 30f;
             HorizontalLayoutGroup layout = row.AddComponent<HorizontalLayoutGroup>();
             layout.padding = new RectOffset(8, 8, 3, 3);
@@ -192,7 +193,7 @@ namespace StorageNetwork.UI
             layout.childForceExpandHeight = false;
 
             TextMeshProUGUI labelText = CreateText("Label", row.transform, label, 10, TextAlignmentOptions.MidlineLeft);
-            labelText.color = new Color(0.20f, 0.21f, 0.20f, 1f);
+            labelText.color = StorageNetworkPanelPalette.BodyText;
             labelText.textWrappingMode = TextWrappingModes.NoWrap;
             labelText.overflowMode = TextOverflowModes.Ellipsis;
             LayoutElement labelLayout = labelText.gameObject.AddComponent<LayoutElement>();
@@ -210,7 +211,7 @@ namespace StorageNetwork.UI
         private TextMeshProUGUI CreateFinePrint(Transform parent, string text)
         {
             TextMeshProUGUI label = CreateText("FinePrint", parent, text, 10, TextAlignmentOptions.TopLeft);
-            label.color = new Color(0.34f, 0.35f, 0.33f, 1f);
+            label.color = StorageNetworkPanelPalette.MutedText;
             label.textWrappingMode = TextWrappingModes.Normal;
             label.overflowMode = TextOverflowModes.Ellipsis;
             LayoutElement layout = label.gameObject.AddComponent<LayoutElement>();
