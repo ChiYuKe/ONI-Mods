@@ -21,6 +21,16 @@ namespace StorageNetwork
         [JsonProperty]
         public float DefaultMaterialRequestLimitKg { get; set; }
 
+        [ModConfigOption(
+            "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_GEYSER_WORLD_OUTPUT_FALLBACK",
+            "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_GEYSER_WORLD_OUTPUT_FALLBACK_DESC",
+            "允许泉在网络不可用时排放到世界",
+            "开启后，已接入网络并启用直接入网的泉会在网络无法储存产物时排放到世界；关闭后会暂停输出并等待网络恢复。",
+            0f,
+            1f)]
+        [JsonProperty]
+        public bool AllowGeyserWorldOutputFallback { get; set; }
+
         [JsonProperty]
         public List<int> StoragesEnabledOutputStoreToNetwork { get; set; }
 
@@ -272,6 +282,7 @@ namespace StorageNetwork
         public Config()
         {
             DefaultMaterialRequestLimitKg = 1000f;
+            AllowGeyserWorldOutputFallback = true;
             StoragesEnabledOutputStoreToNetwork = new List<int>();
             WindowLayouts = new Dictionary<string, StorageNetworkWindowLayout>();
             MainWorldFilterId = -2;

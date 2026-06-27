@@ -670,6 +670,8 @@ namespace StorageNetwork
                 public static LocString CONFIG_RESTART_CONTINUE = "继续";
                 public static LocString CONFIG_DEFAULT_MATERIAL_LIMIT = "材料请求默认限额 kg";
                 public static LocString CONFIG_DEFAULT_MATERIAL_LIMIT_DESC = "新接入生产建筑的默认请求限额。";
+                public static LocString CONFIG_GEYSER_WORLD_OUTPUT_FALLBACK = "允许泉在网络不可用时排放到世界";
+                public static LocString CONFIG_GEYSER_WORLD_OUTPUT_FALLBACK_DESC = "开启后，已接入网络并启用直接入网的泉会在网络无法储存产物时排放到世界；关闭后会暂停输出并等待网络恢复。";
                 public static LocString CONFIG_REQUEST_SUCCESS_COOLDOWN = "请求成功冷却秒数";
                 public static LocString CONFIG_REQUEST_SUCCESS_COOLDOWN_DESC = "材料已满足或达到限额后的检查间隔。";
                 public static LocString CONFIG_REQUEST_RETRY_COOLDOWN = "请求失败重试秒数";
@@ -968,7 +970,7 @@ namespace StorageNetwork
                 public static LocString GEYSER_SETTINGS_TITLE = "泉设置";
                 public static LocString GEYSER_NETWORK_ENABLED = "接入储存网络";
                 public static LocString GEYSER_DIRECT_OUTPUT_ENABLED = "喷发物直接入网";
-                public static LocString GEYSER_DIRECT_OUTPUT_DESC = "开启后会拦截泉的 ElementEmitter 输出，优先存入网络中的匹配箱子；容量不足的部分仍会排放到世界。";
+                public static LocString GEYSER_DIRECT_OUTPUT_DESC = "开启后会拦截泉的 ElementEmitter 输出并存入网络中的匹配箱子；网络无法储存时是否排放到世界由模组选项决定。";
                 public static LocString GEYSER_DIRECT_OUTPUT_ON_SHORT = "直入开";
                 public static LocString GEYSER_DIRECT_OUTPUT_OFF_SHORT = "直入关";
                 public static LocString GEYSER_ERUPTING = "喷发中";
@@ -990,6 +992,8 @@ namespace StorageNetwork
                 public static LocString GEYSER_STATUS_LINE_STATUS = "当前去向：{0}";
                 public static LocString GEYSER_STATUS_NETWORK_OUTPUT = "存入网络";
                 public static LocString GEYSER_STATUS_OVERFLOW_OUTPUT = "服务器已满，溢出到世界";
+                public static LocString GEYSER_STATUS_FULL_PAUSED = "服务器已满，输出已暂停";
+                public static LocString GEYSER_STATUS_NETWORK_PAUSED = "网络不可用，输出已暂停";
                 public static LocString GEYSER_STATUS_WORLD_OUTPUT = "按原版排放";
                 public static LocString GEYSER_STATUS_MISSING_EMITTER = "缺少喷发组件";
                 public static LocString GEYSER_STATUS_TARGET_FULL = "有匹配服务器，但容量已满";
