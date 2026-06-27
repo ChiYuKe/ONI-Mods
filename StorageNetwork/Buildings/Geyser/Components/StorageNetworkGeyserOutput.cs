@@ -194,7 +194,8 @@ namespace StorageNetwork.Components
                 enrollment != null &&
                 emitter != null &&
                 enrollment.IncludedInSceneNetwork &&
-                enrollment.DirectGeyserOutputToNetwork;
+                enrollment.DirectGeyserOutputToNetwork &&
+                GetCaptureState() == null;
         }
 
         private bool IsEruptingNow()
