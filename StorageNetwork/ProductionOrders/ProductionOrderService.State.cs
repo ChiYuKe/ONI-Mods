@@ -244,8 +244,7 @@ namespace StorageNetwork.ProductionOrders
                     allocationThreshold = Mathf.Max(allocationThreshold, order.StockAtSubmit + order.AllocationOffsetAtSubmit);
                     if (IsOrderActive(order))
                     {
-                        float leasedProduct = GetLeasedPrimaryOutputAmount(order);
-                        float producedAfterThreshold = Mathf.Max(availableProduct, leasedProduct + allocationThreshold) - allocationThreshold;
+                        float producedAfterThreshold = availableProduct - allocationThreshold;
                         order.SetProducedAmount(Mathf.Clamp(producedAfterThreshold, 0f, order.RequestedAmount));
                     }
 

@@ -35,6 +35,13 @@ namespace StorageNetwork.UI
                 return GetObjectPrefabKey(storageInfo.GameObject, GetTypeName(storageInfo));
             }
 
+            StorageNetwork.API.StorageNetworkDisplayInfo displayInfo =
+                StorageNetworkInterfaceResolver.GetDisplayInfo(storageInfo?.Storage);
+            if (displayInfo != null && !string.IsNullOrEmpty(displayInfo.TypeKey))
+            {
+                return displayInfo.TypeKey;
+            }
+
             return GetPrefabKey(storageInfo?.Storage, GetTypeName(storageInfo));
         }
 
@@ -51,13 +58,40 @@ namespace StorageNetwork.UI
                 return StorageCategories.GetName(StorageCategories.MinionKey);
             }
 
+            StorageNetwork.API.StorageNetworkDisplayInfo displayInfo =
+                StorageNetworkInterfaceResolver.GetDisplayInfo(storageInfo?.Storage);
+            if (displayInfo != null && !string.IsNullOrEmpty(displayInfo.TypeName))
+            {
+                return displayInfo.TypeName;
+            }
+
             GameObject gameObject = storageInfo?.GameObject;
             return gameObject != null ? gameObject.GetProperName() : storageInfo.Name;
+        }
+
+        public static string GetRowName(StorageInfo storageInfo)
+        {
+            StorageNetwork.API.StorageNetworkDisplayInfo displayInfo =
+                StorageNetworkInterfaceResolver.GetDisplayInfo(storageInfo?.Storage);
+            if (displayInfo != null && !string.IsNullOrEmpty(displayInfo.RowName))
+            {
+                return displayInfo.RowName;
+            }
+
+            return storageInfo?.Name ?? string.Empty;
         }
 
         public static Sprite GetTypeIcon(StorageInfo storageInfo, out Color tint)
         {
             tint = Color.white;
+            StorageNetwork.API.StorageNetworkDisplayInfo displayInfo =
+                StorageNetworkInterfaceResolver.GetDisplayInfo(storageInfo?.Storage);
+            if (displayInfo != null && displayInfo.TypeIcon != null)
+            {
+                tint = displayInfo.TypeIconTint ?? Color.white;
+                return displayInfo.TypeIcon;
+            }
+
             GameObject gameObject = storageInfo?.GameObject;
             KPrefabID prefabId = gameObject != null ? gameObject.GetComponent<KPrefabID>() : null;
             if (prefabId != null)

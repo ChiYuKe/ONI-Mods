@@ -2,6 +2,7 @@ using System.Text;
 using System.Linq;
 using System.Collections.Generic;
 using System.Globalization;
+using StorageNetwork.API;
 using StorageNetwork.Components;
 using StorageNetwork.Core;
 using TMPro;
@@ -27,7 +28,9 @@ namespace StorageNetwork.UI
             System.Action actionClick = null,
             Color? infoColor = null,
             Sprite titleIcon = null,
-            Color? titleIconColor = null)
+            Color? titleIconColor = null,
+            IEnumerable<StorageNetworkStorageRowButton> extraButtons = null,
+            Storage storageButtonContext = null)
         {
             GameObject header = CreateBox("Header", parent, backgroundColor);
             header.AddComponent<LayoutElement>().preferredHeight = 34f;
@@ -82,11 +85,62 @@ namespace StorageNetwork.UI
                 actionLayout.preferredHeight = 20f;
             }
 
+            if (extraButtons != null)
+            {
+                foreach (StorageNetworkStorageRowButton descriptor in extraButtons.OrderBy(button => button.Order).ThenBy(button => button.Id))
+                {
+                    CreateStorageRowExtraButton(header, descriptor, storageButtonContext);
+                }
+            }
+
             TextMeshProUGUI amount = CreateText("Amount", header.transform, amountText, fontSize, TextAlignmentOptions.MidlineRight);
             amount.color = new Color(0.28f, 0.29f, 0.29f, 1f);
             amount.gameObject.AddComponent<LayoutElement>().preferredWidth = amountWidth;
 
             return header;
+        }
+
+        private void CreateStorageRowExtraButton(GameObject rowHeader, StorageNetworkStorageRowButton descriptor, Storage storage)
+        {
+            GameObject button = null;
+            button = CreateGameButton("StorageRowAddonButton_" + descriptor.Id, rowHeader.transform, string.Empty, () =>
+            {
+                descriptor.OnClick?.Invoke(new StorageNetworkStorageRowButtonContext(storage, windowRect != null ? windowRect.gameObject : gameObject, rowHeader, button));
+            });
+            LayoutElement layout = button.AddComponent<LayoutElement>();
+            layout.preferredWidth = descriptor.Width;
+            layout.preferredHeight = 20f;
+
+            if (!string.IsNullOrEmpty(descriptor.IconName) || !string.IsNullOrEmpty(descriptor.FallbackIconText))
+            {
+                AddButtonIconLabel(button.transform, descriptor.IconName, descriptor.FallbackIconText, descriptor.Label);
+            }
+            else
+            {
+                TextMeshProUGUI label = CreateText("Label", button.transform, descriptor.Label, 10, TextAlignmentOptions.Center);
+                label.color = new Color(0.94f, 0.96f, 0.98f, 1f);
+                label.textWrappingMode = TextWrappingModes.NoWrap;
+                label.overflowMode = TextOverflowModes.Ellipsis;
+                Stretch(label.rectTransform(), 4f, 0f);
+            }
+
+            KButton kButton = button.GetComponent<KButton>();
+            if (kButton != null)
+            {
+                kButton.isInteractable = descriptor.IsEnabled;
+            }
+
+            KImage image = button.GetComponent<KImage>();
+            if (image != null && !descriptor.IsEnabled)
+            {
+                image.ColorState = KImage.ColorSelector.Disabled;
+            }
+
+            if (!string.IsNullOrEmpty(descriptor.Tooltip))
+            {
+                ToolTip tooltip = button.AddComponent<ToolTip>();
+                tooltip.toolTip = descriptor.Tooltip;
+            }
         }
 
         private static void AddVerticalContainer(GameObject gameObject, float spacing, int left, int right, int top, int bottom)

@@ -8,7 +8,7 @@ namespace StorageNetwork.Services
 {
     internal static class StorageNetworkInventoryIndexService
     {
-        private const float InventoryIndexTtlSeconds = 2f;
+        private const float InventoryIndexTtlSeconds = 5f;
         private static readonly Dictionary<InventoryIndexKey, InventoryIndexSnapshot> Snapshots = new Dictionary<InventoryIndexKey, InventoryIndexSnapshot>();
         private static readonly List<InventoryIndexKey> ExpiredSnapshotKeys = new List<InventoryIndexKey>();
         private static int cachedRegistryVersion = -1;

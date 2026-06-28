@@ -197,10 +197,13 @@ namespace StorageNetwork.UI
                 selected ? new Color(0.72f, 0.77f, 0.80f, 1f) : new Color(0.88f, 0.87f, 0.82f, 1f));
             AddVerticalContainer(row, 0f, 0, 0, 0, 0);
 
+            List<StorageNetwork.API.StorageNetworkStorageRowButton> extraButtons =
+                StorageNetworkInterfaceResolver.GetStorageRowButtons(storage).ToList();
+
             CreateFoldoutHeader(
                 row.transform,
                 expanded,
-                storageInfo.Name,
+                StorageNetworkStorageDisplay.GetRowName(storageInfo),
                 amountText,
                 new Color(0.72f, 0.72f, 0.68f, 1f),
                 13,
@@ -215,7 +218,11 @@ namespace StorageNetwork.UI
                     : string.IsNullOrEmpty(sourceModName) ? null : string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SOURCE_MOD_NAME), sourceModName),
                 showSettingsButton ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STORAGE_SETTINGS) : null,
                 showSettingsButton ? () => ShowStorageSettingsDialog(storage) : null,
-                serverOffline ? new Color(0.62f, 0.24f, 0.24f, 1f) : (Color?)null);
+                serverOffline ? new Color(0.62f, 0.24f, 0.24f, 1f) : (Color?)null,
+                null,
+                null,
+                extraButtons,
+                storage);
 
             RegisterStorageDropTarget(row, storage);
 

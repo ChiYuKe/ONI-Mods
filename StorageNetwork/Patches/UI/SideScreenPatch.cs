@@ -191,6 +191,7 @@ namespace StorageNetwork.Patches
             private readonly System.Collections.Generic.List<Image> backgroundImages = new System.Collections.Generic.List<Image>();
             private readonly System.Collections.Generic.List<Image> extraIconImages = new System.Collections.Generic.List<Image>();
             private Storage targetStorage;
+            private bool builtInButton;
 
             public void Initialize(GameObject buttonObject)
             {
@@ -219,6 +220,7 @@ namespace StorageNetwork.Patches
             public void SetTarget(Storage storage, bool builtInButton)
             {
                 targetStorage = storage;
+                this.builtInButton = builtInButton;
                 StorageNetworkSettingsButtonState state = StorageNetworkInterfaceResolver.GetSettingsButtonState(storage);
                 bool enabled = builtInButton && !state.IsVisible
                     ? true
@@ -270,10 +272,13 @@ namespace StorageNetwork.Patches
             {
                 if (targetStorage != null)
                 {
-                    StorageNetworkSettingsButtonState state = StorageNetworkInterfaceResolver.GetSettingsButtonState(targetStorage);
-                    if (!state.IsEnabled)
+                    if (!builtInButton)
                     {
-                        return;
+                        StorageNetworkSettingsButtonState state = StorageNetworkInterfaceResolver.GetSettingsButtonState(targetStorage);
+                        if (!state.IsEnabled)
+                        {
+                            return;
+                        }
                     }
 
                     StorageNetworkPanel.ShowSettings(targetStorage);
