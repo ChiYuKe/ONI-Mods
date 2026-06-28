@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
@@ -9,9 +8,7 @@ namespace StorageNetwork.Core
     {
         private const string EnableFileName = "FrameProfileTool.enabled";
         private const string LogPrefix = "[StorageNetwork][FrameProfile]";
-        private const float ReportIntervalSeconds = 60f;
         private static string modPath;
-        private static FrameProfileBehaviour activeProfiler;
 
         public static void SetModPath(string path)
         {
@@ -20,7 +17,7 @@ namespace StorageNetwork.Core
 
         public static void InstallIfEnabled(Game game)
         {
-            if (game == null || !IsEnabled())
+            if (game == null || game.gameObject == null || !IsEnabled())
             {
                 return;
             }
@@ -31,20 +28,19 @@ namespace StorageNetwork.Core
                 profiler = game.gameObject.AddComponent<FrameProfileBehaviour>();
             }
 
-            activeProfiler = profiler;
             profiler.ResetWindow();
-            Debug.Log(LogPrefix + " enabled. Reporting every " + ReportIntervalSeconds.ToString("F0") + "s.");
+            Debug.Log(LogPrefix + " enabled. Reporting every 60s.");
         }
 
         public static void ResetRuntimeState()
         {
-            if (activeProfiler == null)
+            FrameProfileBehaviour profiler = Game.Instance != null
+                ? Game.Instance.gameObject.GetComponent<FrameProfileBehaviour>()
+                : null;
+            if (profiler != null)
             {
-                return;
+                Object.Destroy(profiler);
             }
-
-            UnityEngine.Object.Destroy(activeProfiler);
-            activeProfiler = null;
         }
 
         private static bool IsEnabled()
@@ -66,7 +62,7 @@ namespace StorageNetwork.Core
             }
         }
 
-        public sealed class FrameProfileBehaviour : MonoBehaviour
+        private sealed class FrameProfileBehaviour : MonoBehaviour
         {
             private readonly List<float> frameTimesMs = new List<float>(4096);
             private float windowStartedAt;
@@ -97,6 +93,11 @@ namespace StorageNetwork.Core
                     return;
                 }
 
+                RecordFrame(frameMs);
+            }
+
+            private void RecordFrame(float frameMs)
+            {
                 frameTimesMs.Add(frameMs);
                 totalMs += frameMs;
                 if (frameMs > maxMs)
@@ -124,7 +125,7 @@ namespace StorageNetwork.Core
                     hitchOver200++;
                 }
 
-                if (Time.unscaledTime - windowStartedAt >= ReportIntervalSeconds)
+                if (Time.unscaledTime - windowStartedAt >= 60f)
                 {
                     LogWindow();
                     ResetWindow();

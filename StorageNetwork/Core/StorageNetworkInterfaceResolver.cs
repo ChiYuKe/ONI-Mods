@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using StorageNetwork.API;
 using StorageNetwork.Components;
@@ -7,6 +8,26 @@ namespace StorageNetwork.Core
 {
     internal static class StorageNetworkInterfaceResolver
     {
+        private static readonly Dictionary<string, StorageNetworkCategoryDescriptor> KnownCategories =
+            new Dictionary<string, StorageNetworkCategoryDescriptor>();
+        private static readonly Dictionary<int, ComponentInterfaceCache> ComponentCaches =
+            new Dictionary<int, ComponentInterfaceCache>();
+        private static readonly Dictionary<int, StorageNetworkStorageFlags> TagFlagCache =
+            new Dictionary<int, StorageNetworkStorageFlags>();
+        private static readonly List<int> DeadComponentCacheKeys = new List<int>();
+        private static int lastComponentCachePruneFrame = -1;
+        private static float lastComponentCachePruneAt = -1f;
+
+        public static void ResetRuntimeState()
+        {
+            KnownCategories.Clear();
+            ComponentCaches.Clear();
+            TagFlagCache.Clear();
+            DeadComponentCacheKeys.Clear();
+            lastComponentCachePruneFrame = -1;
+            lastComponentCachePruneAt = -1f;
+        }
+
         public static StorageNetworkStorageFlags GetStorageFlags(Storage storage)
         {
             if (storage == null)
@@ -37,6 +58,9 @@ namespace StorageNetwork.Core
         public static bool HasExternalStorageNetworkInterface(GameObject gameObject)
         {
             return GetComponents<IStorageNetworkStorageFlagsProvider>(gameObject).Any() ||
+                   GetComponents<IStorageNetworkCategoryProvider>(gameObject).Any() ||
+                   GetComponents<IStorageNetworkDisplayProvider>(gameObject).Any() ||
+                   GetComponents<IStorageNetworkStorageRowButtonProvider>(gameObject).Any() ||
                    GetComponents<IStorageNetworkSettingsButtonProvider>(gameObject).Any() ||
                    GetComponents<IStorageNetworkEnrollable>(gameObject).Any(enrollable => !(enrollable is StorageNetworkEnrollment));
         }
@@ -62,6 +86,67 @@ namespace StorageNetwork.Core
                 .FirstOrDefault();
         }
 
+        public static StorageNetworkCategoryDescriptor GetCategory(Storage storage)
+        {
+            foreach (IStorageNetworkCategoryProvider provider in GetComponents<IStorageNetworkCategoryProvider>(storage?.gameObject))
+            {
+                StorageNetworkCategoryDescriptor descriptor = provider.GetStorageNetworkCategory(storage);
+                if (descriptor != null && !string.IsNullOrEmpty(descriptor.Key))
+                {
+                    KnownCategories[descriptor.Key] = descriptor;
+                    return descriptor;
+                }
+            }
+
+            return null;
+        }
+
+        public static StorageNetworkCategoryDescriptor GetKnownCategory(string key)
+        {
+            if (string.IsNullOrEmpty(key))
+            {
+                return null;
+            }
+
+            return KnownCategories.TryGetValue(key, out StorageNetworkCategoryDescriptor descriptor)
+                ? descriptor
+                : null;
+        }
+
+        public static StorageNetworkDisplayInfo GetDisplayInfo(Storage storage)
+        {
+            foreach (IStorageNetworkDisplayProvider provider in GetComponents<IStorageNetworkDisplayProvider>(storage?.gameObject))
+            {
+                StorageNetworkDisplayInfo displayInfo = provider.GetStorageNetworkDisplayInfo(storage);
+                if (displayInfo != null)
+                {
+                    return displayInfo;
+                }
+            }
+
+            return null;
+        }
+
+        public static IEnumerable<StorageNetworkStorageRowButton> GetStorageRowButtons(Storage storage)
+        {
+            foreach (IStorageNetworkStorageRowButtonProvider provider in GetComponents<IStorageNetworkStorageRowButtonProvider>(storage?.gameObject))
+            {
+                IEnumerable<StorageNetworkStorageRowButton> buttons = provider.GetStorageNetworkStorageRowButtons(storage);
+                if (buttons == null)
+                {
+                    continue;
+                }
+
+                foreach (StorageNetworkStorageRowButton button in buttons)
+                {
+                    if (button != null && !string.IsNullOrEmpty(button.Id) && button.OnClick != null)
+                    {
+                        yield return button;
+                    }
+                }
+            }
+        }
+
         public static void InstallExternalApiBridgeIfNeeded(GameObject gameObject)
         {
             if (gameObject == null ||
@@ -80,6 +165,12 @@ namespace StorageNetwork.Core
             if (prefabId == null)
             {
                 return StorageNetworkStorageFlags.None;
+            }
+
+            int cacheKey = prefabId.GetInstanceID();
+            if (TagFlagCache.TryGetValue(cacheKey, out StorageNetworkStorageFlags cachedFlags))
+            {
+                return cachedFlags;
             }
 
             StorageNetworkStorageFlags flags = StorageNetworkStorageFlags.None;
@@ -104,6 +195,7 @@ namespace StorageNetwork.Core
             AddTagFlag(prefabId, StorageNetworkTags.CategoryPowerOutputPort, StorageNetworkStorageFlags.PowerOutputPort, ref flags);
             AddTagFlag(prefabId, StorageNetworkTags.CategoryParticleInputPort, StorageNetworkStorageFlags.ParticleInputPort, ref flags);
             AddTagFlag(prefabId, StorageNetworkTags.CategoryParticleOutputPort, StorageNetworkStorageFlags.ParticleOutputPort, ref flags);
+            TagFlagCache[cacheKey] = flags;
             return flags;
         }
 
@@ -118,9 +210,102 @@ namespace StorageNetwork.Core
         private static T[] GetComponents<T>(GameObject gameObject)
             where T : class
         {
-            return gameObject == null
-                ? new T[0]
-                : gameObject.GetComponents<Component>().OfType<T>().ToArray();
+            if (gameObject == null)
+            {
+                return new T[0];
+            }
+
+            PruneDeadComponentCaches();
+            return GetOrCreateComponentCache(gameObject).GetComponents<T>();
+        }
+
+        private static ComponentInterfaceCache GetOrCreateComponentCache(GameObject gameObject)
+        {
+            int instanceId = gameObject.GetInstanceID();
+            if (ComponentCaches.TryGetValue(instanceId, out ComponentInterfaceCache cache) &&
+                cache.IsFor(gameObject))
+            {
+                return cache;
+            }
+
+            cache = new ComponentInterfaceCache(gameObject);
+            ComponentCaches[instanceId] = cache;
+            return cache;
+        }
+
+        private static void PruneDeadComponentCaches()
+        {
+            if (lastComponentCachePruneFrame == Time.frameCount)
+            {
+                return;
+            }
+
+            if (lastComponentCachePruneAt >= 0f && Time.unscaledTime - lastComponentCachePruneAt < 1f)
+            {
+                return;
+            }
+
+            lastComponentCachePruneFrame = Time.frameCount;
+            lastComponentCachePruneAt = Time.unscaledTime;
+            DeadComponentCacheKeys.Clear();
+            foreach (KeyValuePair<int, ComponentInterfaceCache> pair in ComponentCaches)
+            {
+                if (!pair.Value.IsLive)
+                {
+                    DeadComponentCacheKeys.Add(pair.Key);
+                }
+            }
+
+            foreach (int key in DeadComponentCacheKeys)
+            {
+                ComponentCaches.Remove(key);
+            }
+
+            DeadComponentCacheKeys.Clear();
+        }
+
+        private sealed class ComponentInterfaceCache
+        {
+            private readonly GameObject gameObject;
+            private readonly Component[] components;
+            private readonly Dictionary<System.Type, object> typedComponents =
+                new Dictionary<System.Type, object>();
+
+            public ComponentInterfaceCache(GameObject gameObject)
+            {
+                this.gameObject = gameObject;
+                components = gameObject != null ? gameObject.GetComponents<Component>() : new Component[0];
+            }
+
+            public bool IsLive => gameObject != null;
+
+            public bool IsFor(GameObject candidate)
+            {
+                return gameObject == candidate;
+            }
+
+            public T[] GetComponents<T>()
+                where T : class
+            {
+                System.Type type = typeof(T);
+                if (typedComponents.TryGetValue(type, out object cached))
+                {
+                    return (T[])cached;
+                }
+
+                List<T> matches = new List<T>();
+                foreach (Component component in components)
+                {
+                    if (component is T match)
+                    {
+                        matches.Add(match);
+                    }
+                }
+
+                T[] result = matches.ToArray();
+                typedComponents[type] = result;
+                return result;
+            }
         }
     }
 }

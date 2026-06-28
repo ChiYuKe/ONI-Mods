@@ -21,6 +21,7 @@ namespace StorageNetwork.Core
             StorageNetworkWorldPanelRegistry.ResetRuntimeState();
             StorageNetworkWorldTextPanel.ResetRuntimeState();
             StorageNetworkModInfoResolver.ResetRuntimeState();
+            StorageNetworkInterfaceResolver.ResetRuntimeState();
             StorageNetworkInventoryIndexService.ResetRuntimeState();
             StorageNetworkSourceIndexService.ResetRuntimeState();
             StorageNetworkPerformanceCounters.ResetRuntimeState();

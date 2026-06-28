@@ -1,4 +1,5 @@
 using StorageNetwork.Components;
+using StorageNetwork.API;
 using Loc = StorageNetwork.STRINGS;
 
 namespace StorageNetwork.Core
@@ -16,6 +17,12 @@ namespace StorageNetwork.Core
 
         public static string GetKey(Storage storage)
         {
+            StorageNetworkCategoryDescriptor descriptor = StorageNetworkInterfaceResolver.GetCategory(storage);
+            if (descriptor != null)
+            {
+                return descriptor.Key;
+            }
+
             if (storage == null)
             {
                 return VanillaStorageKey;
@@ -67,6 +74,12 @@ namespace StorageNetwork.Core
 
         public static string GetName(string key)
         {
+            StorageNetworkCategoryDescriptor descriptor = StorageNetworkInterfaceResolver.GetKnownCategory(key);
+            if (descriptor != null && !string.IsNullOrEmpty(descriptor.Name))
+            {
+                return descriptor.Name;
+            }
+
             if (key == GeyserKey)
             {
                 return Loc.Get(Loc.UI.STORAGE_NETWORK.CATEGORY_GEYSER);
@@ -107,6 +120,12 @@ namespace StorageNetwork.Core
 
         public static int GetOrder(string key)
         {
+            StorageNetworkCategoryDescriptor descriptor = StorageNetworkInterfaceResolver.GetKnownCategory(key);
+            if (descriptor != null)
+            {
+                return descriptor.Order;
+            }
+
             if (key == GeyserKey)
             {
                 return 5;
