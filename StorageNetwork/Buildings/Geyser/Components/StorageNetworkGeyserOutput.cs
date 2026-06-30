@@ -191,11 +191,7 @@ namespace StorageNetwork.Components
         private bool ShouldPreventWorldOutput()
         {
             return !Config.Instance.AllowGeyserWorldOutputFallback &&
-                enrollment != null &&
-                emitter != null &&
-                enrollment.IncludedInSceneNetwork &&
-                enrollment.DirectGeyserOutputToNetwork &&
-                GetCaptureState() == null;
+                ShouldTryCapture();
         }
 
         private bool IsEruptingNow()
