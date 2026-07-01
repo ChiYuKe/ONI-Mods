@@ -61,8 +61,14 @@ namespace StorageNetwork.Components
             string captureState = GetCaptureState();
             if (captureState != null)
             {
-                isNetworkCapturing = false;
-                SetNativeEmitterEnabled(true);
+                bool preventWorldOutput = ShouldPreventWorldOutput();
+                isNetworkCapturing = preventWorldOutput;
+                SetNativeEmitterEnabled(!preventWorldOutput);
+                if (preventWorldOutput)
+                {
+                    SuppressNativeOverpressureStatus();
+                }
+
                 return;
             }
 
@@ -84,12 +90,20 @@ namespace StorageNetwork.Components
                     isNetworkCapturing = true;
                     SetNativeEmitterEnabled(false);
                     SuppressNativeOverpressureStatus();
-                    emitter.ForceEmit(mass, output.addedDiseaseIdx, GetDiseaseCount(output, dt), temperature);
+                    if (Config.Instance.AllowGeyserWorldOutputFallback)
+                    {
+                        emitter.ForceEmit(mass, output.addedDiseaseIdx, GetDiseaseCount(output, dt), temperature);
+                    }
                 }
                 else
                 {
-                    isNetworkCapturing = false;
-                    SetNativeEmitterEnabled(true);
+                    bool preventWorldOutput = ShouldPreventWorldOutput();
+                    isNetworkCapturing = preventWorldOutput;
+                    SetNativeEmitterEnabled(!preventWorldOutput);
+                    if (preventWorldOutput)
+                    {
+                        SuppressNativeOverpressureStatus();
+                    }
                 }
 
                 return;
@@ -100,7 +114,8 @@ namespace StorageNetwork.Components
             SuppressNativeOverpressureStatus();
 
             float overflow = StoreElementInNetwork(output.elementHash, mass, temperature, output.addedDiseaseIdx, GetDiseaseCount(output, dt), targetQuery.Targets);
-            if (overflow > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+            if (Config.Instance.AllowGeyserWorldOutputFallback &&
+                overflow > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
             {
                 emitter.ForceEmit(overflow, output.addedDiseaseIdx, GetDiseaseCount(output, dt), temperature);
             }
@@ -122,14 +137,22 @@ namespace StorageNetwork.Components
 
             if (GetCaptureState() != null)
             {
-                isNetworkCapturing = false;
-                SetNativeEmitterEnabled(true);
+                bool preventWorldOutput = ShouldPreventWorldOutput();
+                isNetworkCapturing = preventWorldOutput;
+                SetNativeEmitterEnabled(!preventWorldOutput);
+                if (preventWorldOutput)
+                {
+                    SuppressNativeOverpressureStatus();
+                }
+
                 return;
             }
 
             ElementConverter.OutputElement output = emitter.outputElement;
             ElementOutputTargetQuery targetQuery = FindOutputTargetQuery(output);
-            isNetworkCapturing = targetQuery.Targets.Count > 0 || targetQuery.HasCandidateIgnoringCapacity;
+            isNetworkCapturing = targetQuery.Targets.Count > 0 ||
+                targetQuery.HasCandidateIgnoringCapacity ||
+                ShouldPreventWorldOutput();
             SetNativeEmitterEnabled(!isNetworkCapturing);
             if (isNetworkCapturing)
             {
@@ -163,6 +186,12 @@ namespace StorageNetwork.Components
 
             ElementConverter.OutputElement output = emitter.outputElement;
             return output.elementHash != SimHashes.Vacuum && output.massGenerationRate > 0f;
+        }
+
+        private bool ShouldPreventWorldOutput()
+        {
+            return !Config.Instance.AllowGeyserWorldOutputFallback &&
+                ShouldTryCapture();
         }
 
         private bool IsEruptingNow()
@@ -449,7 +478,9 @@ namespace StorageNetwork.Components
 
             if (GetCaptureState() != null)
             {
-                return Loc.Get(Loc.UI.STORAGE_NETWORK.GEYSER_STATUS_WORLD_OUTPUT);
+                return ShouldPreventWorldOutput()
+                    ? Loc.Get(Loc.UI.STORAGE_NETWORK.GEYSER_STATUS_NETWORK_PAUSED)
+                    : Loc.Get(Loc.UI.STORAGE_NETWORK.GEYSER_STATUS_WORLD_OUTPUT);
             }
 
             ElementOutputTargetQuery targetQuery = FindOutputTargetQuery(emitter.outputElement);
@@ -458,8 +489,15 @@ namespace StorageNetwork.Components
                 return Loc.Get(Loc.UI.STORAGE_NETWORK.GEYSER_STATUS_NETWORK_OUTPUT);
             }
 
-            return targetQuery.HasCandidateIgnoringCapacity
-                ? Loc.Get(Loc.UI.STORAGE_NETWORK.GEYSER_STATUS_OVERFLOW_OUTPUT)
+            if (targetQuery.HasCandidateIgnoringCapacity)
+            {
+                return Config.Instance.AllowGeyserWorldOutputFallback
+                    ? Loc.Get(Loc.UI.STORAGE_NETWORK.GEYSER_STATUS_OVERFLOW_OUTPUT)
+                    : Loc.Get(Loc.UI.STORAGE_NETWORK.GEYSER_STATUS_FULL_PAUSED);
+            }
+
+            return ShouldPreventWorldOutput()
+                ? Loc.Get(Loc.UI.STORAGE_NETWORK.GEYSER_STATUS_NETWORK_PAUSED)
                 : Loc.Get(Loc.UI.STORAGE_NETWORK.GEYSER_STATUS_WORLD_OUTPUT);
         }
 
@@ -551,6 +589,8 @@ namespace StorageNetwork.Components
         {
             bool warning = text == Loc.Get(Loc.UI.STORAGE_NETWORK.GEYSER_STATUS_WORLD_OUTPUT) ||
                 text == Loc.Get(Loc.UI.STORAGE_NETWORK.GEYSER_STATUS_OVERFLOW_OUTPUT) ||
+                text == Loc.Get(Loc.UI.STORAGE_NETWORK.GEYSER_STATUS_FULL_PAUSED) ||
+                text == Loc.Get(Loc.UI.STORAGE_NETWORK.GEYSER_STATUS_NETWORK_PAUSED) ||
                 text == Loc.Get(Loc.UI.STORAGE_NETWORK.GEYSER_STATUS_MISSING_EMITTER);
             return Colorize(text, warning ? "#d86a6a" : "#55d17a");
         }

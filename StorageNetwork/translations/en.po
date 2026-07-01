@@ -1921,6 +1921,14 @@ msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_DEFAULT_MATERIAL_LIMIT
 msgid "新接入生产建筑的默认请求限额。"
 msgstr "Default request limit for newly connected production buildings."
 
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_GEYSER_WORLD_OUTPUT_FALLBACK"
+msgid "允许泉在网络不可用时排放到世界"
+msgstr "Allow geyser world-output fallback"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_GEYSER_WORLD_OUTPUT_FALLBACK_DESC"
+msgid "开启后，已接入网络并启用直接入网的泉会在网络无法储存产物时排放到世界；关闭后会暂停输出并等待网络恢复。"
+msgstr "When enabled, a network-enrolled geyser with direct output vents into the world when the network cannot store its output. When disabled, output pauses until the network recovers."
+
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_REQUEST_SUCCESS_COOLDOWN"
 msgid "请求成功冷却秒数"
 msgstr "Request Success Cooldown Seconds"
@@ -1990,8 +1998,8 @@ msgid "喷发物直接入网"
 msgstr "Send eruptions directly to network"
 
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_DIRECT_OUTPUT_DESC"
-msgid "开启后会拦截泉的 ElementEmitter 输出，优先存入网络中的匹配箱子；容量不足的部分仍会排放到世界。"
-msgstr "When enabled, geyser ElementEmitter output is intercepted and stored in matching network storage first; overflow still vents into the world."
+msgid "开启后会拦截泉的 ElementEmitter 输出并存入网络中的匹配箱子；网络无法储存时是否排放到世界由模组选项决定。"
+msgstr "When enabled, geyser ElementEmitter output is intercepted and stored in matching network storage. Whether unavailable network storage vents to the world is controlled by the mod options."
 
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_DIRECT_OUTPUT_ON_SHORT"
 msgid "直入开"
@@ -2076,6 +2084,14 @@ msgstr "Stored in network"
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_STATUS_OVERFLOW_OUTPUT"
 msgid "服务器已满，溢出到世界"
 msgstr "Server full, overflowing to world"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_STATUS_FULL_PAUSED"
+msgid "服务器已满，输出已暂停"
+msgstr "Server full, output paused"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_STATUS_NETWORK_PAUSED"
+msgid "网络不可用，输出已暂停"
+msgstr "Network unavailable, output paused"
 
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_STATUS_WORLD_OUTPUT"
 msgid "按原版排放"
