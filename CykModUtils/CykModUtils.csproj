@@ -2,18 +2,19 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
-    <AssemblyName>SN_DuplicantGenetics</AssemblyName>
-    <RootNamespace>SN_DuplicantGenetics</RootNamespace>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <GenerateDependencyFile>false</GenerateDependencyFile>
     <GenerateRuntimeConfigurationFiles>false</GenerateRuntimeConfigurationFiles>
+    <AssemblyName>CykModUtils</AssemblyName>
+    <RootNamespace>CykModUtils</RootNamespace>
     <LangVersion>latest</LangVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <GameManagedDir>D:\Program Files (x86)\Steam\steamapps\common\OxygenNotIncluded\OxygenNotIncluded_Data\Managed</GameManagedDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <OutputPath>..\..\..\..\Documents\Klei\OxygenNotIncluded\mods\Dev\SN_DuplicantGenetics\</OutputPath>
+    <OutputPath>bin\Debug\</OutputPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <OutputPath>bin\Release\</OutputPath>
@@ -35,10 +36,6 @@
       <HintPath>$(GameManagedDir)\UnityEngine.CoreModule.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="UnityEngine.AssetBundleModule">
-      <HintPath>$(GameManagedDir)\UnityEngine.AssetBundleModule.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
     <Reference Include="UnityEngine.UI">
       <HintPath>$(GameManagedDir)\UnityEngine.UI.dll</HintPath>
       <Private>False</Private>
@@ -55,16 +52,9 @@
       <HintPath>$(GameManagedDir)\UnityEngine.TextRenderingModule.dll</HintPath>
       <Private>False</Private>
     </Reference>
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\StorageNetwork\StorageNetwork.csproj" Private="False" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="mod.yaml" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="mod_info.yaml" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="Assets\AssetBundles\**\*" CopyToOutputDirectory="PreserveNewest" Condition="Exists('Assets\AssetBundles')" />
-    <None Include="AssetBundles\**\*" CopyToOutputDirectory="PreserveNewest" Condition="Exists('AssetBundles')" />
+    <Reference Include="UnityEngine.InputLegacyModule">
+      <HintPath>$(GameManagedDir)\UnityEngine.InputLegacyModule.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
   </ItemGroup>
 </Project>
-
-
