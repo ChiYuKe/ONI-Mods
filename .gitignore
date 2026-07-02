@@ -367,6 +367,9 @@ ONI源码/
 Managed/
 .tools/
 .tmp_video_frames/
+templates/
 
 # Game animation/asset folders
 **/anim/
+!TutorialCase/FoodandFoodBuffTutorialCase/anim/
+!TutorialCase/FoodandFoodBuffTutorialCase/anim/**
