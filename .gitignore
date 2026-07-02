@@ -368,6 +368,7 @@ Managed/
 .tools/
 .tmp_video_frames/
 templates/
+docs/
 
 # Game animation/asset folders
 **/anim/
