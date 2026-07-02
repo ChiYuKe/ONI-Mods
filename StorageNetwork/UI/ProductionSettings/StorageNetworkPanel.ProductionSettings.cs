@@ -109,6 +109,7 @@ namespace StorageNetwork.UI
             if (coldStorageCooling != null)
             {
                 AddColdStorageSettingsCard(storage, coldStorageCooling);
+                AddServerAssignmentsSettingsCard(storage);
                 AddInventoryCard(storage, fabricator);
                 UpdateProductionSettingsLive(storage, fabricator);
                 LayoutRebuilder.MarkLayoutForRebuild(productionSettingsContent);
@@ -118,6 +119,7 @@ namespace StorageNetwork.UI
             if (StorageNetworkStorageRules.IsConfigurablePort(storage))
             {
                 AddPortSettingsCard(storage);
+                AddServerAssignmentsSettingsCard(storage);
                 AddInventoryCard(storage, fabricator);
                 UpdateProductionSettingsLive(storage, fabricator);
                 LayoutRebuilder.MarkLayoutForRebuild(productionSettingsContent);
@@ -137,6 +139,7 @@ namespace StorageNetwork.UI
             {
                 AddEnergyGeneratorMaterialCard(storage, energyRequester);
             }
+            AddServerAssignmentsSettingsCard(storage);
             AddInventoryCard(storage, fabricator);
             UpdateProductionSettingsLive(storage, fabricator);
 

@@ -87,7 +87,7 @@ namespace StorageNetwork.Services
             HashSet<Tag> matchTags = StorageItemUtility.GetStorageMatchTags(item);
             HashSet<Storage> excluded = StorageTargetSelector.BuildExclusionSet(excludedStorages);
             Pickupable pickupable = item.GetComponent<Pickupable>();
-            Storage target = StorageTargetSelector.FindOutputTarget(item, matchTags, excluded, specificTarget, null, sourceWorldId);
+            Storage target = StorageTargetSelector.FindOutputTarget(item, matchTags, excluded, specificTarget, null, sourceWorldId, null);
             if (pickupable == null || target == null)
             {
                 return StorageTransferResult.Blocked(StorageItemUtility.GetItemDisplayName(item, tag));
@@ -718,8 +718,8 @@ namespace StorageNetwork.Services
             float remaining = mass;
             float moved = 0f;
             Storage target = preferColdStorageForFood && StorageItemUtility.IsFoodOrCookingIngredient(item)
-                ? StorageTargetSelector.FindFoodOutputTarget(item, matchTags, excludedStorages, specificTarget, snapshot, sourceWorldId)
-                : StorageTargetSelector.FindOutputTarget(item, matchTags, excludedStorages, specificTarget, snapshot, sourceWorldId);
+                ? StorageTargetSelector.FindFoodOutputTarget(item, matchTags, excludedStorages, specificTarget, snapshot, sourceWorldId, source)
+                : StorageTargetSelector.FindOutputTarget(item, matchTags, excludedStorages, specificTarget, snapshot, sourceWorldId, source);
             if (target == null)
             {
                 return StorageTransferResult.Blocked(StorageItemUtility.GetItemDisplayName(item, tag));

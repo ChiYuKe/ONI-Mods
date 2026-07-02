@@ -1873,6 +1873,42 @@ msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRANSFER_STATUS_BLOCKED"
 msgid "无法存入 {0}：没有匹配箱子或容量不足"
 msgstr "Cannot store {0}: no matching storage or not enough capacity"
 
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRANSFER_STATUS_RESERVED_TARGETS"
+msgid "自动存放无可用目标：匹配服务器已被输入端指定。"
+msgstr "No automatic storage target: matching servers are assigned to input ports."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.INPUT_TARGET_NOT_FOUND"
+msgid "指定服务器未找到"
+msgstr "Assigned server not found"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.INPUT_TARGET_UNREACHABLE"
+msgid "指定服务器当前不可达"
+msgstr "Assigned server is currently unreachable"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SERVER_ASSIGNMENTS_TITLE"
+msgid "端口指定"
+msgstr "Port assignments"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.INPUT_ASSIGNMENT_TITLE"
+msgid "输入端指定"
+msgstr "Input assignments"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_SOURCE_ASSIGNMENT_TITLE"
+msgid "输出端指定来源"
+msgstr "Output source assignments"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.INPUT_ASSIGNMENT_CLEAR"
+msgid "取消"
+msgstr "Clear"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.INPUT_ASSIGNMENT_CLEAR_ALL"
+msgid "全部取消指定"
+msgstr "Clear all assignments"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.INPUT_ASSIGNMENT_NONE"
+msgid "无"
+msgstr "None"
+
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENROLLABLE_SHORT"
 msgid "可接入"
 msgstr "Enrollable"

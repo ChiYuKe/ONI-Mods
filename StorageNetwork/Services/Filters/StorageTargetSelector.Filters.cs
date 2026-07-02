@@ -60,6 +60,12 @@ namespace StorageNetwork.Services
                    (target.items == null || !target.items.Contains(item));
         }
 
+        public static bool IsAutoOutputCandidateIgnoringReservation(Storage target, GameObject item, StorageItemUtility.StorageMatchTags matchTags, HashSet<Storage> excludedStorages, int sourceWorldId = -1)
+        {
+            return IsUsableOutputTarget(target, item, matchTags, excludedStorages, sourceWorldId) &&
+                   IsAutoOutputMatch(target, matchTags);
+        }
+
         private static bool IsUsableElementOutputTarget(Storage target, Element element, Tag tag, HashSet<Storage> excludedStorages, int sourceWorldId = -1)
         {
             return IsElementOutputTargetCandidate(target, element, tag, excludedStorages, sourceWorldId, true);
@@ -94,7 +100,7 @@ namespace StorageNetwork.Services
                    GetAmountAvailableByAnyMatchTag(source, tags) > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT;
         }
 
-        private static bool IsStorageReachableFromWorld(Storage storage, int worldId)
+        public static bool IsStorageReachableFromWorld(Storage storage, int worldId)
         {
             if (!StorageSceneRegistry.IsLive(storage))
             {

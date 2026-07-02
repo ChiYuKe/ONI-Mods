@@ -18,7 +18,7 @@ namespace StorageNetwork.Components
         public const float MaxRequestRateKgPerSecond = 5f;
 
         [Serialize]
-        public bool OutputRequestEnabled = true;
+        public bool OutputRequestEnabled;
 
         [Serialize]
         public int SourceModeValue;
@@ -157,6 +157,8 @@ namespace StorageNetwork.Components
         {
             CurrentSourceMode = StorageNetworkMaterialRequester.RequestMode.SearchNetwork;
             SourceStorageInstanceId = KPrefabID.InvalidInstanceID;
+            lastStatus = string.Empty;
+            cachedStatusText = null;
         }
 
         public Storage ResolveSourceStorage()

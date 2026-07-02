@@ -204,6 +204,9 @@ namespace StorageNetwork.Components
         {
             CurrentSourceMode = StorageNetworkMaterialRequester.RequestMode.SearchNetwork;
             SourceStorageInstanceId = KPrefabID.InvalidInstanceID;
+            lastStatus = string.Empty;
+            cachedStatusText = null;
+            cachedStatusSignature = null;
         }
 
         public Storage ResolveSourceStorage()

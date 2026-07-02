@@ -1,5 +1,6 @@
 using System.Linq;
 using StorageNetwork.Components;
+using StorageNetwork.Core;
 using StorageNetwork.Services;
 
 namespace StorageNetwork.UI
@@ -23,6 +24,7 @@ namespace StorageNetwork.UI
             StorageNetworkParticleOutputPortEgress particleOutput = storage != null ? storage.GetComponent<StorageNetworkParticleOutputPortEgress>() : null;
             StorageNetworkColdStorageCooling coldStorageCooling = storage != null ? storage.GetComponent<StorageNetworkColdStorageCooling>() : null;
             string itemSignature = BuildItemSignature(storage, fabricator);
+            string serverAssignmentSignature = BuildServerAssignmentSignature(storage);
 
             return string.Join(
                 "~",
@@ -105,6 +107,7 @@ namespace StorageNetwork.UI
                 particleInput != null || particleOutput != null ? StorageNetworkParticleStorageService.GetAvailable(storage.gameObject).ToString("0.###") : "particleAvailable0",
                 particleInput != null || particleOutput != null ? StorageNetworkParticleStorageService.GetCapacity(storage.gameObject).ToString("0.###") : "particleCapacity0",
                 coldStorageCooling != null ? coldStorageCooling.TargetTemperature.ToString("0.###") : "cold0",
+                serverAssignmentSignature,
                 itemSignature);
         }
 
@@ -115,6 +118,29 @@ namespace StorageNetwork.UI
                 .GroupBy(StorageItemUtility.GetStoredItemKey)
                 .OrderBy(group => group.Key)
                 .Select(group => group.Key));
+        }
+
+        private static string BuildServerAssignmentSignature(Storage storage)
+        {
+            if (storage == null ||
+                !StorageNetworkStorageRules.IsServerStorage(storage) ||
+                StorageNetworkStorageRules.IsPowerStorageServer(storage) ||
+                StorageNetworkStorageRules.IsParticleStorageServer(storage))
+            {
+                return "assign0";
+            }
+
+            string inputSignature = string.Join(
+                ",",
+                StorageNetworkInputTargetReservationService.GetReservationsForTarget(storage)
+                    .OrderBy(reservation => reservation.InputStorage != null ? reservation.InputStorage.GetInstanceID() : 0)
+                    .Select(reservation => reservation.InputStorage != null ? reservation.InputStorage.GetInstanceID().ToString() : "0"));
+            string outputSignature = string.Join(
+                ",",
+                StorageNetworkInputTargetReservationService.GetOutputSourceReservationsForTarget(storage)
+                    .OrderBy(reservation => reservation.InputStorage != null ? reservation.InputStorage.GetInstanceID() : 0)
+                    .Select(reservation => reservation.InputStorage != null ? reservation.InputStorage.GetInstanceID().ToString() : "0"));
+            return "assignIn:" + inputSignature + "|assignOut:" + outputSignature;
         }
 
     }

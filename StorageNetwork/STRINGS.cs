@@ -956,6 +956,15 @@ namespace StorageNetwork
                 public static LocString MATERIAL_STATUS_NO_OUTPUT_STORAGE = "建筑没有可读取的输出栏";
                 public static LocString TRANSFER_STATUS_MOVED = "已入网 {0}";
                 public static LocString TRANSFER_STATUS_BLOCKED = "无法存入 {0}：没有匹配箱子或容量不足";
+                public static LocString TRANSFER_STATUS_RESERVED_TARGETS = "自动存放无可用目标：匹配服务器已被输入端指定。";
+                public static LocString INPUT_TARGET_NOT_FOUND = "指定服务器未找到";
+                public static LocString INPUT_TARGET_UNREACHABLE = "指定服务器当前不可达";
+                public static LocString SERVER_ASSIGNMENTS_TITLE = "端口指定";
+                public static LocString INPUT_ASSIGNMENT_TITLE = "输入端指定";
+                public static LocString OUTPUT_SOURCE_ASSIGNMENT_TITLE = "输出端指定来源";
+                public static LocString INPUT_ASSIGNMENT_CLEAR = "取消";
+                public static LocString INPUT_ASSIGNMENT_CLEAR_ALL = "全部取消指定";
+                public static LocString INPUT_ASSIGNMENT_NONE = "无";
 
                 public static LocString ENROLL_STATUS = "已经接入储存网络";
                 public static LocString ENROLL_STATUS_TOOLTIP = "这个建筑已经接入储存网络，会显示在储存网络面板中。";

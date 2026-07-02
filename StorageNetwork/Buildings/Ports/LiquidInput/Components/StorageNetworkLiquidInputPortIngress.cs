@@ -89,9 +89,7 @@ namespace StorageNetwork.Components
                     ? ResolveInputStorage()
                     : null);
 
-            lastStatus = NetworkStorageTransferService.FormatOutputStatus(
-                result,
-                StorageNetwork.STRINGS.Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_STATUS_WAITING_CONTENTS));
+            lastStatus = FormatInputStoreStatus(result);
             retryTimer = result.MovedKg > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ? 0f : EmptyRetrySeconds;
             UpdateCachedStatusText();
         }
@@ -106,6 +104,8 @@ namespace StorageNetwork.Components
         {
             CurrentInputStoreMode = StorageNetworkMaterialRequester.OutputStoreMode.AutoNetwork;
             InputStorageInstanceId = KPrefabID.InvalidInstanceID;
+            lastStatus = string.Empty;
+            cachedStatusText = null;
         }
 
         public Storage ResolveInputStorage()
@@ -253,9 +253,14 @@ namespace StorageNetwork.Components
             if (CurrentInputStoreMode == StorageNetworkMaterialRequester.OutputStoreMode.SpecificStorage)
             {
                 Storage target = ResolveInputStorage();
-                return target != null
+                if (target == null)
+                {
+                    return Loc.Get(Loc.UI.STORAGE_NETWORK.INPUT_TARGET_NOT_FOUND);
+                }
+
+                return StorageTargetSelector.IsStorageReachableFromWorld(target, GetWorldId())
                     ? string.Format(Loc.Get(Loc.UI.STORAGE_NETWORK.OUTPUT_STORE_TARGET), target.GetProperName())
-                    : Loc.Get(Loc.UI.STORAGE_NETWORK.OUTPUT_STORE_MODE_SPECIFIC);
+                    : Loc.Get(Loc.UI.STORAGE_NETWORK.INPUT_TARGET_UNREACHABLE);
             }
 
             return Loc.Get(Loc.UI.STORAGE_NETWORK.OUTPUT_STORE_MODE_AUTO);
@@ -297,6 +302,42 @@ namespace StorageNetwork.Components
                 : lastStatus;
         }
 
+        private string FormatInputStoreStatus(StorageTransferResult result)
+        {
+            if (CurrentInputStoreMode == StorageNetworkMaterialRequester.OutputStoreMode.AutoNetwork &&
+                result.MovedKg <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT &&
+                !result.NetworkOffline &&
+                !string.IsNullOrEmpty(result.BlockedItem) &&
+                HasReservedAutoTargetCandidate())
+            {
+                return Loc.Get(Loc.UI.STORAGE_NETWORK.TRANSFER_STATUS_RESERVED_TARGETS);
+            }
+
+            return NetworkStorageTransferService.FormatOutputStatus(
+                result,
+                Loc.Get(Loc.UI.STORAGE_NETWORK.MATERIAL_STATUS_WAITING_CONTENTS));
+        }
+
+        private bool HasReservedAutoTargetCandidate()
+        {
+            if (storage == null || storage.items == null)
+            {
+                return false;
+            }
+
+            int sourceWorldId = StorageTargetSelector.GetObjectWorldId(storage.gameObject);
+            foreach (GameObject item in storage.items)
+            {
+                if (item != null &&
+                    StorageNetworkInputTargetReservationService.HasReservedAutoOutputCandidate(item, storage, sourceWorldId))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         private static string ColorizeEnabled(bool enabled)
         {
             return Colorize(GetOnOffText(enabled), enabled ? "#55d17a" : "#d86a6a");
@@ -323,6 +364,7 @@ namespace StorageNetwork.Components
         {
             bool warning = text.Contains(Loc.Get(Loc.UI.STORAGE_NETWORK.STATUS_DISABLED)) ||
                 text.Contains(Loc.Get(Loc.UI.STORAGE_NETWORK.PORT_STATUS_SHORT_OFFLINE)) ||
+                text.Contains(Loc.Get(Loc.UI.STORAGE_NETWORK.TRANSFER_STATUS_RESERVED_TARGETS)) ||
                 text.Contains(Loc.Get(Loc.UI.STORAGE_NETWORK.CORE_OFFLINE_TITLE));
             return Colorize(text, warning ? "#d86a6a" : "#55d17a");
         }

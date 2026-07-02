@@ -59,7 +59,8 @@ namespace StorageNetwork.Services
             HashSet<Storage> excludedStorages,
             Storage specificTarget,
             StorageSceneSnapshot snapshot = null,
-            int sourceWorldId = -1)
+            int sourceWorldId = -1,
+            Storage sourceStorage = null)
         {
             if (specificTarget != null)
             {
@@ -73,7 +74,8 @@ namespace StorageNetwork.Services
                     matchTags,
                     excludedStorages,
                     StorageSceneCollector.CollectLightweightForWorld(sourceWorldId).Storages,
-                    sourceWorldId);
+                    sourceWorldId,
+                    sourceStorage);
             }
 
             snapshot = snapshot ?? StorageSceneCollector.Collect();
@@ -86,7 +88,7 @@ namespace StorageNetwork.Services
                 }
             }
 
-            return FindOutputTargetInStorages(item, matchTags, excludedStorages, storages, sourceWorldId);
+            return FindOutputTargetInStorages(item, matchTags, excludedStorages, storages, sourceWorldId, sourceStorage);
         }
 
         public static Storage FindOutputTarget(
@@ -95,7 +97,8 @@ namespace StorageNetwork.Services
             HashSet<Storage> excludedStorages,
             Storage specificTarget,
             StorageSceneSnapshot snapshot = null,
-            int sourceWorldId = -1)
+            int sourceWorldId = -1,
+            Storage sourceStorage = null)
         {
             if (specificTarget != null)
             {
@@ -109,7 +112,8 @@ namespace StorageNetwork.Services
                     matchTags,
                     excludedStorages,
                     StorageSceneCollector.CollectLightweightForWorld(sourceWorldId).Storages,
-                    sourceWorldId);
+                    sourceWorldId,
+                    sourceStorage);
             }
 
             snapshot = snapshot ?? StorageSceneCollector.Collect();
@@ -122,7 +126,7 @@ namespace StorageNetwork.Services
                 }
             }
 
-            return FindOutputTargetInStorages(item, matchTags, excludedStorages, storages, sourceWorldId);
+            return FindOutputTargetInStorages(item, matchTags, excludedStorages, storages, sourceWorldId, sourceStorage);
         }
 
         public static Storage FindFoodOutputTarget(
@@ -131,11 +135,12 @@ namespace StorageNetwork.Services
             HashSet<Storage> excludedStorages,
             Storage specificTarget,
             StorageSceneSnapshot snapshot = null,
-            int sourceWorldId = -1)
+            int sourceWorldId = -1,
+            Storage sourceStorage = null)
         {
             if (specificTarget != null)
             {
-                return FindOutputTarget(item, matchTags, excludedStorages, specificTarget, snapshot, sourceWorldId);
+                return FindOutputTarget(item, matchTags, excludedStorages, specificTarget, snapshot, sourceWorldId, sourceStorage);
             }
 
             Storage coldTarget;
@@ -146,8 +151,9 @@ namespace StorageNetwork.Services
                     matchTags,
                     excludedStorages,
                     StorageSceneCollector.CollectLightweightForWorld(sourceWorldId).Storages,
-                    sourceWorldId);
-                return coldTarget ?? FindOutputTarget(item, matchTags, excludedStorages, null, null, sourceWorldId);
+                    sourceWorldId,
+                    sourceStorage);
+                return coldTarget ?? FindOutputTarget(item, matchTags, excludedStorages, null, null, sourceWorldId, sourceStorage);
             }
 
             snapshot = snapshot ?? StorageSceneCollector.Collect();
@@ -160,8 +166,8 @@ namespace StorageNetwork.Services
                 }
             }
 
-            coldTarget = FindColdStorageOutputTargetInStorages(item, matchTags, excludedStorages, storages, sourceWorldId);
-            return coldTarget ?? FindOutputTargetInStorages(item, matchTags, excludedStorages, storages, sourceWorldId);
+            coldTarget = FindColdStorageOutputTargetInStorages(item, matchTags, excludedStorages, storages, sourceWorldId, sourceStorage);
+            return coldTarget ?? FindOutputTargetInStorages(item, matchTags, excludedStorages, storages, sourceWorldId, sourceStorage);
         }
 
         public static Storage FindFoodOutputTarget(
@@ -170,11 +176,12 @@ namespace StorageNetwork.Services
             HashSet<Storage> excludedStorages,
             Storage specificTarget,
             StorageSceneSnapshot snapshot = null,
-            int sourceWorldId = -1)
+            int sourceWorldId = -1,
+            Storage sourceStorage = null)
         {
             if (specificTarget != null)
             {
-                return FindOutputTarget(item, matchTags, excludedStorages, specificTarget, snapshot, sourceWorldId);
+                return FindOutputTarget(item, matchTags, excludedStorages, specificTarget, snapshot, sourceWorldId, sourceStorage);
             }
 
             Storage coldTarget;
@@ -185,8 +192,9 @@ namespace StorageNetwork.Services
                     matchTags,
                     excludedStorages,
                     StorageSceneCollector.CollectLightweightForWorld(sourceWorldId).Storages,
-                    sourceWorldId);
-                return coldTarget ?? FindOutputTarget(item, matchTags, excludedStorages, null, null, sourceWorldId);
+                    sourceWorldId,
+                    sourceStorage);
+                return coldTarget ?? FindOutputTarget(item, matchTags, excludedStorages, null, null, sourceWorldId, sourceStorage);
             }
 
             snapshot = snapshot ?? StorageSceneCollector.Collect();
@@ -199,8 +207,8 @@ namespace StorageNetwork.Services
                 }
             }
 
-            coldTarget = FindColdStorageOutputTargetInStorages(item, matchTags, excludedStorages, storages, sourceWorldId);
-            return coldTarget ?? FindOutputTargetInStorages(item, matchTags, excludedStorages, storages, sourceWorldId);
+            coldTarget = FindColdStorageOutputTargetInStorages(item, matchTags, excludedStorages, storages, sourceWorldId, sourceStorage);
+            return coldTarget ?? FindOutputTargetInStorages(item, matchTags, excludedStorages, storages, sourceWorldId, sourceStorage);
         }
 
         private static Storage FindOutputTargetInStorages(
@@ -208,7 +216,8 @@ namespace StorageNetwork.Services
             HashSet<Tag> matchTags,
             HashSet<Storage> excludedStorages,
             IEnumerable<Storage> storages,
-            int sourceWorldId)
+            int sourceWorldId,
+            Storage sourceStorage)
         {
             Storage best = null;
             float bestAvailable = 0f;
@@ -217,6 +226,7 @@ namespace StorageNetwork.Services
             foreach (Storage target in storages)
             {
                 if (!IsUsableOutputTarget(target, item, matchTags, excludedStorages, sourceWorldId) ||
+                    StorageNetworkInputTargetReservationService.IsReservedForAutoInput(target, sourceStorage) ||
                     !IsAutoOutputMatch(target, matchTags))
                 {
                     continue;
@@ -245,7 +255,8 @@ namespace StorageNetwork.Services
             StorageItemUtility.StorageMatchTags matchTags,
             HashSet<Storage> excludedStorages,
             IEnumerable<Storage> storages,
-            int sourceWorldId)
+            int sourceWorldId,
+            Storage sourceStorage)
         {
             Storage best = null;
             float bestAvailable = 0f;
@@ -254,6 +265,7 @@ namespace StorageNetwork.Services
             foreach (Storage target in storages)
             {
                 if (!IsUsableOutputTarget(target, item, matchTags, excludedStorages, sourceWorldId) ||
+                    StorageNetworkInputTargetReservationService.IsReservedForAutoInput(target, sourceStorage) ||
                     !IsAutoOutputMatch(target, matchTags))
                 {
                     continue;
@@ -282,7 +294,8 @@ namespace StorageNetwork.Services
             HashSet<Tag> matchTags,
             HashSet<Storage> excludedStorages,
             IEnumerable<Storage> storages,
-            int sourceWorldId)
+            int sourceWorldId,
+            Storage sourceStorage)
         {
             Storage best = null;
             float bestAvailable = 0f;
@@ -292,6 +305,7 @@ namespace StorageNetwork.Services
             {
                 if (!StorageNetworkStorageRules.IsColdStorageServer(target) ||
                     !IsUsableOutputTarget(target, item, matchTags, excludedStorages, sourceWorldId) ||
+                    StorageNetworkInputTargetReservationService.IsReservedForAutoInput(target, sourceStorage) ||
                     !IsAutoOutputMatch(target, matchTags))
                 {
                     continue;
@@ -320,7 +334,8 @@ namespace StorageNetwork.Services
             StorageItemUtility.StorageMatchTags matchTags,
             HashSet<Storage> excludedStorages,
             IEnumerable<Storage> storages,
-            int sourceWorldId)
+            int sourceWorldId,
+            Storage sourceStorage)
         {
             Storage best = null;
             float bestAvailable = 0f;
@@ -330,6 +345,7 @@ namespace StorageNetwork.Services
             {
                 if (!StorageNetworkStorageRules.IsColdStorageServer(target) ||
                     !IsUsableOutputTarget(target, item, matchTags, excludedStorages, sourceWorldId) ||
+                    StorageNetworkInputTargetReservationService.IsReservedForAutoInput(target, sourceStorage) ||
                     !IsAutoOutputMatch(target, matchTags))
                 {
                     continue;
