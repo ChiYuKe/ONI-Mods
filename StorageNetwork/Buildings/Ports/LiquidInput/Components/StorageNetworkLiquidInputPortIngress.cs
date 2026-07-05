@@ -82,9 +82,10 @@ namespace StorageNetwork.Components
                 return;
             }
 
-            StorageTransferResult result = NetworkStorageTransferService.TransferStoredItemsToNetwork(
+            StorageTransferResult result = NetworkStorageTransferService.TransferStoredFluidsToNetwork(
                 storage,
                 new[] { storage },
+                ConduitType.Liquid,
                 specificTarget: CurrentInputStoreMode == StorageNetworkMaterialRequester.OutputStoreMode.SpecificStorage
                     ? ResolveInputStorage()
                     : null);

@@ -102,6 +102,12 @@ namespace StorageNetwork.Buildings
                 storage.showCapacityAsMainStatus = !StoresPower && !StoresParticles && !UsesRefrigeratedStorage;
                 storage.SetDefaultStoredItemModifiers(Storage.StandardInsulatedStorage);
 
+                if (stateCategoryTag == StorageSceneTags.CategoryLiquidPort ||
+                    stateCategoryTag == StorageSceneTags.CategoryGasPort)
+                {
+                    go.AddOrGet<StorageNetworkFluidStorageCompactor>();
+                }
+
                 if (UsesRefrigeratedStorage)
                 {
                     prefabId?.AddTag(RoomConstraints.ConstraintTags.KitchenRefrigerator);
