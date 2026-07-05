@@ -41,6 +41,7 @@ namespace StorageNetwork.Research
                 StorageNetworkGasOutputPortConfig.ID,
                 StorageNetworkPowerInputPortConfig.ID,
                 StorageNetworkPowerOutputPortConfig.ID,
+                StorageNetworkEnergySensorConfig.ID,
                 StorageNetworkParticleInputPortConfig.ID,
                 StorageNetworkParticleOutputPortConfig.ID
             }, 50f, 0f, 0f),

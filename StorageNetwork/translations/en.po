@@ -3177,3 +3177,70 @@ msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKLARGEPARTICLESER
 msgid "储存大量高能粒子，并供粒子出网端口发射。"
 msgstr "Stores a large amount of high-energy particles for particle output ports."
 
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKENERGYSENSOR.NAME"
+msgid "储存网络电量传感器"
+msgstr "Storage Network Charge Sensor"
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKENERGYSENSOR.DESC"
+msgid "测量储存网络中所有可访问电池服务器的总电量。"
+msgstr "Measures the total energy in all battery servers reachable through the Storage Network."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKENERGYSENSOR.EFFECT"
+msgid "根据储存网络的总充电百分比发送自动化信号。"
+msgstr "Sends an automation signal based on the total charge percentage of the Storage Network."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKENERGYSENSOR.LOGIC_PORT"
+msgid "储存网络电量"
+msgstr "Storage Network Charge"
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKENERGYSENSOR.LOGIC_PORT_ACTIVE"
+msgid "需要充电时发送绿色信号"
+msgstr "Sends a Green Signal when the Storage Network needs charging"
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKENERGYSENSOR.LOGIC_PORT_INACTIVE"
+msgid "不需要充电时发送红色信号"
+msgstr "Sends a Red Signal when the Storage Network does not need charging"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENERGY_SENSOR_SIDE_SCREEN_TITLE"
+msgid "储存网络电量范围"
+msgstr "Storage Network Charge Range"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENERGY_SENSOR_HIGH_THRESHOLD"
+msgid "停止充电"
+msgstr "Stop Charging"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENERGY_SENSOR_LOW_THRESHOLD"
+msgid "开始充电"
+msgstr "Start Charging"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENERGY_SENSOR_HIGH_THRESHOLD_TOOLTIP"
+msgid "当储存网络电量达到此百分比时发送红色信号。"
+msgstr "Sends a Red Signal when Storage Network charge reaches this percentage."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENERGY_SENSOR_LOW_THRESHOLD_TOOLTIP"
+msgid "当储存网络电量降至此百分比时发送绿色信号。"
+msgstr "Sends a Green Signal when Storage Network charge falls to this percentage."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENERGY_SENSOR_STATUS_ITEM"
+msgid "网络电量：{StoredJoules}/{CapacityJoules}（{Percent}）\n自动化：{Signal}"
+msgstr "Network charge: {StoredJoules}/{CapacityJoules} ({Percent})\nAutomation: {Signal}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENERGY_SENSOR_STATUS_TOOLTIP"
+msgid "所有当前可访问电池服务器中储存的总电量。"
+msgstr "Total energy stored in all currently reachable battery servers."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENERGY_SENSOR_NETWORK_OFFLINE"
+msgid "网络离线（红色）"
+msgstr "Network offline (Red)"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENERGY_SENSOR_NO_CAPACITY"
+msgid "没有可访问的电池服务器（红色）"
+msgstr "No reachable battery servers (Red)"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENERGY_SENSOR_SIGNAL_GREEN"
+msgid "需要充电（绿色）"
+msgstr "Charging requested (Green)"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENERGY_SENSOR_SIGNAL_RED"
+msgid "停止充电（红色）"
+msgstr "Charging stopped (Red)"
