@@ -25,6 +25,12 @@ internal static class StorageNetworkEnergySensorLogicTests
         AssertFalse(
             "red signal remains red between thresholds",
             StorageNetworkEnergySensorLogic.ShouldRequestPower(false, true, 50f, 100f, 20f, 80f));
+        AssertFalse(
+            "equal threshold preserves red signal at the threshold",
+            StorageNetworkEnergySensorLogic.ShouldRequestPower(false, true, 50f, 100f, 50f, 50f));
+        AssertTrue(
+            "equal threshold preserves green signal at the threshold",
+            StorageNetworkEnergySensorLogic.ShouldRequestPower(true, true, 50f, 100f, 50f, 50f));
         AssertEqual("negative charge clamps to zero percent", 0f, StorageNetworkEnergySensorLogic.GetPercent(-10f, 100f));
         AssertEqual("overcharge clamps to one hundred percent", 100f, StorageNetworkEnergySensorLogic.GetPercent(120f, 100f));
 

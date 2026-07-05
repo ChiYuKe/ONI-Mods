@@ -32,6 +32,11 @@ namespace StorageNetwork.Components
             }
 
             float percent = GetPercent(storedJoules, capacityJoules);
+            if (lowThreshold == highThreshold && percent == lowThreshold)
+            {
+                return previousSignal;
+            }
+
             if (previousSignal)
             {
                 return percent < highThreshold;
