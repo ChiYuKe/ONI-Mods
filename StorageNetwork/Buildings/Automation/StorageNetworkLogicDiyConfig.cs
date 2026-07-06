@@ -51,6 +51,7 @@ namespace StorageNetwork.Buildings
             BuildingConfigManager.Instance.IgnoreDefaultKComponent(typeof(RequiresFoundation), prefabTag);
             go.AddOrGet<CodexEntryRedirector>().CodexID = ID;
             go.AddOrGet<StorageNetworkSceneMember>();
+            go.AddOrGet<UserNameable>();
         }
 
         public override void DoPostConfigureComplete(GameObject go)

@@ -87,7 +87,15 @@ namespace StorageNetwork.UI
             CreateProductionPickerFooter(content.transform, options.Count);
         }
 
-        private static void ShowStandaloneOutputFilterPicker(string title, List<ProductionPickerOption> options, string footerTitle = null, string footerHint = null)
+        private static void ShowStandaloneOutputFilterPicker(
+            string title,
+            List<ProductionPickerOption> options,
+            string footerTitle = null,
+            string footerHint = null,
+            bool showSearch = true,
+            string layoutKey = "standaloneOutputFilterPicker",
+            float width = 430f,
+            float height = 520f)
         {
             CloseStandaloneOutputFilterPicker();
             if (options == null || options.Count == 0)
@@ -121,14 +129,14 @@ namespace StorageNetwork.UI
             pickerRect.anchorMin = new Vector2(0.5f, 0.5f);
             pickerRect.anchorMax = new Vector2(0.5f, 0.5f);
             pickerRect.pivot = new Vector2(0.5f, 0.5f);
-            pickerRect.sizeDelta = new Vector2(430f, 520f);
+            pickerRect.sizeDelta = new Vector2(width, height);
             pickerRect.anchoredPosition = Vector2.zero;
-            StorageNetworkWindowDrag.TryApplyLayout("standaloneOutputFilterPicker", pickerRect, new Vector2(360f, 360f), new Vector2(820f, 900f));
+            StorageNetworkWindowDrag.TryApplyLayout(layoutKey, pickerRect, new Vector2(360f, 360f), new Vector2(820f, 900f));
 
             GameObject header = CreatePlainImage("PickerHeader", picker.transform, new Color(0.36f, 0.42f, 0.47f, 1f));
             RectTransform headerRect = header.GetComponent<RectTransform>();
             SetTopStretch(headerRect, 8f, 8f, 8f, 34f);
-            header.AddComponent<StorageNetworkWindowDrag>().Configure(pickerRect, "standaloneOutputFilterPicker");
+            header.AddComponent<StorageNetworkWindowDrag>().Configure(pickerRect, layoutKey);
             HorizontalLayoutGroup headerLayout = header.AddComponent<HorizontalLayoutGroup>();
             headerLayout.padding = new RectOffset(10, 4, 3, 3);
             headerLayout.spacing = 8f;
@@ -146,7 +154,7 @@ namespace StorageNetwork.UI
             headerText.raycastTarget = false;
             headerText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
 
-            KInputTextField searchInput = CreateStandalonePickerSearchInput(header.transform);
+            KInputTextField searchInput = showSearch ? CreateStandalonePickerSearchInput(header.transform) : null;
 
             GameObject closeButton = CreateCloseIconButton("PickerClose", header.transform, CloseStandaloneOutputFilterPickerAction);
             LayoutElement closeLayout = closeButton.AddComponent<LayoutElement>();
@@ -181,7 +189,11 @@ namespace StorageNetwork.UI
             ConfigureSmoothVerticalScroll(scrollRect, 24f);
             viewport.AddComponent<ScrollWheelBlocker>();
 
-            searchInput.onValueChanged.AddListener(_ => RefreshStandalonePickerOptions(content.transform, options, searchInput.text, footerTitle, footerHint));
+            if (searchInput != null)
+            {
+                searchInput.onValueChanged.AddListener(_ => RefreshStandalonePickerOptions(content.transform, options, searchInput.text, footerTitle, footerHint));
+            }
+
             RefreshStandalonePickerOptions(content.transform, options, string.Empty, footerTitle, footerHint);
         }
 

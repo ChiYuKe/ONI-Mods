@@ -1,4 +1,5 @@
 using StorageNetwork.Components;
+using StorageNetwork.API;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -10,8 +11,7 @@ namespace StorageNetwork.UI
     {
         private StorageNetworkLogicDiy targetLogic;
         private GameObject contentRoot;
-        private TextMeshProUGUI statusText;
-        private float refreshTimer;
+        private TextMeshProUGUI buttonText;
 
         public StorageNetworkLogicDiySideScreen()
         {
@@ -67,38 +67,26 @@ namespace StorageNetwork.UI
             contentRoot.AddComponent<RectTransform>();
 
             LayoutElement rootLayout = contentRoot.AddComponent<LayoutElement>();
-            rootLayout.minHeight = 82f;
-            rootLayout.preferredHeight = 96f;
+            rootLayout.minHeight = 32f;
+            rootLayout.preferredHeight = 36f;
             rootLayout.flexibleWidth = 1f;
 
             VerticalLayoutGroup layout = contentRoot.AddComponent<VerticalLayoutGroup>();
-            layout.padding = new RectOffset(6, 6, 6, 6);
-            layout.spacing = 5f;
+            layout.padding = new RectOffset(4, 4, 2, 2);
+            layout.spacing = 0f;
             layout.childControlWidth = true;
             layout.childControlHeight = true;
             layout.childForceExpandWidth = true;
             layout.childForceExpandHeight = false;
 
-            statusText = CreateText(
-                contentRoot.transform,
-                string.Empty,
-                10f,
-                FontStyles.Bold,
-                new Color(0.30f, 0.31f, 0.30f, 1f));
-            statusText.textWrappingMode = TextWrappingModes.Normal;
-            statusText.gameObject.AddComponent<LayoutElement>().preferredHeight = 28f;
-
-            KButton configureButton = CreateButton(
-                Loc.Get(Loc.UI.STORAGE_NETWORK.LOGIC_DIY_OPEN_SETTINGS),
-                Loc.Get(Loc.UI.STORAGE_NETWORK.LOGIC_DIY_OPEN_SETTINGS_TOOLTIP),
-                () =>
+            KButton button = CreateSmallButton(contentRoot.transform, Loc.Get(Loc.UI.STORAGE_NETWORK.LOGIC_DIY_OPEN_SETTINGS), Loc.Get(Loc.UI.STORAGE_NETWORK.LOGIC_DIY_OPEN_SETTINGS_TOOLTIP), () =>
+            {
+                if (targetLogic != null)
                 {
-                    if (targetLogic != null)
-                    {
-                        StorageNetworkLogicDiyConfigPanel.Show(targetLogic);
-                    }
-                });
-            LayoutElement buttonLayout = configureButton.gameObject.GetComponent<LayoutElement>() ?? configureButton.gameObject.AddComponent<LayoutElement>();
+                    StorageNetworkPanel.ShowLogicDiyOutputModePicker(targetLogic);
+                }
+            });
+            LayoutElement buttonLayout = button.gameObject.AddComponent<LayoutElement>();
             buttonLayout.minHeight = 32f;
             buttonLayout.preferredHeight = 32f;
         }
@@ -111,8 +99,8 @@ namespace StorageNetwork.UI
             }
 
             LayoutElement layoutElement = GetComponent<LayoutElement>() ?? gameObject.AddComponent<LayoutElement>();
-            layoutElement.minHeight = 90f;
-            layoutElement.preferredHeight = 104f;
+            layoutElement.minHeight = 36f;
+            layoutElement.preferredHeight = 42f;
             layoutElement.flexibleWidth = 1f;
 
             if (GetComponent<VerticalLayoutGroup>() == null)
@@ -125,59 +113,33 @@ namespace StorageNetwork.UI
             }
         }
 
-        private KButton CreateButton(string label, string tooltipText, System.Action onClick)
+        private KButton CreateSmallButton(Transform parent, string label, string tooltipText, System.Action onClick)
         {
-            GameObject row = new GameObject("ConfigureButton");
-            row.transform.SetParent(contentRoot.transform, false);
-            row.AddComponent<RectTransform>();
+            GameObject buttonObject = new GameObject("Action");
+            buttonObject.transform.SetParent(parent, false);
+            buttonObject.AddComponent<RectTransform>();
 
-            KImage background = row.AddComponent<KImage>();
-            background.type = Image.Type.Sliced;
-            background.colorStyleSetting = CreateButtonStyle();
-            background.ColorState = KImage.ColorSelector.Inactive;
+            KImage image = buttonObject.AddComponent<KImage>();
+            image.type = Image.Type.Sliced;
+            ApplyButtonSprite(image);
+            image.colorStyleSetting = CreateButtonStyle();
+            image.ColorState = KImage.ColorSelector.Inactive;
 
-            KButton button = row.AddComponent<KButton>();
-            button.bgImage = background;
+            KButton button = buttonObject.AddComponent<KButton>();
+            button.bgImage = image;
             button.additionalKImages = new KImage[0];
             button.soundPlayer = new ButtonSoundPlayer();
-            button.onClick += onClick;
+            button.onClick += () => onClick?.Invoke();
 
-            LayoutElement rowLayout = row.AddComponent<LayoutElement>();
-            rowLayout.minHeight = 32f;
-            rowLayout.preferredHeight = 32f;
+            buttonText = CreateText(buttonObject.transform, label, 10f, FontStyles.Normal, Color.white);
+            buttonText.alignment = TextAlignmentOptions.Center;
+            buttonText.textWrappingMode = TextWrappingModes.NoWrap;
+            buttonText.overflowMode = TextOverflowModes.Ellipsis;
+            Stretch(buttonText.rectTransform(), 4f, 0f);
 
-            HorizontalLayoutGroup layout = row.AddComponent<HorizontalLayoutGroup>();
-            layout.padding = new RectOffset(8, 8, 3, 3);
-            layout.childAlignment = TextAnchor.MiddleLeft;
-            layout.childControlWidth = true;
-            layout.childControlHeight = true;
-            layout.childForceExpandWidth = true;
-            layout.childForceExpandHeight = true;
-
-            TextMeshProUGUI text = CreateText(row.transform, label, 10f, FontStyles.Bold, new Color(0.94f, 0.96f, 0.98f, 1f));
-            text.alignment = TextAlignmentOptions.MidlineLeft;
-            text.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
-
-            ToolTip tooltip = row.AddComponent<ToolTip>();
+            ToolTip tooltip = buttonObject.AddComponent<ToolTip>();
             tooltip.SetSimpleTooltip(tooltipText ?? string.Empty);
             return button;
-        }
-
-        private void Update()
-        {
-            if (targetLogic == null)
-            {
-                return;
-            }
-
-            refreshTimer -= Time.unscaledDeltaTime;
-            if (refreshTimer > 0f)
-            {
-                return;
-            }
-
-            refreshTimer = 0.25f;
-            Refresh();
         }
 
         private void Refresh()
@@ -187,14 +149,9 @@ namespace StorageNetwork.UI
                 return;
             }
 
-            bool fourChannel = targetLogic.OutputMode == StorageNetworkLogicDiy.ChannelMode.FourChannel;
-            if (statusText != null)
+            if (buttonText != null)
             {
-                statusText.text = string.Format(
-                    Loc.Get(Loc.UI.STORAGE_NETWORK.LOGIC_DIY_CURRENT_MODE),
-                    fourChannel
-                        ? Loc.Get(Loc.UI.STORAGE_NETWORK.LOGIC_DIY_FOUR_CHANNEL)
-                        : Loc.Get(Loc.UI.STORAGE_NETWORK.LOGIC_DIY_SINGLE_CHANNEL));
+                buttonText.text = Loc.Get(Loc.UI.STORAGE_NETWORK.LOGIC_DIY_OPEN_SETTINGS);
             }
         }
 
@@ -215,9 +172,9 @@ namespace StorageNetwork.UI
         internal static ColorStyleSetting CreateButtonStyle()
         {
             ColorStyleSetting style = ScriptableObject.CreateInstance<ColorStyleSetting>();
-            style.inactiveColor = new Color(0.17f, 0.19f, 0.25f, 1f);
-            style.hoverColor = new Color(0.25f, 0.28f, 0.35f, 1f);
-            style.activeColor = new Color(0.11f, 0.12f, 0.16f, 1f);
+            style.inactiveColor = StorageNetworkPanelPalette.BlueButtonNormal;
+            style.hoverColor = StorageNetworkPanelPalette.BlueButtonHover;
+            style.activeColor = StorageNetworkPanelPalette.BlueButtonPressed;
             style.disabledColor = new Color(0.42f, 0.41f, 0.40f, 1f);
             style.disabledActiveColor = style.disabledColor;
             style.disabledhoverColor = style.disabledColor;
@@ -227,10 +184,62 @@ namespace StorageNetwork.UI
         internal static ColorStyleSetting CreateSelectedStyle()
         {
             ColorStyleSetting style = CreateButtonStyle();
-            style.inactiveColor = new Color(0.12f, 0.42f, 0.30f, 1f);
-            style.hoverColor = new Color(0.17f, 0.53f, 0.38f, 1f);
-            style.activeColor = new Color(0.09f, 0.31f, 0.23f, 1f);
+            style.inactiveColor = StorageNetworkPanelPalette.PinkButtonNormal;
+            style.hoverColor = StorageNetworkPanelPalette.PinkButtonHover;
+            style.activeColor = StorageNetworkPanelPalette.PinkButtonPressed;
             return style;
+        }
+
+        internal static void ApplyButtonSprite(KImage image)
+        {
+            if (image == null)
+            {
+                return;
+            }
+
+            Sprite sprite = GetSprite("web_button");
+            if (sprite == null)
+            {
+                return;
+            }
+
+            image.sprite = sprite;
+            image.type = Image.Type.Sliced;
+            image.pixelsPerUnitMultiplier = 2f;
+            image.fillCenter = true;
+        }
+
+        internal static void ApplyBoxSprite(Image image)
+        {
+            if (image == null)
+            {
+                return;
+            }
+
+            Sprite sprite = GetSprite("web_box");
+            if (sprite == null)
+            {
+                return;
+            }
+
+            image.sprite = sprite;
+            image.type = Image.Type.Sliced;
+            image.pixelsPerUnitMultiplier = 2f;
+            image.fillCenter = true;
+        }
+
+        private static Sprite GetSprite(string spriteName)
+        {
+            Sprite sprite = Assets.GetSprite(spriteName);
+            return sprite != null ? sprite : StorageNetwork.Core.StorageNetworkSpriteLoader.GetSprite(spriteName);
+        }
+
+        internal static void Stretch(RectTransform rect, float horizontal, float vertical)
+        {
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = new Vector2(horizontal, vertical);
+            rect.offsetMax = new Vector2(-horizontal, -vertical);
         }
     }
 }
