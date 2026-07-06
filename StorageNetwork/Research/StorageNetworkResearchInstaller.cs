@@ -22,6 +22,7 @@ namespace StorageNetwork.Research
 
         private const string CoreTechId = "StorageNetworkResearchCore";
         private const string PortsTechId = "StorageNetworkResearchPorts";
+        private const string SignalTechId = "StorageNetworkResearchSignal";
         private const string SmallStorageTechId = "StorageNetworkResearchSmallStorage";
         private const string MediumStorageTechId = "StorageNetworkResearchMediumStorage";
         public const string OrderProductionTechId = "StorageNetworkResearchOrderProduction";
@@ -46,7 +47,8 @@ namespace StorageNetwork.Research
             }, 50f, 0f, 0f),
             new StorageNetworkTechSpec(SmallStorageTechId, "STORAGENETWORKRESEARCHSMALLSTORAGE", CoreTechId, 1, 0, new[] { SmallSolidServerConfig.ID, SmallLiquidServerConfig.ID, SmallGasServerConfig.ID, SmallParticleServerConfig.ID, SmallBatteryServerConfig.ID, SmallColdStorageServerConfig.ID }, 50f, 0f, 0f),
             new StorageNetworkTechSpec(MediumStorageTechId, "STORAGENETWORKRESEARCHMEDIUMSTORAGE", SmallStorageTechId, 2, 0, new[] { MediumSolidServerConfig.ID, MediumLiquidServerConfig.ID, MediumGasServerConfig.ID, MediumParticleServerConfig.ID, MediumBatteryServerConfig.ID, MediumColdStorageServerConfig.ID }, 50f, 30f, 0f),
-            new StorageNetworkTechSpec(OrderProductionTechId, "STORAGENETWORKRESEARCHORDERPRODUCTION", new[] { MediumStorageTechId, PortsTechId }, 3, 1, new[] { StorageNetworkOrderProductionCenterConfig.ID, StorageNetworkEngravingDiskConfig.ID }, 50f, 30f, 50f),
+            new StorageNetworkTechSpec(SignalTechId, "STORAGENETWORKRESEARCHSIGNAL", PortsTechId, 2, 1, new[] { StorageNetworkLogicDiyConfig.ID }, 50f, 30f, 0f),
+            new StorageNetworkTechSpec(OrderProductionTechId, "STORAGENETWORKRESEARCHORDERPRODUCTION", new[] { MediumStorageTechId, SignalTechId }, 3, 1, new[] { StorageNetworkOrderProductionCenterConfig.ID, StorageNetworkEngravingDiskConfig.ID }, 50f, 30f, 50f),
             new StorageNetworkTechSpec(LargeStorageTechId, "STORAGENETWORKRESEARCHLARGESTORAGE", MediumStorageTechId, 3, 0, new[] { LargeSolidServerConfig.ID, LargeLiquidServerConfig.ID, LargeGasServerConfig.ID, LargeParticleServerConfig.ID, LargeBatteryServerConfig.ID, LargeColdStorageServerConfig.ID }, 70f, 50f, 50f),
             new StorageNetworkTechSpec(RelayTechId, "STORAGENETWORKRESEARCHRELAY", LargeStorageTechId, 4, 0, new[] { StorageNetworkRelayModuleConfig.ID }, 70f, 100f, 200f)
         };
@@ -430,6 +432,8 @@ namespace StorageNetwork.Research
                             return Loc.RESEARCH.TECHS.STORAGENETWORKSMALLSTORAGE.NAME;
                         case "STORAGENETWORKRESEARCHMEDIUMSTORAGE":
                             return Loc.RESEARCH.TECHS.STORAGENETWORKMEDIUMSTORAGE.NAME;
+                        case "STORAGENETWORKRESEARCHSIGNAL":
+                            return Loc.RESEARCH.TECHS.STORAGENETWORKSIGNAL.NAME;
                         case "STORAGENETWORKRESEARCHORDERPRODUCTION":
                             return Loc.RESEARCH.TECHS.STORAGENETWORKORDERPRODUCTION.NAME;
                         case "STORAGENETWORKRESEARCHLARGESTORAGE":
@@ -454,6 +458,8 @@ namespace StorageNetwork.Research
                             return Loc.RESEARCH.TECHS.STORAGENETWORKSMALLSTORAGE.DESC;
                         case "STORAGENETWORKRESEARCHMEDIUMSTORAGE":
                             return Loc.RESEARCH.TECHS.STORAGENETWORKMEDIUMSTORAGE.DESC;
+                        case "STORAGENETWORKRESEARCHSIGNAL":
+                            return Loc.RESEARCH.TECHS.STORAGENETWORKSIGNAL.DESC;
                         case "STORAGENETWORKRESEARCHORDERPRODUCTION":
                             return Loc.RESEARCH.TECHS.STORAGENETWORKORDERPRODUCTION.DESC;
                         case "STORAGENETWORKRESEARCHLARGESTORAGE":

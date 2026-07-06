@@ -85,6 +85,7 @@ namespace StorageNetwork.Patches
                 try
                 {
                     StorageNetworkCoreSideScreenInstaller.Install(__instance);
+                    StorageNetworkLogicDiySideScreenInstaller.Install(__instance);
                     StorageNetworkOrderProductionCenterSideScreenInstaller.Install(__instance);
                 }
                 catch (System.Exception exception)

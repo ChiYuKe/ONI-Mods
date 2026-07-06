@@ -85,7 +85,7 @@ namespace StorageNetwork.UI.Installers
             }
 
             ToolTip toolTip = button.GetComponent<ToolTip>() ?? button.gameObject.AddComponent<ToolTip>();
-            toolTip.SetSimpleTooltip(STRINGS.UI.STORAGE_NETWORK.OVERVIEW_TOOLTIP);
+            toolTip.SetSimpleTooltip(BuildTooltipText());
             button.onClick += () =>
             {
                 button.isOn = false;
@@ -95,6 +95,13 @@ namespace StorageNetwork.UI.Installers
             };
 
             button.transform.SetSiblingIndex(GetInsertIndex(parent));
+        }
+
+        private static string BuildTooltipText()
+        {
+            string tooltip = STRINGS.Get(STRINGS.UI.STORAGE_NETWORK.OVERVIEW_TOOLTIP);
+            string hotkey = GameUtil.GetHotkeyString(StorageNetwork.Patches.StorageNetworkHotkeyPatch.Action);
+            return string.IsNullOrEmpty(hotkey) ? tooltip : string.Format("{0} {1}", tooltip, hotkey);
         }
 
         private static void SetButtonLabel(LocText label)

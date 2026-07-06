@@ -123,6 +123,17 @@ namespace StorageNetwork.UI
             return instance != null && instance.gameObject != null && instance.gameObject.activeInHierarchy;
         }
 
+        public static void Toggle()
+        {
+            if (IsOpen())
+            {
+                CloseFromRightClick();
+                return;
+            }
+
+            Show();
+        }
+
         public static void ResetRuntimeState()
         {
             if (instance != null && instance.gameObject != null)

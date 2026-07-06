@@ -11,6 +11,8 @@ namespace StorageNetwork.Gameplay
         private const string LiquidCategory = "Plumbing";
         private const string PowerCategory = "Power";
         private const string RadiationCategory = "HEP";
+        private const string AutomationCategory = "Automation";
+        private const string LogicGatesCategory = "LogicGates";
         private const string StorageNetworkSubcategory = "StorageNetwork";
 
         public static void Install()
@@ -73,10 +75,23 @@ namespace StorageNetwork.Gameplay
             Add(PowerCategory, StorageNetworkPowerInputPortConfig.ID);
             Add(PowerCategory, StorageNetworkPowerOutputPortConfig.ID);
 
+            AddAutomationSignalBuilding(StorageNetworkLogicDiyConfig.ID);
+
             Add(FoodCategory, SmallColdStorageServerConfig.ID);
             Add(FoodCategory, MediumColdStorageServerConfig.ID);
             Add(FoodCategory, LargeColdStorageServerConfig.ID);
 
+        }
+
+        private static void AddAutomationSignalBuilding(string buildingId)
+        {
+            ModUtil.AddBuildingToPlanScreen(
+                AutomationCategory,
+                buildingId,
+                LogicGatesCategory,
+                "LogicGateNOT",
+                ModUtil.BuildingOrdering.After);
+            ModUtil.AddBuildingToHotkeyBuildMenu(LogicGatesCategory, buildingId, global::Action.NumActions);
         }
 
         private static void Add(string category, string buildingId)

@@ -104,6 +104,16 @@ namespace StorageNetwork
                     public static LocString EFFECT = "从同星球的粒子服务器中取出高能粒子，并向右发射。";
                 }
 
+                public class STORAGENETWORKLOGICDIY
+                {
+                    public static LocString NAME = "储存网络信号输出器";
+                    public static LocString DESC = "用于向自动化线路输出储存网络信号的小型自动化建筑。";
+                    public static LocString EFFECT = "提供一个自动化信号输出端。";
+                    public static LocString LOGIC_PORT = "储存网络信号输出";
+                    public static LocString LOGIC_PORT_ACTIVE = "输出绿色信号。";
+                    public static LocString LOGIC_PORT_INACTIVE = "输出红色信号。";
+                }
+
                 public class STORAGENETWORKSMALLLIQUIDSERVER
                 {
                     public static LocString NAME = "小型液体服务器";
@@ -284,6 +294,12 @@ namespace StorageNetwork
                     public static LocString DESC = "解锁中型固体、液体、气体、电池和冷库服务器。";
                 }
 
+                public class STORAGENETWORKSIGNAL
+                {
+                    public static LocString NAME = "网络信号";
+                    public static LocString DESC = "解锁可向自动化线路输出储存网络信号的信号输出器。";
+                }
+
                 public class STORAGENETWORKORDERPRODUCTION
                 {
                     public static LocString NAME = "订单生产中心";
@@ -445,6 +461,18 @@ namespace StorageNetwork
                 public static LocString COLD_STORAGE_COOLING_DEFAULT = "默认值";
                 public static LocString COLD_STORAGE_COOLING_VALUE = "目标温度：{0}";
                 public static LocString COLD_STORAGE_COOLING_DESC = "调整冷库服务器把内容物冷却到的目标温度；储存网络窗口与详情侧屏使用同一数值。";
+                public static LocString LOGIC_DIY_SIDE_SCREEN_TITLE = "信号输出设置";
+                public static LocString LOGIC_DIY_OUTPUT_MODE = "输出通道";
+                public static LocString LOGIC_DIY_CURRENT_MODE = "当前模式：{0}";
+                public static LocString LOGIC_DIY_OPEN_SETTINGS = "打开信号设置";
+                public static LocString LOGIC_DIY_OPEN_SETTINGS_TOOLTIP = "打开储存网络信号输出器的专用设置面板。";
+                public static LocString LOGIC_DIY_CONFIG_PANEL_TITLE = "信号输出器设置";
+                public static LocString LOGIC_DIY_SINGLE_CHANNEL = "单通道输出";
+                public static LocString LOGIC_DIY_SINGLE_CHANNEL_TOOLTIP = "输出 1 位自动化信号，只使用红/绿状态。";
+                public static LocString LOGIC_DIY_SINGLE_CHANNEL_DESC = "当前模式：单通道。输出值会限制为 0 或 1。";
+                public static LocString LOGIC_DIY_FOUR_CHANNEL = "4 通道输出";
+                public static LocString LOGIC_DIY_FOUR_CHANNEL_TOOLTIP = "输出 4 位自动化信号，可用于信号带网络。";
+                public static LocString LOGIC_DIY_FOUR_CHANNEL_DESC = "当前模式：4 通道。输出值可使用 0 到 15 的四位信号。";
                 public static LocString PRODUCTION_STATUS_TITLE = "运行状态";
                 public static LocString PRODUCTION_CONTENT_TITLE = "内容物";
                 public static LocString PRODUCTION_STATUS_IDLE = "当前状态：待机";
