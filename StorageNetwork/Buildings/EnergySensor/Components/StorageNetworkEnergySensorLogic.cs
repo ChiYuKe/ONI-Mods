@@ -44,5 +44,27 @@ namespace StorageNetwork.Components
 
             return percent <= lowThreshold;
         }
+
+        public static bool ShouldRequestPowerAfterHighThresholdIncrease(
+            bool previousSignal,
+            bool networkOnline,
+            float storedJoules,
+            float capacityJoules,
+            float lowThreshold,
+            float highThreshold)
+        {
+            if (!networkOnline || capacityJoules <= 0f)
+            {
+                return false;
+            }
+
+            float percent = GetPercent(storedJoules, capacityJoules);
+            if (percent < highThreshold)
+            {
+                return true;
+            }
+
+            return ShouldRequestPower(previousSignal, networkOnline, storedJoules, capacityJoules, lowThreshold, highThreshold);
+        }
     }
 }

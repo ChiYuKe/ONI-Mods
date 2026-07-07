@@ -25,6 +25,12 @@ internal static class StorageNetworkEnergySensorLogicTests
         AssertFalse(
             "red signal remains red between thresholds",
             StorageNetworkEnergySensorLogic.ShouldRequestPower(false, true, 50f, 100f, 20f, 80f));
+        AssertTrue(
+            "raising high threshold above current charge resumes green",
+            StorageNetworkEnergySensorLogic.ShouldRequestPowerAfterHighThresholdIncrease(false, true, 29f, 100f, 0f, 46f));
+        AssertFalse(
+            "raising high threshold below current charge remains red",
+            StorageNetworkEnergySensorLogic.ShouldRequestPowerAfterHighThresholdIncrease(false, true, 60f, 100f, 0f, 46f));
         AssertFalse(
             "equal threshold preserves red signal at the threshold",
             StorageNetworkEnergySensorLogic.ShouldRequestPower(false, true, 50f, 100f, 50f, 50f));

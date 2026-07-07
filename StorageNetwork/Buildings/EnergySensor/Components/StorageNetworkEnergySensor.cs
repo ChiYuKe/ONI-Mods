@@ -38,13 +38,14 @@ namespace StorageNetwork.Components
             get => highThresholdValue;
             set
             {
+                int oldHighThresholdValue = highThresholdValue;
                 highThresholdValue = Mathf.Clamp(Mathf.RoundToInt(value), 0, 100);
                 if (lowThresholdValue > highThresholdValue)
                 {
                     lowThresholdValue = highThresholdValue;
                 }
 
-                RefreshSignal();
+                RefreshSignal(highThresholdValue > oldHighThresholdValue);
             }
         }
 
@@ -103,16 +104,24 @@ namespace StorageNetwork.Components
             RefreshSignal();
         }
 
-        private void RefreshSignal()
+        private void RefreshSignal(bool highThresholdIncreased = false)
         {
             snapshot = StorageNetworkPowerService.GetSnapshot(GetWorldId());
-            requestPower = StorageNetworkEnergySensorLogic.ShouldRequestPower(
-                requestPower,
-                snapshot.NetworkOnline,
-                snapshot.StoredJoules,
-                snapshot.CapacityJoules,
-                lowThresholdValue,
-                highThresholdValue);
+            requestPower = highThresholdIncreased
+                ? StorageNetworkEnergySensorLogic.ShouldRequestPowerAfterHighThresholdIncrease(
+                    requestPower,
+                    snapshot.NetworkOnline,
+                    snapshot.StoredJoules,
+                    snapshot.CapacityJoules,
+                    lowThresholdValue,
+                    highThresholdValue)
+                : StorageNetworkEnergySensorLogic.ShouldRequestPower(
+                    requestPower,
+                    snapshot.NetworkOnline,
+                    snapshot.StoredJoules,
+                    snapshot.CapacityJoules,
+                    lowThresholdValue,
+                    highThresholdValue);
             logicPorts?.SendSignal(PORT_ID, requestPower ? 1 : 0);
         }
 
