@@ -146,6 +146,7 @@ namespace StorageNetwork.Components
 
             slot.HasDisk = true;
             slot.RecipeIds = new List<string>(disk.EngravedRecipeIds ?? new List<string>());
+            slot.DiskName = GetDiskName(disk);
             slot.DeduplicateRecipeIds();
             Util.KDestroyGameObject(disk.gameObject);
             RefreshFabricatorRecipes();
@@ -360,6 +361,7 @@ namespace StorageNetwork.Components
             {
                 diskObject.SetActive(true);
                 diskObject.GetComponent<StorageNetworkEngravingDisk>()?.SetRecipeIds(slot.RecipeIds);
+                ApplyDiskName(diskObject, slot.DiskName);
             }
 
             slot.Clear();
@@ -507,6 +509,7 @@ namespace StorageNetwork.Components
 
             slot.HasDisk = true;
             slot.RecipeIds = new List<string>(disk.EngravedRecipeIds ?? new List<string>());
+            slot.DiskName = GetDiskName(disk);
             slot.DeduplicateRecipeIds();
             disk.GetComponent<KPrefabID>()?.RemoveTag(StorageNetworkTags.SelectedEngravingDisk);
             Util.KDestroyGameObject(disk.gameObject);
@@ -679,6 +682,21 @@ namespace StorageNetwork.Components
             Util.KDestroyGameObject(target);
         }
 
+        private static string GetDiskName(StorageNetworkEngravingDisk disk)
+        {
+            return disk != null ? disk.gameObject.GetProperName() : string.Empty;
+        }
+
+        private static void ApplyDiskName(GameObject diskObject, string diskName)
+        {
+            if (diskObject == null || string.IsNullOrEmpty(diskName))
+            {
+                return;
+            }
+
+            diskObject.AddOrGet<UserNameable>()?.SetName(diskName);
+        }
+
         [SerializationConfig(MemberSerialization.OptIn)]
         public sealed class EngravingDiskSlot
         {
@@ -688,10 +706,14 @@ namespace StorageNetwork.Components
             [Serialize]
             public List<string> RecipeIds = new List<string>();
 
+            [Serialize]
+            public string DiskName;
+
             public void Clear()
             {
                 HasDisk = false;
                 RecipeIds.Clear();
+                DiskName = null;
             }
 
             public void DeduplicateRecipeIds()

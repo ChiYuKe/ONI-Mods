@@ -155,6 +155,33 @@ namespace StorageNetwork.Components
             Trigger(1721324763, this);
         }
 
+        public void CopyOrderCenterSettingsFrom(GameObject sourceObject)
+        {
+            StorageNetworkOrderProductionCenterFabricator source = sourceObject != null
+                ? sourceObject.GetComponent<StorageNetworkOrderProductionCenterFabricator>()
+                : null;
+
+            if (source != null && source != this)
+            {
+                CopyQueueCountsFrom(source);
+                int sourceNextOrderIdx = GetIntField(NextOrderIdxField, source, 0);
+                NextOrderIdxField?.SetValue(this, sourceNextOrderIdx);
+            }
+
+            ComplexRecipe[] recipes = RecipeListField?.GetValue(this) as ComplexRecipe[];
+            int recipeCount = recipes != null ? recipes.Length : 0;
+            EnsureOpenOrderCountsMatchRecipes();
+            ClampOrderIndex(NextOrderIdxField, recipeCount);
+            ClampOrderIndex(WorkingOrderIdxField, recipeCount);
+            HasOpenOrdersField?.SetValue(this, HasAnyQueuedRecipe());
+            QueueDirtyField?.SetValue(this, true);
+            StopInvalidCores();
+            SyncVanillaCurrentOrder();
+            RefreshWorldProgressBars();
+            SyncOperationalActive(HasParallelWorkingOrder);
+            Trigger(1721324763, this);
+        }
+
         public void CancelOrderCenterRecipe(ComplexRecipe recipe, int finalQueued, bool cancelWorkingCores)
         {
             if (recipe == null)
@@ -230,6 +257,39 @@ namespace StorageNetwork.Components
             SyncVanillaCurrentOrder();
             RefreshWorldProgressBars();
             SyncOperationalActive(HasParallelWorkingOrder);
+        }
+
+        private void CopyQueueCountsFrom(StorageNetworkOrderProductionCenterFabricator source)
+        {
+            ComplexRecipe[] recipes = RecipeListField?.GetValue(this) as ComplexRecipe[];
+            Dictionary<string, int> sourceQueueCounts = RecipeQueueCountsField?.GetValue(source) as Dictionary<string, int>;
+            Dictionary<string, int> targetQueueCounts = RecipeQueueCountsField?.GetValue(this) as Dictionary<string, int>;
+            if (recipes == null || sourceQueueCounts == null || targetQueueCounts == null)
+            {
+                return;
+            }
+
+            HashSet<string> validRecipeIds = new HashSet<string>(recipes
+                .Where(recipe => recipe != null)
+                .Select(recipe => recipe.id));
+
+            foreach (string queuedRecipeId in targetQueueCounts.Keys.ToList())
+            {
+                if (!validRecipeIds.Contains(queuedRecipeId))
+                {
+                    targetQueueCounts.Remove(queuedRecipeId);
+                }
+            }
+
+            foreach (ComplexRecipe recipe in recipes)
+            {
+                if (recipe == null)
+                {
+                    continue;
+                }
+
+                targetQueueCounts[recipe.id] = sourceQueueCounts.TryGetValue(recipe.id, out int count) ? count : 0;
+            }
         }
 
         public float GetProgressForRecipe(ComplexRecipe recipe)

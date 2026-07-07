@@ -56,6 +56,11 @@ namespace StorageNetwork.Patches
         {
             public static bool Prefix(KButtonEvent e)
             {
+                if (StorageNetworkHotkeyPatch.TryConsume(e))
+                {
+                    return false;
+                }
+
                 if (ConsumeStorageNetworkMouseScroll(e))
                 {
                     return false;
