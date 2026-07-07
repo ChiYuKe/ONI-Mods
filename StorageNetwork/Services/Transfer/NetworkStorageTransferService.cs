@@ -839,9 +839,34 @@ namespace StorageNetwork.Services
 
             if (transferAmount + PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT >= mass)
             {
-                StoreFluidChunk(target, primaryElement, mass, conduitType);
-                source.ConsumeIgnoringDisease(item);
-                return new StorageTransferResult(mass, null);
+                float stored = StoreFluidChunkAndGetStoredMass(target, primaryElement, mass, conduitType);
+                if (stored + PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT >= mass)
+                {
+                    source.ConsumeIgnoringDisease(item);
+                    return new StorageTransferResult(stored, null);
+                }
+
+                if (stored > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+                {
+                    Pickupable storedPortion = pickupable.Take(stored);
+                    if (storedPortion != null)
+                    {
+                        Util.KDestroyGameObject(storedPortion.gameObject);
+                    }
+
+                    source.Trigger(-1697596308, item);
+                    source.OnStorageChange?.Invoke(item);
+                }
+
+                float fallbackMoved = TransferStoredObject(source, target, item, mass - stored);
+                float totalMoved = stored + fallbackMoved;
+                return totalMoved > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT
+                    ? new StorageTransferResult(
+                        totalMoved,
+                        source.items.Contains(item) && GetTransferableAmount(item) > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT
+                            ? StorageItemUtility.GetItemDisplayName(item, tag)
+                            : null)
+                    : StorageTransferResult.Blocked(StorageItemUtility.GetItemDisplayName(item, tag));
             }
 
             Pickupable taken = pickupable.Take(transferAmount);
@@ -852,8 +877,31 @@ namespace StorageNetwork.Services
                 return StorageTransferResult.Blocked(StorageItemUtility.GetItemDisplayName(item, tag));
             }
 
-            StoreFluidChunk(target, takenElement, moved, conduitType);
-            Util.KDestroyGameObject(taken.gameObject);
+            float storedFromTaken = StoreFluidChunkAndGetStoredMass(target, takenElement, moved, conduitType);
+            if (storedFromTaken <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+            {
+                target.Store(taken.gameObject, hide_popups: true, block_events: false, do_disease_transfer: true, is_deserializing: false);
+                source.Trigger(-1697596308, item);
+                source.OnStorageChange?.Invoke(item);
+                return new StorageTransferResult(moved, StorageItemUtility.GetItemDisplayName(item, tag));
+            }
+
+            if (storedFromTaken + PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT >= moved)
+            {
+                Util.KDestroyGameObject(taken.gameObject);
+            }
+            else
+            {
+                float remainderMass = moved - storedFromTaken;
+                PrimaryElement takenRemainderElement = taken.GetComponent<PrimaryElement>();
+                if (takenRemainderElement != null)
+                {
+                    takenRemainderElement.Mass = remainderMass;
+                }
+
+                target.Store(taken.gameObject, hide_popups: true, block_events: false, do_disease_transfer: true, is_deserializing: false);
+            }
+
             source.Trigger(-1697596308, item);
             source.OnStorageChange?.Invoke(item);
             return new StorageTransferResult(
@@ -875,6 +923,20 @@ namespace StorageNetwork.Services
             return element != null &&
                 ((conduitType == ConduitType.Liquid && element.IsLiquid) ||
                  (conduitType == ConduitType.Gas && element.IsGas));
+        }
+
+        private static float StoreFluidChunkAndGetStoredMass(Storage target, PrimaryElement fluid, float mass, ConduitType conduitType)
+        {
+            if (target == null || fluid == null || mass <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+            {
+                return 0f;
+            }
+
+            SimHashes elementId = fluid.ElementID;
+            float before = GetStoredElementMass(target, elementId);
+            StoreFluidChunk(target, fluid, mass, conduitType);
+            float after = GetStoredElementMass(target, elementId);
+            return Mathf.Clamp(after - before, 0f, mass);
         }
 
         private static void StoreFluidChunk(Storage target, PrimaryElement fluid, float mass, ConduitType conduitType)
@@ -900,6 +962,26 @@ namespace StorageNetwork.Services
                 fluid.DiseaseCount,
                 false,
                 true);
+        }
+
+        private static float GetStoredElementMass(Storage storage, SimHashes elementId)
+        {
+            if (storage?.items == null)
+            {
+                return 0f;
+            }
+
+            float mass = 0f;
+            foreach (GameObject item in storage.items)
+            {
+                PrimaryElement primaryElement = item != null ? item.GetComponent<PrimaryElement>() : null;
+                if (primaryElement != null && primaryElement.ElementID == elementId)
+                {
+                    mass += Mathf.Max(0f, primaryElement.Mass);
+                }
+            }
+
+            return mass;
         }
 
         private static float TransferStoredObject(Storage source, Storage target, GameObject item, float amount)
