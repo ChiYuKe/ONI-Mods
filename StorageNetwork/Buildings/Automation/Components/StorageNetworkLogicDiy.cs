@@ -74,6 +74,7 @@ namespace StorageNetwork.Components
         private readonly Dictionary<string, float> previousMaterialAmountByNode = new Dictionary<string, float>();
         private readonly Dictionary<string, float> counterValueByNode = new Dictionary<string, float>();
         private float runtimeEvalDt;
+        private static readonly Dictionary<System.Type, PropertyInfo> switchLikeOutputPropertyByType = new Dictionary<System.Type, PropertyInfo>();
         private static readonly EventSystem.IntraObjectHandler<StorageNetworkLogicDiy> OnCopySettingsDelegate =
             new EventSystem.IntraObjectHandler<StorageNetworkLogicDiy>((component, data) => component.OnCopySettings(data));
 
@@ -805,8 +806,7 @@ namespace StorageNetwork.Components
                 return 0f;
             }
 
-            GameObject target = FindBuildingGameObject(selectedBuildingInstanceId);
-            if (target == null)
+            if (!StorageNetworkBuildingRegistry.TryGetBuilding(selectedBuildingInstanceId, out GameObject target))
             {
                 return 0f;
             }
@@ -822,8 +822,8 @@ namespace StorageNetwork.Components
                 return 0f;
             }
 
-            GameObject target = FindBuildingGameObject(selectedBuildingInstanceId);
-            if (target == null || target == gameObject)
+            if (!StorageNetworkBuildingRegistry.TryGetLogicOutputBuilding(selectedBuildingInstanceId, out GameObject target) ||
+                target == gameObject)
             {
                 return 0f;
             }
@@ -880,7 +880,18 @@ namespace StorageNetwork.Components
                     continue;
                 }
 
-                PropertyInfo property = component.GetType().GetProperty("IsSwitchedOn", BindingFlags.Instance | BindingFlags.Public);
+                System.Type componentType = component.GetType();
+                if (!switchLikeOutputPropertyByType.TryGetValue(componentType, out PropertyInfo property))
+                {
+                    property = componentType.GetProperty("IsSwitchedOn", BindingFlags.Instance | BindingFlags.Public);
+                    if (property != null && property.PropertyType != typeof(bool))
+                    {
+                        property = null;
+                    }
+
+                    switchLikeOutputPropertyByType[componentType] = property;
+                }
+
                 if (property == null || property.PropertyType != typeof(bool))
                 {
                     continue;
@@ -898,33 +909,6 @@ namespace StorageNetwork.Components
             }
 
             return false;
-        }
-
-        private static bool HasLogicOutputPort(GameObject target)
-        {
-            LogicPorts ports = target != null ? target.GetComponent<LogicPorts>() : null;
-            return ports?.outputPortInfo != null && ports.outputPortInfo.Length > 0;
-        }
-
-        private GameObject FindBuildingGameObject(int instanceId)
-        {
-            if (instanceId == KPrefabID.InvalidInstanceID || instanceId <= 0)
-            {
-                return null;
-            }
-
-            BuildingComplete[] buildings = global::UnityEngine.Object.FindObjectsOfType<BuildingComplete>();
-            foreach (BuildingComplete building in buildings)
-            {
-                GameObject target = building != null ? building.gameObject : null;
-                KPrefabID prefabId = target != null ? target.GetComponent<KPrefabID>() : null;
-                if (prefabId != null && prefabId.InstanceID == instanceId)
-                {
-                    return target;
-                }
-            }
-
-            return null;
         }
 
         private void UpdateRuntimeTimers(float dt)
@@ -1212,11 +1196,16 @@ namespace StorageNetwork.Components
         {
             List<WebEditorBuildingOption> options = new List<WebEditorBuildingOption>();
             int worldId = gameObject != null ? gameObject.GetMyWorldId() : -1;
-            BuildingComplete[] buildings = global::UnityEngine.Object.FindObjectsOfType<BuildingComplete>();
-            foreach (BuildingComplete building in buildings)
+            List<GameObject> buildings = StorageNetworkBuildingRegistry.GetBuildingsForWorld(worldId);
+            if (buildings.Count == 0)
             {
-                GameObject target = building != null ? building.gameObject : null;
-                if (target == null || target.GetMyWorldId() != worldId)
+                StorageNetworkBuildingRegistry.RebuildFromScene();
+                buildings = StorageNetworkBuildingRegistry.GetBuildingsForWorld(worldId);
+            }
+
+            foreach (GameObject target in buildings)
+            {
+                if (target == null)
                 {
                     continue;
                 }
@@ -1227,7 +1216,7 @@ namespace StorageNetwork.Components
                     continue;
                 }
 
-                bool hasLogicOutput = HasLogicOutputPort(target);
+                bool hasLogicOutput = StorageNetworkBuildingRegistry.IsLogicOutputBuilding(target);
                 if (!IsStorageNetworkModBuilding(target, prefabId) && !hasLogicOutput)
                 {
                     continue;

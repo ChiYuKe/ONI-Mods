@@ -13,6 +13,7 @@ namespace StorageNetwork.Patches
             {
                 StorageNetworkLifecycle.ResetRuntimeState();
                 StorageNetworkConstructionSupplyService.Reset();
+                StorageNetworkBuildingRegistry.Clear();
             }
 
             public static void Postfix(Game __instance)
@@ -28,6 +29,7 @@ namespace StorageNetwork.Patches
             {
                 StorageNetworkLifecycle.ResetRuntimeState();
                 StorageNetworkConstructionSupplyService.Reset();
+                StorageNetworkBuildingRegistry.Clear();
             }
         }
 
@@ -38,6 +40,7 @@ namespace StorageNetwork.Patches
             {
                 StorageNetworkLifecycle.ResetRuntimeState();
                 StorageNetworkConstructionSupplyService.Reset();
+                StorageNetworkBuildingRegistry.Clear();
             }
         }
     }

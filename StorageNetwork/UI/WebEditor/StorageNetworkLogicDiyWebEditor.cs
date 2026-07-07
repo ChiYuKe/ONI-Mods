@@ -16,11 +16,13 @@ namespace StorageNetwork.UI.WebEditor
     {
         private const int FirstPort = 17845;
         private const int LastPort = 17864;
+        private const double LaunchSuppressSeconds = 20d;
 
         private static readonly object sync = new object();
         private static readonly Dictionary<int, WeakReference<StorageNetworkLogicDiy>> registered = new Dictionary<int, WeakReference<StorageNetworkLogicDiy>>();
         private static readonly Dictionary<int, WebEditorSaveRequest> pending = new Dictionary<int, WebEditorSaveRequest>();
         private static readonly Dictionary<int, System.DateTime> activePages = new Dictionary<int, System.DateTime>();
+        private static readonly Dictionary<int, System.DateTime> recentLaunches = new Dictionary<int, System.DateTime>();
         private static readonly Dictionary<int, WebEditorState> cachedStates = new Dictionary<int, WebEditorState>();
         private static readonly Dictionary<int, float> lastFullStateRefreshTime = new Dictionary<int, float>();
         private static readonly Dictionary<int, IntPtr> editorWindowHandles = new Dictionary<int, IntPtr>();
@@ -66,16 +68,23 @@ namespace StorageNetwork.UI.WebEditor
 
             string url = $"http://127.0.0.1:{activePort}/?id={id}";
             bool pageAlreadyActive;
+            bool launchRecentlyRequested;
             lock (sync)
             {
                 pageAlreadyActive = IsPageActiveLocked(id);
+                launchRecentlyRequested = IsLaunchRecentlyRequestedLocked(id);
                 activePages[id] = System.DateTime.UtcNow;
             }
 
-            if (pageAlreadyActive)
+            if (pageAlreadyActive || launchRecentlyRequested)
             {
                 ThreadPool.QueueUserWorkItem(_ => TryActivateExistingEditorWindowRepeated(id, windowTitle));
                 return;
+            }
+
+            lock (sync)
+            {
+                recentLaunches[id] = System.DateTime.UtcNow;
             }
 
             if (!TryOpenTopmostBrowserWindow(url, id, windowTitle))
@@ -358,6 +367,22 @@ namespace StorageNetwork.UI.WebEditor
             }
 
             activePages.Remove(id);
+            return false;
+        }
+
+        private static bool IsLaunchRecentlyRequestedLocked(int id)
+        {
+            if (!recentLaunches.TryGetValue(id, out System.DateTime lastLaunch))
+            {
+                return false;
+            }
+
+            if ((System.DateTime.UtcNow - lastLaunch).TotalSeconds <= LaunchSuppressSeconds)
+            {
+                return true;
+            }
+
+            recentLaunches.Remove(id);
             return false;
         }
 

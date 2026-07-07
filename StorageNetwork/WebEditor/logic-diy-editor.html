@@ -638,6 +638,7 @@
         <div class="header-actions">
             <span id="status">未保存</span>
             <button class="header-btn" id="sidebarToggleBtn" type="button">折叠模块</button>
+            <button class="header-btn" id="exportPngBtn" type="button">导出PNG</button>
             <button class="header-btn" id="langBtn" type="button">EN</button>
             <button class="save-btn" id="saveBtn">保存到游戏</button>
         </div>
@@ -740,6 +741,7 @@ const zoomBadge = document.getElementById('zoomBadge');
 const fitViewBtn = document.getElementById('fitViewBtn');
 const statusEl = document.getElementById('status');
 const saveBtn = document.getElementById('saveBtn');
+const exportPngBtn = document.getElementById('exportPngBtn');
 const sidebarToggleBtn = document.getElementById('sidebarToggleBtn');
 const docsBtn = document.getElementById('docsBtn');
 const langBtn = document.getElementById('langBtn');
@@ -749,6 +751,8 @@ const docsContent = document.getElementById('docsContent');
 const editorTitleEl = document.getElementById('editorTitle');
 const editorId = new URLSearchParams(location.search).get('id') || '0';
 const storageKey = `storage-network-logic-diy-${editorId}`;
+const pageToken = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+const pageOpenedAt = Date.now();
 const WORKSPACE_WIDTH = 3200;
 const WORKSPACE_HEIGHT = 1800;
 
@@ -795,6 +799,47 @@ const LANG_STORAGE_KEY = 'storage-network-logic-diy-language';
 const SIDEBAR_COLLAPSED_STORAGE_KEY = 'storage-network-logic-diy-sidebar-collapsed';
 let currentLanguage = localStorage.getItem(LANG_STORAGE_KEY) || (/^zh/i.test(navigator.language || '') ? 'zh' : 'en');
 let sidebarCollapsed = localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY) === '1';
+let duplicatePageClosing = false;
+
+function closeDuplicateEditorPage() {
+    if (duplicatePageClosing) return;
+    duplicatePageClosing = true;
+    document.body.classList.add('disconnected');
+    const message = document.querySelector('.shutdown-message');
+    if (message) {
+        message.textContent = currentLanguage === 'zh'
+            ? '这个建筑的逻辑编辑器已经打开，正在关闭重复窗口...'
+            : 'This building editor is already open. Closing duplicate window...';
+    }
+    setTimeout(() => window.close(), 80);
+}
+
+try {
+    const duplicateChannel = typeof BroadcastChannel !== 'undefined'
+        ? new BroadcastChannel(`storage-network-logic-diy-${editorId}`)
+        : null;
+    if (duplicateChannel) {
+        duplicateChannel.onmessage = event => {
+            const data = event.data || {};
+            if (!data || data.token === pageToken) return;
+            if (data.type === 'probe') {
+                duplicateChannel.postMessage({ type: 'alive', token: pageToken, openedAt: pageOpenedAt });
+                return;
+            }
+            if (data.type === 'alive' && Number(data.openedAt || 0) < pageOpenedAt) {
+                closeDuplicateEditorPage();
+            }
+        };
+        duplicateChannel.postMessage({ type: 'probe', token: pageToken, openedAt: pageOpenedAt });
+        setTimeout(() => {
+            if (!duplicatePageClosing) {
+                duplicateChannel.postMessage({ type: 'alive', token: pageToken, openedAt: pageOpenedAt });
+            }
+        }, 200);
+    }
+} catch {
+    // Duplicate-window prevention is best-effort; the game-side launch guard still applies.
+}
 
 const uiText = {
     zh: {
@@ -808,6 +853,7 @@ const uiText = {
         autoSaving: '自动保存中...',
         autoSaved: '已自动保存到游戏',
         saveFailed: '保存失败',
+        exportPng: '导出PNG',
         collapseSidebar: '折叠模块',
         expandSidebar: '展开模块',
         connected: '已连接游戏',
@@ -868,6 +914,7 @@ const uiText = {
         autoSaving: 'Auto-saving...',
         autoSaved: 'Auto-saved to game',
         saveFailed: 'Save failed',
+        exportPng: 'Export PNG',
         collapseSidebar: 'Collapse',
         expandSidebar: 'Expand',
         connected: 'Connected to game',
@@ -1452,6 +1499,7 @@ function localizePage(refreshNodes) {
     renderSidebar();
     docsBtn.textContent = docsPage.classList.contains('visible') ? t('backToEdit') : t('docs');
     saveBtn.textContent = t('save');
+    exportPngBtn.textContent = t('exportPng');
     langBtn.textContent = currentLanguage === 'zh' ? 'EN' : '中文';
     applySidebarCollapsedState();
     if (!statusEl.textContent || ['未保存', 'Unsaved'].includes(statusEl.textContent)) {
@@ -2403,6 +2451,224 @@ function renderConnections() {
     });
 }
 
+function getExportNodeSize(id) {
+    const data = nodesData[id] || {};
+    const meta = nodeMeta[data.type] || {};
+    if (data.type === 'group') return getGroupSize(id);
+    const el = document.getElementById(id);
+    return {
+        width: el?.offsetWidth || 180,
+        height: el?.offsetHeight || Number(meta.contentHeight || 80) + 44
+    };
+}
+
+function getExportPortPosition(nodeId, direction, portName) {
+    const data = nodesData[nodeId];
+    const meta = nodeMeta[data?.type || ''] || {};
+    const size = getExportNodeSize(nodeId);
+    const index = parsePortIndex(portName);
+    const count = direction === 'output' ? Number(meta.outputs || 0) : Number(meta.inputs || 0);
+    const customCenters = direction === 'output' ? meta.outputPortCenters : meta.inputPortCenters;
+    const centerY = Array.isArray(customCenters) && customCenters[index] != null
+        ? Number(customCenters[index])
+        : 28 + Number(meta.contentHeight || Math.max(1, size.height - 44)) * ((index + 0.5) / Math.max(1, count));
+    return {
+        x: Number(data?.x || 0) + (direction === 'output' ? size.width : 0),
+        y: Number(data?.y || 0) + centerY
+    };
+}
+
+function drawRoundedRect(ctx, x, y, width, height, radius) {
+    const r = Math.min(radius, width * 0.5, height * 0.5);
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + width - r, y);
+    ctx.quadraticCurveTo(x + width, y, x + width, y + r);
+    ctx.lineTo(x + width, y + height - r);
+    ctx.quadraticCurveTo(x + width, y + height, x + width - r, y + height);
+    ctx.lineTo(x + r, y + height);
+    ctx.quadraticCurveTo(x, y + height, x, y + height - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+}
+
+function drawWrappedText(ctx, text, x, y, maxWidth, lineHeight, maxLines = 4) {
+    const words = String(text || '').split(/\s+/);
+    const hasSpaces = words.length > 1;
+    const units = hasSpaces ? words : Array.from(String(text || ''));
+    let line = '';
+    let lines = [];
+    units.forEach(unit => {
+        const next = hasSpaces ? (line ? `${line} ${unit}` : unit) : `${line}${unit}`;
+        if (ctx.measureText(next).width > maxWidth && line) {
+            lines.push(line);
+            line = unit;
+        } else {
+            line = next;
+        }
+    });
+    if (line) lines.push(line);
+    lines = lines.slice(0, maxLines);
+    lines.forEach((lineText, index) => ctx.fillText(lineText, x, y + index * lineHeight));
+    return y + lines.length * lineHeight;
+}
+
+function getNodeExportLines(id) {
+    const data = nodesData[id] || {};
+    const type = data.type || '';
+    const el = document.getElementById(id);
+    if (type === 'output') return ['Port0                 1', 'Port1                 2', 'Port2                 4', 'Port3                 8'];
+    if (type === 'cycle4') {
+        const interval = Math.max(0.2, Number(data.intervalSeconds || 5)).toFixed(1);
+        return [`${interval}s`, 'Port0              1', 'Port1              2', 'Port2              3', 'Port3              4'];
+    }
+    if (type === 'material' || type === 'material-change' || type === 'material-low' || type === 'material-high') {
+        const material = getSelectedMaterial();
+        const name = stripGameRichText(material?.Name || material?.name || t('chooseMaterial'));
+        const amount = formatTons(material?.MassKg ?? material?.massKg ?? serverState.selectedMaterialAmountKg ?? 0).replace(/<[^>]*>/g, '');
+        if (type === 'material') return [name, `${t('current')} ${amount}`];
+        return [name, `${t('current')} ${amount}`, `${Math.max(0, Number(data.value || 100)).toFixed(0)}kg`];
+    }
+    if (type === 'building-status' || type === 'building-signal') {
+        const building = getSelectedBuilding(id);
+        const name = stripGameRichText(building?.Name || building?.name || t('chooseBuilding'));
+        const value = type === 'building-signal'
+            ? (building ? `${t('signalValue')} ${getBuildingSignalValue(building)}` : t('noBuildingSelected'))
+            : (building ? ((building.Operational ?? building.operational) ? t('currentAvailable') : t('currentUnavailable')) : t('noBuildingSelected'));
+        return [name, value];
+    }
+    if (type === 'constant' || type === 'variable') return [`${Math.max(0, Number(data.value || serverState.conditionThresholdKg || serverState.ConditionThresholdKg || 100)).toFixed(0)}kg`];
+    if (type === 'timer' || type === 'delay') return [`${Math.max(0.2, Number(data.intervalSeconds || 5)).toFixed(1)}s`];
+    if (type === 'random') return [`${Math.max(0, Math.min(100, Number(data.value ?? 50))).toFixed(0)}%`];
+    if (type === 'comment' || type === 'group') return [data.text || (type === 'group' ? t('groupDefault') : t('commentDefault'))];
+    if (type === 'test-signal') return [el?.querySelector('.signal-state')?.textContent || t('signalRed'), el?.querySelector('.signal-value')?.textContent || '0'];
+    const meta = nodeMeta[type] || {};
+    return [meta.label || t('logicOutput'), meta.sign || ''];
+}
+
+function drawExportNode(ctx, id, bounds) {
+    const data = nodesData[id];
+    if (!data) return;
+    const meta = nodeMeta[data.type] || {};
+    const size = getExportNodeSize(id);
+    const x = Number(data.x || 0) - bounds.left;
+    const y = Number(data.y || 0) - bounds.top;
+    const isGroup = data.type === 'group';
+    ctx.save();
+    if (isGroup) {
+        ctx.globalAlpha = 0.72;
+        ctx.fillStyle = '#b6bbaa';
+        ctx.strokeStyle = '#4a5046';
+        ctx.lineWidth = 2;
+        drawRoundedRect(ctx, x, y, size.width, size.height, 6);
+        ctx.fill();
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+    } else {
+        ctx.shadowColor = 'rgba(0,0,0,0.28)';
+        ctx.shadowBlur = 4;
+        ctx.shadowOffsetX = 3;
+        ctx.shadowOffsetY = 3;
+        ctx.fillStyle = '#9fa599';
+        ctx.strokeStyle = '#4a5046';
+        ctx.lineWidth = 2;
+        drawRoundedRect(ctx, x, y, size.width, size.height, 5);
+        ctx.fill();
+        ctx.stroke();
+        ctx.shadowColor = 'transparent';
+    }
+    ctx.fillStyle = isGroup ? '#b6bbaa' : '#9fa599';
+    drawRoundedRect(ctx, x + 2, y + 2, size.width - 4, 27, 4);
+    ctx.fill();
+    ctx.fillStyle = '#2d312e';
+    ctx.font = 'bold 13px "Segoe UI", sans-serif';
+    ctx.fillText(meta.title || data.type, x + 12, y + 19);
+
+    if (!isGroup) {
+        ctx.fillStyle = ['material', 'building-status', 'building-signal', 'material-change'].includes(data.type) ? '#a04370' : '#242c3d';
+        ctx.fillRect(x + 14, y + 38, Math.max(20, size.width - 28), Math.max(20, size.height - 52));
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 13px "Segoe UI", sans-serif';
+        const lines = getNodeExportLines(id);
+        let textY = y + 61;
+        lines.forEach((line, index) => {
+            ctx.font = index === 0 ? 'bold 13px "Segoe UI", sans-serif' : '12px "Segoe UI", sans-serif';
+            textY = drawWrappedText(ctx, line, x + 24, textY, size.width - 48, 17, 2) + 2;
+        });
+    } else {
+        ctx.fillStyle = '#4a5046';
+        ctx.font = '13px "Segoe UI", sans-serif';
+        drawWrappedText(ctx, data.text || t('groupDefault'), x + 14, y + 52, size.width - 28, 18, 4);
+    }
+
+    const drawPort = (direction, index) => {
+        const pos = getExportPortPosition(id, direction, `${direction === 'output' ? 'out' : 'in'}-${index}`);
+        const px = pos.x - bounds.left;
+        const py = pos.y - bounds.top;
+        ctx.fillStyle = direction === 'output' ? '#d45d8f' : '#3b82f6';
+        ctx.strokeStyle = '#4a5046';
+        ctx.lineWidth = 1.5;
+        ctx.fillRect(px - 5, py - 5, 10, 10);
+        ctx.strokeRect(px - 5, py - 5, 10, 10);
+    };
+    for (let i = 0; i < Number(meta.inputs || 0); i++) drawPort('input', i);
+    for (let i = 0; i < Number(meta.outputs || 0); i++) drawPort('output', i);
+    ctx.restore();
+}
+
+function exportGraphPng() {
+    const nodeIds = Object.keys(nodesData).filter(id => document.getElementById(id));
+    if (!nodeIds.length) return;
+    const padding = 80;
+    const rawBounds = getAllNodesBounds();
+    const bounds = {
+        left: Math.max(0, rawBounds.left - padding),
+        top: Math.max(0, rawBounds.top - padding),
+        right: Math.min(WORKSPACE_WIDTH, rawBounds.right + padding),
+        bottom: Math.min(WORKSPACE_HEIGHT, rawBounds.bottom + padding)
+    };
+    const width = Math.max(320, Math.ceil(bounds.right - bounds.left));
+    const height = Math.max(240, Math.ceil(bounds.bottom - bounds.top));
+    const maxSide = 4096;
+    const scale = Math.min(2, maxSide / Math.max(width, height));
+    const exportCanvas = document.createElement('canvas');
+    exportCanvas.width = Math.ceil(width * scale);
+    exportCanvas.height = Math.ceil(height * scale);
+    const ctx = exportCanvas.getContext('2d');
+    ctx.scale(scale, scale);
+    ctx.fillStyle = '#cbd0c4';
+    ctx.fillRect(0, 0, width, height);
+
+    nodeIds.filter(id => nodesData[id]?.type === 'group').forEach(id => drawExportNode(ctx, id, bounds));
+    ctx.strokeStyle = '#7a8274';
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    connections.forEach(conn => {
+        if (!nodesData[conn.fromNode] || !nodesData[conn.toNode]) return;
+        const p1 = getExportPortPosition(conn.fromNode, 'output', conn.fromPort);
+        const p2 = getExportPortPosition(conn.toNode, 'input', conn.toPort);
+        const x1 = p1.x - bounds.left;
+        const y1 = p1.y - bounds.top;
+        const x2 = p2.x - bounds.left;
+        const y2 = p2.y - bounds.top;
+        const deltaX = Math.abs(x2 - x1) * 0.5;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.bezierCurveTo(x1 + deltaX, y1, x2 - deltaX, y2, x2, y2);
+        ctx.stroke();
+    });
+    nodeIds.filter(id => nodesData[id]?.type !== 'group').forEach(id => drawExportNode(ctx, id, bounds));
+
+    const link = document.createElement('a');
+    const name = stripGameRichText(serverState.buildingName || serverState.BuildingName || 'logic-editor')
+        .replace(/[\\/:*?"<>|]+/g, '_')
+        .trim() || 'logic-editor';
+    link.download = `${name}.png`;
+    link.href = exportCanvas.toDataURL('image/png');
+    link.click();
+}
+
 window.deleteNode = function(id) {
     document.getElementById(id)?.remove();
     connections = connections.filter(conn => conn.fromNode !== id && conn.toNode !== id);
@@ -2679,6 +2945,7 @@ function currentThreshold() {
 }
 
 saveBtn.addEventListener('click', () => saveToGame(t('saving'), t('saved')));
+exportPngBtn.addEventListener('click', exportGraphPng);
 sidebarToggleBtn.addEventListener('click', () => {
     sidebarCollapsed = !sidebarCollapsed;
     applySidebarCollapsedState();
