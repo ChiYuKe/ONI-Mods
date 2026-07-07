@@ -72,5 +72,6 @@
     <None Include="translations\*.po" CopyToOutputDirectory="PreserveNewest" />
     <None Include="Assets\Sprite\*.png" CopyToOutputDirectory="PreserveNewest" />
     <None Include="Assets\AssetBundles\**\*" CopyToOutputDirectory="PreserveNewest" Condition="Exists('Assets\AssetBundles')" />
+    <None Include="WebEditor\**\*" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

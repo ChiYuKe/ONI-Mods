@@ -1,4 +1,5 @@
 using StorageNetwork.Components;
+using System.Collections.Generic;
 using TUNING;
 using UnityEngine;
 
@@ -39,6 +40,17 @@ namespace StorageNetwork.Buildings
             buildingDef.BaseTimeUntilRepair = -1f;
             buildingDef.PermittedRotations = PermittedRotations.R360;
             buildingDef.DragBuild = true;
+            buildingDef.LogicOutputPorts = new List<LogicPorts.Port>
+            {
+                LogicPorts.Port.OutputPort(
+                    StorageNetworkLogicDiy.PORT_ID,
+                    OutputPortOffset,
+                    STRINGS.BUILDINGS.PREFABS.STORAGENETWORKLOGICDIY.LOGIC_PORT,
+                    STRINGS.BUILDINGS.PREFABS.STORAGENETWORKLOGICDIY.LOGIC_PORT_ACTIVE,
+                    STRINGS.BUILDINGS.PREFABS.STORAGENETWORKLOGICDIY.LOGIC_PORT_INACTIVE,
+                    false,
+                    false)
+            };
 
             GeneratedBuildings.RegisterWithOverlay(OverlayModes.Logic.HighlightItemIDs, ID);
             buildingDef.AddSearchTerms(global::STRINGS.SEARCH_TERMS.AUTOMATION);
@@ -51,13 +63,14 @@ namespace StorageNetwork.Buildings
             BuildingConfigManager.Instance.IgnoreDefaultKComponent(typeof(RequiresFoundation), prefabTag);
             go.AddOrGet<CodexEntryRedirector>().CodexID = ID;
             go.AddOrGet<StorageNetworkSceneMember>();
+            go.AddOrGet<CopyBuildingSettings>();
+            go.AddOrGet<LogicPorts>();
             go.AddOrGet<UserNameable>();
         }
 
         public override void DoPostConfigureComplete(GameObject go)
         {
-            StorageNetworkLogicDiy logic = go.AddOrGet<StorageNetworkLogicDiy>();
-            logic.OutputPortOffset = OutputPortOffset;
+            go.AddOrGet<StorageNetworkLogicDiy>();
             go.GetComponent<KPrefabID>()?.AddTag(GameTags.OverlayBehindConduits);
         }
     }

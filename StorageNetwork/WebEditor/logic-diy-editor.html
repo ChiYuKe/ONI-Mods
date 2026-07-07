@@ -1,0 +1,2812 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logic Editor</title>
+    <style>
+        :root {
+            --bg-main: #cbd0c4;
+            --bg-sidebar: #bac0b3;
+            --panel-bg: #9fa599;
+            --panel-accent: #8c4366;
+            --panel-dark: #242c3d;
+            --text-light: #e5e7eb;
+            --text-dark: #2d312e;
+            --text-muted: #656b62;
+            --node-border: #4a5046;
+            --color-pink: #d45d8f;
+            --color-blue: #3b82f6;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            user-select: none;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: var(--bg-main);
+            color: var(--text-dark);
+        }
+
+        .window {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            border: 12px solid var(--panel-dark);
+        }
+
+        .header {
+            background-color: var(--panel-dark);
+            color: var(--text-light);
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+
+        .title-group {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 12px;
+            letter-spacing: 0;
+        }
+
+        .save-btn,
+        .header-btn {
+            background: var(--panel-accent);
+            border: 0;
+            color: var(--text-light);
+            cursor: pointer;
+            font-weight: bold;
+            padding: 6px 14px;
+        }
+
+        .header-btn {
+            background: transparent;
+            border: 2px solid var(--panel-accent);
+        }
+
+        .header-btn.active {
+            background: var(--panel-accent);
+        }
+
+        .container {
+            flex: 1;
+            display: flex;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 280px;
+            background-color: var(--bg-sidebar);
+            border-right: 2px solid var(--node-border);
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+            overflow-y: auto;
+            z-index: 20;
+            transition: width 0.16s ease, padding 0.16s ease, border-width 0.16s ease;
+        }
+
+        .container.sidebar-collapsed .sidebar {
+            width: 0;
+            padding-left: 0;
+            padding-right: 0;
+            border-right-width: 0;
+            overflow: hidden;
+        }
+
+        .container.sidebar-collapsed .sidebar > * {
+            display: none;
+        }
+
+        .sidebar::-webkit-scrollbar { width: 6px; }
+        .sidebar::-webkit-scrollbar-thumb { background: var(--panel-bg); border-radius: 3px; }
+        .sidebar-section { margin-bottom: 25px; }
+
+        .section-title {
+            font-size: 12px;
+            font-weight: bold;
+            color: var(--text-dark);
+            margin-bottom: 10px;
+            padding-bottom: 4px;
+            border-bottom: 1px solid rgba(0,0,0,0.1);
+        }
+
+        .menu-item {
+            background-color: var(--panel-bg);
+            border: 2px solid var(--node-border);
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: grab;
+            transition: transform 0.1s;
+        }
+        .menu-item:hover { transform: translateX(2px); }
+        .menu-item h4 { font-size: 13px; margin-bottom: 4px; }
+        .menu-item p { font-size: 11px; color: var(--text-muted); line-height: 1.3; }
+
+        .canvas {
+            flex: 1;
+            position: relative;
+            background-color: #aeb5a8;
+            padding: 20px;
+            overflow: hidden;
+            --canvas-zoom: 1;
+            --canvas-pan-x: 0px;
+            --canvas-pan-y: 0px;
+        }
+
+        .canvas-hint {
+            font-size: 11px;
+            color: var(--text-muted);
+            position: absolute;
+            top: 15px;
+            left: 20px;
+            pointer-events: none;
+            z-index: 2;
+            line-height: 1.6;
+        }
+
+        .viewport-tools {
+            position: absolute;
+            top: 14px;
+            right: 70px;
+            z-index: 30;
+            display: flex;
+            gap: 6px;
+        }
+
+        .viewport-btn {
+            background: var(--panel-bg);
+            border: 2px solid var(--node-border);
+            color: var(--text-dark);
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: bold;
+            padding: 4px 8px;
+        }
+
+        .viewport-btn:hover {
+            background: var(--panel-accent);
+            color: var(--text-light);
+        }
+
+        .node-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            transform: translate(var(--canvas-pan-x), var(--canvas-pan-y)) scale(var(--canvas-zoom));
+            transform-origin: 0 0;
+        }
+
+        .workspace-surface {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 3200px;
+            height: 1800px;
+            z-index: 1;
+            background-color: var(--bg-main);
+            border: 2px solid rgba(74,80,70,0.45);
+            box-shadow: 0 0 0 9999px rgba(36,44,61,0.12);
+            pointer-events: none;
+        }
+
+        .svg-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 3200px;
+            height: 1800px;
+            z-index: 5;
+            pointer-events: none;
+            overflow: visible;
+        }
+
+        .svg-layer path {
+            pointer-events: stroke;
+            cursor: pointer;
+            transition: stroke 0.1s, stroke-width 0.1s;
+        }
+        .svg-layer path:hover {
+            stroke: #ef4444 !important;
+            stroke-width: 5px !important;
+        }
+
+        .node {
+            position: absolute;
+            background-color: var(--panel-bg);
+            border: 2px solid var(--node-border);
+            border-radius: 4px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            z-index: 10;
+        }
+
+        .node.group-node {
+            z-index: 4;
+        }
+
+        .canvas.panning {
+            cursor: grabbing;
+        }
+
+        .node.selected {
+            outline: 3px solid #facc15;
+            outline-offset: 2px;
+            box-shadow: 0 8px 18px rgba(0,0,0,0.18);
+        }
+
+        .node.group-node.selected {
+            z-index: 4;
+        }
+
+        .selection-box {
+            position: absolute;
+            z-index: 55;
+            display: none;
+            border: 2px dashed #facc15;
+            background: rgba(250,204,21,0.12);
+            pointer-events: none;
+        }
+
+        .zoom-badge {
+            position: absolute;
+            right: 14px;
+            bottom: 12px;
+            z-index: 30;
+            background: rgba(36,44,61,0.86);
+            color: var(--text-light);
+            font-size: 11px;
+            font-weight: bold;
+            padding: 5px 8px;
+            pointer-events: none;
+        }
+
+        .node-title {
+            font-size: 12px;
+            padding: 6px 10px;
+            color: var(--text-dark);
+            font-weight: bold;
+            cursor: move;
+            background-color: rgba(0,0,0,0.04);
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 28px;
+        }
+
+        .node-delete {
+            cursor: pointer;
+            color: var(--text-muted);
+            font-size: 12px;
+            font-weight: normal;
+            margin-left: 10px;
+        }
+        .node-delete:hover { color: #ef4444; }
+
+        .port {
+            width: 12px;
+            height: 12px;
+            position: absolute;
+            border: 2px solid var(--node-border);
+            cursor: crosshair;
+            transition: transform 0.1s;
+            z-index: 15;
+            pointer-events: auto;
+        }
+        .port:hover { transform: scale(1.3); }
+        .port.snap-target {
+            transform: scale(1.45);
+            box-shadow: 0 0 0 4px rgba(255,255,255,0.65), 0 0 0 7px rgba(85,85,85,0.25);
+        }
+        .port.output { background-color: var(--color-pink); right: -7px; }
+        .port.input { background-color: var(--color-blue); left: -7px; }
+
+        .material-content,
+        .building-content { background-color: var(--panel-accent); color: var(--text-light); padding: 15px; margin: 8px; width: 140px; cursor: pointer; }
+        .material-content h3,
+        .building-content h3 { font-size: 14px; margin-bottom: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .material-content p,
+        .building-content p { font-size: 11px; opacity: 0.8; }
+        .variable-container .material-content {
+            width: 100%;
+            margin: 0;
+            padding: 12px;
+        }
+
+        .pure-condition-box {
+            background-color: var(--panel-dark);
+            color: var(--text-light);
+            padding: 12px 24px;
+            margin: 8px;
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            width: 140px;
+            border-radius: 2px;
+        }
+        .pure-condition-box div {
+            font-size: 10px;
+            opacity: 0.6;
+            margin-bottom: 4px;
+            font-weight: normal;
+        }
+
+        .variable-container { width: 150px; padding: 8px; display: flex; flex-direction: column; gap: 8px; }
+        .input-row { display: flex; align-items: center; justify-content: space-between; gap: 4px; }
+        .num-input { width: 100%; background: #fff; border: 2px solid var(--node-border); padding: 3px 6px; text-align: right; font-weight: bold; font-size: 13px; outline: none; user-select: text; }
+        .unit-label { font-size: 11px; font-weight: bold; width: 14px; display: flex; flex-direction: column; align-items: center; line-height: 1.1; color: var(--text-dark); }
+        .spin-cluster { display: flex; flex-direction: column; gap: 2px; }
+        .spin-btn { background-color: var(--panel-dark); color: white; border: none; width: 20px; height: 13px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 8px; }
+        .chips-row { display: flex; gap: 4px; }
+        .chip { flex: 1; background-color: var(--panel-dark); color: var(--text-light); border: none; padding: 6px 0; font-size: 11px; text-align: center; cursor: pointer; }
+        .chip.active { background-color: var(--panel-accent); }
+        .node-note { color: var(--text-muted); font-size: 10px; font-weight: bold; text-align: center; }
+        .cycle-container { width: 150px; padding: 8px; display: grid; grid-template-columns: 1fr 38px; grid-template-rows: 28px repeat(4, 12px); gap: 4px 6px; align-items: center; }
+        .cycle-container .input-row { grid-column: 1 / 3; display: grid; grid-template-columns: 1fr 18px 20px; gap: 4px; }
+        .cycle-container .unit-label { width: 18px; }
+        .cycle-row { grid-column: 1 / 3; display: flex; justify-content: space-between; align-items: center; height: 12px; padding: 0 6px; color: var(--text-muted); font-size: 10px; font-weight: bold; }
+        .cycle-row span:first-child { color: var(--text-dark); }
+        .signal-monitor { width: 150px; padding: 8px; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+        .signal-state { border: 2px solid var(--node-border); background: #7f1d1d; color: var(--text-light); font-size: 12px; font-weight: bold; padding: 8px 0; text-align: center; }
+        .signal-state.active { background: #166534; }
+        .signal-value { border: 2px solid var(--node-border); background: var(--panel-dark); color: var(--text-light); font-size: 12px; font-weight: bold; padding: 8px 4px; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .comment-box { width: 190px; min-height: 72px; padding: 10px; margin: 8px; background: #f2e7a7; border: 2px solid rgba(0,0,0,0.2); color: #3f3a22; font-size: 12px; line-height: 1.4; user-select: text; }
+        .group-box { margin: 8px; border: 2px dashed var(--node-border); background: rgba(255,255,255,0.14); color: var(--text-muted); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; cursor: move; }
+        .group-resize {
+            position: absolute;
+            z-index: 20;
+            background: rgba(250,204,21,0.85);
+            border: 1px solid var(--node-border);
+        }
+        .group-resize.e, .group-resize.w { width: 8px; top: 34px; bottom: 6px; cursor: ew-resize; }
+        .group-resize.n, .group-resize.s { height: 8px; left: 6px; right: 6px; cursor: ns-resize; }
+        .group-resize.n { top: -5px; }
+        .group-resize.s { bottom: -5px; }
+        .group-resize.e { right: -5px; }
+        .group-resize.w { left: -5px; }
+        .group-resize.ne, .group-resize.nw, .group-resize.se, .group-resize.sw { width: 12px; height: 12px; }
+        .group-resize.ne { right: -6px; top: -6px; cursor: nesw-resize; }
+        .group-resize.nw { left: -6px; top: -6px; cursor: nwse-resize; }
+        .group-resize.se { right: -6px; bottom: -6px; cursor: nwse-resize; }
+        .group-resize.sw { left: -6px; bottom: -6px; cursor: nesw-resize; }
+
+        .output-rows-container { background-color: var(--panel-dark); margin: 8px; padding: 8px; display: flex; flex-direction: column; gap: 6px; width: 140px; }
+        .output-channel-row { display: flex; justify-content: space-between; align-items: center; color: var(--text-light); font-size: 12px; padding: 4px 6px; background-color: rgba(255,255,255,0.05); height: 24px; }
+        .output-channel-row span:last-child { opacity: 0.6; font-weight: bold; }
+
+        .material-picker {
+            position: absolute;
+            z-index: 50;
+            width: 260px;
+            max-height: 320px;
+            overflow-y: auto;
+            background: var(--bg-sidebar);
+            border: 2px solid var(--node-border);
+            box-shadow: 0 8px 18px rgba(0,0,0,0.18);
+            padding: 8px;
+            display: none;
+        }
+        .material-picker.visible { display: block; }
+        .material-picker-title {
+            font-size: 12px;
+            font-weight: bold;
+            color: var(--text-dark);
+            padding: 4px 4px 8px;
+            border-bottom: 1px solid rgba(0,0,0,0.12);
+            margin-bottom: 6px;
+        }
+        .material-option {
+            width: 100%;
+            border: 2px solid var(--node-border);
+            background: var(--panel-bg);
+            color: var(--text-dark);
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 6px;
+            padding: 8px;
+            text-align: left;
+        }
+        .material-option.active {
+            background: var(--panel-accent);
+            color: var(--text-light);
+        }
+        .material-option span:first-child {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .material-empty {
+            color: var(--text-muted);
+            font-size: 12px;
+            padding: 12px 8px;
+        }
+
+        .node-menu {
+            position: absolute;
+            z-index: 70;
+            width: 340px;
+            max-height: 460px;
+            display: none;
+            flex-direction: column;
+            background: var(--bg-sidebar);
+            border: 2px solid var(--node-border);
+            box-shadow: 0 12px 26px rgba(0,0,0,0.24);
+            padding: 10px;
+        }
+        .node-menu.visible { display: flex; }
+        .node-menu-title {
+            font-size: 12px;
+            font-weight: bold;
+            padding: 2px 2px 8px;
+            color: var(--text-dark);
+        }
+        .node-search {
+            width: 100%;
+            border: 2px solid var(--node-border);
+            background: #eef0ea;
+            color: var(--text-dark);
+            outline: none;
+            padding: 8px 10px;
+            font-size: 13px;
+            font-weight: bold;
+            user-select: text;
+            margin-bottom: 8px;
+        }
+        .node-menu-list {
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+        .node-menu-section {
+            margin-bottom: 10px;
+        }
+        .node-menu-section-title {
+            color: var(--text-muted);
+            font-size: 11px;
+            font-weight: bold;
+            padding: 5px 2px;
+            border-bottom: 1px solid rgba(0,0,0,0.12);
+            margin-bottom: 5px;
+        }
+        .node-menu-option {
+            width: 100%;
+            border: 2px solid var(--node-border);
+            background: var(--panel-bg);
+            color: var(--text-dark);
+            cursor: pointer;
+            display: block;
+            text-align: left;
+            padding: 8px 10px;
+            margin-bottom: 6px;
+        }
+        .node-menu-option:hover,
+        .node-menu-option.active {
+            background: var(--panel-accent);
+            color: var(--text-light);
+        }
+        .node-menu-option h4 {
+            font-size: 13px;
+            margin-bottom: 3px;
+        }
+        .node-menu-option p {
+            font-size: 11px;
+            line-height: 1.35;
+            color: inherit;
+            opacity: 0.72;
+        }
+        .node-menu-empty {
+            color: var(--text-muted);
+            font-size: 12px;
+            padding: 14px 8px;
+        }
+
+        .docs-page {
+            position: absolute;
+            inset: 0;
+            z-index: 60;
+            display: none;
+            grid-template-columns: 230px 1fr;
+            background: var(--bg-main);
+            border-left: 2px solid var(--node-border);
+        }
+
+        .docs-page.visible { display: grid; }
+        .docs-nav {
+            background: var(--bg-sidebar);
+            border-right: 2px solid var(--node-border);
+            padding: 16px;
+            overflow-y: auto;
+        }
+        .docs-title {
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 12px;
+        }
+        .docs-nav button {
+            width: 100%;
+            display: block;
+            border: 2px solid var(--node-border);
+            background: var(--panel-bg);
+            color: var(--text-dark);
+            cursor: pointer;
+            text-align: left;
+            font-weight: bold;
+            font-size: 12px;
+            padding: 10px;
+            margin-bottom: 8px;
+        }
+        .docs-nav button.active {
+            background: var(--panel-accent);
+            color: var(--text-light);
+        }
+        .docs-content {
+            padding: 18px 24px;
+            overflow-y: auto;
+        }
+        .docs-content h2 {
+            font-size: 18px;
+            margin-bottom: 14px;
+        }
+        .docs-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 12px;
+        }
+        .docs-card {
+            border: 2px solid var(--node-border);
+            background: var(--panel-bg);
+            padding: 12px;
+            border-radius: 4px;
+        }
+        .docs-card h3 {
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+        .docs-card p {
+            font-size: 12px;
+            color: var(--text-dark);
+            line-height: 1.45;
+            margin-bottom: 8px;
+        }
+        .docs-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+        .docs-meta span {
+            background: var(--panel-dark);
+            color: var(--text-light);
+            font-size: 11px;
+            font-weight: bold;
+            padding: 4px 6px;
+        }
+        .docs-example {
+            color: var(--text-muted);
+            font-size: 11px;
+            line-height: 1.4;
+        }
+
+        .shutdown-message {
+            width: 100%;
+            height: 100%;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: var(--panel-dark);
+            color: var(--text-light);
+            font-size: 18px;
+            font-weight: bold;
+        }
+        body.disconnected .window { display: none; }
+        body.disconnected .shutdown-message { display: flex; }
+    </style>
+</head>
+<body>
+<div class="window">
+    <div class="header">
+        <div class="title-group">
+            <span id="editorTitle">逻辑编辑器</span>
+            <button class="header-btn" id="docsBtn">节点说明</button>
+        </div>
+        <div class="header-actions">
+            <span id="status">未保存</span>
+            <button class="header-btn" id="sidebarToggleBtn" type="button">折叠模块</button>
+            <button class="header-btn" id="langBtn" type="button">EN</button>
+            <button class="save-btn" id="saveBtn">保存到游戏</button>
+        </div>
+    </div>
+    <div class="container" id="container">
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-section">
+                <div class="section-title">核心单元</div>
+                <div class="menu-item" draggable="true" data-type="material"><h4>材料数据源</h4><p>接入仓储网络，实时输出指定材料的数量。</p></div>
+                <div class="menu-item" draggable="true" data-type="constant"><h4>常量数值模块</h4><p>输出当前节点自己的固定数值。</p></div>
+                <div class="menu-item" draggable="true" data-type="test-signal"><h4>测试信号模块</h4><p>接入一根线，显示真假值和实际数值。</p></div>
+                <div class="menu-item" draggable="true" data-type="timer"><h4>定时模块</h4><p>按设定秒数周期性输出一次脉冲信号。</p></div>
+                <div class="menu-item" draggable="true" data-type="cycle4"><h4>四路循环模块</h4><p>按设定秒数在4个输出端口之间循环输出1。</p></div>
+                <div class="menu-item" draggable="true" data-type="output"><h4>4端点输出</h4><p>拥有4个独立通道端点的信号接收输出端。</p></div>
+            </div>
+            <div class="sidebar-section">
+                <div class="section-title">条件判定</div>
+                <div class="menu-item" draggable="true" data-type="logic-gt"><h4>大于模块</h4><p>当输入一大于输入二时输出激活信号。</p></div>
+                <div class="menu-item" draggable="true" data-type="logic-lt"><h4>小于模块</h4><p>当输入一小于输入二时输出激活信号。</p></div>
+                <div class="menu-item" draggable="true" data-type="logic-eq"><h4>等于模块</h4><p>当两个输入信号数值相等时输出激活信号。</p></div>
+                <div class="menu-item" draggable="true" data-type="logic-range"><h4>范围判断模块</h4><p>输入值在最小值和最大值之间时输出真。</p></div>
+                <div class="menu-item" draggable="true" data-type="material-low"><h4>材料不足模块</h4><p>选中材料低于当前节点阈值时输出真。</p></div>
+                <div class="menu-item" draggable="true" data-type="material-high"><h4>材料充足模块</h4><p>选中材料高于当前节点阈值时输出真。</p></div>
+            </div>
+            <div class="sidebar-section">
+                <div class="section-title">数学运算</div>
+                <div class="menu-item" draggable="true" data-type="math-add"><h4>加法模块</h4><p>将两个输入数值相加后输出。</p></div>
+                <div class="menu-item" draggable="true" data-type="math-subtract"><h4>减法模块</h4><p>用输入一减去输入二后输出。</p></div>
+                <div class="menu-item" draggable="true" data-type="math-multiply"><h4>乘法模块</h4><p>将两个输入数值相乘后输出。</p></div>
+                <div class="menu-item" draggable="true" data-type="math-divide"><h4>除法模块</h4><p>用输入一除以输入二后输出。</p></div>
+                <div class="menu-item" draggable="true" data-type="math-negate"><h4>取反数值模块</h4><p>输出输入数值的相反数。</p></div>
+                <div class="menu-item" draggable="true" data-type="math-min"><h4>最小值模块</h4><p>输出两个输入中较小的数值。</p></div>
+                <div class="menu-item" draggable="true" data-type="math-max"><h4>最大值模块</h4><p>输出两个输入中较大的数值。</p></div>
+            </div>
+            <div class="sidebar-section">
+                <div class="section-title">布尔逻辑</div>
+                <div class="menu-item" draggable="true" data-type="bool-and"><h4>与模块</h4><p>两个输入都为真时输出激活信号。</p></div>
+                <div class="menu-item" draggable="true" data-type="bool-or"><h4>或模块</h4><p>任意一个输入为真时输出激活信号。</p></div>
+                <div class="menu-item" draggable="true" data-type="bool-not"><h4>非模块</h4><p>反转输入信号，真变假，假变真。</p></div>
+                <div class="menu-item" draggable="true" data-type="bool-selector"><h4>选择器模块</h4><p>条件为真输出A，否则输出B。</p></div>
+                <div class="menu-item" draggable="true" data-type="bool-true"><h4>真值模块</h4><p>持续输出激活信号。</p></div>
+                <div class="menu-item" draggable="true" data-type="bool-false"><h4>假值模块</h4><p>持续输出关闭信号。</p></div>
+            </div>
+            <div class="sidebar-section">
+                <div class="section-title">状态控制</div>
+                <div class="menu-item" draggable="true" data-type="delay"><h4>延迟模块</h4><p>输入持续为真达到设定秒数后输出真。</p></div>
+                <div class="menu-item" draggable="true" data-type="latch"><h4>保持模块</h4><p>Set 输入置真保持输出，Reset 输入清除。</p></div>
+                <div class="menu-item" draggable="true" data-type="material-change"><h4>材料变化模块</h4><p>选中材料数量变化时输出一个短脉冲。</p></div>
+            </div>
+            <div class="sidebar-section">
+                <div class="section-title">网络状态</div>
+                <div class="menu-item" draggable="true" data-type="inventory-percent"><h4>网络占用率模块</h4><p>输出仓储网络总体容量占用率，范围0到100。</p></div>
+                <div class="menu-item" draggable="true" data-type="inventory-stored"><h4>已用容量模块</h4><p>输出仓储网络当前已储存质量，单位kg。</p></div>
+                <div class="menu-item" draggable="true" data-type="inventory-remaining"><h4>剩余容量模块</h4><p>输出仓储网络剩余可用容量，单位kg。</p></div>
+                <div class="menu-item" draggable="true" data-type="inventory-capacity"><h4>总容量模块</h4><p>输出仓储网络总容量，单位kg。</p></div>
+                <div class="menu-item" draggable="true" data-type="power-percent"><h4>电量百分比模块</h4><p>输出储能网络电量百分比，范围0到100。</p></div>
+                <div class="menu-item" draggable="true" data-type="power-stored"><h4>当前电量模块</h4><p>输出储能网络当前电量，单位J。</p></div>
+                <div class="menu-item" draggable="true" data-type="power-remaining"><h4>剩余电池容量模块</h4><p>输出储能网络还能存入的电量，单位J。</p></div>
+                <div class="menu-item" draggable="true" data-type="power-capacity"><h4>电池总容量模块</h4><p>输出储能网络总电池容量，单位J。</p></div>
+                <div class="menu-item" draggable="true" data-type="building-status"><h4>建筑可用模块</h4><p>选择一个建筑，可运行时输出真。</p></div>
+            </div>
+            <div class="sidebar-section">
+                <div class="section-title">整理</div>
+                <div class="menu-item" draggable="true" data-type="comment"><h4>注释模块</h4><p>只显示备注，不参与逻辑计算。</p></div>
+                <div class="menu-item" draggable="true" data-type="group"><h4>分组框</h4><p>用于给一片节点做视觉分组。</p></div>
+            </div>
+        </div>
+        <div class="canvas" id="canvas">
+            <div class="canvas-hint">拖入节点，端点拉线连接。点击线条删除连接，点击 X 删除节点。</div>
+            <div class="node-layer" id="nodeLayer">
+                <div class="workspace-surface"></div>
+                <svg class="svg-layer" id="svg-layer"></svg>
+            </div>
+            <div class="material-picker" id="materialPicker"></div>
+            <div class="node-menu" id="nodeMenu"></div>
+            <div class="selection-box" id="selectionBox"></div>
+            <div class="viewport-tools">
+                <button class="viewport-btn" id="fitViewBtn" type="button">定位全部</button>
+            </div>
+            <div class="zoom-badge" id="zoomBadge">100%</div>
+        </div>
+        <div class="docs-page" id="docsPage">
+            <div class="docs-nav" id="docsNav"></div>
+            <div class="docs-content" id="docsContent"></div>
+        </div>
+    </div>
+</div>
+<div class="shutdown-message">游戏已关闭，正在关闭编辑器...</div>
+
+<script>
+const canvas = document.getElementById('canvas');
+const container = document.getElementById('container');
+const nodeLayer = document.getElementById('nodeLayer');
+const svgLayer = document.getElementById('svg-layer');
+const sidebar = document.getElementById('sidebar');
+const materialPicker = document.getElementById('materialPicker');
+const nodeMenu = document.getElementById('nodeMenu');
+const selectionBox = document.getElementById('selectionBox');
+const zoomBadge = document.getElementById('zoomBadge');
+const fitViewBtn = document.getElementById('fitViewBtn');
+const statusEl = document.getElementById('status');
+const saveBtn = document.getElementById('saveBtn');
+const sidebarToggleBtn = document.getElementById('sidebarToggleBtn');
+const docsBtn = document.getElementById('docsBtn');
+const langBtn = document.getElementById('langBtn');
+const docsPage = document.getElementById('docsPage');
+const docsNav = document.getElementById('docsNav');
+const docsContent = document.getElementById('docsContent');
+const editorTitleEl = document.getElementById('editorTitle');
+const editorId = new URLSearchParams(location.search).get('id') || '0';
+const storageKey = `storage-network-logic-diy-${editorId}`;
+const WORKSPACE_WIDTH = 3200;
+const WORKSPACE_HEIGHT = 1800;
+
+let nodesData = {};
+let connections = [];
+let nodeIdCounter = 0;
+let connectionIdCounter = 0;
+let dragNodeId = null;
+let dragOffsetX = 0;
+let dragOffsetY = 0;
+let dragSelectedNodes = [];
+let dragStartPositions = {};
+let dragStartMouse = null;
+let resizeGroupId = null;
+let resizeDirection = '';
+let resizeStartPoint = null;
+let resizeStartBox = null;
+let activeDrawingLine = null;
+let sourcePortEl = null;
+let snappedPortEl = null;
+let draggedType = null;
+let serverState = {};
+let selectedMaterialKey = '';
+let selectedNodeIds = new Set();
+let internalClipboard = null;
+let isBoxSelecting = false;
+let selectionStart = null;
+let canvasZoom = 1;
+let canvasPanX = 0;
+let canvasPanY = 0;
+let isPanningCanvas = false;
+let panStartPoint = null;
+let panStartOffset = null;
+let rightMouseDownPoint = null;
+let rightMouseCanvasPoint = null;
+let rightPanMoved = false;
+let autoSaveTimer = 0;
+let heartbeatFailures = 0;
+let heartbeatTimer = 0;
+let stateRefreshTimer = 0;
+let monitorPreviewTimer = 0;
+const SNAP_DISTANCE = 34;
+const LANG_STORAGE_KEY = 'storage-network-logic-diy-language';
+const SIDEBAR_COLLAPSED_STORAGE_KEY = 'storage-network-logic-diy-sidebar-collapsed';
+let currentLanguage = localStorage.getItem(LANG_STORAGE_KEY) || (/^zh/i.test(navigator.language || '') ? 'zh' : 'en');
+let sidebarCollapsed = localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY) === '1';
+
+const uiText = {
+    zh: {
+        editorTitle: '逻辑编辑器',
+        docs: '节点说明',
+        backToEdit: '返回编辑',
+        unsaved: '未保存',
+        save: '保存到游戏',
+        saving: '保存中...',
+        saved: '已保存到游戏',
+        autoSaving: '自动保存中...',
+        autoSaved: '已自动保存到游戏',
+        saveFailed: '保存失败',
+        collapseSidebar: '折叠模块',
+        expandSidebar: '展开模块',
+        connected: '已连接游戏',
+        gameClosed: '游戏已关闭',
+        shutdown: '游戏已关闭，正在关闭编辑器...',
+        canvasHint: '拖入节点，端点拉线连接。滚轮缩放，右键拖动画布；空白处框选，Delete 删除，Ctrl+C/V 复制粘贴；点击线条删除连接，点击 X 删除节点。',
+        fitView: '定位全部',
+        docsTitle: '节点说明',
+        input: '输入',
+        output: '输出',
+        noDescription: '暂无说明。',
+        unitKg: '单位 kg',
+        unitJ: '单位 J',
+        percentRange: '范围 0-100',
+        materialKg: '材料 kg',
+        noOutput: '无输出值',
+        truthy: '非 0 为真',
+        chooseMaterial: '选择材料',
+        chooseBuilding: '选择建筑',
+        addNode: '添加节点',
+        searchNode: '搜索节点...',
+        noNodeResults: '没有找到节点',
+        noMaterials: '当前网络没有可选材料',
+        noBuildings: '当前世界没有可选建筑',
+        building: '建筑',
+        available: '可用',
+        unavailable: '不可用',
+        currentAvailable: '当前可用',
+        currentUnavailable: '当前不可用',
+        noBuildingSelected: '未选择建筑',
+        selectMaterial: '点击选择材料',
+        selectBuilding: '点击选择建筑',
+        signalValue: '信号值',
+        noSignalBuildings: '当前世界没有带输出端口的其他建筑',
+        current: '当前',
+        legacyNote: '旧版兼容，不建议新建',
+        constantNote: '独立常量输出',
+        signalRed: '红',
+        signalGreen: '绿',
+        belowThreshold: '低于阈值输出真',
+        aboveThreshold: '高于阈值输出真',
+        seconds: '秒',
+        delayTime: '延迟时间',
+        pulseInterval: '脉冲间隔',
+        commentDefault: '备注',
+        groupDefault: '分组',
+        logicOutput: '逻辑输出',
+        ton: '吨'
+    },
+    en: {
+        editorTitle: 'Logic Editor',
+        docs: 'Node Guide',
+        backToEdit: 'Back',
+        unsaved: 'Unsaved',
+        save: 'Save to Game',
+        saving: 'Saving...',
+        saved: 'Saved to game',
+        autoSaving: 'Auto-saving...',
+        autoSaved: 'Auto-saved to game',
+        saveFailed: 'Save failed',
+        collapseSidebar: 'Collapse',
+        expandSidebar: 'Expand',
+        connected: 'Connected to game',
+        gameClosed: 'Game closed',
+        shutdown: 'Game closed, closing editor...',
+        canvasHint: 'Drag nodes in and pull wires between ports. Wheel to zoom, right-drag to pan; box-select on empty space, Delete to remove, Ctrl+C/V to copy and paste. Click a wire to delete it, click X to delete a node.',
+        fitView: 'Fit All',
+        docsTitle: 'Node Guide',
+        input: 'In',
+        output: 'Out',
+        noDescription: 'No description yet.',
+        unitKg: 'Unit kg',
+        unitJ: 'Unit J',
+        percentRange: 'Range 0-100',
+        materialKg: 'Material kg',
+        noOutput: 'No output',
+        truthy: 'Non-zero is true',
+        chooseMaterial: 'Choose material',
+        chooseBuilding: 'Choose building',
+        addNode: 'Add Node',
+        searchNode: 'Search nodes...',
+        noNodeResults: 'No nodes found',
+        noMaterials: 'No materials available in this network',
+        noBuildings: 'No buildings available in this world',
+        building: 'Building',
+        available: 'Available',
+        unavailable: 'Unavailable',
+        currentAvailable: 'Available',
+        currentUnavailable: 'Unavailable',
+        noBuildingSelected: 'No building selected',
+        selectMaterial: 'Click to choose material',
+        selectBuilding: 'Click to choose building',
+        signalValue: 'Signal',
+        noSignalBuildings: 'No other buildings with output ports in this world',
+        current: 'Current',
+        legacyNote: 'Legacy compatibility; not recommended',
+        constantNote: 'Independent constant output',
+        signalRed: 'Red',
+        signalGreen: 'Green',
+        belowThreshold: 'True below threshold',
+        aboveThreshold: 'True at/above threshold',
+        seconds: 'sec',
+        delayTime: 'Delay time',
+        pulseInterval: 'Pulse interval',
+        commentDefault: 'Note',
+        groupDefault: 'Group',
+        logicOutput: 'Logic output',
+        ton: 't'
+    }
+};
+
+const sidebarGroups = [
+    { key: 'core', types: ['material', 'constant', 'test-signal', 'timer', 'cycle4', 'output'] },
+    { key: 'conditions', types: ['logic-gt', 'logic-lt', 'logic-eq', 'logic-range', 'material-low', 'material-high'] },
+    { key: 'math', types: ['math-add', 'math-subtract', 'math-multiply', 'math-divide', 'math-mod', 'math-clamp', 'math-negate', 'math-min', 'math-max'] },
+    { key: 'bool', types: ['bool-and', 'bool-nand', 'bool-or', 'bool-nor', 'bool-xor', 'bool-not', 'bool-selector', 'bool-true', 'bool-false'] },
+    { key: 'state', types: ['delay', 'latch', 'counter', 'random', 'material-change'] },
+    { key: 'network', types: ['inventory-percent', 'inventory-stored', 'inventory-remaining', 'inventory-capacity', 'power-percent', 'power-stored', 'power-remaining', 'power-capacity', 'building-status', 'building-signal'] },
+    { key: 'organize', types: ['comment', 'group'] }
+];
+
+const sidebarText = {
+    zh: {
+        core: '核心单元', conditions: '条件判定', math: '数学运算', bool: '布尔逻辑', state: '状态控制', network: '网络状态', organize: '整理',
+        material: ['材料数据源', '接入仓储网络，实时输出指定材料的数量。'],
+        constant: ['常量数值模块', '输出当前节点自己的固定数值。'],
+        'test-signal': ['测试信号模块', '接入一根线，显示真假值和实际数值。'],
+        timer: ['定时模块', '按设定秒数周期性输出一次脉冲信号。'],
+        cycle4: ['四路循环模块', '按设定秒数在4个输出端口之间循环输出1。'],
+        output: ['4端点输出', '拥有4个独立通道端点的信号接收输出端。'],
+        'logic-gt': ['大于模块', '当输入一大于输入二时输出激活信号。'],
+        'logic-lt': ['小于模块', '当输入一小于输入二时输出激活信号。'],
+        'logic-eq': ['等于模块', '当两个输入信号数值相等时输出激活信号。'],
+        'logic-range': ['范围判断模块', '输入值在最小值和最大值之间时输出真。'],
+        'material-low': ['材料不足模块', '选中材料低于当前节点阈值时输出真。'],
+        'material-high': ['材料充足模块', '选中材料高于当前节点阈值时输出真。'],
+        'math-add': ['加法模块', '将两个输入数值相加后输出。'],
+        'math-subtract': ['减法模块', '用输入一减去输入二后输出。'],
+        'math-multiply': ['乘法模块', '将两个输入数值相乘后输出。'],
+        'math-divide': ['除法模块', '用输入一除以输入二后输出。'],
+        'math-mod': ['取模模块', '输出输入一除以输入二后的余数。'],
+        'math-clamp': ['钳制模块', '把输入值限制在最小值和最大值之间。'],
+        'math-negate': ['取反数值模块', '输出输入数值的相反数。'],
+        'math-min': ['最小值模块', '输出两个输入中较小的数值。'],
+        'math-max': ['最大值模块', '输出两个输入中较大的数值。'],
+        'bool-and': ['与模块', '两个输入都为真时输出激活信号。'],
+        'bool-nand': ['与非模块', '与模块结果取反，两个输入都为真时输出假。'],
+        'bool-or': ['或模块', '任意一个输入为真时输出激活信号。'],
+        'bool-nor': ['或非模块', '或模块结果取反，任意输入为真时输出假。'],
+        'bool-xor': ['异或模块', '两个输入真假不同才输出真。'],
+        'bool-not': ['非模块', '反转输入信号，真变假，假变真。'],
+        'bool-selector': ['选择器模块', '条件为真输出A，否则输出B。'],
+        'bool-true': ['真值模块', '持续输出激活信号。'],
+        'bool-false': ['假值模块', '持续输出关闭信号。'],
+        delay: ['延迟模块', '输入持续为真达到设定秒数后输出真。'],
+        latch: ['保持模块', 'Set 输入置真保持输出，Reset 输入清除。'],
+        counter: ['计数器模块', 'Pulse 输入上升沿时计数加1，Reset 输入清零。'],
+        random: ['随机模块', '按设定概率输出真，用于随机分流或随机控制。'],
+        'material-change': ['材料变化模块', '选中材料数量变化时输出一个短脉冲。'],
+        'inventory-percent': ['网络占用率模块', '输出仓储网络总体容量占用率，范围0到100。'],
+        'inventory-stored': ['已用容量模块', '输出仓储网络当前已储存质量，单位kg。'],
+        'inventory-remaining': ['剩余容量模块', '输出仓储网络剩余可用容量，单位kg。'],
+        'inventory-capacity': ['总容量模块', '输出仓储网络总容量，单位kg。'],
+        'power-percent': ['电量百分比模块', '输出储能网络电量百分比，范围0到100。'],
+        'power-stored': ['当前电量模块', '输出储能网络当前电量，单位J。'],
+        'power-remaining': ['剩余电池容量模块', '输出储能网络还能存入的电量，单位J。'],
+        'power-capacity': ['电池总容量模块', '输出储能网络总电池容量，单位J。'],
+        'building-status': ['建筑可用模块', '选择一个建筑，可运行时输出真。'],
+        'building-signal': ['建筑信号模块', '选择一个带自动化输出端口的建筑，输出它当前的信号值；会排除当前建筑自身。'],
+        comment: ['注释模块', '只显示备注，不参与逻辑计算。'],
+        group: ['分组框', '用于给一片节点做视觉分组。']
+    },
+    en: {
+        core: 'Core', conditions: 'Conditions', math: 'Math', bool: 'Boolean', state: 'State', network: 'Network', organize: 'Organize',
+        material: ['Material Source', 'Outputs the selected material amount in the storage network.'],
+        constant: ['Constant Value', 'Outputs this node\'s fixed numeric value.'],
+        'test-signal': ['Signal Probe', 'Displays the truth state and numeric value of one input wire.'],
+        timer: ['Timer', 'Outputs a pulse at the configured interval.'],
+        cycle4: ['4-Way Cycle', 'Cycles a value of 1 across four output ports.'],
+        output: ['4-Port Output', 'Receives four independent automation output channels.'],
+        'logic-gt': ['Greater Than', 'Outputs true when input A is greater than input B.'],
+        'logic-lt': ['Less Than', 'Outputs true when input A is less than input B.'],
+        'logic-eq': ['Equal', 'Outputs true when both input values are equal.'],
+        'logic-range': ['Range Check', 'Outputs true when the input is between min and max.'],
+        'material-low': ['Material Low', 'Outputs true when the selected material is below this node threshold.'],
+        'material-high': ['Material High', 'Outputs true when the selected material is at or above this node threshold.'],
+        'math-add': ['Add', 'Adds two input values.'],
+        'math-subtract': ['Subtract', 'Subtracts input B from input A.'],
+        'math-multiply': ['Multiply', 'Multiplies two input values.'],
+        'math-divide': ['Divide', 'Divides input A by input B.'],
+        'math-mod': ['Modulo', 'Outputs the remainder after A is divided by B.'],
+        'math-clamp': ['Clamp', 'Constrains the value between min and max.'],
+        'math-negate': ['Negate', 'Outputs the negative of the input value.'],
+        'math-min': ['Minimum', 'Outputs the smaller of two input values.'],
+        'math-max': ['Maximum', 'Outputs the larger of two input values.'],
+        'bool-and': ['AND', 'Outputs true when both inputs are true.'],
+        'bool-nand': ['NAND', 'Inverts AND; outputs false only when both inputs are true.'],
+        'bool-or': ['OR', 'Outputs true when any input is true.'],
+        'bool-nor': ['NOR', 'Inverts OR; outputs true only when both inputs are false.'],
+        'bool-xor': ['XOR', 'Outputs true when the two inputs are different.'],
+        'bool-not': ['NOT', 'Inverts the input signal.'],
+        'bool-selector': ['Selector', 'Outputs A when condition is true; otherwise outputs B.'],
+        'bool-true': ['TRUE', 'Always outputs an active signal.'],
+        'bool-false': ['FALSE', 'Always outputs an inactive signal.'],
+        delay: ['Delay', 'Outputs true after the input stays true for the configured time.'],
+        latch: ['Latch', 'Set turns output on; Reset clears it.'],
+        counter: ['Counter', 'Increments on Pulse rising edge; Reset clears the count.'],
+        random: ['Random Chance', 'Outputs true based on the configured probability.'],
+        'material-change': ['Material Changed', 'Outputs a short pulse when the selected material amount changes.'],
+        'inventory-percent': ['Network Usage %', 'Outputs total storage network usage from 0 to 100.'],
+        'inventory-stored': ['Stored Capacity', 'Outputs currently stored mass in kg.'],
+        'inventory-remaining': ['Remaining Capacity', 'Outputs remaining capacity in kg.'],
+        'inventory-capacity': ['Total Capacity', 'Outputs total storage network capacity in kg.'],
+        'power-percent': ['Power %', 'Outputs power storage percentage from 0 to 100.'],
+        'power-stored': ['Stored Power', 'Outputs stored network power in J.'],
+        'power-remaining': ['Remaining Battery', 'Outputs remaining battery capacity in J.'],
+        'power-capacity': ['Battery Capacity', 'Outputs total battery capacity in J.'],
+        'building-status': ['Building Ready', 'Choose a building; outputs true when it can operate.'],
+        'building-signal': ['Building Signal', 'Choose a building with an automation output port and output its current signal value. The current building is excluded.'],
+        comment: ['Comment', 'Visual note only; does not affect logic.'],
+        group: ['Group Box', 'Visual grouping box for related nodes.']
+    }
+};
+
+function t(key) {
+    return (uiText[currentLanguage] && uiText[currentLanguage][key]) || uiText.zh[key] || key;
+}
+
+const nodeMeta = {
+    material: { title: '材料数据源', inputs: 0, outputs: 1, contentHeight: 78, module: 'MaterialCondition' },
+    variable: { title: '全局阈值模块（旧）', inputs: 0, outputs: 1, contentHeight: 74, module: 'Variable' },
+    constant: { title: '常量数值模块', inputs: 0, outputs: 1, contentHeight: 74, module: 'Constant' },
+    'test-signal': { title: '测试信号模块', inputs: 1, outputs: 0, contentHeight: 58, module: 'SignalMonitor' },
+    timer: { title: '定时模块', inputs: 0, outputs: 1, contentHeight: 74, module: 'TimerPulse' },
+    cycle4: { title: '四路循环模块', inputs: 0, outputs: 4, contentHeight: 108, module: 'Cycle4', outputPortCenters: [74, 90, 106, 122] },
+    'logic-gt': { title: '大于模块', inputs: 2, outputs: 1, contentHeight: 68, module: 'GreaterThan', sign: '>', label: '条件成立' },
+    'logic-lt': { title: '小于模块', inputs: 2, outputs: 1, contentHeight: 68, module: 'LessThan', sign: '<', label: '条件成立' },
+    'logic-eq': { title: '等于模块', inputs: 2, outputs: 1, contentHeight: 68, module: 'Equal', sign: '=', label: '条件成立' },
+    'logic-range': { title: '范围判断模块', inputs: 3, outputs: 1, contentHeight: 86, module: 'Range', sign: '[]', label: '范围内' },
+    'material-low': { title: '材料不足模块', inputs: 0, outputs: 1, contentHeight: 142, module: 'MaterialLow' },
+    'material-high': { title: '材料充足模块', inputs: 0, outputs: 1, contentHeight: 142, module: 'MaterialHigh' },
+    'math-add': { title: '加法模块', inputs: 2, outputs: 1, contentHeight: 68, module: 'Add', sign: '+', label: '数值运算' },
+    'math-subtract': { title: '减法模块', inputs: 2, outputs: 1, contentHeight: 68, module: 'Subtract', sign: '-', label: '数值运算' },
+    'math-multiply': { title: '乘法模块', inputs: 2, outputs: 1, contentHeight: 68, module: 'Multiply', sign: '*', label: '数值运算' },
+    'math-divide': { title: '除法模块', inputs: 2, outputs: 1, contentHeight: 68, module: 'Divide', sign: '/', label: '数值运算' },
+    'math-mod': { title: '取模模块', inputs: 2, outputs: 1, contentHeight: 68, module: 'Modulo', sign: '%', label: '数值运算' },
+    'math-clamp': { title: '钳制模块', inputs: 3, outputs: 1, contentHeight: 86, module: 'Clamp', sign: 'CLAMP', label: '限制范围' },
+    'math-negate': { title: '取反数值模块', inputs: 1, outputs: 1, contentHeight: 68, module: 'Negate', sign: '-A', label: '数值运算' },
+    'math-min': { title: '最小值模块', inputs: 2, outputs: 1, contentHeight: 68, module: 'Min', sign: 'MIN', label: '数值运算' },
+    'math-max': { title: '最大值模块', inputs: 2, outputs: 1, contentHeight: 68, module: 'Max', sign: 'MAX', label: '数值运算' },
+    'bool-and': { title: '与模块', inputs: 2, outputs: 1, contentHeight: 68, module: 'BoolAnd', sign: 'AND', label: '全部为真' },
+    'bool-nand': { title: '与非模块', inputs: 2, outputs: 1, contentHeight: 68, module: 'BoolNand', sign: 'NAND', label: '与后取反' },
+    'bool-or': { title: '或模块', inputs: 2, outputs: 1, contentHeight: 68, module: 'BoolOr', sign: 'OR', label: '任意为真' },
+    'bool-nor': { title: '或非模块', inputs: 2, outputs: 1, contentHeight: 68, module: 'BoolNor', sign: 'NOR', label: '或后取反' },
+    'bool-xor': { title: '异或模块', inputs: 2, outputs: 1, contentHeight: 68, module: 'BoolXor', sign: 'XOR', label: '真假不同' },
+    'bool-not': { title: '非模块', inputs: 1, outputs: 1, contentHeight: 68, module: 'BoolNot', sign: 'NOT', label: '反转信号' },
+    'bool-selector': { title: '选择器模块', inputs: 3, outputs: 1, contentHeight: 86, module: 'Selector', sign: 'A/B', label: '条件选择' },
+    'bool-true': { title: '真值模块', inputs: 0, outputs: 1, contentHeight: 58, module: 'BoolTrue', sign: 'TRUE', label: '常量信号' },
+    'bool-false': { title: '假值模块', inputs: 0, outputs: 1, contentHeight: 58, module: 'BoolFalse', sign: 'FALSE', label: '常量信号' },
+    delay: { title: '延迟模块', inputs: 1, outputs: 1, contentHeight: 74, module: 'Delay' },
+    latch: { title: '保持模块', inputs: 2, outputs: 1, contentHeight: 68, module: 'Latch', sign: 'SET', label: '保持输出' },
+    counter: { title: '计数器模块', inputs: 2, outputs: 1, contentHeight: 68, module: 'Counter', sign: 'COUNT', label: '脉冲计数' },
+    random: { title: '随机模块', inputs: 0, outputs: 1, contentHeight: 74, module: 'RandomChance' },
+    'edge-pulse': { title: '脉冲模块', inputs: 1, outputs: 1, contentHeight: 68, module: 'EdgePulse', sign: '↑', label: '上升沿' },
+    'material-change': { title: '材料变化模块', inputs: 0, outputs: 1, contentHeight: 92, module: 'MaterialChanged' },
+    'inventory-percent': { title: '网络占用率模块', inputs: 0, outputs: 1, contentHeight: 58, module: 'InventoryPercent', sign: '0-100%', label: '输出占用率' },
+    'inventory-stored': { title: '已用容量模块', inputs: 0, outputs: 1, contentHeight: 58, module: 'InventoryStored', sign: 'kg', label: '已储存' },
+    'inventory-remaining': { title: '剩余容量模块', inputs: 0, outputs: 1, contentHeight: 58, module: 'InventoryRemaining', sign: 'kg', label: '剩余容量' },
+    'inventory-capacity': { title: '总容量模块', inputs: 0, outputs: 1, contentHeight: 58, module: 'InventoryCapacity', sign: 'kg', label: '总容量' },
+    'power-percent': { title: '电量百分比模块', inputs: 0, outputs: 1, contentHeight: 58, module: 'PowerPercent', sign: '0-100%', label: '储能占比' },
+    'power-stored': { title: '当前电量模块', inputs: 0, outputs: 1, contentHeight: 58, module: 'PowerStored', sign: 'J', label: '当前电量' },
+    'power-remaining': { title: '剩余电池容量模块', inputs: 0, outputs: 1, contentHeight: 58, module: 'PowerRemaining', sign: 'J', label: '剩余容量' },
+    'power-capacity': { title: '电池总容量模块', inputs: 0, outputs: 1, contentHeight: 58, module: 'PowerCapacity', sign: 'J', label: '电池容量' },
+    'building-status': { title: '建筑可用模块', inputs: 0, outputs: 1, contentHeight: 78, module: 'BuildingStatus' },
+    'building-signal': { title: '建筑信号模块', inputs: 0, outputs: 1, contentHeight: 78, module: 'BuildingSignal' },
+    comment: { title: '注释模块', inputs: 0, outputs: 0, contentHeight: 88, module: 'Comment' },
+    group: { title: '分组框', inputs: 0, outputs: 0, contentHeight: 176, module: 'Group' },
+    output: { title: '输出模块', inputs: 4, outputs: 0, contentHeight: 130, module: 'Output' }
+};
+
+function getNodeText(type) {
+    return (sidebarText[currentLanguage] && sidebarText[currentLanguage][type]) ||
+        (sidebarText.zh && sidebarText.zh[type]) ||
+        [type, ''];
+}
+
+function applyNodeTranslations() {
+    Object.keys(nodeMeta).forEach(type => {
+        const text = getNodeText(type);
+        nodeMeta[type].title = text[0] || type;
+    });
+    const labels = currentLanguage === 'en'
+        ? {
+            'logic-gt': 'Condition true', 'logic-lt': 'Condition true', 'logic-eq': 'Condition true', 'logic-range': 'In range',
+            'math-add': 'Numeric op', 'math-subtract': 'Numeric op', 'math-multiply': 'Numeric op', 'math-divide': 'Numeric op', 'math-mod': 'Remainder', 'math-clamp': 'Clamp range', 'math-negate': 'Numeric op', 'math-min': 'Numeric op', 'math-max': 'Numeric op',
+            'bool-and': 'All true', 'bool-nand': 'Invert AND', 'bool-or': 'Any true', 'bool-nor': 'Invert OR', 'bool-xor': 'Different', 'bool-not': 'Invert signal', 'bool-selector': 'Choose value', 'bool-true': 'Constant signal', 'bool-false': 'Constant signal',
+            latch: 'Hold output', counter: 'Pulse count', 'edge-pulse': 'Rising edge', random: 'Chance', 'inventory-percent': 'Usage %', 'inventory-stored': 'Stored', 'inventory-remaining': 'Remaining', 'inventory-capacity': 'Total capacity',
+            'power-percent': 'Power %', 'power-stored': 'Stored power', 'power-remaining': 'Remaining', 'power-capacity': 'Battery capacity'
+        }
+        : {
+            'logic-gt': '条件成立', 'logic-lt': '条件成立', 'logic-eq': '条件成立', 'logic-range': '范围内',
+            'math-add': '数值运算', 'math-subtract': '数值运算', 'math-multiply': '数值运算', 'math-divide': '数值运算', 'math-mod': '余数', 'math-clamp': '限制范围', 'math-negate': '数值运算', 'math-min': '数值运算', 'math-max': '数值运算',
+            'bool-and': '全部为真', 'bool-nand': '与后取反', 'bool-or': '任意为真', 'bool-nor': '或后取反', 'bool-xor': '真假不同', 'bool-not': '反转信号', 'bool-selector': '条件选择', 'bool-true': '常量信号', 'bool-false': '常量信号',
+            latch: '保持输出', counter: '脉冲计数', 'edge-pulse': '上升沿', random: '概率输出', 'inventory-percent': '输出占用率', 'inventory-stored': '已储存', 'inventory-remaining': '剩余容量', 'inventory-capacity': '总容量',
+            'power-percent': '储能占比', 'power-stored': '当前电量', 'power-remaining': '剩余容量', 'power-capacity': '电池容量'
+        };
+    Object.entries(labels).forEach(([type, label]) => {
+        if (nodeMeta[type]) nodeMeta[type].label = label;
+    });
+    if (nodeMeta.output) nodeMeta.output.title = currentLanguage === 'en' ? 'Output' : '输出模块';
+}
+
+function renderSidebar() {
+    sidebar.innerHTML = '';
+    sidebarGroups.forEach(group => {
+        const section = document.createElement('div');
+        section.className = 'sidebar-section';
+        const title = document.createElement('div');
+        title.className = 'section-title';
+        title.textContent = sidebarText[currentLanguage][group.key] || sidebarText.zh[group.key] || group.key;
+        section.appendChild(title);
+        group.types.forEach(type => {
+            const text = getNodeText(type);
+            const item = document.createElement('div');
+            item.className = 'menu-item';
+            item.draggable = true;
+            item.dataset.type = type;
+            item.innerHTML = `<h4>${escapeHtml(text[0] || type)}</h4><p>${escapeHtml(text[1] || '')}</p>`;
+            item.addEventListener('dragstart', () => { draggedType = item.dataset.type; });
+            section.appendChild(item);
+        });
+        sidebar.appendChild(section);
+    });
+}
+
+function applySidebarCollapsedState() {
+    container.classList.toggle('sidebar-collapsed', sidebarCollapsed);
+    sidebarToggleBtn.textContent = sidebarCollapsed ? t('expandSidebar') : t('collapseSidebar');
+    localStorage.setItem(SIDEBAR_COLLAPSED_STORAGE_KEY, sidebarCollapsed ? '1' : '0');
+    requestAnimationFrame(() => renderConnections());
+}
+
+function createNodeAt(type, x, y) {
+    const meta = nodeMeta[type];
+    if (!meta) return null;
+    const id = `node_${++nodeIdCounter}`;
+    const size = type === 'group'
+        ? { width: 280, height: 180 }
+        : { width: 180, height: Number(meta.contentHeight || 80) + 44 };
+    const pos = clampToWorkspace(Number(x || 0), Number(y || 0), size.width, size.height);
+    nodesData[id] = { type, x: pos.x, y: pos.y };
+    const el = createNodeDOM(id, type, pos.x, pos.y);
+    if (el) nodeLayer.appendChild(el);
+    clearSelection();
+    selectNode(id, true);
+    renderConnections();
+    updateSignalMonitors();
+    markDirty();
+    return id;
+}
+
+function showNodeMenu(screenPoint, canvasPoint) {
+    if (docsPage.classList.contains('visible')) return;
+    rightMouseCanvasPoint = canvasPoint;
+    materialPicker.classList.remove('visible');
+    renderNodeMenu('');
+    const rect = canvas.getBoundingClientRect();
+    const width = 340;
+    const maxLeft = Math.max(8, rect.width - width - 12);
+    nodeMenu.style.left = `${Math.min(Math.max(8, screenPoint.x), maxLeft)}px`;
+    nodeMenu.style.top = `${Math.min(Math.max(8, screenPoint.y), Math.max(8, rect.height - 470))}px`;
+    nodeMenu.classList.add('visible');
+    const input = nodeMenu.querySelector('.node-search');
+    input?.focus();
+    input?.select();
+}
+
+function hideNodeMenu() {
+    nodeMenu.classList.remove('visible');
+}
+
+function renderNodeMenu(query) {
+    const normalized = String(query || '').trim().toLowerCase();
+    nodeMenu.innerHTML = `
+        <div class="node-menu-title">${escapeHtml(t('addNode'))}</div>
+        <input class="node-search" type="text" value="${escapeHtml(query || '')}" placeholder="${escapeHtml(t('searchNode'))}">
+        <div class="node-menu-list"></div>
+    `;
+    const input = nodeMenu.querySelector('.node-search');
+    const list = nodeMenu.querySelector('.node-menu-list');
+    let resultCount = 0;
+
+    sidebarGroups.forEach(group => {
+        const groupTitle = sidebarText[currentLanguage][group.key] || sidebarText.zh[group.key] || group.key;
+        const matches = group.types.filter(type => {
+            const text = getNodeText(type);
+            const haystack = `${text[0] || ''} ${text[1] || ''} ${type}`.toLowerCase();
+            return !normalized || haystack.includes(normalized);
+        });
+        if (!matches.length) return;
+
+        const section = document.createElement('div');
+        section.className = 'node-menu-section';
+        const title = document.createElement('div');
+        title.className = 'node-menu-section-title';
+        title.textContent = groupTitle;
+        section.appendChild(title);
+
+        matches.forEach(type => {
+            const text = getNodeText(type);
+            const option = document.createElement('button');
+            option.className = 'node-menu-option';
+            option.type = 'button';
+            option.dataset.type = type;
+            option.innerHTML = `<h4>${escapeHtml(text[0] || type)}</h4><p>${escapeHtml(text[1] || '')}</p>`;
+            option.addEventListener('click', () => {
+                const point = rightMouseCanvasPoint || { x: 120, y: 120 };
+                createNodeAt(type, point.x - 70, point.y - 18);
+                hideNodeMenu();
+            });
+            section.appendChild(option);
+            resultCount++;
+        });
+
+        list.appendChild(section);
+    });
+
+    if (!resultCount) {
+        list.innerHTML = `<div class="node-menu-empty">${escapeHtml(t('noNodeResults'))}</div>`;
+    }
+
+    input.addEventListener('input', () => {
+        const value = input.value;
+        renderNodeMenu(value);
+        const nextInput = nodeMenu.querySelector('.node-search');
+        nextInput?.focus();
+        nextInput?.setSelectionRange(value.length, value.length);
+    });
+    input.addEventListener('keydown', e => {
+        if (e.key === 'Escape') {
+            hideNodeMenu();
+            e.preventDefault();
+            return;
+        }
+        if (e.key === 'Enter') {
+            const first = nodeMenu.querySelector('.node-menu-option');
+            if (first) {
+                first.click();
+                e.preventDefault();
+            }
+        }
+    });
+}
+
+function getDocGroups() {
+    return sidebarGroups.map(group => ({
+        title: sidebarText[currentLanguage][group.key] || sidebarText.zh[group.key] || group.key,
+        items: group.types.map(type => {
+            const text = getNodeText(type);
+            return [type, text[1] || '', currentLanguage === 'en' ? 'Connect this node with ports in the graph.' : '把这个节点接入图中的端点。'];
+        })
+    }));
+}
+
+const docGroups = [
+    {
+        title: '核心单元',
+        items: [
+            ['material', '输出当前选中材料在仓储网络中的数量。输出单位是 kg。', '把材料数据源接到大于模块，再用常量数值模块设置阈值。'],
+            ['constant', '输出一个固定数值。常用来做阈值。输出单位取决于你要比较的对象，材料容量一般填 kg，百分比填 0-100。', '检测乙醇是否大于 1000kg，就把常量填 1000。'],
+            ['test-signal', '显示输入线的当前真假和值。本节点只显示，不参与输出。', '把任何节点接进来，红代表 0，绿代表非 0，右侧显示实际数值。'],
+            ['timer', '按设定秒数周期性输出一次短暂绿信号。', '每 5 秒触发一次后续逻辑。'],
+            ['cycle4', '按设定秒数在 4 个输出端口之间轮流输出 1。', '接到 4 端点输出，可以让 4 个自动化通道轮流变绿。'],
+            ['output', '把输入信号发送到游戏里的自动化输出端。4 个输入分别对应 Port0 到 Port3。', 'Port0=1，Port1=2，Port2=4，Port3=8，可组合成多路信号。']
+        ]
+    },
+    {
+        title: '条件判定',
+        items: [
+            ['logic-gt', '输入一大于输入二时输出 1，否则输出 0。', '材料数量 > 常量阈值。'],
+            ['logic-lt', '输入一小于输入二时输出 1，否则输出 0。', '剩余容量 < 1000kg 时报警。'],
+            ['logic-eq', '两个输入数值相等时输出 1，否则输出 0。', '循环编号或固定状态判断。'],
+            ['logic-range', '输入值在最小值和最大值之间时输出 1。输入0是被判断值，输入1/2是范围两端。', '电量百分比在 20 到 80 之间时允许运行。'],
+            ['material-low', '选中材料低于本节点阈值时输出 1。输出单位比较的是 kg。', '乙醇低于 1000kg 时输出绿信号。'],
+            ['material-high', '选中材料高于或等于本节点阈值时输出 1。输出单位比较的是 kg。', '水达到 5000kg 后打开输出。']
+        ]
+    },
+    {
+        title: '数学运算',
+        items: [
+            ['math-add', '两个输入相加后输出。', '把两路容量或材料数量合成一个数。'],
+            ['math-subtract', '输入一减去输入二后输出。', '总容量 - 已用容量 = 剩余容量。'],
+            ['math-multiply', '两个输入相乘后输出。', '把百分比转换成比例阈值。'],
+            ['math-divide', '输入一除以输入二后输出。除数为 0 时输出 0。', '已用容量 / 总容量。'],
+            ['math-negate', '输出输入数值的相反数。', '需要反向偏移数值时使用。'],
+            ['math-min', '输出两个输入中较小的数值。', '限制最大输出阈值。'],
+            ['math-max', '输出两个输入中较大的数值。', '保证最低阈值。']
+        ]
+    },
+    {
+        title: '布尔逻辑',
+        items: [
+            ['bool-and', '两个输入都为真时输出 1。非 0 都算真。', '材料充足并且建筑可用时才输出。'],
+            ['bool-or', '任意一个输入为真时输出 1。', '任意警报成立就输出。'],
+            ['bool-not', '反转输入。真变 0，假变 1。', '把“材料不足”反过来当作“材料足够”。'],
+            ['bool-selector', '输入0为真时输出输入1，否则输出输入2。', '根据条件在两个数值之间切换。'],
+            ['bool-true', '持续输出 1。', '临时强制开启一条逻辑。'],
+            ['bool-false', '持续输出 0。', '临时强制关闭一条逻辑。']
+        ]
+    },
+    {
+        title: '状态控制',
+        items: [
+            ['delay', '输入持续为真达到设定秒数后输出 1。输入变假会重新计时。', '条件稳定 10 秒后再启动。'],
+            ['latch', 'Set 输入为真后保持输出 1，Reset 输入为真后清除为 0。', '触发后保持开启，直到另一个条件复位。'],
+            ['material-change', '选中材料数量变化时输出一次短脉冲。', '网络库存变化时触发一次刷新逻辑。']
+        ]
+    },
+    {
+        title: '网络状态',
+        items: [
+            ['inventory-percent', '输出仓储网络占用率，范围 0-100。', '占用率 > 90 时停止输入。'],
+            ['inventory-stored', '输出仓储网络已用容量，单位 kg。', '已用容量大于某个阈值时输出。'],
+            ['inventory-remaining', '输出仓储网络剩余容量，单位 kg。', '剩余容量小于 1000kg 时报警。'],
+            ['inventory-capacity', '输出仓储网络总容量，单位 kg。', '和已用容量配合做自定义百分比。'],
+            ['power-percent', '输出储能网络电量百分比，范围 0-100。', '电量低于 20 时关闭耗电设备。'],
+            ['power-stored', '输出当前储能电量，单位 J。', '电量大于 6MJ 时允许输出。'],
+            ['power-remaining', '输出还能存入的电量，单位 J。', '剩余电池容量低时停止发电输入。'],
+            ['power-capacity', '输出电池总容量，单位 J。', '和当前电量配合做自定义判断。'],
+            ['building-status', '选择一个 StorageNetwork 模组建筑。目标建筑可用时输出 1，不可用时输出 0。', '信号开关可用并且材料充足时输出。']
+        ]
+    },
+    {
+        title: '整理',
+        items: [
+            ['comment', '只显示备注文字，不参与计算。', '给一组节点写说明。'],
+            ['group', '视觉分组框，不参与计算。', '把同一套逻辑圈在一起。']
+        ]
+    }
+];
+
+const nodeDocByType = Object.fromEntries(docGroups.flatMap(group =>
+    group.items.map(item => [item[0], { description: item[1], example: item[2] }])
+));
+
+function markDirty() {
+    statusEl.textContent = t('unsaved');
+    persistLayout();
+    scheduleAutoSave();
+}
+
+function setStatus(text) {
+    statusEl.textContent = text;
+}
+
+function setEditorTitle(name) {
+    const cleanName = stripGameRichText(name || '').trim();
+    const title = cleanName ? `${cleanName} - ${t('editorTitle')}` : t('editorTitle');
+    document.title = `${title} [SNLD-${editorId}]`;
+    editorTitleEl.textContent = title;
+}
+
+function toggleDocsPage(forceVisible) {
+    const visible = typeof forceVisible === 'boolean' ? forceVisible : !docsPage.classList.contains('visible');
+    docsPage.classList.toggle('visible', visible);
+    docsBtn.classList.toggle('active', visible);
+    docsBtn.textContent = visible ? t('backToEdit') : t('docs');
+    if (visible) {
+        renderDocsPage(0);
+        materialPicker.classList.remove('visible');
+    }
+}
+
+function renderDocsPage(activeIndex) {
+    const groups = getDocGroups();
+    docsNav.innerHTML = `<div class="docs-title">${escapeHtml(t('docsTitle'))}</div>`;
+    groups.forEach((group, index) => {
+        const button = document.createElement('button');
+        button.textContent = group.title;
+        button.className = index === activeIndex ? 'active' : '';
+        button.addEventListener('click', () => renderDocsPage(index));
+        docsNav.appendChild(button);
+    });
+
+    const group = groups[activeIndex] || groups[0];
+    docsContent.innerHTML = `<h2>${escapeHtml(group.title)}</h2><div class="docs-grid"></div>`;
+    const grid = docsContent.querySelector('.docs-grid');
+    group.items.forEach(item => grid.appendChild(createDocsCard(item[0])));
+}
+
+function createDocsCard(type) {
+    const meta = nodeMeta[type] || {};
+    const text = getNodeText(type);
+    const doc = { description: text[1] || '', example: currentLanguage === 'en' ? 'Connect this node with ports in the graph.' : '把这个节点接入图中的端点。' };
+    const card = document.createElement('div');
+    card.className = 'docs-card';
+    card.innerHTML = `
+        <h3>${escapeHtml(meta.title || type)}</h3>
+        <div class="docs-meta">
+            <span>${t('input')} ${Number(meta.inputs || 0)}</span>
+            <span>${t('output')} ${Number(meta.outputs || 0)}</span>
+            <span>${escapeHtml(getNodeOutputUnit(type))}</span>
+        </div>
+        <p>${escapeHtml(doc.description || t('noDescription'))}</p>
+        <div class="docs-example">${escapeHtml(doc.example || '')}</div>
+    `;
+    return card;
+}
+
+function getNodeOutputUnit(type) {
+    if (type.startsWith('inventory-') && type !== 'inventory-percent') return t('unitKg');
+    if (type.startsWith('power-') && type !== 'power-percent') return t('unitJ');
+    if (type.endsWith('percent')) return t('percentRange');
+    if (type === 'material' || type === 'material-low' || type === 'material-high') return t('materialKg');
+    if (type === 'test-signal' || type === 'comment' || type === 'group' || type === 'output') return t('noOutput');
+    return t('truthy');
+}
+
+function handleGameDisconnected() {
+    setStatus(t('gameClosed'));
+    clearInterval(heartbeatTimer);
+    clearInterval(stateRefreshTimer);
+    clearInterval(monitorPreviewTimer);
+    document.body.classList.add('disconnected');
+    setTimeout(() => {
+        window.open('', '_self');
+        window.close();
+    }, 300);
+    setTimeout(() => window.close(), 1200);
+}
+
+function scheduleAutoSave() {
+    clearTimeout(autoSaveTimer);
+    autoSaveTimer = setTimeout(() => saveToGame(t('autoSaving'), t('autoSaved')), 700);
+}
+
+function localizePage(refreshNodes) {
+    currentLanguage = currentLanguage === 'en' ? 'en' : 'zh';
+    localStorage.setItem(LANG_STORAGE_KEY, currentLanguage);
+    hideNodeMenu();
+    applyNodeTranslations();
+    renderSidebar();
+    docsBtn.textContent = docsPage.classList.contains('visible') ? t('backToEdit') : t('docs');
+    saveBtn.textContent = t('save');
+    langBtn.textContent = currentLanguage === 'zh' ? 'EN' : '中文';
+    applySidebarCollapsedState();
+    if (!statusEl.textContent || ['未保存', 'Unsaved'].includes(statusEl.textContent)) {
+        statusEl.textContent = t('unsaved');
+    }
+    document.querySelector('.canvas-hint').textContent = t('canvasHint');
+    fitViewBtn.textContent = t('fitView');
+    document.querySelector('.shutdown-message').textContent = t('shutdown');
+    setEditorTitle(serverState.buildingName || serverState.BuildingName || '');
+    if (refreshNodes) {
+        document.querySelectorAll('.node').forEach(node => node.remove());
+        Object.entries(nodesData).forEach(([id, node]) => {
+            const el = createNodeDOM(id, node.type, node.x, node.y);
+            if (el) nodeLayer.appendChild(el);
+        });
+        clearSelection();
+        renderConnections();
+        updateSignalMonitors();
+    }
+    if (docsPage.classList.contains('visible')) renderDocsPage(0);
+}
+
+function getCanvasPoint(e) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+        x: (e.clientX - rect.left - canvasPanX) / canvasZoom,
+        y: (e.clientY - rect.top - canvasPanY) / canvasZoom
+    };
+}
+
+function getCanvasScreenPoint(e) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top
+    };
+}
+
+function setCanvasZoom(nextZoom) {
+    canvasZoom = Math.min(2.2, Math.max(0.45, Number(nextZoom) || 1));
+    canvas.style.setProperty('--canvas-zoom', canvasZoom);
+    zoomBadge.textContent = `${Math.round(canvasZoom * 100)}%`;
+    renderConnections();
+    persistLayout();
+}
+
+function setCanvasPan(x, y) {
+    canvasPanX = Number(x) || 0;
+    canvasPanY = Number(y) || 0;
+    canvas.style.setProperty('--canvas-pan-x', `${canvasPanX}px`);
+    canvas.style.setProperty('--canvas-pan-y', `${canvasPanY}px`);
+    renderConnections();
+    persistLayout();
+}
+
+function clearSelection() {
+    selectedNodeIds.forEach(id => document.getElementById(id)?.classList.remove('selected'));
+    selectedNodeIds.clear();
+}
+
+function selectNode(id, selected) {
+    if (!nodesData[id]) return;
+    if (selected) {
+        selectedNodeIds.add(id);
+        document.getElementById(id)?.classList.add('selected');
+    } else {
+        selectedNodeIds.delete(id);
+        document.getElementById(id)?.classList.remove('selected');
+    }
+}
+
+function deleteSelectedNodes() {
+    const ids = Array.from(selectedNodeIds);
+    if (!ids.length) return;
+    ids.forEach(id => document.getElementById(id)?.remove());
+    const selected = new Set(ids);
+    connections = connections.filter(conn => !selected.has(conn.fromNode) && !selected.has(conn.toNode));
+    ids.forEach(id => delete nodesData[id]);
+    clearSelection();
+    renderConnections();
+    updateSignalMonitors();
+    markDirty();
+}
+
+function copySelectedNodes() {
+    const ids = Array.from(selectedNodeIds);
+    if (!ids.length) return;
+    const selected = new Set(ids);
+    internalClipboard = {
+        nodes: ids.map(id => ({ oldId: id, data: structuredCloneSafe(nodesData[id]) })),
+        connections: connections
+            .filter(conn => selected.has(conn.fromNode) && selected.has(conn.toNode))
+            .map(conn => structuredCloneSafe(conn))
+    };
+}
+
+function pasteCopiedNodes() {
+    if (!internalClipboard?.nodes?.length) return;
+    clearSelection();
+    const idMap = {};
+    internalClipboard.nodes.forEach(item => {
+        const oldId = item.oldId;
+        const oldData = item.data || {};
+        const newId = `node_${++nodeIdCounter}`;
+        idMap[oldId] = newId;
+        nodesData[newId] = {
+            ...structuredCloneSafe(oldData),
+            x: Number(oldData.x || 0) + 36,
+            y: Number(oldData.y || 0) + 36
+        };
+        const el = createNodeDOM(newId, nodesData[newId].type, nodesData[newId].x, nodesData[newId].y);
+        if (el) nodeLayer.appendChild(el);
+        selectNode(newId, true);
+    });
+    internalClipboard.connections.forEach(conn => {
+        if (!idMap[conn.fromNode] || !idMap[conn.toNode]) return;
+        connections.push({
+            id: `conn_${++connectionIdCounter}`,
+            fromNode: idMap[conn.fromNode],
+            fromPort: conn.fromPort,
+            toNode: idMap[conn.toNode],
+            toPort: conn.toPort
+        });
+    });
+    renderConnections();
+    updateSignalMonitors();
+    markDirty();
+}
+
+function structuredCloneSafe(value) {
+    return JSON.parse(JSON.stringify(value || {}));
+}
+
+function updateSelectionBox(currentPoint) {
+    const x1 = Math.min(selectionStart.x, currentPoint.x);
+    const y1 = Math.min(selectionStart.y, currentPoint.y);
+    const x2 = Math.max(selectionStart.x, currentPoint.x);
+    const y2 = Math.max(selectionStart.y, currentPoint.y);
+    selectionBox.style.left = `${x1}px`;
+    selectionBox.style.top = `${y1}px`;
+    selectionBox.style.width = `${x2 - x1}px`;
+    selectionBox.style.height = `${y2 - y1}px`;
+}
+
+function finishBoxSelection(e) {
+    if (!isBoxSelecting || !selectionStart) return;
+    const end = getCanvasScreenPoint(e);
+    const x1 = Math.min(selectionStart.x, end.x);
+    const y1 = Math.min(selectionStart.y, end.y);
+    const x2 = Math.max(selectionStart.x, end.x);
+    const y2 = Math.max(selectionStart.y, end.y);
+    if (!e.shiftKey) clearSelection();
+    document.querySelectorAll('.node').forEach(node => {
+        const rect = node.getBoundingClientRect();
+        const canvasRect = canvas.getBoundingClientRect();
+        const nodeRect = {
+            left: rect.left - canvasRect.left,
+            top: rect.top - canvasRect.top,
+            right: rect.right - canvasRect.left,
+            bottom: rect.bottom - canvasRect.top
+        };
+        const intersects = nodeRect.left <= x2 && nodeRect.right >= x1 && nodeRect.top <= y2 && nodeRect.bottom >= y1;
+        if (intersects) selectNode(node.id, true);
+    });
+    selectionBox.style.display = 'none';
+    isBoxSelecting = false;
+    selectionStart = null;
+}
+
+function beginNodeDrag(e, id) {
+    if (!nodesData[id]) return;
+    if (!selectedNodeIds.has(id)) {
+        if (!e.shiftKey) clearSelection();
+        selectNode(id, true);
+    }
+
+    dragNodeId = id;
+    dragSelectedNodes = selectedNodeIds.has(id) ? Array.from(selectedNodeIds) : [id];
+    if (nodesData[id]?.type === 'group') {
+        getNodesInsideGroup(id).forEach(nodeId => {
+            if (!dragSelectedNodes.includes(nodeId)) dragSelectedNodes.push(nodeId);
+        });
+    }
+
+    const mouse = getCanvasPoint(e);
+    dragStartMouse = { x: e.clientX, y: e.clientY };
+    dragStartPositions = {};
+    dragSelectedNodes.forEach(nodeId => {
+        dragStartPositions[nodeId] = {
+            x: nodesData[nodeId]?.x || 0,
+            y: nodesData[nodeId]?.y || 0
+        };
+    });
+    document.querySelectorAll('.node').forEach(n => {
+        n.style.zIndex = n.classList.contains('group-node') ? 4 : 10;
+    });
+    dragSelectedNodes.forEach(nodeId => {
+        const selectedEl = document.getElementById(nodeId);
+        if (selectedEl) selectedEl.style.zIndex = selectedEl.classList.contains('group-node') ? 4 : 11;
+    });
+    dragOffsetX = mouse.x - (nodesData[id]?.x || 0);
+    dragOffsetY = mouse.y - (nodesData[id]?.y || 0);
+}
+
+function getGroupSize(id) {
+    return {
+        width: Math.max(160, Number(nodesData[id]?.width || 280)),
+        height: Math.max(110, Number(nodesData[id]?.height || 180))
+    };
+}
+
+function getNodesInsideGroup(groupId) {
+    const group = nodesData[groupId];
+    if (!group) return [];
+    const size = getGroupSize(groupId);
+    const bounds = {
+        left: group.x,
+        top: group.y,
+        right: group.x + size.width,
+        bottom: group.y + size.height
+    };
+    return Object.keys(nodesData).filter(id => {
+        if (id === groupId || nodesData[id]?.type === 'group') return false;
+        const rect = getNodeBounds(id);
+        return rect.left >= bounds.left && rect.right <= bounds.right && rect.top >= bounds.top && rect.bottom <= bounds.bottom;
+    });
+}
+
+function getNodeBounds(id) {
+    const data = nodesData[id] || {};
+    const el = document.getElementById(id);
+    const width = data.type === 'group' ? getGroupSize(id).width : (el?.offsetWidth || 160);
+    const height = data.type === 'group' ? getGroupSize(id).height : (el?.offsetHeight || 100);
+    return {
+        left: Number(data.x || 0),
+        top: Number(data.y || 0),
+        right: Number(data.x || 0) + width,
+        bottom: Number(data.y || 0) + height
+    };
+}
+
+function clampToWorkspace(x, y, width = 160, height = 100) {
+    return {
+        x: Math.min(Math.max(0, Number(x) || 0), Math.max(0, WORKSPACE_WIDTH - width)),
+        y: Math.min(Math.max(0, Number(y) || 0), Math.max(0, WORKSPACE_HEIGHT - height))
+    };
+}
+
+function getAllNodesBounds() {
+    const boundsList = Object.keys(nodesData)
+        .filter(id => document.getElementById(id))
+        .map(id => getNodeBounds(id));
+    if (!boundsList.length) return null;
+    return boundsList.reduce((acc, bounds) => ({
+        left: Math.min(acc.left, bounds.left),
+        top: Math.min(acc.top, bounds.top),
+        right: Math.max(acc.right, bounds.right),
+        bottom: Math.max(acc.bottom, bounds.bottom)
+    }), boundsList[0]);
+}
+
+function fitAllNodesToView() {
+    const bounds = getAllNodesBounds() || { left: 0, top: 0, right: WORKSPACE_WIDTH, bottom: WORKSPACE_HEIGHT };
+
+    const rect = canvas.getBoundingClientRect();
+    const padding = 90;
+    const availableWidth = Math.max(100, rect.width - padding * 2);
+    const availableHeight = Math.max(100, rect.height - padding * 2);
+    const contentWidth = Math.max(1, bounds.right - bounds.left);
+    const contentHeight = Math.max(1, bounds.bottom - bounds.top);
+    const fitZoom = Math.min(
+        1,
+        Math.max(0.45, Math.min(
+            availableWidth / contentWidth,
+            availableHeight / contentHeight
+        ))
+    );
+    const panX = (rect.width - contentWidth * fitZoom) * 0.5 - bounds.left * fitZoom;
+    const panY = (rect.height - contentHeight * fitZoom) * 0.5 - bounds.top * fitZoom;
+    setCanvasZoom(fitZoom);
+    setCanvasPan(panX, panY);
+}
+
+function beginGroupResize(e, id, direction) {
+    resizeGroupId = id;
+    resizeDirection = direction;
+    resizeStartPoint = getCanvasPoint(e);
+    resizeStartBox = {
+        x: nodesData[id]?.x || 0,
+        y: nodesData[id]?.y || 0,
+        ...getGroupSize(id)
+    };
+}
+
+function applyGroupResize(e) {
+    if (!resizeGroupId || !resizeStartPoint || !resizeStartBox) return;
+    const point = getCanvasPoint(e);
+    const dx = point.x - resizeStartPoint.x;
+    const dy = point.y - resizeStartPoint.y;
+    let nextX = resizeStartBox.x;
+    let nextY = resizeStartBox.y;
+    let nextWidth = resizeStartBox.width;
+    let nextHeight = resizeStartBox.height;
+    if (resizeDirection.includes('e')) nextWidth = resizeStartBox.width + dx;
+    if (resizeDirection.includes('s')) nextHeight = resizeStartBox.height + dy;
+    if (resizeDirection.includes('w')) {
+        nextX = resizeStartBox.x + dx;
+        nextWidth = resizeStartBox.width - dx;
+    }
+    if (resizeDirection.includes('n')) {
+        nextY = resizeStartBox.y + dy;
+        nextHeight = resizeStartBox.height - dy;
+    }
+    nextWidth = Math.max(160, nextWidth);
+    nextHeight = Math.max(110, nextHeight);
+    if (resizeDirection.includes('w')) nextX = resizeStartBox.x + resizeStartBox.width - nextWidth;
+    if (resizeDirection.includes('n')) nextY = resizeStartBox.y + resizeStartBox.height - nextHeight;
+    if (nextX < 0) {
+        nextWidth += nextX;
+        nextX = 0;
+    }
+    if (nextY < 0) {
+        nextHeight += nextY;
+        nextY = 0;
+    }
+    nextWidth = Math.min(Math.max(160, nextWidth), WORKSPACE_WIDTH - nextX);
+    nextHeight = Math.min(Math.max(110, nextHeight), WORKSPACE_HEIGHT - nextY);
+    nodesData[resizeGroupId].x = nextX;
+    nodesData[resizeGroupId].y = nextY;
+    nodesData[resizeGroupId].width = nextWidth;
+    nodesData[resizeGroupId].height = nextHeight;
+    const el = document.getElementById(resizeGroupId);
+    if (el) {
+        el.style.left = `${nodesData[resizeGroupId].x}px`;
+        el.style.top = `${nodesData[resizeGroupId].y}px`;
+        applyGroupSize(el, resizeGroupId);
+    }
+    persistLayout();
+}
+
+function endGroupResize() {
+    if (!resizeGroupId) return;
+    resizeGroupId = null;
+    resizeDirection = '';
+    resizeStartPoint = null;
+    resizeStartBox = null;
+    markDirty();
+}
+
+function createNodeDOM(id, type, x, y) {
+    const meta = nodeMeta[type];
+    if (!meta) return null;
+
+    const node = document.createElement('div');
+    node.className = type === 'group' ? 'node group-node' : 'node';
+    node.id = id;
+    node.dataset.type = type;
+    node.style.left = `${x}px`;
+    node.style.top = `${y}px`;
+    node.innerHTML = createNodeInnerHTML(id, type, meta);
+
+    const titleEl = node.querySelector('.node-title');
+    titleEl.addEventListener('mousedown', e => {
+        if (e.target.classList.contains('node-delete')) return;
+        beginNodeDrag(e, id);
+        e.stopPropagation();
+    });
+
+    if (type === 'group') {
+        applyGroupSize(node, id);
+        appendGroupResizeHandles(node, id);
+        node.querySelector('.group-box')?.addEventListener('mousedown', e => {
+            beginNodeDrag(e, id);
+            e.stopPropagation();
+            e.preventDefault();
+        });
+    }
+
+    const titleHeight = 28;
+    for (let i = 0; i < meta.inputs; i++) appendPort(node, 'input', i, titleHeight, meta.contentHeight, meta.inputs, meta);
+    for (let i = 0; i < meta.outputs; i++) appendPort(node, 'output', i, titleHeight, meta.contentHeight, meta.outputs, meta);
+
+    node.querySelectorAll('.chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+            node.querySelectorAll('.chip').forEach(item => item.classList.remove('active'));
+            chip.classList.add('active');
+            markDirty();
+        });
+    });
+
+    const input = node.querySelector('.num-input');
+    if (input) {
+        input.addEventListener('input', () => {
+            syncNodeInputs(node);
+            markDirty();
+        });
+        node.querySelector('[data-spin="up"]')?.addEventListener('click', () => stepInput(input, node, 1));
+        node.querySelector('[data-spin="down"]')?.addEventListener('click', () => stepInput(input, node, -1));
+    }
+
+    const material = node.querySelector('.material-content');
+    if (material) {
+        material.addEventListener('click', e => {
+            e.stopPropagation();
+            showMaterialPicker(node);
+        });
+    }
+
+    const building = node.querySelector('.building-content');
+    if (building) {
+        building.addEventListener('click', e => {
+            e.stopPropagation();
+            showBuildingPicker(node);
+        });
+    }
+
+    return node;
+}
+
+function applyGroupSize(node, id) {
+    const size = getGroupSize(id);
+    const box = node.querySelector('.group-box');
+    if (!box) return;
+    box.style.width = `${Math.max(120, size.width - 20)}px`;
+    box.style.height = `${Math.max(68, size.height - 44)}px`;
+}
+
+function appendGroupResizeHandles(node, id) {
+    ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'].forEach(direction => {
+        const handle = document.createElement('div');
+        handle.className = `group-resize ${direction}`;
+        handle.addEventListener('mousedown', e => {
+            e.stopPropagation();
+            e.preventDefault();
+            beginGroupResize(e, id, direction);
+        });
+        node.appendChild(handle);
+    });
+}
+
+function createNodeInnerHTML(id, type, meta) {
+    const deleteHtml = `<span class="node-delete" onclick="deleteNode('${id}')">✕</span>`;
+    if (type === 'material') {
+        const material = getSelectedMaterial();
+        const name = stripGameRichText(material?.Name || material?.name || t('chooseMaterial'));
+        const amount = formatTons(material?.MassKg ?? material?.massKg ?? serverState.selectedMaterialAmountKg ?? 0);
+        return `<div class="node-title"><span>${meta.title}</span>${deleteHtml}</div><div class="material-content" title="${t('selectMaterial')}"><h3>${escapeHtml(name)}</h3><p>${t('current')} ${amount}</p></div>`;
+    }
+    if (type === 'building-status') {
+        const building = getSelectedBuilding(id);
+        const name = stripGameRichText(building?.Name || building?.name || t('chooseBuilding'));
+        const ready = building ? ((building.Operational ?? building.operational) ? t('currentAvailable') : t('currentUnavailable')) : t('noBuildingSelected');
+        return `<div class="node-title"><span>${meta.title}</span>${deleteHtml}</div><div class="building-content" title="${t('selectBuilding')}"><h3>${escapeHtml(name)}</h3><p>${escapeHtml(ready)}</p></div>`;
+    }
+    if (type === 'building-signal') {
+        const building = getSelectedBuilding(id);
+        const name = stripGameRichText(building?.Name || building?.name || t('chooseBuilding'));
+        const value = building ? `${t('signalValue')} ${getBuildingSignalValue(building)}` : t('noBuildingSelected');
+        return `<div class="node-title"><span>${meta.title}</span>${deleteHtml}</div><div class="building-content" title="${t('selectBuilding')}"><h3>${escapeHtml(name)}</h3><p>${escapeHtml(value)}</p></div>`;
+    }
+    if (type === 'variable') {
+        const value = Number(serverState.conditionThresholdKg || serverState.ConditionThresholdKg || 100).toFixed(0);
+        return `<div class="node-title"><span>${meta.title}</span>${deleteHtml}</div><div class="variable-container"><div class="input-row"><input type="text" class="num-input" value="${value}"><div class="unit-label"><div>k</div><div>g</div></div><div class="spin-cluster"><button class="spin-btn" data-spin="up">▲</button><button class="spin-btn" data-spin="down">▼</button></div></div><div class="chips-row"><button class="chip active" data-step="100">100kg</button><button class="chip" data-step="500">500kg</button><button class="chip" data-step="1000">1t</button></div><div class="node-note">${t('legacyNote')}</div></div>`;
+    }
+    if (type === 'constant') {
+        const value = Math.max(0, Number(nodesData[id]?.value || 100)).toFixed(0);
+        return `<div class="node-title"><span>${meta.title}</span>${deleteHtml}</div><div class="variable-container"><div class="input-row"><input type="text" class="num-input" data-field="value" value="${value}"><div class="unit-label"><div>k</div><div>g</div></div><div class="spin-cluster"><button class="spin-btn" data-spin="up">▲</button><button class="spin-btn" data-spin="down">▼</button></div></div><div class="chips-row"><button class="chip active" data-step="100">100kg</button><button class="chip" data-step="500">500kg</button><button class="chip" data-step="1000">1t</button></div><div class="node-note">${t('constantNote')}</div></div>`;
+    }
+    if (type === 'test-signal') {
+        return `<div class="node-title"><span>${meta.title}</span>${deleteHtml}</div><div class="signal-monitor"><div class="signal-state">${t('signalRed')}</div><div class="signal-value">0</div></div>`;
+    }
+    if (type === 'material-low' || type === 'material-high') {
+        const value = Math.max(0, Number(nodesData[id]?.value || 100)).toFixed(0);
+        const label = type === 'material-low' ? t('belowThreshold') : t('aboveThreshold');
+        const material = getSelectedMaterial();
+        const name = stripGameRichText(material?.Name || material?.name || t('chooseMaterial'));
+        const amount = formatTons(material?.MassKg ?? material?.massKg ?? serverState.selectedMaterialAmountKg ?? 0);
+        return `<div class="node-title"><span>${meta.title}</span>${deleteHtml}</div><div class="variable-container"><div class="material-content" title="${t('selectMaterial')}"><h3>${escapeHtml(name)}</h3><p>${t('current')} ${amount}</p></div><div class="input-row"><input type="text" class="num-input" data-field="value" value="${value}"><div class="unit-label"><div>k</div><div>g</div></div><div class="spin-cluster"><button class="spin-btn" data-spin="up">▲</button><button class="spin-btn" data-spin="down">▼</button></div></div><div class="chips-row"><button class="chip active" data-step="100">100kg</button><button class="chip" data-step="500">500kg</button><button class="chip" data-step="1000">1t</button></div><div class="node-note">${label}</div></div>`;
+    }
+    if (type === 'cycle4') {
+        const value = Math.max(0.2, Number(nodesData[id]?.intervalSeconds || 5)).toFixed(1);
+        return `<div class="node-title"><span>${meta.title}</span>${deleteHtml}</div><div class="cycle-container"><div class="input-row"><input type="text" class="num-input" data-field="intervalSeconds" value="${value}"><div class="unit-label"><div>s</div><div>${t('seconds')}</div></div><div class="spin-cluster"><button class="spin-btn" data-spin="up">▲</button><button class="spin-btn" data-spin="down">▼</button></div></div><div class="cycle-row"><span>Port0</span><span>1</span></div><div class="cycle-row"><span>Port1</span><span>2</span></div><div class="cycle-row"><span>Port2</span><span>3</span></div><div class="cycle-row"><span>Port3</span><span>4</span></div></div>`;
+    }
+    if (type === 'timer' || type === 'delay') {
+        const value = Math.max(0.2, Number(nodesData[id]?.intervalSeconds || 5)).toFixed(1);
+        const label = type === 'delay' ? t('delayTime') : t('pulseInterval');
+        return `<div class="node-title"><span>${meta.title}</span>${deleteHtml}</div><div class="variable-container"><div class="input-row"><input type="text" class="num-input" data-field="intervalSeconds" value="${value}"><div class="unit-label"><div>s</div><div>${t('seconds')}</div></div><div class="spin-cluster"><button class="spin-btn" data-spin="up">▲</button><button class="spin-btn" data-spin="down">▼</button></div></div><div class="chips-row"><button class="chip active" data-step="1">1s</button><button class="chip" data-step="5">5s</button><button class="chip" data-step="10">10s</button></div><div class="node-note">${label}</div></div>`;
+    }
+    if (type === 'random') {
+        const value = Math.max(0, Math.min(100, Number(nodesData[id]?.value ?? 50))).toFixed(0);
+        return `<div class="node-title"><span>${meta.title}</span>${deleteHtml}</div><div class="variable-container"><div class="input-row"><input type="text" class="num-input" data-field="value" value="${value}"><div class="unit-label"><div>%</div><div></div></div><div class="spin-cluster"><button class="spin-btn" data-spin="up">▲</button><button class="spin-btn" data-spin="down">▼</button></div></div><div class="chips-row"><button class="chip active" data-step="5">5%</button><button class="chip" data-step="10">10%</button><button class="chip" data-step="25">25%</button></div><div class="node-note">${meta.label || ''}</div></div>`;
+    }
+    if (type === 'comment') {
+        const text = escapeHtml(nodesData[id]?.text || t('commentDefault'));
+        return `<div class="node-title"><span>${meta.title}</span>${deleteHtml}</div><div class="comment-box" contenteditable="true" oninput="syncCommentText('${id}', this)">${text}</div>`;
+    }
+    if (type === 'group') {
+        const text = escapeHtml(nodesData[id]?.text || t('groupDefault'));
+        return `<div class="node-title"><span>${meta.title}</span>${deleteHtml}</div><div class="group-box">${text}</div>`;
+    }
+    if (type === 'output') {
+        return `<div class="node-title"><span>${meta.title}</span>${deleteHtml}</div><div class="output-rows-container"><div class="output-channel-row"><span>Port0</span><span>1</span></div><div class="output-channel-row"><span>Port1</span><span>2</span></div><div class="output-channel-row"><span>Port2</span><span>4</span></div><div class="output-channel-row"><span>Port3</span><span>8</span></div></div>`;
+    }
+    if (type === 'material-change') {
+        const material = getSelectedMaterial();
+        const name = stripGameRichText(material?.Name || material?.name || t('chooseMaterial'));
+        const amount = formatTons(material?.MassKg ?? material?.massKg ?? serverState.selectedMaterialAmountKg ?? 0);
+        return `<div class="node-title"><span>${meta.title}</span>${deleteHtml}</div><div class="material-content" title="${t('selectMaterial')}"><h3>${escapeHtml(name)}</h3><p>${t('current')} ${amount}</p></div>`;
+    }
+    return `<div class="node-title"><span>${meta.title}</span>${deleteHtml}</div><div class="pure-condition-box"><div>${meta.label || t('logicOutput')}</div>${meta.sign}</div>`;
+}
+
+function getSelectedMaterial() {
+    const materials = serverState.materials || serverState.Materials || [];
+    return materials.find(item => (item.Key || item.key) === selectedMaterialKey) ||
+        materials.find(item => item.Selected || item.selected) ||
+        materials[0];
+}
+
+function getBuildings() {
+    return serverState.buildings || serverState.Buildings || [];
+}
+
+function getCurrentBuildingInstanceId() {
+    return Number(serverState.currentBuildingInstanceId ?? serverState.CurrentBuildingInstanceId ?? 0);
+}
+
+function getBuildingId(item) {
+    return Number(item?.InstanceId ?? item?.instanceId ?? 0);
+}
+
+function buildingHasLogicOutput(item) {
+    return Boolean(item?.HasLogicOutput ?? item?.hasLogicOutput);
+}
+
+function getBuildingSignalValue(item) {
+    return Number(item?.SignalValue ?? item?.signalValue ?? 0);
+}
+
+function getBuildingsForNode(nodeId) {
+    const nodeType = nodesData[nodeId]?.type || '';
+    if (nodeType !== 'building-signal') return getBuildings();
+    const currentId = getCurrentBuildingInstanceId();
+    return getBuildings().filter(item => buildingHasLogicOutput(item) && getBuildingId(item) !== currentId);
+}
+
+function getSelectedBuilding(nodeId) {
+    const buildings = getBuildingsForNode(nodeId);
+    const selectedId = Number(nodesData[nodeId]?.buildingInstanceId || 0);
+    return buildings.find(item => getBuildingId(item) === selectedId);
+}
+
+function showMaterialPicker(node) {
+    const materials = serverState.materials || serverState.Materials || [];
+    const nodeRect = node.getBoundingClientRect();
+    const canvasRect = canvas.getBoundingClientRect();
+    materialPicker.style.left = `${Math.max(8, nodeRect.left - canvasRect.left)}px`;
+    materialPicker.style.top = `${Math.max(8, nodeRect.bottom - canvasRect.top + 8)}px`;
+    materialPicker.innerHTML = `<div class="material-picker-title">${t('chooseMaterial')}</div>`;
+    if (!materials.length) {
+        materialPicker.innerHTML += `<div class="material-empty">${t('noMaterials')}</div>`;
+    } else {
+        materials.forEach(item => {
+            const key = item.Key || item.key || '';
+            const name = stripGameRichText(item.Name || item.name || key);
+            const mass = item.MassKg ?? item.massKg ?? 0;
+            const option = document.createElement('button');
+            option.className = `material-option ${key === selectedMaterialKey ? 'active' : ''}`;
+            option.innerHTML = `<span>${escapeHtml(name)}</span><span>${formatTons(mass)}</span>`;
+            option.addEventListener('click', () => selectMaterial(key));
+            materialPicker.appendChild(option);
+        });
+    }
+    materialPicker.classList.add('visible');
+}
+
+function showBuildingPicker(node) {
+    const buildings = getBuildingsForNode(node.id);
+    const selectedId = Number(nodesData[node.id]?.buildingInstanceId || 0);
+    const nodeRect = node.getBoundingClientRect();
+    const canvasRect = canvas.getBoundingClientRect();
+    materialPicker.style.left = `${Math.max(8, nodeRect.left - canvasRect.left)}px`;
+    materialPicker.style.top = `${Math.max(8, nodeRect.bottom - canvasRect.top + 8)}px`;
+    materialPicker.innerHTML = `<div class="material-picker-title">${t('chooseBuilding')}</div>`;
+    if (!buildings.length) {
+        const emptyText = nodesData[node.id]?.type === 'building-signal' ? t('noSignalBuildings') : t('noBuildings');
+        materialPicker.innerHTML += `<div class="material-empty">${emptyText}</div>`;
+    } else {
+        buildings.forEach(item => {
+            const instanceId = getBuildingId(item);
+            const name = stripGameRichText(item.Name || item.name || `${t('building')} ${instanceId}`);
+            const operational = item.Operational ?? item.operational;
+            const rightText = nodesData[node.id]?.type === 'building-signal'
+                ? `${t('signalValue')} ${getBuildingSignalValue(item)}`
+                : (operational ? t('available') : t('unavailable'));
+            const option = document.createElement('button');
+            option.className = `material-option ${instanceId === selectedId ? 'active' : ''}`;
+            option.innerHTML = `<span>${escapeHtml(name)}</span><span>${escapeHtml(rightText)}</span>`;
+            option.addEventListener('click', () => selectBuilding(node.id, instanceId));
+            materialPicker.appendChild(option);
+        });
+    }
+    materialPicker.classList.add('visible');
+}
+
+function selectBuilding(nodeId, instanceId) {
+    if (!nodesData[nodeId]) return;
+    nodesData[nodeId].buildingInstanceId = Number(instanceId || 0);
+    const node = document.getElementById(nodeId);
+    const content = node?.querySelector('.building-content');
+    const building = getSelectedBuilding(nodeId);
+    if (content && building) {
+        content.querySelector('h3').textContent = stripGameRichText(building.Name || building.name || `${t('building')} ${instanceId}`);
+        content.querySelector('p').textContent = nodesData[nodeId]?.type === 'building-signal'
+            ? `${t('signalValue')} ${getBuildingSignalValue(building)}`
+            : ((building.Operational ?? building.operational) ? t('currentAvailable') : t('currentUnavailable'));
+    }
+    materialPicker.classList.remove('visible');
+    updateSignalMonitors();
+    markDirty();
+}
+
+function selectMaterial(key) {
+    selectedMaterialKey = key || '';
+    serverState.conditionItemKey = selectedMaterialKey;
+    serverState.ConditionItemKey = selectedMaterialKey;
+    document.querySelectorAll('.material-content').forEach(content => {
+        const material = getSelectedMaterial();
+        if (content && material) {
+            content.querySelector('h3').textContent = stripGameRichText(material.Name || material.name || selectedMaterialKey);
+            content.querySelector('p').textContent = `${t('current')} ${formatTons(material.MassKg ?? material.massKg ?? 0)}`;
+        }
+    });
+    materialPicker.classList.remove('visible');
+    updateSignalMonitors();
+    markDirty();
+}
+
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[ch]));
+}
+
+function stripGameRichText(value) {
+    return String(value ?? '').replace(/<link=[^>]*>/gi, '').replace(/<\/link>/gi, '');
+}
+
+function appendPort(node, direction, index, titleHeight, contentHeight, count, meta) {
+    const port = document.createElement('div');
+    port.className = `port ${direction}`;
+    port.dataset.port = `${direction === 'output' ? 'out' : 'in'}-${index}`;
+    const customCenters = direction === 'output' ? meta?.outputPortCenters : meta?.inputPortCenters;
+    const centerY = Array.isArray(customCenters) && customCenters[index] != null
+        ? Number(customCenters[index])
+        : titleHeight + contentHeight * ((index + 0.5) / count);
+    port.style.top = `${centerY - 6}px`;
+    port.addEventListener('mousedown', e => {
+        e.stopPropagation();
+        e.preventDefault();
+        sourcePortEl = port;
+        activeDrawingLine = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        activeDrawingLine.setAttribute('stroke', '#555');
+        activeDrawingLine.setAttribute('stroke-width', '2');
+        activeDrawingLine.setAttribute('stroke-dasharray', '4,4');
+        activeDrawingLine.setAttribute('fill', 'none');
+        svgLayer.appendChild(activeDrawingLine);
+    });
+    node.appendChild(port);
+}
+
+function stepInput(input, node, direction) {
+    const active = node.querySelector('.chip.active');
+    const step = Number(active?.dataset.step || 100);
+    const minValue = input.dataset.field === 'intervalSeconds' ? 0.2 : 0;
+    const maxValue = node?.dataset.type === 'random' && input.dataset.field === 'value' ? 100 : Number.POSITIVE_INFINITY;
+    const digits = input.dataset.field === 'intervalSeconds' ? 1 : 0;
+    input.value = Math.min(maxValue, Math.max(minValue, Number(input.value || 0) + direction * step)).toFixed(digits);
+    syncNodeInputs(node);
+    markDirty();
+}
+
+function syncNodeInputs(node) {
+    if (!node || !nodesData[node.id]) return;
+    node.querySelectorAll('.num-input[data-field]').forEach(input => {
+        const field = input.dataset.field;
+        const minValue = field === 'intervalSeconds' ? 0.2 : 0;
+        const maxValue = node.dataset.type === 'random' && field === 'value' ? 100 : Number.POSITIVE_INFINITY;
+        nodesData[node.id][field] = Math.min(maxValue, Math.max(minValue, Number(input.value || minValue)));
+    });
+    updateSignalMonitors();
+}
+
+window.syncCommentText = function(id, el) {
+    if (!nodesData[id]) return;
+    nodesData[id].text = el.textContent || '';
+    markDirty();
+};
+
+function formatTons(kg) {
+    const amount = Math.max(0, Number(kg || 0));
+    if (amount < 1000) {
+        if (amount > 0 && amount < 0.1) return '<0.1kg';
+        const digits = amount < 10 ? 1 : 0;
+        return `${amount.toFixed(digits)}kg`;
+    }
+    return `${(amount / 1000).toFixed(1)}${t('ton')}`;
+}
+
+localizePage(false);
+
+canvas.addEventListener('dragover', e => e.preventDefault());
+canvas.addEventListener('drop', e => {
+    e.preventDefault();
+    if (!draggedType) return;
+    const point = getCanvasPoint(e);
+    createNodeAt(draggedType, point.x - 50, point.y - 20);
+    draggedType = null;
+});
+
+canvas.addEventListener('wheel', e => {
+    if (docsPage.classList.contains('visible') || e.target.closest('.material-picker') || e.target.closest('.node-menu')) return;
+    e.preventDefault();
+    const direction = e.deltaY > 0 ? -1 : 1;
+    setCanvasZoom(canvasZoom + direction * 0.08);
+}, { passive: false });
+
+canvas.addEventListener('contextmenu', e => {
+    e.preventDefault();
+});
+
+canvas.addEventListener('mousedown', e => {
+    if (e.button === 2 && !docsPage.classList.contains('visible') && !e.target.closest('.node') && !e.target.closest('.port') && !e.target.closest('.material-picker') && !e.target.closest('.node-menu')) {
+        isPanningCanvas = true;
+        panStartPoint = { x: e.clientX, y: e.clientY };
+        rightMouseDownPoint = { x: e.clientX, y: e.clientY };
+        rightMouseCanvasPoint = getCanvasPoint(e);
+        rightPanMoved = false;
+        panStartOffset = { x: canvasPanX, y: canvasPanY };
+        canvas.classList.add('panning');
+        materialPicker.classList.remove('visible');
+        hideNodeMenu();
+        e.preventDefault();
+        return;
+    }
+    if (e.button !== 0 || e.target.tagName === 'path' || e.target.closest('.node') || e.target.closest('.port') || e.target.closest('.material-picker') || e.target.closest('.node-menu')) return;
+    if (!e.shiftKey) clearSelection();
+    isBoxSelecting = true;
+    selectionStart = getCanvasScreenPoint(e);
+    selectionBox.style.display = 'block';
+    updateSelectionBox(selectionStart);
+    materialPicker.classList.remove('visible');
+    e.preventDefault();
+});
+
+document.addEventListener('mousemove', e => {
+    if (isPanningCanvas && panStartPoint && panStartOffset) {
+        if (rightMouseDownPoint && Math.hypot(e.clientX - rightMouseDownPoint.x, e.clientY - rightMouseDownPoint.y) > 5) {
+            rightPanMoved = true;
+        }
+        setCanvasPan(
+            panStartOffset.x + e.clientX - panStartPoint.x,
+            panStartOffset.y + e.clientY - panStartPoint.y
+        );
+        return;
+    }
+    if (resizeGroupId) {
+        applyGroupResize(e);
+        return;
+    }
+    if (dragNodeId && dragStartMouse) {
+        let dx = (e.clientX - dragStartMouse.x) / canvasZoom;
+        let dy = (e.clientY - dragStartMouse.y) / canvasZoom;
+        dragSelectedNodes.forEach(nodeId => {
+            const startPos = dragStartPositions[nodeId];
+            const nodeEl = document.getElementById(nodeId);
+            if (!startPos || !nodeEl || !nodesData[nodeId]) return;
+            const width = nodesData[nodeId].type === 'group' ? getGroupSize(nodeId).width : (nodeEl.offsetWidth || 160);
+            const height = nodesData[nodeId].type === 'group' ? getGroupSize(nodeId).height : (nodeEl.offsetHeight || 100);
+            dx = Math.min(dx, WORKSPACE_WIDTH - width - startPos.x);
+            dy = Math.min(dy, WORKSPACE_HEIGHT - height - startPos.y);
+            dx = Math.max(dx, -startPos.x);
+            dy = Math.max(dy, -startPos.y);
+        });
+        dragSelectedNodes.forEach(nodeId => {
+            const startPos = dragStartPositions[nodeId];
+            const nodeEl = document.getElementById(nodeId);
+            if (!startPos || !nodeEl || !nodesData[nodeId]) return;
+            const x = startPos.x + dx;
+            const y = startPos.y + dy;
+            nodeEl.style.left = `${x}px`;
+            nodeEl.style.top = `${y}px`;
+            nodesData[nodeId].x = x;
+            nodesData[nodeId].y = y;
+        });
+        renderConnections();
+        persistLayout();
+    }
+    if (activeDrawingLine && sourcePortEl) {
+        const p1 = calculatePortAbsolutePos(sourcePortEl);
+        const point = getCanvasPoint(e);
+        const mouseX = point.x;
+        const mouseY = point.y;
+        const snapTarget = findSnapPort(mouseX, mouseY);
+        setSnappedPort(snapTarget);
+        const p2 = snapTarget ? calculatePortAbsolutePos(snapTarget) : { x: mouseX, y: mouseY };
+        const deltaX = Math.abs(p2.x - p1.x) * 0.5;
+        activeDrawingLine.setAttribute('d', `M ${p1.x} ${p1.y} C ${p1.x + deltaX} ${p1.y}, ${p2.x - deltaX} ${p2.y}, ${p2.x} ${p2.y}`);
+    }
+    if (isBoxSelecting && selectionStart) {
+        updateSelectionBox(getCanvasScreenPoint(e));
+    }
+});
+
+document.addEventListener('mousedown', e => {
+    if (!materialPicker.contains(e.target) && !e.target.closest('.material-content') && !e.target.closest('.building-content')) {
+        materialPicker.classList.remove('visible');
+    }
+    if (!nodeMenu.contains(e.target)) {
+        hideNodeMenu();
+    }
+});
+
+document.addEventListener('mouseup', e => {
+    if (isPanningCanvas) {
+        const shouldOpenNodeMenu = e.button === 2 && !rightPanMoved && rightMouseDownPoint && !e.target.closest('.node') && !e.target.closest('.port') && !e.target.closest('.material-picker') && !e.target.closest('.node-menu');
+        const screenPoint = rightMouseDownPoint
+            ? getCanvasScreenPoint({ clientX: rightMouseDownPoint.x, clientY: rightMouseDownPoint.y })
+            : getCanvasScreenPoint(e);
+        const canvasPoint = rightMouseCanvasPoint || getCanvasPoint(e);
+        const restorePan = panStartOffset ? { ...panStartOffset } : { x: canvasPanX, y: canvasPanY };
+        isPanningCanvas = false;
+        panStartPoint = null;
+        panStartOffset = null;
+        canvas.classList.remove('panning');
+        if (rightPanMoved) {
+            persistLayout();
+        } else {
+            setCanvasPan(restorePan.x, restorePan.y);
+        }
+        rightMouseDownPoint = null;
+        rightMouseCanvasPoint = null;
+        rightPanMoved = false;
+        if (shouldOpenNodeMenu) {
+            showNodeMenu(screenPoint, canvasPoint);
+        }
+        return;
+    }
+    if (resizeGroupId) {
+        endGroupResize();
+        return;
+    }
+    if (isBoxSelecting) {
+        finishBoxSelection(e);
+        return;
+    }
+    dragNodeId = null;
+    dragSelectedNodes = [];
+    dragStartPositions = {};
+    dragStartMouse = null;
+    if (!activeDrawingLine) return;
+    const point = getCanvasPoint(e);
+    const mouseX = point.x;
+    const mouseY = point.y;
+    const targetPortEl = snappedPortEl || e.target.closest('.port') || findSnapPort(mouseX, mouseY);
+    if (targetPortEl && targetPortEl !== sourcePortEl) {
+        connectPorts(sourcePortEl, targetPortEl);
+    }
+    activeDrawingLine.remove();
+    activeDrawingLine = null;
+    setSnappedPort(null);
+    sourcePortEl = null;
+    renderConnections();
+});
+
+function connectPorts(a, b) {
+    const from = a.classList.contains('output') ? a : b;
+    const to = a.classList.contains('input') ? a : b;
+    if (!from.classList.contains('output') || !to.classList.contains('input')) return;
+    if (from.parentElement.id === to.parentElement.id) return;
+    connections = connections.filter(conn => !(conn.toNode === to.parentElement.id && conn.toPort === to.dataset.port));
+    connections.push({
+        id: `conn_${++connectionIdCounter}`,
+        fromNode: from.parentElement.id,
+        fromPort: from.dataset.port,
+        toNode: to.parentElement.id,
+        toPort: to.dataset.port
+    });
+    updateSignalMonitors();
+    markDirty();
+}
+
+function calculatePortAbsolutePos(portEl) {
+    const portRect = portEl.getBoundingClientRect();
+    const canvasRect = canvas.getBoundingClientRect();
+    return {
+        x: (portRect.left + portRect.width * 0.5 - canvasRect.left - canvasPanX) / canvasZoom,
+        y: (portRect.top + portRect.height * 0.5 - canvasRect.top - canvasPanY) / canvasZoom
+    };
+}
+
+function setSnappedPort(portEl) {
+    if (snappedPortEl === portEl) return;
+    snappedPortEl?.classList.remove('snap-target');
+    snappedPortEl = portEl;
+    snappedPortEl?.classList.add('snap-target');
+}
+
+function findSnapPort(mouseX, mouseY) {
+    if (!sourcePortEl) return null;
+    const wantsInput = sourcePortEl.classList.contains('output');
+    const selector = wantsInput ? '.port.input' : '.port.output';
+    let bestPort = null;
+    let bestDistance = SNAP_DISTANCE;
+    document.querySelectorAll(selector).forEach(port => {
+        if (port === sourcePortEl || port.parentElement === sourcePortEl.parentElement) return;
+        const pos = calculatePortAbsolutePos(port);
+        const distance = Math.hypot(pos.x - mouseX, pos.y - mouseY);
+        if (distance < bestDistance) {
+            bestDistance = distance;
+            bestPort = port;
+        }
+    });
+    return bestPort;
+}
+
+function renderConnections() {
+    svgLayer.innerHTML = '';
+    connections.forEach(conn => {
+        const fromNodeEl = document.getElementById(conn.fromNode);
+        const toNodeEl = document.getElementById(conn.toNode);
+        if (!fromNodeEl || !toNodeEl) return;
+        const fromPortEl = fromNodeEl.querySelector(`.port.output[data-port="${conn.fromPort}"]`);
+        const toPortEl = toNodeEl.querySelector(`.port.input[data-port="${conn.toPort}"]`);
+        if (!fromPortEl || !toPortEl) return;
+        const p1 = calculatePortAbsolutePos(fromPortEl);
+        const p2 = calculatePortAbsolutePos(toPortEl);
+        const deltaX = Math.abs(p2.x - p1.x) * 0.5;
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', `M ${p1.x} ${p1.y} C ${p1.x + deltaX} ${p1.y}, ${p2.x - deltaX} ${p2.y}, ${p2.x} ${p2.y}`);
+        path.setAttribute('stroke', '#7a8274');
+        path.setAttribute('stroke-width', '3');
+        path.setAttribute('fill', 'none');
+        path.addEventListener('click', () => {
+            connections = connections.filter(c => c.id !== conn.id);
+            renderConnections();
+            updateSignalMonitors();
+            markDirty();
+        });
+        svgLayer.appendChild(path);
+    });
+}
+
+window.deleteNode = function(id) {
+    document.getElementById(id)?.remove();
+    connections = connections.filter(conn => conn.fromNode !== id && conn.toNode !== id);
+    delete nodesData[id];
+    selectedNodeIds.delete(id);
+    renderConnections();
+    updateSignalMonitors();
+    markDirty();
+};
+
+function persistLayout() {
+    localStorage.setItem(storageKey, buildLayoutJson());
+}
+
+function buildLayoutJson() {
+    return JSON.stringify({ nodesData, connections, nodeIdCounter, connectionIdCounter, canvasZoom, canvasPanX, canvasPanY });
+}
+
+function restoreLayout(layoutJson) {
+    const saved = layoutJson || localStorage.getItem(storageKey);
+    if (saved) {
+        try {
+            const data = JSON.parse(saved);
+            return loadLayoutState(data, true);
+        } catch {
+            if (!layoutJson) localStorage.removeItem(storageKey);
+        }
+    }
+    return false;
+}
+
+function loadLayoutState(data, persistLocal) {
+    document.querySelectorAll('.node').forEach(node => node.remove());
+    nodesData = data.nodesData || {};
+    connections = data.connections || [];
+    nodeIdCounter = data.nodeIdCounter || 0;
+    connectionIdCounter = data.connectionIdCounter || 0;
+    clearSelection();
+    setCanvasZoom(data.canvasZoom || 1);
+    setCanvasPan(data.canvasPanX || 0, data.canvasPanY || 0);
+    Object.entries(nodesData).forEach(([id, node]) => {
+        const size = node.type === 'group'
+            ? getGroupSize(id)
+            : { width: 180, height: Number(nodeMeta[node.type]?.contentHeight || 80) + 44 };
+        const pos = clampToWorkspace(node.x, node.y, size.width, size.height);
+        node.x = pos.x;
+        node.y = pos.y;
+    });
+    Object.entries(nodesData).forEach(([id, node]) => {
+        const el = createNodeDOM(id, node.type, node.x, node.y);
+        if (el) nodeLayer.appendChild(el);
+    });
+    renderConnections();
+    updateSignalMonitors();
+    if (persistLocal) persistLayout();
+    return Object.keys(nodesData).length > 0;
+}
+
+function createDefaultGraph() {
+    document.querySelectorAll('.node').forEach(node => node.remove());
+    clearSelection();
+    setCanvasZoom(1);
+    setCanvasPan(0, 0);
+    nodesData = {
+        node_out: { type: 'output', x: 520, y: 180 }
+    };
+    connections = [];
+    nodeIdCounter = 10;
+    connectionIdCounter = 10;
+    Object.entries(nodesData).forEach(([id, node]) => nodeLayer.appendChild(createNodeDOM(id, node.type, node.x, node.y)));
+    renderConnections();
+    updateSignalMonitors();
+    persistLayout();
+}
+
+function updateSignalMonitors() {
+    Object.entries(nodesData).forEach(([id, node]) => {
+        if (node.type !== 'test-signal') return;
+        const value = evaluatePreviewInput(id, 0, 0);
+        const active = Math.abs(value) > 0.0001;
+        const nodeEl = document.getElementById(id);
+        const stateEl = nodeEl?.querySelector('.signal-state');
+        const valueEl = nodeEl?.querySelector('.signal-value');
+        if (stateEl) {
+            stateEl.textContent = active ? t('signalGreen') : t('signalRed');
+            stateEl.classList.toggle('active', active);
+        }
+        if (valueEl) {
+            valueEl.textContent = formatPreviewValue(value, findPreviewInputType(id, 0));
+            valueEl.title = String(value);
+        }
+    });
+}
+
+function findPreviewInputType(nodeId, portIndex) {
+    const input = connections.find(conn => conn.toNode === nodeId && parsePortIndex(conn.toPort) === portIndex);
+    return input ? nodesData[input.fromNode]?.type || '' : '';
+}
+
+function evaluatePreviewInput(nodeId, portIndex, depth) {
+    const input = connections.find(conn => conn.toNode === nodeId && parsePortIndex(conn.toPort) === portIndex);
+    return input ? evaluatePreviewNode(input.fromNode, parsePortIndex(input.fromPort), depth + 1) : 0;
+}
+
+function evaluatePreviewNode(nodeId, outputPortIndex, depth = 0) {
+    if (depth > 32) return 0;
+    const node = nodesData[nodeId];
+    if (!node) return 0;
+    const type = node.type;
+    const a = evaluatePreviewInput(nodeId, 0, depth + 1);
+    const b = evaluatePreviewInput(nodeId, 1, depth + 1);
+    if (type === 'material') return getSelectedMaterialAmountForPreview();
+    if (type === 'constant') return Number(node.value ?? currentNodeInputValue(nodeId, 'value', 100));
+    if (type === 'variable') return Number(serverState.conditionThresholdKg || serverState.ConditionThresholdKg || 100);
+    if (type === 'material-low') return getSelectedMaterialAmountForPreview() < Math.max(0, Number(node.value || 100)) ? 1 : 0;
+    if (type === 'material-high') return getSelectedMaterialAmountForPreview() >= Math.max(0, Number(node.value || 100)) ? 1 : 0;
+    if (type === 'logic-gt') return a > b ? 1 : 0;
+    if (type === 'logic-lt') return a < b ? 1 : 0;
+    if (type === 'logic-eq') return Math.abs(a - b) < 0.0001 ? 1 : 0;
+    if (type === 'logic-range') {
+        const c = evaluatePreviewInput(nodeId, 2, depth + 1);
+        return a >= Math.min(b, c) && a <= Math.max(b, c) ? 1 : 0;
+    }
+    if (type === 'math-add') return a + b;
+    if (type === 'math-subtract') return a - b;
+    if (type === 'math-multiply') return a * b;
+    if (type === 'math-divide') return Math.abs(b) < 0.0001 ? 0 : a / b;
+    if (type === 'math-mod') return Math.abs(b) < 0.0001 ? 0 : a % b;
+    if (type === 'math-clamp') {
+        const c = evaluatePreviewInput(nodeId, 2, depth + 1);
+        return Math.min(Math.max(a, Math.min(b, c)), Math.max(b, c));
+    }
+    if (type === 'math-negate') return -a;
+    if (type === 'math-min') return Math.min(a, b);
+    if (type === 'math-max') return Math.max(a, b);
+    if (type === 'bool-and') return isPreviewTrue(a) && isPreviewTrue(b) ? 1 : 0;
+    if (type === 'bool-nand') return isPreviewTrue(a) && isPreviewTrue(b) ? 0 : 1;
+    if (type === 'bool-or') return isPreviewTrue(a) || isPreviewTrue(b) ? 1 : 0;
+    if (type === 'bool-nor') return isPreviewTrue(a) || isPreviewTrue(b) ? 0 : 1;
+    if (type === 'bool-xor') return isPreviewTrue(a) !== isPreviewTrue(b) ? 1 : 0;
+    if (type === 'bool-not') return isPreviewTrue(a) ? 0 : 1;
+    if (type === 'bool-selector') return isPreviewTrue(a) ? b : evaluatePreviewInput(nodeId, 2, depth + 1);
+    if (type === 'bool-true') return 1;
+    if (type === 'bool-false') return 0;
+    if (type === 'inventory-percent') return getInventoryPercentForPreview();
+    if (type === 'inventory-stored') return getServerNumber('TotalStoredKg', 'totalStoredKg');
+    if (type === 'inventory-remaining') return Math.max(0, getServerNumber('TotalCapacityKg', 'totalCapacityKg') - getServerNumber('TotalStoredKg', 'totalStoredKg'));
+    if (type === 'inventory-capacity') return getServerNumber('TotalCapacityKg', 'totalCapacityKg');
+    if (type === 'power-percent') return getPowerPercentForPreview();
+    if (type === 'power-stored') return getServerNumber('PowerStoredJoules', 'powerStoredJoules');
+    if (type === 'power-remaining') return getServerNumber('PowerRemainingJoules', 'powerRemainingJoules');
+    if (type === 'power-capacity') return getServerNumber('PowerCapacityJoules', 'powerCapacityJoules');
+    if (type === 'building-status') {
+        const building = getSelectedBuilding(nodeId);
+        return building && (building.Operational ?? building.operational) ? 1 : 0;
+    }
+    if (type === 'building-signal') {
+        const building = getSelectedBuilding(nodeId);
+        return building ? getBuildingSignalValue(building) : 0;
+    }
+    if (type === 'cycle4') return outputPortIndex === Math.floor(Date.now() / Math.max(200, Number(node.intervalSeconds || 5) * 1000)) % 4 ? 1 : 0;
+    if (type === 'timer') return Math.floor(Date.now() / Math.max(200, Number(node.intervalSeconds || 5) * 1000)) % 2 === 0 ? 1 : 0;
+    if (type === 'counter') return 0;
+    if (type === 'random') return Math.random() * 100 < Math.max(0, Math.min(100, Number(node.value ?? 50))) ? 1 : 0;
+    if (type === 'delay' || type === 'latch' || type === 'edge-pulse' || type === 'material-change') return a;
+    return 0;
+}
+
+function currentNodeInputValue(nodeId, field, fallback) {
+    return document.getElementById(nodeId)?.querySelector(`.num-input[data-field="${field}"]`)?.value ?? fallback;
+}
+
+function getSelectedMaterialAmountForPreview() {
+    const material = getSelectedMaterial();
+    return Number(material?.MassKg ?? material?.massKg ?? serverState.selectedMaterialAmountKg ?? serverState.SelectedMaterialAmountKg ?? 0);
+}
+
+function getInventoryPercentForPreview() {
+    const stored = getServerNumber('TotalStoredKg', 'totalStoredKg');
+    const capacity = getServerNumber('TotalCapacityKg', 'totalCapacityKg');
+    return capacity > 0 ? Math.min(100, Math.max(0, stored / capacity * 100)) : 0;
+}
+
+function getPowerPercentForPreview() {
+    const stored = getServerNumber('PowerStoredJoules', 'powerStoredJoules');
+    const capacity = getServerNumber('PowerCapacityJoules', 'powerCapacityJoules');
+    return capacity > 0 ? Math.min(100, Math.max(0, stored / capacity * 100)) : 0;
+}
+
+function getServerNumber(pascalName, camelName) {
+    return Number(serverState[pascalName] ?? serverState[camelName] ?? 0);
+}
+
+function isPreviewTrue(value) {
+    return Math.abs(Number(value || 0)) > 0.0001;
+}
+
+function formatPreviewValue(value, sourceType = '') {
+    const number = Number(value || 0);
+    if (!Number.isFinite(number)) return '0';
+    if (sourceType.startsWith('power-')) return formatJoules(number);
+    if (sourceType.startsWith('inventory-') && sourceType !== 'inventory-percent') return formatTons(number);
+    if (Math.abs(number) >= 1000) return formatTons(number);
+    if (Math.abs(number - Math.round(number)) < 0.0001) return String(Math.round(number));
+    return number.toFixed(2);
+}
+
+function formatJoules(joules) {
+    const amount = Math.max(0, Number(joules || 0));
+    if (amount >= 1000000) return `${(amount / 1000000).toFixed(1)}MJ`;
+    if (amount >= 1000) return `${(amount / 1000).toFixed(1)}kJ`;
+    return `${amount.toFixed(0)}J`;
+}
+
+function buildRuntimeBlueprintJson() {
+    const nodes = [];
+    Object.entries(nodesData).forEach(([id, node]) => {
+        const meta = nodeMeta[node.type];
+        if (!meta) return;
+        const runtimeNode = { Id: normalizeNodeId(id, node.type), Module: meta.module };
+        if (node.type === 'timer' || node.type === 'cycle4' || node.type === 'delay') {
+            const inputValue = document.getElementById(id)?.querySelector('.num-input[data-field="intervalSeconds"]')?.value;
+            runtimeNode.IntervalSeconds = Math.max(0.2, Number(inputValue || node.intervalSeconds || 5));
+        }
+        if (node.type === 'constant' || node.type === 'material-low' || node.type === 'material-high' || node.type === 'random') {
+            const inputValue = document.getElementById(id)?.querySelector('.num-input[data-field="value"]')?.value;
+            const fallback = node.type === 'random' ? 50 : 100;
+            const maxValue = node.type === 'random' ? 100 : Number.POSITIVE_INFINITY;
+            runtimeNode.Value = Math.min(maxValue, Math.max(0, Number(inputValue || node.value || fallback)));
+        }
+        if (node.type === 'building-status' || node.type === 'building-signal') {
+            runtimeNode.SelectedBuildingInstanceId = Number(node.buildingInstanceId || 0);
+        }
+        nodes.push(runtimeNode);
+    });
+    ensureSystemNodes(nodes);
+    const runtimeConnections = connections.map(conn => ({
+        FromNodeId: normalizeNodeId(conn.fromNode, nodesData[conn.fromNode]?.type),
+        FromPortIndex: parsePortIndex(conn.fromPort),
+        ToNodeId: normalizeNodeId(conn.toNode, nodesData[conn.toNode]?.type),
+        ToPortIndex: parsePortIndex(conn.toPort)
+    }));
+    return JSON.stringify({ Nodes: nodes, Connections: runtimeConnections });
+}
+
+function ensureSystemNodes(nodes) {
+    const required = [
+        { Id: 'system:material', Module: 'MaterialCondition' },
+        { Id: 'system:compare', Module: 'Variable' },
+        { Id: 'system:output', Module: 'Output' }
+    ];
+    required.forEach(item => {
+        if (!nodes.some(node => node.Id === item.Id)) nodes.push(item);
+    });
+}
+
+function normalizeNodeId(id, type) {
+    if (id === 'node_mat' || type === 'material') return 'system:material';
+    if (id === 'node_var' || type === 'variable') return 'system:compare';
+    if (id === 'node_out' || type === 'output') return 'system:output';
+    return id;
+}
+
+function parsePortIndex(port) {
+    const parts = String(port || '0').split('-');
+    return Number(parts[1] || 0);
+}
+
+function currentThreshold() {
+    const variable = Object.keys(nodesData).find(id => nodesData[id].type === 'variable') ||
+        Object.keys(nodesData).find(id => nodesData[id].type === 'constant');
+    const value = variable ? document.getElementById(variable)?.querySelector('.num-input')?.value : '';
+    return Math.max(0, Number(value || serverState.conditionThresholdKg || serverState.ConditionThresholdKg || 100));
+}
+
+saveBtn.addEventListener('click', () => saveToGame(t('saving'), t('saved')));
+sidebarToggleBtn.addEventListener('click', () => {
+    sidebarCollapsed = !sidebarCollapsed;
+    applySidebarCollapsedState();
+});
+docsBtn.addEventListener('click', () => toggleDocsPage());
+fitViewBtn.addEventListener('click', fitAllNodesToView);
+langBtn.addEventListener('click', () => {
+    currentLanguage = currentLanguage === 'zh' ? 'en' : 'zh';
+    localizePage(true);
+});
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && nodeMenu.classList.contains('visible')) {
+        hideNodeMenu();
+        e.preventDefault();
+        return;
+    }
+    if (e.key === 'Escape' && docsPage.classList.contains('visible')) {
+        toggleDocsPage(false);
+        return;
+    }
+    if (docsPage.classList.contains('visible') || e.target.closest('input') || e.target.isContentEditable) {
+        return;
+    }
+    if ((e.key === 'Delete' || e.key === 'Backspace') && selectedNodeIds.size) {
+        e.preventDefault();
+        deleteSelectedNodes();
+        return;
+    }
+    if (e.ctrlKey && e.key.toLowerCase() === 'c') {
+        e.preventDefault();
+        copySelectedNodes();
+        return;
+    }
+    if (e.ctrlKey && e.key.toLowerCase() === 'v') {
+        e.preventDefault();
+        pasteCopiedNodes();
+    }
+});
+
+async function saveToGame(savingText, savedText) {
+    setStatus(savingText);
+    const payload = {
+        RuntimeBlueprintJson: buildRuntimeBlueprintJson(),
+        RuntimeLayoutJson: buildLayoutJson(),
+        OutputModeValue: 1,
+        SourceModeValue: 1,
+        ConditionThresholdKg: currentThreshold(),
+        ConditionItemKey: selectedMaterialKey || serverState.conditionItemKey || serverState.ConditionItemKey || ''
+    };
+    const response = await fetch(`/api/save?id=${encodeURIComponent(editorId)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    });
+    if (!response.ok) {
+        setStatus(t('saveFailed'));
+        return;
+    }
+    persistLayout();
+    setStatus(savedText);
+}
+
+async function refreshGameState() {
+    try {
+        const response = await fetch(`/api/state?id=${encodeURIComponent(editorId)}`);
+        if (!response.ok) return;
+        const nextState = await response.json();
+        const previousMaterialKey = selectedMaterialKey;
+        serverState = { ...serverState, ...nextState };
+        setEditorTitle(serverState.buildingName || serverState.BuildingName);
+        if (!selectedMaterialKey) {
+            selectedMaterialKey = serverState.conditionItemKey || serverState.ConditionItemKey || '';
+        }
+        if (!selectedMaterialKey) {
+            const selected = getSelectedMaterial();
+            selectedMaterialKey = selected?.Key || selected?.key || '';
+        }
+        if (previousMaterialKey !== selectedMaterialKey || nextState.Materials || nextState.materials || nextState.Buildings || nextState.buildings) {
+            document.querySelectorAll('.material-content').forEach(content => {
+                const material = getSelectedMaterial();
+                if (content && material) {
+                    content.querySelector('h3').textContent = stripGameRichText(material.Name || material.name || selectedMaterialKey);
+                    content.querySelector('p').textContent = `${t('current')} ${formatTons(material.MassKg ?? material.massKg ?? 0)}`;
+                }
+            });
+            document.querySelectorAll('.building-content').forEach(content => {
+                const node = content.closest('.node');
+                const building = node ? getSelectedBuilding(node.id) : null;
+                if (!building) return;
+                content.querySelector('h3').textContent = stripGameRichText(building.Name || building.name || `${t('building')} ${getBuildingId(building)}`);
+                content.querySelector('p').textContent = nodesData[node.id]?.type === 'building-signal'
+                    ? `${t('signalValue')} ${getBuildingSignalValue(building)}`
+                    : ((building.Operational ?? building.operational) ? t('currentAvailable') : t('currentUnavailable'));
+            });
+        }
+        updateSignalMonitors();
+    } catch {
+        // Heartbeat handles disconnected-game UI.
+    }
+}
+
+function sendHeartbeat() {
+    fetch(`/api/heartbeat?id=${encodeURIComponent(editorId)}`)
+        .then(response => {
+            if (!response.ok) throw new Error('heartbeat failed');
+            heartbeatFailures = 0;
+        })
+        .catch(() => {
+            heartbeatFailures++;
+            if (heartbeatFailures >= 3) {
+                handleGameDisconnected();
+            }
+        });
+}
+
+async function boot() {
+    await refreshGameState();
+    const serverLayout = serverState.runtimeLayoutJson || serverState.RuntimeLayoutJson || '';
+    if (!restoreLayout(serverLayout) && !restoreLayout()) createDefaultGraph();
+    setStatus(t('connected'));
+    updateSignalMonitors();
+    monitorPreviewTimer = setInterval(updateSignalMonitors, 500);
+    stateRefreshTimer = setInterval(refreshGameState, 1000);
+    sendHeartbeat();
+    heartbeatTimer = setInterval(sendHeartbeat, 2000);
+}
+
+boot();
+</script>
+</body>
+</html>

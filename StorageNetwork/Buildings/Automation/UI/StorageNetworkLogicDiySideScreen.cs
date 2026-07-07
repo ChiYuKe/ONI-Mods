@@ -11,7 +11,7 @@ namespace StorageNetwork.UI
     {
         private StorageNetworkLogicDiy targetLogic;
         private GameObject contentRoot;
-        private TextMeshProUGUI buttonText;
+        private TextMeshProUGUI openButtonText;
 
         public StorageNetworkLogicDiySideScreen()
         {
@@ -79,16 +79,16 @@ namespace StorageNetwork.UI
             layout.childForceExpandWidth = true;
             layout.childForceExpandHeight = false;
 
-            KButton button = CreateSmallButton(contentRoot.transform, Loc.Get(Loc.UI.STORAGE_NETWORK.LOGIC_DIY_OPEN_SETTINGS), Loc.Get(Loc.UI.STORAGE_NETWORK.LOGIC_DIY_OPEN_SETTINGS_TOOLTIP), () =>
+            KButton openButton = CreateSmallButton(contentRoot.transform, Loc.Get(Loc.UI.STORAGE_NETWORK.LOGIC_DIY_OPEN_SETTINGS), Loc.Get(Loc.UI.STORAGE_NETWORK.LOGIC_DIY_OPEN_SETTINGS_TOOLTIP), () =>
             {
                 if (targetLogic != null)
                 {
                     StorageNetworkPanel.ShowLogicDiyOutputModePicker(targetLogic);
                 }
-            });
-            LayoutElement buttonLayout = button.gameObject.AddComponent<LayoutElement>();
-            buttonLayout.minHeight = 32f;
-            buttonLayout.preferredHeight = 32f;
+            }, out openButtonText);
+            LayoutElement openButtonLayout = openButton.gameObject.AddComponent<LayoutElement>();
+            openButtonLayout.minHeight = 32f;
+            openButtonLayout.preferredHeight = 32f;
         }
 
         private void EnsureRootLayout()
@@ -113,7 +113,7 @@ namespace StorageNetwork.UI
             }
         }
 
-        private KButton CreateSmallButton(Transform parent, string label, string tooltipText, System.Action onClick)
+        private KButton CreateSmallButton(Transform parent, string label, string tooltipText, System.Action onClick, out TextMeshProUGUI labelText)
         {
             GameObject buttonObject = new GameObject("Action");
             buttonObject.transform.SetParent(parent, false);
@@ -131,11 +131,11 @@ namespace StorageNetwork.UI
             button.soundPlayer = new ButtonSoundPlayer();
             button.onClick += () => onClick?.Invoke();
 
-            buttonText = CreateText(buttonObject.transform, label, 10f, FontStyles.Normal, Color.white);
-            buttonText.alignment = TextAlignmentOptions.Center;
-            buttonText.textWrappingMode = TextWrappingModes.NoWrap;
-            buttonText.overflowMode = TextOverflowModes.Ellipsis;
-            Stretch(buttonText.rectTransform(), 4f, 0f);
+            labelText = CreateText(buttonObject.transform, label, 10f, FontStyles.Normal, Color.white);
+            labelText.alignment = TextAlignmentOptions.Center;
+            labelText.textWrappingMode = TextWrappingModes.NoWrap;
+            labelText.overflowMode = TextOverflowModes.Ellipsis;
+            Stretch(labelText.rectTransform(), 4f, 0f);
 
             ToolTip tooltip = buttonObject.AddComponent<ToolTip>();
             tooltip.SetSimpleTooltip(tooltipText ?? string.Empty);
@@ -149,10 +149,11 @@ namespace StorageNetwork.UI
                 return;
             }
 
-            if (buttonText != null)
+            if (openButtonText != null)
             {
-                buttonText.text = Loc.Get(Loc.UI.STORAGE_NETWORK.LOGIC_DIY_OPEN_SETTINGS);
+                openButtonText.text = Loc.Get(Loc.UI.STORAGE_NETWORK.LOGIC_DIY_OPEN_SETTINGS);
             }
+
         }
 
         private static TextMeshProUGUI CreateText(Transform parent, string textValue, float fontSize, FontStyles style, Color color)
