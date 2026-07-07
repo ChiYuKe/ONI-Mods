@@ -707,10 +707,10 @@ namespace StorageNetwork
                 public static LocString ENERGY_SENSOR_LOW_THRESHOLD_TOOLTIP = "当储存网络电量降至此百分比时发送绿色信号。";
                 public static LocString ENERGY_SENSOR_STATUS_ITEM = "网络电量：{StoredJoules}/{CapacityJoules}（{Percent}）\n自动化：{Signal}";
                 public static LocString ENERGY_SENSOR_STATUS_TOOLTIP = "所有当前可访问电池服务器中储存的总电量。";
-                public static LocString ENERGY_SENSOR_NETWORK_OFFLINE = "网络离线（红色）";
-                public static LocString ENERGY_SENSOR_NO_CAPACITY = "没有可访问的电池服务器（红色）";
-                public static LocString ENERGY_SENSOR_SIGNAL_GREEN = "需要充电（绿色）";
-                public static LocString ENERGY_SENSOR_SIGNAL_RED = "停止充电（红色）";
+                public static LocString ENERGY_SENSOR_NETWORK_OFFLINE = "网络离线";
+                public static LocString ENERGY_SENSOR_NO_CAPACITY = "没有可访问的电池服务器";
+                public static LocString ENERGY_SENSOR_SIGNAL_GREEN = "需要充电";
+                public static LocString ENERGY_SENSOR_SIGNAL_RED = "停止充电";
                 public static LocString SOLID_INPUT_PORT_STATUS_ITEM = "固体入网端口：{0}";
                 public static LocString SOLID_INPUT_PORT_STATUS_TOOLTIP = "向网络输入：{0}\n网络：{1}\n存放策略：{2}\n端口缓存：{3} / {4}\n入网状态：{5}";
                 public static LocString SOLID_OUTPUT_PORT_STATUS_ITEM = "固体出网端口：{0}";

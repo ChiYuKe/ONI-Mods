@@ -193,17 +193,22 @@ namespace StorageNetwork.Components
         {
             if (!snapshot.NetworkOnline)
             {
-                return Loc.Get(Loc.UI.STORAGE_NETWORK.ENERGY_SENSOR_NETWORK_OFFLINE);
+                return ColorizeSignal(Loc.Get(Loc.UI.STORAGE_NETWORK.ENERGY_SENSOR_NETWORK_OFFLINE), false);
             }
 
             if (snapshot.CapacityJoules <= 0f)
             {
-                return Loc.Get(Loc.UI.STORAGE_NETWORK.ENERGY_SENSOR_NO_CAPACITY);
+                return ColorizeSignal(Loc.Get(Loc.UI.STORAGE_NETWORK.ENERGY_SENSOR_NO_CAPACITY), false);
             }
 
             return requestPower
-                ? Loc.Get(Loc.UI.STORAGE_NETWORK.ENERGY_SENSOR_SIGNAL_GREEN)
-                : Loc.Get(Loc.UI.STORAGE_NETWORK.ENERGY_SENSOR_SIGNAL_RED);
+                ? ColorizeSignal(Loc.Get(Loc.UI.STORAGE_NETWORK.ENERGY_SENSOR_SIGNAL_GREEN), true)
+                : ColorizeSignal(Loc.Get(Loc.UI.STORAGE_NETWORK.ENERGY_SENSOR_SIGNAL_RED), false);
+        }
+
+        private static string ColorizeSignal(string text, bool green)
+        {
+            return string.Format("<color={0}>{1}</color>", green ? "#55d17a" : "#d86a6a", text);
         }
 
         private int GetWorldId()
