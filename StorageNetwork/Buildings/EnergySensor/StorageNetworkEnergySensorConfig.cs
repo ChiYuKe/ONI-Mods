@@ -8,7 +8,7 @@ namespace StorageNetwork.Buildings
     public sealed class StorageNetworkEnergySensorConfig : IBuildingConfig
     {
         public const string ID = "StorageNetworkEnergySensor";
-        private const string AnimFile = "batterysmart_kanim";
+        private const string AnimFile = "storagenetwork_small_battery_server_kanim";
 
         public override BuildingDef CreateBuildingDef()
         {
