@@ -307,7 +307,7 @@ namespace StorageNetwork
                 public class STORAGENETWORKSIGNAL
                 {
                     public static LocString NAME = "网络信号";
-                    public static LocString DESC = "解锁可向自动化线路输出储存网络信号的信号输出器。";
+                    public static LocString DESC = "解锁可向自动化线路输出储存网络信号的信号输出器和电量传感器。";
                 }
 
                 public class STORAGENETWORKORDERPRODUCTION

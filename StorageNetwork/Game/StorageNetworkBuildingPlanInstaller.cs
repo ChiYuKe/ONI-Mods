@@ -74,9 +74,9 @@ namespace StorageNetwork.Gameplay
             Add(PowerCategory, LargeBatteryServerConfig.ID);
             Add(PowerCategory, StorageNetworkPowerInputPortConfig.ID);
             Add(PowerCategory, StorageNetworkPowerOutputPortConfig.ID);
-            Add(PowerCategory, StorageNetworkEnergySensorConfig.ID);
 
             AddAutomationSignalBuilding(StorageNetworkLogicDiyConfig.ID);
+            AddAutomationSignalBuilding(StorageNetworkEnergySensorConfig.ID);
 
             Add(FoodCategory, SmallColdStorageServerConfig.ID);
             Add(FoodCategory, MediumColdStorageServerConfig.ID);
