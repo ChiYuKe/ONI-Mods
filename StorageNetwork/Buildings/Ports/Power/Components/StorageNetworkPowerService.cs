@@ -57,6 +57,34 @@ namespace StorageNetwork.Components
             return total;
         }
 
+        public static StorageNetworkPowerSnapshot GetSnapshot(int worldId)
+        {
+            bool networkOnline = IsNetworkOnlineForWorld(worldId);
+            if (!networkOnline)
+            {
+                return StorageNetworkPowerSnapshot.Offline;
+            }
+
+            float storedJoules = 0f;
+            float capacityJoules = 0f;
+            float availableCapacityJoules = 0f;
+            float joulesLostPerCycle = 0f;
+            foreach (StorageNetworkPowerStorage battery in GetReachablePowerStorages(worldId))
+            {
+                storedJoules += battery.RawJoulesAvailable;
+                capacityJoules += battery.CapacityJoules;
+                availableCapacityJoules += battery.AvailableCapacityJoules;
+                joulesLostPerCycle += battery.JoulesLostPerCycle;
+            }
+
+            return new StorageNetworkPowerSnapshot(
+                true,
+                storedJoules,
+                capacityJoules,
+                availableCapacityJoules,
+                joulesLostPerCycle);
+        }
+
         public static float AddEnergy(int worldId, float joules)
         {
             if (joules <= 0f || !IsNetworkOnlineForWorld(worldId))
@@ -175,5 +203,34 @@ namespace StorageNetwork.Components
                 yield return battery;
             }
         }
+    }
+
+    internal readonly struct StorageNetworkPowerSnapshot
+    {
+        public static readonly StorageNetworkPowerSnapshot Offline = new StorageNetworkPowerSnapshot(false, 0f, 0f, 0f, 0f);
+
+        public StorageNetworkPowerSnapshot(
+            bool networkOnline,
+            float storedJoules,
+            float capacityJoules,
+            float availableCapacityJoules,
+            float joulesLostPerCycle)
+        {
+            NetworkOnline = networkOnline;
+            StoredJoules = storedJoules;
+            CapacityJoules = capacityJoules;
+            AvailableCapacityJoules = availableCapacityJoules;
+            JoulesLostPerCycle = joulesLostPerCycle;
+        }
+
+        public bool NetworkOnline { get; }
+
+        public float StoredJoules { get; }
+
+        public float CapacityJoules { get; }
+
+        public float AvailableCapacityJoules { get; }
+
+        public float JoulesLostPerCycle { get; }
     }
 }

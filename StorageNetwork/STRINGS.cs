@@ -90,6 +90,16 @@ namespace StorageNetwork
                     public static LocString EFFECT = "用于向电路输出电力，并作为后续电力出网逻辑的连接建筑。";
                 }
 
+                public class STORAGENETWORKENERGYSENSOR
+                {
+                    public static LocString NAME = "储存网络电量传感器";
+                    public static LocString DESC = "测量储存网络中所有可访问电池服务器的总电量。";
+                    public static LocString EFFECT = "根据储存网络的总充电百分比发送自动化信号。";
+                    public static LocString LOGIC_PORT = "储存网络电量";
+                    public static LocString LOGIC_PORT_ACTIVE = "需要充电时发送绿色信号";
+                    public static LocString LOGIC_PORT_INACTIVE = "不需要充电时发送红色信号";
+                }
+
                 public class STORAGENETWORKPARTICLEINPUTPORT
                 {
                     public static LocString NAME = "粒子入网端口";
@@ -297,7 +307,7 @@ namespace StorageNetwork
                 public class STORAGENETWORKSIGNAL
                 {
                     public static LocString NAME = "网络信号";
-                    public static LocString DESC = "解锁可向自动化线路输出储存网络信号的信号输出器。";
+                    public static LocString DESC = "解锁可向自动化线路输出储存网络信号的信号输出器和电量传感器。";
                 }
 
                 public class STORAGENETWORKORDERPRODUCTION
@@ -690,6 +700,17 @@ namespace StorageNetwork
                 public static LocString POWER_STATUS_BUFFER_FULL = "端口电池已满";
                 public static LocString POWER_STATUS_CHARGED = "当前充入 {0}";
                 public static LocString POWER_STATUS_REFILLED = "已从网络取电 {0}";
+                public static LocString ENERGY_SENSOR_SIDE_SCREEN_TITLE = "储存网络电量范围";
+                public static LocString ENERGY_SENSOR_HIGH_THRESHOLD = "停止充电";
+                public static LocString ENERGY_SENSOR_LOW_THRESHOLD = "开始充电";
+                public static LocString ENERGY_SENSOR_HIGH_THRESHOLD_TOOLTIP = "当储存网络电量达到此百分比时发送红色信号。";
+                public static LocString ENERGY_SENSOR_LOW_THRESHOLD_TOOLTIP = "当储存网络电量降至此百分比时发送绿色信号。";
+                public static LocString ENERGY_SENSOR_STATUS_ITEM = "网络电量：{StoredJoules}/{CapacityJoules}（{Percent}）\n自动化：{Signal}";
+                public static LocString ENERGY_SENSOR_STATUS_TOOLTIP = "所有当前可访问电池服务器中储存的总电量。";
+                public static LocString ENERGY_SENSOR_NETWORK_OFFLINE = "网络离线";
+                public static LocString ENERGY_SENSOR_NO_CAPACITY = "没有可访问的电池服务器";
+                public static LocString ENERGY_SENSOR_SIGNAL_GREEN = "需要充电";
+                public static LocString ENERGY_SENSOR_SIGNAL_RED = "停止充电";
                 public static LocString SOLID_INPUT_PORT_STATUS_ITEM = "固体入网端口：{0}";
                 public static LocString SOLID_INPUT_PORT_STATUS_TOOLTIP = "向网络输入：{0}\n网络：{1}\n存放策略：{2}\n端口缓存：{3} / {4}\n入网状态：{5}";
                 public static LocString SOLID_OUTPUT_PORT_STATUS_ITEM = "固体出网端口：{0}";
