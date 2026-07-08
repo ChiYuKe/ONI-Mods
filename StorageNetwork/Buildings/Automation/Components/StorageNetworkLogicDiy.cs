@@ -976,7 +976,7 @@ namespace StorageNetwork.Components
         private StorageNetworkPowerSnapshot GetCurrentPowerSnapshot()
         {
             int worldId = gameObject != null ? gameObject.GetMyWorldId() : -1;
-            return StorageNetworkPowerService.GetSnapshot(worldId);
+            return StorageNetworkPowerService.GetAutomationSnapshot(worldId);
         }
 
         private float GetBuildingStatusSignal(int selectedBuildingInstanceId)

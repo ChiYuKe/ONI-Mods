@@ -278,7 +278,7 @@ namespace StorageNetwork.Components
                 return powerStorage != null ? powerStorage.AvailableCapacityJoules : 0f;
             }
 
-            return StorageNetworkPowerService.GetAvailableCapacityJoules(GetWorldId());
+            return StorageNetworkPowerService.GetAvailableChargeCapacityJoules(GetWorldId());
         }
 
         public float GetInputWattsSetting()
@@ -397,7 +397,7 @@ namespace StorageNetwork.Components
 
             float stored = CurrentInputStoreMode == StorageNetworkMaterialRequester.OutputStoreMode.SpecificStorage
                 ? AddEnergyToSpecificStorage(PortJoulesAvailable)
-                : StorageNetworkPowerService.AddEnergy(GetWorldId(), Mathf.Min(PortJoulesAvailable, StorageNetworkPowerService.GetAvailableCapacityJoules(GetWorldId())));
+                : StorageNetworkPowerService.AddEnergy(GetWorldId(), Mathf.Min(PortJoulesAvailable, StorageNetworkPowerService.GetAvailableChargeCapacityJoules(GetWorldId())));
             if (stored <= 0f)
             {
                 SetStableStatus(Loc.Get(Loc.UI.STORAGE_NETWORK.POWER_STATUS_NO_CAPACITY), true);
