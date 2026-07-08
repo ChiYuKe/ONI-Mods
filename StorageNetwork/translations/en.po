@@ -2917,6 +2917,26 @@ msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CORE_SIDE_SCREEN_RELAY_LABEL"
 msgid "中继"
 msgstr "Relay"
 
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CORE_SIDE_SCREEN_INTERNAL_BATTERY_LABEL"
+msgid "核心电池"
+msgstr "Core Battery"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CORE_SIDE_SCREEN_POWER_LABEL"
+msgid "供电"
+msgstr "Power"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CORE_SIDE_SCREEN_POWER_EXTERNAL"
+msgid "外部"
+msgstr "External"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CORE_SIDE_SCREEN_POWER_INTERNAL"
+msgid "备用"
+msgstr "Backup"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CORE_INTERNAL_BATTERY_LOW_NOTIFICATION"
+msgid "储存网络核心备用电池电量低。"
+msgstr "The StorageNetwork Core backup battery is low."
+
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LIQUID_OUTPUT_SIDE_SCREEN_TITLE"
 msgid "液体输出筛选"
 msgstr "Liquid Output Filter"
