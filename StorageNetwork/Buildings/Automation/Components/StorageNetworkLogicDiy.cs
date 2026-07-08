@@ -678,6 +678,9 @@ namespace StorageNetwork.Components
                 case "Split4":
                     result = EvaluateSplit4Node(outputPortIndex, a);
                     break;
+                case "Merge4":
+                    result = EvaluateMerge4Node(blueprint, nodes, nodeId, depth);
+                    break;
                 default:
                     result = 0f;
                     break;
@@ -827,51 +830,44 @@ namespace StorageNetwork.Components
 
         private bool EvaluateArraySetNode(string nodeId, RuntimeBlueprint blueprint, Dictionary<string, RuntimeBlueprintNode> nodes, int depth)
         {
-            string targetArrayId = null;
-            if (blueprint?.Connections != null)
-            {
-                foreach (RuntimeBlueprintConnection conn in blueprint.Connections)
-                {
-                    if (conn != null && conn.FromNodeId == nodeId && conn.FromPortIndex == 0)
-                    {
-                        targetArrayId = conn.ToNodeId;
-                        break;
-                    }
-                }
-            }
-
-            if (string.IsNullOrEmpty(targetArrayId)) return false;
-
-            float writeEnableValue = EvaluateRuntimeInputNumber(blueprint, nodes, nodeId, 2, depth + 1);
-            if (!IsRuntimeTrue(writeEnableValue)) return false;
-
             float indexValue = EvaluateRuntimeInputNumber(blueprint, nodes, nodeId, 0, depth + 1);
             float writeValue = EvaluateRuntimeInputNumber(blueprint, nodes, nodeId, 1, depth + 1);
 
-            if (!arraySlotValuesByNode.TryGetValue(targetArrayId, out float[] slots) || slots == null || slots.Length == 0)
+            bool wrote = false;
+            if (blueprint?.Connections == null) return false;
+
+            foreach (RuntimeBlueprintConnection conn in blueprint.Connections)
             {
-                if (nodes.TryGetValue(targetArrayId, out RuntimeBlueprintNode arrayNode) && arrayNode?.Values != null && arrayNode.Values.Count > 0)
+                if (conn == null || conn.FromNodeId != nodeId || conn.FromPortIndex != 0) continue;
+                string targetArrayId = conn.ToNodeId;
+                if (string.IsNullOrEmpty(targetArrayId)) continue;
+                if (!nodes.TryGetValue(targetArrayId, out RuntimeBlueprintNode targetNode) || targetNode?.Module != "Array") continue;
+
+                if (!arraySlotValuesByNode.TryGetValue(targetArrayId, out float[] slots) || slots == null || slots.Length == 0)
                 {
-                    slots = arrayNode.Values.ToArray();
-                }
-                else
-                {
-                    slots = new float[4];
+                    if (targetNode.Values != null && targetNode.Values.Count > 0)
+                    {
+                        slots = targetNode.Values.ToArray();
+                    }
+                    else
+                    {
+                        slots = new float[4];
+                    }
+
+                    arraySlotValuesByNode[targetArrayId] = slots;
                 }
 
-                arraySlotValuesByNode[targetArrayId] = slots;
+                int writeIndex = Mathf.FloorToInt(indexValue);
+                if (writeIndex < 0 || writeIndex >= slots.Length) continue;
+                slots[writeIndex] = writeValue;
+                wrote = true;
             }
 
-            int writeIndex = Mathf.Clamp(Mathf.FloorToInt(indexValue), 0, slots.Length - 1);
-            slots[writeIndex] = writeValue;
-            return true;
+            return wrote;
         }
 
         private float EvaluateArrayGetNode(string nodeId, RuntimeBlueprint blueprint, Dictionary<string, RuntimeBlueprintNode> nodes, int depth)
         {
-            float activateValue = EvaluateRuntimeInputNumber(blueprint, nodes, nodeId, 2, depth + 1);
-            if (!IsRuntimeTrue(activateValue)) return 0f;
-
             float indexValue = EvaluateRuntimeInputNumber(blueprint, nodes, nodeId, 1, depth + 1);
             RuntimeBlueprintConnection refConn = FindRuntimeInput(blueprint, nodeId, 0);
             if (refConn == null || string.IsNullOrEmpty(refConn.FromNodeId)) return 0f;
@@ -879,7 +875,8 @@ namespace StorageNetwork.Components
             if (!arraySlotValuesByNode.TryGetValue(refConn.FromNodeId, out float[] slots) || slots == null || slots.Length == 0)
                 return 0f;
 
-            int readIndex = Mathf.Clamp(Mathf.FloorToInt(indexValue), 0, slots.Length - 1);
+            int readIndex = Mathf.FloorToInt(indexValue);
+            if (readIndex < 0 || readIndex >= slots.Length) return 0f;
             return slots[readIndex];
         }
 
@@ -895,6 +892,20 @@ namespace StorageNetwork.Components
                 _ => 0
             };
             return bit;
+        }
+
+        private float EvaluateMerge4Node(RuntimeBlueprint blueprint, Dictionary<string, RuntimeBlueprintNode> nodes, string nodeId, int depth)
+        {
+            int value = 0;
+            for (int i = 0; i < 4; i++)
+            {
+                float inputVal = EvaluateRuntimeInputNumber(blueprint, nodes, nodeId, i, depth + 1);
+                if (IsRuntimeTrue(inputVal))
+                {
+                    value |= 1 << i;
+                }
+            }
+            return value;
         }
 
         private float EvaluateMaterialChangedNode(string nodeId)

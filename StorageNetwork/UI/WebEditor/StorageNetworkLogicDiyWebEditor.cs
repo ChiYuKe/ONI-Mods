@@ -455,16 +455,10 @@ namespace StorageNetwork.UI.WebEditor
                 System.Diagnostics.ProcessStartInfo startInfo = new System.Diagnostics.ProcessStartInfo
                 {
                     FileName = browserPath,
-                    Arguments = $"--app=\"{url}\" --new-window --always-on-top --window-size=1400,850",
+                    Arguments = $"--app=\"{url}\" --new-window",
                     UseShellExecute = false
                 };
-                System.Diagnostics.Process process = System.Diagnostics.Process.Start(startInfo);
-                if (process == null)
-                {
-                    return false;
-                }
-
-                ThreadPool.QueueUserWorkItem(_ => SetEditorWindowTopmost(process, id, windowTitle));
+                System.Diagnostics.Process.Start(startInfo);
                 return true;
             }
             catch (Exception ex)
