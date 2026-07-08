@@ -18,8 +18,6 @@ namespace StorageNetwork.UI
         private TextMeshProUGUI remainingValue;
         private TextMeshProUGUI serversValue;
         private TextMeshProUGUI relayValue;
-        private TextMeshProUGUI internalBatteryValue;
-        private TextMeshProUGUI internalBatteryStateValue;
         private GameObject targetObject;
 
         public StorageNetworkCoreSideScreen()
@@ -61,7 +59,7 @@ namespace StorageNetwork.UI
             rect.anchorMin = new Vector2(0f, 1f);
             rect.anchorMax = new Vector2(1f, 1f);
             rect.pivot = new Vector2(0.5f, 1f);
-            rect.sizeDelta = new Vector2(0f, 139f);
+            rect.sizeDelta = new Vector2(0f, 116f);
 
             VerticalLayoutGroup layout = root.AddComponent<VerticalLayoutGroup>();
             layout.padding = new RectOffset(6, 6, 6, 6);
@@ -86,12 +84,6 @@ namespace StorageNetwork.UI
                 out serversValue,
                 Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CORE_SIDE_SCREEN_RELAY_LABEL),
                 out relayValue);
-            CreateMetricRow(
-                panel.transform,
-                Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CORE_SIDE_SCREEN_INTERNAL_BATTERY_LABEL),
-                out internalBatteryValue,
-                Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CORE_SIDE_SCREEN_POWER_LABEL),
-                out internalBatteryStateValue);
         }
 
         private void Refresh()
@@ -103,7 +95,6 @@ namespace StorageNetwork.UI
 
             int worldId = StorageNetworkWorldUtility.GetObjectWorldId(targetObject);
             StorageSceneSnapshot snapshot = StorageSceneCollector.CollectForWorld(worldId, includeReachableWorlds: false);
-            StorageNetworkCore core = targetObject.GetComponent<StorageNetworkCore>();
             bool online = StorageSceneRegistry.HasOnlineCoreInWorld(worldId);
             bool relayOnline = StorageSceneRegistry.IsCrossPlanetRelayOnline();
             string worldName = StorageNetworkWorldDisplay.GetWorldName(worldId);
@@ -127,17 +118,6 @@ namespace StorageNetwork.UI
                 ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CORE_SIDE_SCREEN_RELAY_ONLINE)
                 : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CORE_SIDE_SCREEN_RELAY_OFFLINE));
             relayValue.color = relayOnline ? new Color(0.24f, 0.48f, 0.32f, 1f) : new Color(0.52f, 0.44f, 0.34f, 1f);
-            SetText(internalBatteryValue, core != null
-                ? string.Format("{0} / {1}",
-                    GameUtil.GetFormattedJoules(core.InternalBatteryJoulesAvailable, "F1", GameUtil.TimeSlice.None),
-                    GameUtil.GetFormattedJoules(StorageNetworkCore.InternalBatteryCapacityJoules, "F1", GameUtil.TimeSlice.None))
-                : string.Empty);
-            SetText(internalBatteryStateValue, core?.HasExternalPower == true
-                ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CORE_SIDE_SCREEN_POWER_EXTERNAL)
-                : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CORE_SIDE_SCREEN_POWER_INTERNAL));
-            internalBatteryStateValue.color = core?.HasExternalPower == true
-                ? new Color(0.24f, 0.48f, 0.32f, 1f)
-                : new Color(0.52f, 0.44f, 0.34f, 1f);
         }
 
         private static bool IsStorageNetworkServer(GameObject gameObject)
@@ -162,8 +142,8 @@ namespace StorageNetwork.UI
             background.color = new Color(0.93f, 0.92f, 0.86f, 1f);
 
             LayoutElement panelLayout = panel.AddComponent<LayoutElement>();
-            panelLayout.minHeight = 127f;
-            panelLayout.preferredHeight = 127f;
+            panelLayout.minHeight = 104f;
+            panelLayout.preferredHeight = 104f;
 
             VerticalLayoutGroup panelGroup = panel.AddComponent<VerticalLayoutGroup>();
             panelGroup.padding = new RectOffset(10, 10, 8, 8);

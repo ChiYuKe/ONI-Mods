@@ -43,11 +43,6 @@ namespace StorageNetwork.Components
                 total += battery.AvailableCapacityJoules;
             }
 
-            foreach (StorageNetworkCore core in GetReachableCores(worldId))
-            {
-                total += core.InternalBatteryAvailableCapacityJoules;
-            }
-
             return total;
         }
 
@@ -97,14 +92,7 @@ namespace StorageNetwork.Components
                 return 0f;
             }
 
-            float storedInNetworkBatteries = AddEnergyEvenly(GetReachablePowerStorages(worldId), joules);
-            float remaining = joules - storedInNetworkBatteries;
-            if (remaining <= EpsilonJoules)
-            {
-                return storedInNetworkBatteries;
-            }
-
-            return storedInNetworkBatteries + AddEnergyToCoreInternalBatteries(GetReachableCores(worldId), remaining);
+            return AddEnergyEvenly(GetReachablePowerStorages(worldId), joules);
         }
 
         public static float ConsumeEnergy(int worldId, float joules)
@@ -152,38 +140,6 @@ namespace StorageNetwork.Components
                 foreach (StorageNetworkPowerStorage battery in batteries)
                 {
                     accepted += battery.AddEnergy(share);
-                }
-
-                if (accepted <= EpsilonJoules)
-                {
-                    break;
-                }
-
-                remaining -= accepted;
-            }
-
-            return joules - remaining;
-        }
-
-        private static float AddEnergyToCoreInternalBatteries(IEnumerable<StorageNetworkCore> cores, float joules)
-        {
-            List<StorageNetworkCore> batteries = cores
-                .Where(core => core != null && core.InternalBatteryAvailableCapacityJoules > EpsilonJoules)
-                .ToList();
-            float remaining = joules;
-            while (remaining > EpsilonJoules && batteries.Count > 0)
-            {
-                batteries.RemoveAll(core => core.InternalBatteryAvailableCapacityJoules <= EpsilonJoules);
-                if (batteries.Count == 0)
-                {
-                    break;
-                }
-
-                float share = remaining / batteries.Count;
-                float accepted = 0f;
-                foreach (StorageNetworkCore core in batteries)
-                {
-                    accepted += core.AddInternalBatteryEnergy(share);
                 }
 
                 if (accepted <= EpsilonJoules)
@@ -245,25 +201,6 @@ namespace StorageNetwork.Components
                 }
 
                 yield return battery;
-            }
-        }
-
-        private static IEnumerable<StorageNetworkCore> GetReachableCores(int worldId)
-        {
-            bool crossPlanetRelayOnline = StorageSceneRegistry.IsCrossPlanetRelayOnline();
-            foreach (StorageNetworkCore core in StorageSceneRegistry.GetCores())
-            {
-                if (core == null || core.gameObject == null)
-                {
-                    continue;
-                }
-
-                if (!crossPlanetRelayOnline && worldId >= 0 && core.gameObject.GetMyWorldId() != worldId)
-                {
-                    continue;
-                }
-
-                yield return core;
             }
         }
     }

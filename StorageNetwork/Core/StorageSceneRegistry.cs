@@ -162,12 +162,6 @@ namespace StorageNetwork.Core
             return PowerStorages;
         }
 
-        public static IReadOnlyCollection<StorageNetworkCore> GetCores()
-        {
-            PruneDeadEntriesThrottled();
-            return Cores;
-        }
-
         public static bool IsLive(Component component)
         {
             if (component == null)
@@ -219,7 +213,8 @@ namespace StorageNetwork.Core
                     continue;
                 }
 
-                if (core.IsNetworkOnline)
+                Operational operational = core.GetComponent<Operational>();
+                if (operational != null && operational.IsOperational)
                 {
                     OnlineCoreCache[worldId] = new CoreOnlineCacheEntry(true, frame, version);
                     return true;
