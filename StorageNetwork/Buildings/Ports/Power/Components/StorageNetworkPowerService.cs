@@ -43,12 +43,14 @@ namespace StorageNetwork.Components
                 total += battery.AvailableCapacityJoules;
             }
 
-            foreach (StorageNetworkCore core in GetReachableCores(worldId))
-            {
-                total += core.InternalBatteryAvailableCapacityJoules;
-            }
-
             return total;
+        }
+
+        public static float GetAvailableChargeCapacityJoules(int worldId)
+        {
+            return StorageNetworkPowerReserveMetrics.GetAvailableChargeCapacityJoules(
+                GetAvailableCapacityJoules(worldId),
+                GetCoreReserveAvailableCapacityJoules(worldId));
         }
 
         public static float GetJoulesLostPerCycle(int worldId)
@@ -82,6 +84,26 @@ namespace StorageNetwork.Components
                 joulesLostPerCycle += battery.JoulesLostPerCycle;
             }
 
+            return new StorageNetworkPowerSnapshot(
+                true,
+                storedJoules,
+                capacityJoules,
+                availableCapacityJoules,
+                joulesLostPerCycle);
+        }
+
+        public static StorageNetworkPowerSnapshot GetAutomationSnapshot(int worldId)
+        {
+            bool networkOnline = IsNetworkOnlineForWorld(worldId);
+            if (!networkOnline)
+            {
+                return StorageNetworkPowerSnapshot.Offline;
+            }
+
+            float storedJoules = GetStoredJoules(worldId) + GetCoreReserveStoredJoules(worldId);
+            float capacityJoules = GetCapacityJoules(worldId) + GetCoreReserveCapacityJoules(worldId);
+            float availableCapacityJoules = GetAvailableChargeCapacityJoules(worldId);
+            float joulesLostPerCycle = GetJoulesLostPerCycle(worldId);
             return new StorageNetworkPowerSnapshot(
                 true,
                 storedJoules,
@@ -227,6 +249,39 @@ namespace StorageNetwork.Components
             }
 
             return joules - remaining;
+        }
+
+        private static float GetCoreReserveStoredJoules(int worldId)
+        {
+            float total = 0f;
+            foreach (StorageNetworkCore core in GetReachableCores(worldId))
+            {
+                total += core.InternalBatteryJoulesAvailable;
+            }
+
+            return total;
+        }
+
+        private static float GetCoreReserveCapacityJoules(int worldId)
+        {
+            float total = 0f;
+            foreach (StorageNetworkCore core in GetReachableCores(worldId))
+            {
+                total += StorageNetworkCore.InternalBatteryCapacityJoules;
+            }
+
+            return total;
+        }
+
+        private static float GetCoreReserveAvailableCapacityJoules(int worldId)
+        {
+            float total = 0f;
+            foreach (StorageNetworkCore core in GetReachableCores(worldId))
+            {
+                total += core.InternalBatteryAvailableCapacityJoules;
+            }
+
+            return total;
         }
 
         private static System.Collections.Generic.IEnumerable<StorageNetworkPowerStorage> GetReachablePowerStorages(int worldId)

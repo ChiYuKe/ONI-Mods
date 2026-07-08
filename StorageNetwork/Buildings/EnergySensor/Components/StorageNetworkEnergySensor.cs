@@ -106,7 +106,7 @@ namespace StorageNetwork.Components
 
         private void RefreshSignal(bool highThresholdIncreased = false)
         {
-            snapshot = StorageNetworkPowerService.GetSnapshot(GetWorldId());
+            snapshot = StorageNetworkPowerService.GetAutomationSnapshot(GetWorldId());
             requestPower = highThresholdIncreased
                 ? StorageNetworkEnergySensorLogic.ShouldRequestPowerAfterHighThresholdIncrease(
                     requestPower,
