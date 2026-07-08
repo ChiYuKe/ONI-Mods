@@ -1088,11 +1088,16 @@ namespace StorageNetwork
                 public static LocString CORE_SIDE_SCREEN_SERVERS_LABEL = "服务器";
                 public static LocString CORE_SIDE_SCREEN_STORAGES_LABEL = "接入储存";
                 public static LocString CORE_SIDE_SCREEN_RELAY_LABEL = "中继";
-                public static LocString CORE_SIDE_SCREEN_INTERNAL_BATTERY_LABEL = "核心电池";
+                public static LocString CORE_SIDE_SCREEN_INTERNAL_BATTERY_LABEL = "备用电池";
                 public static LocString CORE_SIDE_SCREEN_POWER_LABEL = "供电";
                 public static LocString CORE_SIDE_SCREEN_POWER_EXTERNAL = "外部";
                 public static LocString CORE_SIDE_SCREEN_POWER_INTERNAL = "备用";
                 public static LocString CORE_INTERNAL_BATTERY_LOW_NOTIFICATION = "储存网络核心备用电池电量低。";
+                public static LocString CORE_INTERNAL_BATTERY_STATUS = "可用电力：{Battery}/{Capacity}";
+                public static LocString CORE_INTERNAL_BATTERY_STATUS_TOOLTIP = "储存网络核心内置备用电池电量：{Battery}/{Capacity}（{Percent}）。外部电力中断时会消耗这部分电力维持网络在线。";
+                public static LocString CORE_BACKUP_POWER_NOTIFICATION = "储存网络核心外部供电中断，已切换到备用电池。";
+                public static LocString CORE_BACKUP_POWER_STATUS = "备用电池供电：{Battery}";
+                public static LocString CORE_BACKUP_POWER_STATUS_TOOLTIP = "外部电力中断，储存网络核心正在消耗备用电池维持网络在线。当前备用电量：{Battery}";
                 public static LocString LIQUID_OUTPUT_SIDE_SCREEN_TITLE = "液体输出筛选";
                 public static LocString LIQUID_OUTPUT_SIDE_SCREEN_CURRENT = "当前输出：{0}";
                 public static LocString LIQUID_OUTPUT_SIDE_SCREEN_HINT = "快速选择液体出网端口要输出的液体。列表来自当前网络服务器中已有的液体，切换后会替换端口缓存并立即尝试输出。";

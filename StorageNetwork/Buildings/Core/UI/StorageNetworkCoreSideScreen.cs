@@ -21,6 +21,7 @@ namespace StorageNetwork.UI
         private TextMeshProUGUI internalBatteryValue;
         private TextMeshProUGUI internalBatteryStateValue;
         private GameObject targetObject;
+        private GameObject contentRoot;
 
         public StorageNetworkCoreSideScreen()
         {
@@ -53,17 +54,30 @@ namespace StorageNetwork.UI
 
         private void BuildContent()
         {
+            if (contentRoot != null)
+            {
+                return;
+            }
+
+            EnsureRootLayout();
             Transform parent = ContentContainer != null ? ContentContainer.transform : transform;
 
-            GameObject root = new GameObject("StorageNetworkCoreInfo");
-            root.transform.SetParent(parent, false);
-            RectTransform rect = root.AddComponent<RectTransform>();
+            contentRoot = new GameObject("StorageNetworkCoreInfo");
+            contentRoot.transform.SetParent(parent, false);
+            RectTransform rect = contentRoot.AddComponent<RectTransform>();
             rect.anchorMin = new Vector2(0f, 1f);
             rect.anchorMax = new Vector2(1f, 1f);
             rect.pivot = new Vector2(0.5f, 1f);
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
             rect.sizeDelta = new Vector2(0f, 139f);
 
-            VerticalLayoutGroup layout = root.AddComponent<VerticalLayoutGroup>();
+            LayoutElement rootLayout = contentRoot.AddComponent<LayoutElement>();
+            rootLayout.minHeight = 139f;
+            rootLayout.preferredHeight = 145f;
+            rootLayout.flexibleWidth = 1f;
+
+            VerticalLayoutGroup layout = contentRoot.AddComponent<VerticalLayoutGroup>();
             layout.padding = new RectOffset(6, 6, 6, 6);
             layout.spacing = 4f;
             layout.childControlWidth = true;
@@ -71,7 +85,7 @@ namespace StorageNetwork.UI
             layout.childForceExpandWidth = true;
             layout.childForceExpandHeight = false;
 
-            GameObject panel = CreatePanel(root.transform);
+            GameObject panel = CreatePanel(contentRoot.transform);
             CreateHeader(panel.transform, out worldValue, out statusValue);
             CreateDivider(panel.transform);
             CreateMetricRow(
@@ -94,8 +108,38 @@ namespace StorageNetwork.UI
                 out internalBatteryStateValue);
         }
 
+        private void EnsureRootLayout()
+        {
+            RectTransform screenRect = gameObject.GetComponent<RectTransform>() ?? gameObject.AddComponent<RectTransform>();
+            screenRect.anchorMin = new Vector2(0f, 1f);
+            screenRect.anchorMax = new Vector2(1f, 1f);
+            screenRect.pivot = new Vector2(0.5f, 1f);
+            screenRect.offsetMin = Vector2.zero;
+            screenRect.offsetMax = Vector2.zero;
+
+            LayoutElement screenLayout = gameObject.GetComponent<LayoutElement>() ?? gameObject.AddComponent<LayoutElement>();
+            screenLayout.minHeight = 145f;
+            screenLayout.preferredHeight = 151f;
+            screenLayout.flexibleWidth = 1f;
+
+            VerticalLayoutGroup screenGroup = gameObject.GetComponent<VerticalLayoutGroup>() ?? gameObject.AddComponent<VerticalLayoutGroup>();
+            screenGroup.childControlWidth = true;
+            screenGroup.childControlHeight = true;
+            screenGroup.childForceExpandWidth = true;
+            screenGroup.childForceExpandHeight = false;
+        }
+
+        private void EnsureContentBuilt()
+        {
+            if (contentRoot == null)
+            {
+                BuildContent();
+            }
+        }
+
         private void Refresh()
         {
+            EnsureContentBuilt();
             if (targetObject == null)
             {
                 return;
@@ -119,14 +163,14 @@ namespace StorageNetwork.UI
             SetText(statusValue, online
                 ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CORE_SIDE_SCREEN_ONLINE)
                 : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CORE_SIDE_SCREEN_OFFLINE));
-            statusValue.color = online ? new Color(0.24f, 0.48f, 0.32f, 1f) : new Color(0.62f, 0.24f, 0.24f, 1f);
+            SetColor(statusValue, online ? new Color(0.24f, 0.48f, 0.32f, 1f) : new Color(0.62f, 0.24f, 0.24f, 1f));
             SetText(capacityValue, string.Format("{0} / {1}", GameUtil.GetFormattedMass(snapshot.TotalStoredKg), GameUtil.GetFormattedMass(snapshot.TotalCapacityKg)));
             SetText(remainingValue, GameUtil.GetFormattedMass(remaining));
             SetText(serversValue, string.Format("{0} / {1}", serverCount, storageCount));
             SetText(relayValue, relayOnline
                 ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CORE_SIDE_SCREEN_RELAY_ONLINE)
                 : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CORE_SIDE_SCREEN_RELAY_OFFLINE));
-            relayValue.color = relayOnline ? new Color(0.24f, 0.48f, 0.32f, 1f) : new Color(0.52f, 0.44f, 0.34f, 1f);
+            SetColor(relayValue, relayOnline ? new Color(0.24f, 0.48f, 0.32f, 1f) : new Color(0.52f, 0.44f, 0.34f, 1f));
             SetText(internalBatteryValue, core != null
                 ? string.Format("{0} / {1}",
                     GameUtil.GetFormattedJoules(core.InternalBatteryJoulesAvailable, "F1", GameUtil.TimeSlice.None),
@@ -135,9 +179,9 @@ namespace StorageNetwork.UI
             SetText(internalBatteryStateValue, core?.HasExternalPower == true
                 ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CORE_SIDE_SCREEN_POWER_EXTERNAL)
                 : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CORE_SIDE_SCREEN_POWER_INTERNAL));
-            internalBatteryStateValue.color = core?.HasExternalPower == true
+            SetColor(internalBatteryStateValue, core?.HasExternalPower == true
                 ? new Color(0.24f, 0.48f, 0.32f, 1f)
-                : new Color(0.52f, 0.44f, 0.34f, 1f);
+                : new Color(0.52f, 0.44f, 0.34f, 1f));
         }
 
         private static bool IsStorageNetworkServer(GameObject gameObject)
@@ -150,6 +194,14 @@ namespace StorageNetwork.UI
             if (text != null)
             {
                 text.SetText(value ?? string.Empty);
+            }
+        }
+
+        private static void SetColor(TextMeshProUGUI text, Color color)
+        {
+            if (text != null)
+            {
+                text.color = color;
             }
         }
 

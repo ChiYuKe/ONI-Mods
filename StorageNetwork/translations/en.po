@@ -2918,8 +2918,8 @@ msgid "中继"
 msgstr "Relay"
 
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CORE_SIDE_SCREEN_INTERNAL_BATTERY_LABEL"
-msgid "核心电池"
-msgstr "Core Battery"
+msgid "备用电池"
+msgstr "Backup Battery"
 
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CORE_SIDE_SCREEN_POWER_LABEL"
 msgid "供电"
@@ -2936,6 +2936,26 @@ msgstr "Backup"
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CORE_INTERNAL_BATTERY_LOW_NOTIFICATION"
 msgid "储存网络核心备用电池电量低。"
 msgstr "The StorageNetwork Core backup battery is low."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CORE_INTERNAL_BATTERY_STATUS"
+msgid "可用电力：{Battery}/{Capacity}"
+msgstr "Available power: {Battery}/{Capacity}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CORE_INTERNAL_BATTERY_STATUS_TOOLTIP"
+msgid "储存网络核心内置备用电池电量：{Battery}/{Capacity}（{Percent}）。外部电力中断时会消耗这部分电力维持网络在线。"
+msgstr "StorageNetwork Core backup battery charge: {Battery}/{Capacity} ({Percent}). This power is consumed to keep the network online when external power is unavailable."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CORE_BACKUP_POWER_NOTIFICATION"
+msgid "储存网络核心外部供电中断，已切换到备用电池。"
+msgstr "The StorageNetwork Core lost external power and switched to backup battery power."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CORE_BACKUP_POWER_STATUS"
+msgid "备用电池供电：{Battery}"
+msgstr "Backup battery power: {Battery}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CORE_BACKUP_POWER_STATUS_TOOLTIP"
+msgid "外部电力中断，储存网络核心正在消耗备用电池维持网络在线。当前备用电量：{Battery}"
+msgstr "External power is unavailable. The StorageNetwork Core is using its backup battery to keep the network online. Backup charge: {Battery}"
 
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LIQUID_OUTPUT_SIDE_SCREEN_TITLE"
 msgid "液体输出筛选"
