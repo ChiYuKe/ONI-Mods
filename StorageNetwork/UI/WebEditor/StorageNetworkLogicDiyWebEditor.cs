@@ -67,29 +67,15 @@ namespace StorageNetwork.UI.WebEditor
             }
 
             string url = $"http://127.0.0.1:{activePort}/?id={id}";
-            bool pageAlreadyActive;
-            bool launchRecentlyRequested;
             lock (sync)
             {
-                pageAlreadyActive = IsPageActiveLocked(id);
-                launchRecentlyRequested = IsLaunchRecentlyRequestedLocked(id);
                 activePages[id] = System.DateTime.UtcNow;
-            }
-
-            if (pageAlreadyActive || launchRecentlyRequested)
-            {
-                ThreadPool.QueueUserWorkItem(_ => TryActivateExistingEditorWindowRepeated(id, windowTitle));
-                return;
-            }
-
-            lock (sync)
-            {
                 recentLaunches[id] = System.DateTime.UtcNow;
             }
 
             if (!TryOpenTopmostBrowserWindow(url, id, windowTitle))
             {
-                Application.OpenURL(url);
+                try { System.Diagnostics.Process.Start(url); } catch { Application.OpenURL(url); }
             }
         }
 
@@ -469,7 +455,7 @@ namespace StorageNetwork.UI.WebEditor
                 System.Diagnostics.ProcessStartInfo startInfo = new System.Diagnostics.ProcessStartInfo
                 {
                     FileName = browserPath,
-                    Arguments = $"--app=\"{url}\" --new-window --always-on-top",
+                    Arguments = $"--app=\"{url}\" --new-window --always-on-top --window-size=1400,850",
                     UseShellExecute = false
                 };
                 System.Diagnostics.Process process = System.Diagnostics.Process.Start(startInfo);

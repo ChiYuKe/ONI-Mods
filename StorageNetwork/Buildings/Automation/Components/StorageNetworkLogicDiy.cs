@@ -73,6 +73,11 @@ namespace StorageNetwork.Components
         private readonly Dictionary<string, bool> previousInputStateByNode = new Dictionary<string, bool>();
         private readonly Dictionary<string, float> previousMaterialAmountByNode = new Dictionary<string, float>();
         private readonly Dictionary<string, float> counterValueByNode = new Dictionary<string, float>();
+        private readonly Dictionary<string, int> sequenceStepByNode = new Dictionary<string, int>();
+        private readonly Dictionary<string, bool> sequencePrevAdvanceByNode = new Dictionary<string, bool>();
+        private readonly Dictionary<string, bool> sequencePrevResetByNode = new Dictionary<string, bool>();
+        private readonly Dictionary<string, float[]> arraySlotValuesByNode = new Dictionary<string, float[]>();
+        private readonly Dictionary<string, bool> arrayPrevWriteByNode = new Dictionary<string, bool>();
         private float runtimeEvalDt;
         private static readonly Dictionary<System.Type, PropertyInfo> switchLikeOutputPropertyByType = new Dictionary<System.Type, PropertyInfo>();
         private static readonly EventSystem.IntraObjectHandler<StorageNetworkLogicDiy> OnCopySettingsDelegate =
@@ -360,6 +365,7 @@ namespace StorageNetwork.Components
             }
 
             Dictionary<string, RuntimeBlueprintNode> nodes = BuildRuntimeNodeMap(blueprint);
+            EvaluateRuntimeSideEffects(blueprint, nodes);
             if (OutputMode == ChannelMode.FourChannel)
             {
                 bool hasAnyInput = false;
@@ -397,6 +403,22 @@ namespace StorageNetwork.Components
             outputValue = IsRuntimeTrue(value) ? 1 : 0;
             outputValue = ClampOutputValue(outputValue);
             return true;
+        }
+
+        private void EvaluateRuntimeSideEffects(RuntimeBlueprint blueprint, Dictionary<string, RuntimeBlueprintNode> nodes)
+        {
+            if (blueprint?.Nodes == null || nodes == null)
+            {
+                return;
+            }
+
+            foreach (RuntimeBlueprintNode node in blueprint.Nodes)
+            {
+                if (node?.Module == "ArraySet" && !string.IsNullOrEmpty(node.Id))
+                {
+                    EvaluateArraySetNode(node.Id, blueprint, nodes, 0);
+                }
+            }
         }
 
         private float GetRuntimeCompareInputKg()
@@ -572,6 +594,18 @@ namespace StorageNetwork.Components
                         ? b
                         : EvaluateRuntimeInputNumber(blueprint, nodes, nodeId, 2, depth + 1);
                     break;
+                case "Sequence":
+                    result = EvaluateSequenceNode(nodeId, outputPortIndex, a, b);
+                    break;
+                case "Array":
+                    result = EvaluateArrayNode(nodeId, node);
+                    break;
+                case "ArrayGet":
+                    result = EvaluateArrayGetNode(nodeId, blueprint, nodes, depth);
+                    break;
+                case "ArraySet":
+                    result = EvaluateArraySetNode(nodeId, blueprint, nodes, depth) ? 1f : 0f;
+                    break;
                 case "Delay":
                     result = EvaluateDelayNode(nodeId, a, node.IntervalSeconds);
                     break;
@@ -640,6 +674,9 @@ namespace StorageNetwork.Components
                     break;
                 case "Output":
                     result = a;
+                    break;
+                case "Split4":
+                    result = EvaluateSplit4Node(outputPortIndex, a);
                     break;
                 default:
                     result = 0f;
@@ -715,6 +752,149 @@ namespace StorageNetwork.Components
             previousInputStateByNode[nodeId] = current;
             counterValueByNode[nodeId] = count;
             return count;
+        }
+
+        private float EvaluateSequenceNode(string nodeId, int outputPortIndex, float advanceValue, float resetValue)
+        {
+            bool advanceActive = IsRuntimeTrue(advanceValue);
+            sequencePrevAdvanceByNode.TryGetValue(nodeId, out bool prevAdvance);
+            bool advanceEdge = advanceActive && !prevAdvance;
+            sequencePrevAdvanceByNode[nodeId] = advanceActive;
+
+            bool resetActive = IsRuntimeTrue(resetValue);
+            sequencePrevResetByNode.TryGetValue(nodeId, out bool prevReset);
+            bool resetEdge = resetActive && !prevReset;
+            sequencePrevResetByNode[nodeId] = resetActive;
+
+            if (!sequenceStepByNode.TryGetValue(nodeId, out int step))
+            {
+                step = 0;
+            }
+
+            if (resetEdge)
+            {
+                step = 0;
+            }
+            else if (advanceEdge)
+            {
+                step++;
+            }
+
+            RuntimeBlueprint blueprint = TryGetRuntimeBlueprint();
+            Dictionary<string, RuntimeBlueprintNode> nodes = BuildRuntimeNodeMap(blueprint);
+            int valuesLength = 1;
+            if (nodes.TryGetValue(nodeId, out RuntimeBlueprintNode node) && node?.Values != null && node.Values.Count > 0)
+            {
+                valuesLength = node.Values.Count;
+            }
+
+            step = step % Mathf.Max(1, valuesLength);
+            sequenceStepByNode[nodeId] = step;
+
+            if (outputPortIndex == 1)
+            {
+                return step;
+            }
+
+            float stepValue = 0f;
+            if (nodes.TryGetValue(nodeId, out RuntimeBlueprintNode valueNode) && valueNode?.Values != null && valueNode.Values.Count > 0)
+            {
+                int clampedStep = Mathf.Clamp(step, 0, valueNode.Values.Count - 1);
+                stepValue = Mathf.Clamp(valueNode.Values[clampedStep], 0f, 15f);
+            }
+
+            return stepValue;
+        }
+
+        private float EvaluateArrayNode(string nodeId, RuntimeBlueprintNode node)
+        {
+            if (!arraySlotValuesByNode.TryGetValue(nodeId, out float[] slots))
+            {
+                if (node?.Values != null && node.Values.Count > 0)
+                {
+                    slots = node.Values.ToArray();
+                }
+                else
+                {
+                    slots = new float[4];
+                }
+
+                arraySlotValuesByNode[nodeId] = slots;
+            }
+
+            return 0f;
+        }
+
+        private bool EvaluateArraySetNode(string nodeId, RuntimeBlueprint blueprint, Dictionary<string, RuntimeBlueprintNode> nodes, int depth)
+        {
+            string targetArrayId = null;
+            if (blueprint?.Connections != null)
+            {
+                foreach (RuntimeBlueprintConnection conn in blueprint.Connections)
+                {
+                    if (conn != null && conn.FromNodeId == nodeId && conn.FromPortIndex == 0)
+                    {
+                        targetArrayId = conn.ToNodeId;
+                        break;
+                    }
+                }
+            }
+
+            if (string.IsNullOrEmpty(targetArrayId)) return false;
+
+            float writeEnableValue = EvaluateRuntimeInputNumber(blueprint, nodes, nodeId, 2, depth + 1);
+            if (!IsRuntimeTrue(writeEnableValue)) return false;
+
+            float indexValue = EvaluateRuntimeInputNumber(blueprint, nodes, nodeId, 0, depth + 1);
+            float writeValue = EvaluateRuntimeInputNumber(blueprint, nodes, nodeId, 1, depth + 1);
+
+            if (!arraySlotValuesByNode.TryGetValue(targetArrayId, out float[] slots) || slots == null || slots.Length == 0)
+            {
+                if (nodes.TryGetValue(targetArrayId, out RuntimeBlueprintNode arrayNode) && arrayNode?.Values != null && arrayNode.Values.Count > 0)
+                {
+                    slots = arrayNode.Values.ToArray();
+                }
+                else
+                {
+                    slots = new float[4];
+                }
+
+                arraySlotValuesByNode[targetArrayId] = slots;
+            }
+
+            int writeIndex = Mathf.Clamp(Mathf.FloorToInt(indexValue), 0, slots.Length - 1);
+            slots[writeIndex] = writeValue;
+            return true;
+        }
+
+        private float EvaluateArrayGetNode(string nodeId, RuntimeBlueprint blueprint, Dictionary<string, RuntimeBlueprintNode> nodes, int depth)
+        {
+            float activateValue = EvaluateRuntimeInputNumber(blueprint, nodes, nodeId, 2, depth + 1);
+            if (!IsRuntimeTrue(activateValue)) return 0f;
+
+            float indexValue = EvaluateRuntimeInputNumber(blueprint, nodes, nodeId, 1, depth + 1);
+            RuntimeBlueprintConnection refConn = FindRuntimeInput(blueprint, nodeId, 0);
+            if (refConn == null || string.IsNullOrEmpty(refConn.FromNodeId)) return 0f;
+
+            if (!arraySlotValuesByNode.TryGetValue(refConn.FromNodeId, out float[] slots) || slots == null || slots.Length == 0)
+                return 0f;
+
+            int readIndex = Mathf.Clamp(Mathf.FloorToInt(indexValue), 0, slots.Length - 1);
+            return slots[readIndex];
+        }
+
+        private static float EvaluateSplit4Node(int outputPortIndex, float inputValue)
+        {
+            int rawValue = Mathf.Clamp(Mathf.FloorToInt(inputValue), 0, 15);
+            int bit = outputPortIndex switch
+            {
+                0 => rawValue & 1,
+                1 => (rawValue >> 1) & 1,
+                2 => (rawValue >> 2) & 1,
+                3 => (rawValue >> 3) & 1,
+                _ => 0
+            };
+            return bit;
         }
 
         private float EvaluateMaterialChangedNode(string nodeId)
@@ -1262,6 +1442,11 @@ namespace StorageNetwork.Components
             previousInputStateByNode.Clear();
             previousMaterialAmountByNode.Clear();
             counterValueByNode.Clear();
+            sequenceStepByNode.Clear();
+            sequencePrevAdvanceByNode.Clear();
+            sequencePrevResetByNode.Clear();
+            arraySlotValuesByNode.Clear();
+            arrayPrevWriteByNode.Clear();
         }
 
         internal sealed class WebEditorMaterialOption
@@ -1345,6 +1530,8 @@ namespace StorageNetwork.Components
             public float Value { get; set; }
 
             public int SelectedBuildingInstanceId { get; set; }
+
+            public List<float> Values { get; set; }
         }
 
         public sealed class RuntimeBlueprintConnection

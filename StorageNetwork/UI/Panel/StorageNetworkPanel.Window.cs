@@ -17,12 +17,12 @@ namespace StorageNetwork.UI
             windowRect.anchorMax = new Vector2(0.5f, 0.5f);
             windowRect.pivot = new Vector2(0.5f, 0.5f);
             windowRect.anchoredPosition = Vector2.zero;
-            windowRect.sizeDelta = new Vector2(960f, 850f); 
-            StorageNetworkWindowDrag.TryApplyLayout("mainWindow", windowRect, new Vector2(760f, 520f), new Vector2(1400f, 1100f));
+            windowRect.sizeDelta = new Vector2(1400f, 850f);
+            StorageNetworkWindowDrag.TryApplyLayout("mainWindow_v2", windowRect, new Vector2(760f, 520f), new Vector2(1920f, 1200f));
 
             GameObject header = CreateBox("Header", window.transform, StorageNetworkPanelPalette.HeaderBackground);
             SetTopStretch(header.GetComponent<RectTransform>(), 6f, 6f, 6f, 28f);
-            header.AddComponent<StorageNetworkWindowDrag>().Configure(windowRect, "mainWindow");
+            header.AddComponent<StorageNetworkWindowDrag>().Configure(windowRect, "mainWindow_v2");
 
             TextMeshProUGUI title = CreateText("Title", header.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TITLE), 14, TextAlignmentOptions.MidlineLeft);
             title.fontStyle = FontStyles.Bold;

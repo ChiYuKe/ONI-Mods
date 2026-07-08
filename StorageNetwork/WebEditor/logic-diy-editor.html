@@ -87,6 +87,27 @@
         .header-btn.active {
             background: var(--panel-accent);
         }
+        .header-btn.live-on {
+            background: #22c55e;
+            color: #fff;
+            border-color: #16a34a;
+        }
+
+        .port.active-out {
+            background: #22c55e !important;
+            box-shadow: 0 0 6px rgba(34,197,94,0.6);
+        }
+
+        @keyframes dashFlow {
+            0% { stroke-dashoffset: 0; }
+            100% { stroke-dashoffset: -16; }
+        }
+        .conn-live {
+            stroke: #22c55e !important;
+            stroke-width: 2.5 !important;
+            stroke-dasharray: 8 4;
+            animation: dashFlow 0.5s linear infinite;
+        }
 
         .container {
             flex: 1;
@@ -399,6 +420,30 @@
         .output-channel-row { display: flex; justify-content: space-between; align-items: center; color: var(--text-light); font-size: 12px; padding: 4px 6px; background-color: rgba(255,255,255,0.05); height: 24px; }
         .output-channel-row span:last-child { opacity: 0.6; font-weight: bold; }
 
+        .sequence-container { background-color: var(--panel-dark); margin: 6px 8px 8px 8px; padding: 6px 8px; display: flex; flex-direction: column; gap: 2px; width: 188px; border-radius: 3px; }
+        .sequence-add-row { display: flex; justify-content: center; padding-bottom: 5px; }
+        .sequence-add-row button { height: 20px; padding: 0 14px; font-size: 11px; border: 1px solid rgba(255,255,255,0.15); background: var(--panel-accent); color: var(--text-light); cursor: pointer; font-weight: bold; border-radius: 2px; }
+        .sequence-add-row button:hover { filter: brightness(1.15); }
+        .sequence-row { display: flex; align-items: center; color: var(--text-light); font-size: 10px; height: 22px; gap: 6px; padding: 0 2px; }
+        .sequence-row > span { min-width: 22px; font-size: 10px; opacity: 0.55; font-weight: bold; font-family: monospace; text-align: right; }
+        .sequence-row > button { width: 16px; height: 16px; padding: 0; line-height: 1; font-size: 10px; border: 1px solid rgba(255,255,255,0.12); background: transparent; color: rgba(255,255,255,0.3); cursor: pointer; font-weight: bold; border-radius: 2px; flex-shrink: 0; }
+        .sequence-row > button:hover { color: #ef4444; border-color: #ef4444; }
+        .sequence-bits { display: flex; gap: 4px; flex: 1; justify-content: flex-end; }
+        .seq-bit { width: 28px; height: 18px; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; font-family: monospace; cursor: pointer; border-radius: 2px; background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.2); border: 1px solid transparent; transition: all 0.1s; }
+        .seq-bit.on { background: #22c55e; color: #fff; box-shadow: 0 0 4px rgba(34,197,94,0.4); }
+        .seq-bit:hover { border-color: rgba(255,255,255,0.3); }
+
+        .array-container { background-color: var(--panel-dark); margin: 4px 8px 6px 8px; padding: 4px 6px; display: flex; flex-direction: column; gap: 1px; width: 192px; border-radius: 3px; }
+        .array-add-row { display: flex; justify-content: center; padding-bottom: 4px; }
+        .array-add-row button { height: 18px; padding: 0 10px; font-size: 10px; border: 1px solid rgba(255,255,255,0.12); background: transparent; color: rgba(255,255,255,0.4); cursor: pointer; font-weight: bold; border-radius: 2px; }
+        .array-add-row button:hover { color: var(--text-light); border-color: rgba(255,255,255,0.3); }
+        .array-row { display: flex; align-items: center; height: 20px; gap: 4px; padding: 0; }
+        .array-row span.array-idx { width: 20px; text-align: center; font-size: 9px; font-weight: bold; font-family: monospace; color: rgba(255,255,255,0.3); flex-shrink: 0; }
+        .array-row input { flex: 1; height: 18px; padding: 0 5px; border: 1px solid rgba(255,255,255,0.08); border-radius: 2px; background: rgba(0,0,0,0.15); color: var(--text-light); font-size: 10px; text-align: right; font-family: monospace; }
+        .array-row input:focus { border-color: rgba(255,255,255,0.25); outline: none; }
+        .array-row button.array-del { width: 14px; height: 14px; padding: 0; line-height: 1; font-size: 9px; border: none; background: transparent; color: rgba(255,255,255,0.15); cursor: pointer; flex-shrink: 0; border-radius: 2px; }
+        .array-row button.array-del:hover { color: #ef4444; background: rgba(239,68,68,0.1); }
+
         .material-picker {
             position: absolute;
             z-index: 50;
@@ -634,6 +679,7 @@
         <div class="title-group">
             <span id="editorTitle">逻辑编辑器</span>
             <button class="header-btn" id="docsBtn">节点说明</button>
+            <button class="header-btn" id="liveSignalBtn" title="信号可视化">⚡</button>
         </div>
         <div class="header-actions">
             <span id="status">未保存</span>
@@ -744,6 +790,9 @@ const saveBtn = document.getElementById('saveBtn');
 const exportPngBtn = document.getElementById('exportPngBtn');
 const sidebarToggleBtn = document.getElementById('sidebarToggleBtn');
 const docsBtn = document.getElementById('docsBtn');
+const LIVE_SIGNAL_KEY = 'sn-logic-live-signal';
+const liveSignalBtn = document.getElementById('liveSignalBtn');
+let liveSignal = localStorage.getItem(LIVE_SIGNAL_KEY) === '1';
 const langBtn = document.getElementById('langBtn');
 const docsPage = document.getElementById('docsPage');
 const docsNav = document.getElementById('docsNav');
@@ -751,6 +800,20 @@ const docsContent = document.getElementById('docsContent');
 const editorTitleEl = document.getElementById('editorTitle');
 const editorId = new URLSearchParams(location.search).get('id') || '0';
 const storageKey = `storage-network-logic-diy-${editorId}`;
+const winPosKey = `storage-network-logic-diy-winpos`;
+const savedPos = (() => { try { const v = localStorage.getItem(winPosKey); return v ? JSON.parse(v) : null; } catch { return null; } })();
+if (savedPos && savedPos.w && savedPos.h) {
+    window.resizeTo(savedPos.w, savedPos.h);
+    window.moveTo(savedPos.x, savedPos.y);
+} else {
+    window.resizeTo(1400, 850);
+    window.moveTo(Math.max(0, (screen.width - 1400) / 2), Math.max(0, (screen.height - 850) / 2));
+}
+let winSaveTimer = 0;
+window.addEventListener('resize', () => { clearTimeout(winSaveTimer); winSaveTimer = setTimeout(saveWinPos, 300); });
+function saveWinPos() {
+    try { localStorage.setItem(winPosKey, JSON.stringify({ x: window.screenX, y: window.screenY, w: window.outerWidth, h: window.outerHeight })); } catch {}
+}
 const pageToken = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 const pageOpenedAt = Date.now();
 const WORKSPACE_WIDTH = 3200;
@@ -788,6 +851,7 @@ let panStartPoint = null;
 let panStartOffset = null;
 let rightMouseDownPoint = null;
 let rightMouseCanvasPoint = null;
+let lastMouseCanvasPoint = { x: 120, y: 120 };
 let rightPanMoved = false;
 let autoSaveTimer = 0;
 let heartbeatFailures = 0;
@@ -901,7 +965,9 @@ const uiText = {
         commentDefault: '备注',
         groupDefault: '分组',
         logicOutput: '逻辑输出',
-        ton: '吨'
+        ton: '吨',
+        addStep: '+ 步',
+        removeStep: '移除'
     },
     en: {
         editorTitle: 'Logic Editor',
@@ -962,16 +1028,18 @@ const uiText = {
         commentDefault: 'Note',
         groupDefault: 'Group',
         logicOutput: 'Logic output',
-        ton: 't'
+        ton: 't',
+        addStep: '+ Step',
+        removeStep: 'Remove'
     }
 };
 
 const sidebarGroups = [
-    { key: 'core', types: ['material', 'constant', 'test-signal', 'timer', 'cycle4', 'output'] },
+    { key: 'core', types: ['material', 'constant', 'test-signal', 'timer', 'cycle4', 'split4', 'output'] },
     { key: 'conditions', types: ['logic-gt', 'logic-lt', 'logic-eq', 'logic-range', 'material-low', 'material-high'] },
     { key: 'math', types: ['math-add', 'math-subtract', 'math-multiply', 'math-divide', 'math-mod', 'math-clamp', 'math-negate', 'math-min', 'math-max'] },
     { key: 'bool', types: ['bool-and', 'bool-nand', 'bool-or', 'bool-nor', 'bool-xor', 'bool-not', 'bool-selector', 'bool-true', 'bool-false'] },
-    { key: 'state', types: ['delay', 'latch', 'counter', 'random', 'material-change'] },
+    { key: 'state', types: ['delay', 'latch', 'counter', 'random', 'material-change', 'sequence', 'array', 'array-get', 'array-set'] },
     { key: 'network', types: ['inventory-percent', 'inventory-stored', 'inventory-remaining', 'inventory-capacity', 'power-percent', 'power-stored', 'power-remaining', 'power-capacity', 'building-status', 'building-signal'] },
     { key: 'organize', types: ['comment', 'group'] }
 ];
@@ -984,6 +1052,7 @@ const sidebarText = {
         'test-signal': ['测试信号模块', '接入一根线，显示真假值和实际数值。'],
         timer: ['定时模块', '按设定秒数周期性输出一次脉冲信号。'],
         cycle4: ['四路循环模块', '按设定秒数在4个输出端口之间循环输出1。'],
+        split4: ['四路拆分模块', '将0-15的合成信号拆成4个独立布尔输出（Port0=1, Port1=2, Port2=4, Port3=8），与输出模块端口一一对应。'],
         output: ['4端点输出', '拥有4个独立通道端点的信号接收输出端。'],
         'logic-gt': ['大于模块', '当输入一大于输入二时输出激活信号。'],
         'logic-lt': ['小于模块', '当输入一小于输入二时输出激活信号。'],
@@ -1025,7 +1094,11 @@ const sidebarText = {
         'building-status': ['建筑可用模块', '选择一个建筑，可运行时输出真。'],
         'building-signal': ['建筑信号模块', '选择一个带自动化输出端口的建筑，输出它当前的信号值；会排除当前建筑自身。'],
         comment: ['注释模块', '只显示备注，不参与逻辑计算。'],
-        group: ['分组框', '用于给一片节点做视觉分组。']
+        group: ['分组框', '用于给一片节点做视觉分组。'],
+        sequence: ['序列模块', 'Advance上升沿切换步进，Reset上升沿回到S0。输出当前步的合成信号值和步号。'],
+        array: ['数组模块', '输入索引，输出对应槽位的值。可自由增减条目。'],
+        'array-get': ['数组取值', '连接到数组模块后，输入索引即可取出指定槽位的值。'],
+        'array-set': ['数组写入', '连接到数组模块后，指定索引和值即可写入对应槽位。']
     },
     en: {
         core: 'Core', conditions: 'Conditions', math: 'Math', bool: 'Boolean', state: 'State', network: 'Network', organize: 'Organize',
@@ -1034,6 +1107,7 @@ const sidebarText = {
         'test-signal': ['Signal Probe', 'Displays the truth state and numeric value of one input wire.'],
         timer: ['Timer', 'Outputs a pulse at the configured interval.'],
         cycle4: ['4-Way Cycle', 'Cycles a value of 1 across four output ports.'],
+        split4: ['4-Way Split', 'Splits a 0-15 combined signal into 4 independent outputs (Port0=1, Port1=2, Port2=4, Port3=8), matching the output module port order.'],
         output: ['4-Port Output', 'Receives four independent automation output channels.'],
         'logic-gt': ['Greater Than', 'Outputs true when input A is greater than input B.'],
         'logic-lt': ['Less Than', 'Outputs true when input A is less than input B.'],
@@ -1075,7 +1149,11 @@ const sidebarText = {
         'building-status': ['Building Ready', 'Choose a building; outputs true when it can operate.'],
         'building-signal': ['Building Signal', 'Choose a building with an automation output port and output its current signal value. The current building is excluded.'],
         comment: ['Comment', 'Visual note only; does not affect logic.'],
-        group: ['Group Box', 'Visual grouping box for related nodes.']
+        group: ['Group Box', 'Visual grouping box for related nodes.'],
+        sequence: ['Sequence', 'Advance rising edge moves to the next step, Reset returns to S0. Outputs the current step value and step index.'],
+        array: ['Array', 'Read/write values by index. A rising edge at WriteEnable stores Value into the Index slot. Outputs the current slot value.'],
+        'array-get': ['Array Get', 'Connect to an Array node, then provide an index to read the value at that slot.'],
+        'array-set': ['Array Set', 'Connect to an Array node, then specify index and value to write to that slot.']
     }
 };
 
@@ -1084,55 +1162,60 @@ function t(key) {
 }
 
 const nodeMeta = {
-    material: { title: '材料数据源', inputs: 0, outputs: 1, contentHeight: 78, module: 'MaterialCondition' },
-    variable: { title: '全局阈值模块（旧）', inputs: 0, outputs: 1, contentHeight: 74, module: 'Variable' },
-    constant: { title: '常量数值模块', inputs: 0, outputs: 1, contentHeight: 74, module: 'Constant' },
-    'test-signal': { title: '测试信号模块', inputs: 1, outputs: 0, contentHeight: 58, module: 'SignalMonitor' },
-    timer: { title: '定时模块', inputs: 0, outputs: 1, contentHeight: 74, module: 'TimerPulse' },
-    cycle4: { title: '四路循环模块', inputs: 0, outputs: 4, contentHeight: 108, module: 'Cycle4', outputPortCenters: [74, 90, 106, 122] },
-    'logic-gt': { title: '大于模块', inputs: 2, outputs: 1, contentHeight: 68, module: 'GreaterThan', sign: '>', label: '条件成立' },
-    'logic-lt': { title: '小于模块', inputs: 2, outputs: 1, contentHeight: 68, module: 'LessThan', sign: '<', label: '条件成立' },
-    'logic-eq': { title: '等于模块', inputs: 2, outputs: 1, contentHeight: 68, module: 'Equal', sign: '=', label: '条件成立' },
-    'logic-range': { title: '范围判断模块', inputs: 3, outputs: 1, contentHeight: 86, module: 'Range', sign: '[]', label: '范围内' },
-    'material-low': { title: '材料不足模块', inputs: 0, outputs: 1, contentHeight: 142, module: 'MaterialLow' },
-    'material-high': { title: '材料充足模块', inputs: 0, outputs: 1, contentHeight: 142, module: 'MaterialHigh' },
-    'math-add': { title: '加法模块', inputs: 2, outputs: 1, contentHeight: 68, module: 'Add', sign: '+', label: '数值运算' },
-    'math-subtract': { title: '减法模块', inputs: 2, outputs: 1, contentHeight: 68, module: 'Subtract', sign: '-', label: '数值运算' },
-    'math-multiply': { title: '乘法模块', inputs: 2, outputs: 1, contentHeight: 68, module: 'Multiply', sign: '*', label: '数值运算' },
-    'math-divide': { title: '除法模块', inputs: 2, outputs: 1, contentHeight: 68, module: 'Divide', sign: '/', label: '数值运算' },
-    'math-mod': { title: '取模模块', inputs: 2, outputs: 1, contentHeight: 68, module: 'Modulo', sign: '%', label: '数值运算' },
-    'math-clamp': { title: '钳制模块', inputs: 3, outputs: 1, contentHeight: 86, module: 'Clamp', sign: 'CLAMP', label: '限制范围' },
-    'math-negate': { title: '取反数值模块', inputs: 1, outputs: 1, contentHeight: 68, module: 'Negate', sign: '-A', label: '数值运算' },
-    'math-min': { title: '最小值模块', inputs: 2, outputs: 1, contentHeight: 68, module: 'Min', sign: 'MIN', label: '数值运算' },
-    'math-max': { title: '最大值模块', inputs: 2, outputs: 1, contentHeight: 68, module: 'Max', sign: 'MAX', label: '数值运算' },
-    'bool-and': { title: '与模块', inputs: 2, outputs: 1, contentHeight: 68, module: 'BoolAnd', sign: 'AND', label: '全部为真' },
-    'bool-nand': { title: '与非模块', inputs: 2, outputs: 1, contentHeight: 68, module: 'BoolNand', sign: 'NAND', label: '与后取反' },
-    'bool-or': { title: '或模块', inputs: 2, outputs: 1, contentHeight: 68, module: 'BoolOr', sign: 'OR', label: '任意为真' },
-    'bool-nor': { title: '或非模块', inputs: 2, outputs: 1, contentHeight: 68, module: 'BoolNor', sign: 'NOR', label: '或后取反' },
-    'bool-xor': { title: '异或模块', inputs: 2, outputs: 1, contentHeight: 68, module: 'BoolXor', sign: 'XOR', label: '真假不同' },
-    'bool-not': { title: '非模块', inputs: 1, outputs: 1, contentHeight: 68, module: 'BoolNot', sign: 'NOT', label: '反转信号' },
-    'bool-selector': { title: '选择器模块', inputs: 3, outputs: 1, contentHeight: 86, module: 'Selector', sign: 'A/B', label: '条件选择' },
-    'bool-true': { title: '真值模块', inputs: 0, outputs: 1, contentHeight: 58, module: 'BoolTrue', sign: 'TRUE', label: '常量信号' },
-    'bool-false': { title: '假值模块', inputs: 0, outputs: 1, contentHeight: 58, module: 'BoolFalse', sign: 'FALSE', label: '常量信号' },
-    delay: { title: '延迟模块', inputs: 1, outputs: 1, contentHeight: 74, module: 'Delay' },
-    latch: { title: '保持模块', inputs: 2, outputs: 1, contentHeight: 68, module: 'Latch', sign: 'SET', label: '保持输出' },
-    counter: { title: '计数器模块', inputs: 2, outputs: 1, contentHeight: 68, module: 'Counter', sign: 'COUNT', label: '脉冲计数' },
-    random: { title: '随机模块', inputs: 0, outputs: 1, contentHeight: 74, module: 'RandomChance' },
-    'edge-pulse': { title: '脉冲模块', inputs: 1, outputs: 1, contentHeight: 68, module: 'EdgePulse', sign: '↑', label: '上升沿' },
-    'material-change': { title: '材料变化模块', inputs: 0, outputs: 1, contentHeight: 92, module: 'MaterialChanged' },
-    'inventory-percent': { title: '网络占用率模块', inputs: 0, outputs: 1, contentHeight: 58, module: 'InventoryPercent', sign: '0-100%', label: '输出占用率' },
-    'inventory-stored': { title: '已用容量模块', inputs: 0, outputs: 1, contentHeight: 58, module: 'InventoryStored', sign: 'kg', label: '已储存' },
-    'inventory-remaining': { title: '剩余容量模块', inputs: 0, outputs: 1, contentHeight: 58, module: 'InventoryRemaining', sign: 'kg', label: '剩余容量' },
-    'inventory-capacity': { title: '总容量模块', inputs: 0, outputs: 1, contentHeight: 58, module: 'InventoryCapacity', sign: 'kg', label: '总容量' },
-    'power-percent': { title: '电量百分比模块', inputs: 0, outputs: 1, contentHeight: 58, module: 'PowerPercent', sign: '0-100%', label: '储能占比' },
-    'power-stored': { title: '当前电量模块', inputs: 0, outputs: 1, contentHeight: 58, module: 'PowerStored', sign: 'J', label: '当前电量' },
-    'power-remaining': { title: '剩余电池容量模块', inputs: 0, outputs: 1, contentHeight: 58, module: 'PowerRemaining', sign: 'J', label: '剩余容量' },
-    'power-capacity': { title: '电池总容量模块', inputs: 0, outputs: 1, contentHeight: 58, module: 'PowerCapacity', sign: 'J', label: '电池容量' },
-    'building-status': { title: '建筑可用模块', inputs: 0, outputs: 1, contentHeight: 78, module: 'BuildingStatus' },
-    'building-signal': { title: '建筑信号模块', inputs: 0, outputs: 1, contentHeight: 78, module: 'BuildingSignal' },
+    material: { title: '材料数据源', inputs: 0, outputs: 1, contentHeight: 78, module: 'MaterialCondition', outputLabels: ['当前材料数量 (kg)'] },
+    variable: { title: '全局阈值模块（旧）', inputs: 0, outputs: 1, contentHeight: 74, module: 'Variable', outputLabels: ['阈值'] },
+    constant: { title: '常量数值模块', inputs: 0, outputs: 1, contentHeight: 74, module: 'Constant', outputLabels: ['常量值'] },
+    'test-signal': { title: '测试信号模块', inputs: 1, outputs: 0, contentHeight: 58, module: 'SignalMonitor', inputLabels: ['待测信号'] },
+    timer: { title: '定时模块', inputs: 0, outputs: 1, contentHeight: 74, module: 'TimerPulse', outputLabels: ['脉冲信号'] },
+    cycle4: { title: '四路循环模块', inputs: 0, outputs: 4, contentHeight: 108, module: 'Cycle4', outputPortCenters: [74, 90, 106, 122], outputLabels: ['端口0 (1)', '端口1 (2)', '端口2 (4)', '端口3 (8)'] },
+    'logic-gt': { title: '大于模块', inputs: 2, outputs: 1, contentHeight: 68, module: 'GreaterThan', sign: '>', label: '条件成立', inputLabels: ['输入A', '输入B'], outputLabels: ['A>B 输出1'] },
+    'logic-lt': { title: '小于模块', inputs: 2, outputs: 1, contentHeight: 68, module: 'LessThan', sign: '<', label: '条件成立', inputLabels: ['输入A', '输入B'], outputLabels: ['A<B 输出1'] },
+    'logic-eq': { title: '等于模块', inputs: 2, outputs: 1, contentHeight: 68, module: 'Equal', sign: '=', label: '条件成立', inputLabels: ['输入A', '输入B'], outputLabels: ['A=B 输出1'] },
+    'logic-range': { title: '范围判断模块', inputs: 3, outputs: 1, contentHeight: 86, module: 'Range', sign: '[]', label: '范围内', inputLabels: ['被测值', '最小值', '最大值'], outputLabels: ['范围内输出1'] },
+    'material-low': { title: '材料不足模块', inputs: 0, outputs: 1, contentHeight: 142, module: 'MaterialLow', outputLabels: ['低于阈值输出1'] },
+    'material-high': { title: '材料充足模块', inputs: 0, outputs: 1, contentHeight: 142, module: 'MaterialHigh', outputLabels: ['高于阈值输出1'] },
+    'math-add': { title: '加法模块', inputs: 2, outputs: 1, contentHeight: 68, module: 'Add', sign: '+', label: '数值运算', inputLabels: ['A', 'B'], outputLabels: ['A+B'] },
+    'math-subtract': { title: '减法模块', inputs: 2, outputs: 1, contentHeight: 68, module: 'Subtract', sign: '-', label: '数值运算', inputLabels: ['A', 'B'], outputLabels: ['A-B'] },
+    'math-multiply': { title: '乘法模块', inputs: 2, outputs: 1, contentHeight: 68, module: 'Multiply', sign: '*', label: '数值运算', inputLabels: ['A', 'B'], outputLabels: ['A×B'] },
+    'math-divide': { title: '除法模块', inputs: 2, outputs: 1, contentHeight: 68, module: 'Divide', sign: '/', label: '数值运算', inputLabels: ['A', 'B'], outputLabels: ['A÷B'] },
+    'math-mod': { title: '取模模块', inputs: 2, outputs: 1, contentHeight: 68, module: 'Modulo', sign: '%', label: '数值运算', inputLabels: ['A', 'B'], outputLabels: ['A%B'] },
+    'math-clamp': { title: '钳制模块', inputs: 3, outputs: 1, contentHeight: 86, module: 'Clamp', sign: 'CLAMP', label: '限制范围', inputLabels: ['输入值', '最小值', '最大值'], outputLabels: ['钳制结果'] },
+    'math-negate': { title: '取反数值模块', inputs: 1, outputs: 1, contentHeight: 68, module: 'Negate', sign: '-A', label: '数值运算', inputLabels: ['A'], outputLabels: ['-A'] },
+    'math-min': { title: '最小值模块', inputs: 2, outputs: 1, contentHeight: 68, module: 'Min', sign: 'MIN', label: '数值运算', inputLabels: ['A', 'B'], outputLabels: ['min(A,B)'] },
+    'math-max': { title: '最大值模块', inputs: 2, outputs: 1, contentHeight: 68, module: 'Max', sign: 'MAX', label: '数值运算', inputLabels: ['A', 'B'], outputLabels: ['max(A,B)'] },
+    'bool-and': { title: '与模块', inputs: 2, outputs: 1, contentHeight: 68, module: 'BoolAnd', sign: 'AND', label: '全部为真', inputLabels: ['A', 'B'], outputLabels: ['A AND B'] },
+    'bool-nand': { title: '与非模块', inputs: 2, outputs: 1, contentHeight: 68, module: 'BoolNand', sign: 'NAND', label: '与后取反', inputLabels: ['A', 'B'], outputLabels: ['A NAND B'] },
+    'bool-or': { title: '或模块', inputs: 2, outputs: 1, contentHeight: 68, module: 'BoolOr', sign: 'OR', label: '任意为真', inputLabels: ['A', 'B'], outputLabels: ['A OR B'] },
+    'bool-nor': { title: '或非模块', inputs: 2, outputs: 1, contentHeight: 68, module: 'BoolNor', sign: 'NOR', label: '或后取反', inputLabels: ['A', 'B'], outputLabels: ['A NOR B'] },
+    'bool-xor': { title: '异或模块', inputs: 2, outputs: 1, contentHeight: 68, module: 'BoolXor', sign: 'XOR', label: '真假不同', inputLabels: ['A', 'B'], outputLabels: ['A XOR B'] },
+    'bool-not': { title: '非模块', inputs: 1, outputs: 1, contentHeight: 68, module: 'BoolNot', sign: 'NOT', label: '反转信号', inputLabels: ['A'], outputLabels: ['NOT A'] },
+    'bool-selector': { title: '选择器模块', inputs: 3, outputs: 1, contentHeight: 86, module: 'Selector', sign: 'A/B', label: '条件选择', inputLabels: ['条件', '真值A', '假值B'], outputLabels: ['选择结果'] },
+    'bool-true': { title: '真值模块', inputs: 0, outputs: 1, contentHeight: 58, module: 'BoolTrue', sign: 'TRUE', label: '常量信号', outputLabels: ['恒为1'] },
+    'bool-false': { title: '假值模块', inputs: 0, outputs: 1, contentHeight: 58, module: 'BoolFalse', sign: 'FALSE', label: '常量信号', outputLabels: ['恒为0'] },
+    delay: { title: '延迟模块', inputs: 1, outputs: 1, contentHeight: 74, module: 'Delay', inputLabels: ['输入信号'], outputLabels: ['延迟后输出'] },
+    latch: { title: '保持模块', inputs: 2, outputs: 1, contentHeight: 68, module: 'Latch', sign: 'SET', label: '保持输出', inputLabels: ['Set 置位', 'Reset 复位'], outputLabels: ['锁存输出'] },
+    counter: { title: '计数器模块', inputs: 2, outputs: 1, contentHeight: 68, module: 'Counter', sign: 'COUNT', label: '脉冲计数', inputLabels: ['Pulse 脉冲', 'Reset 清零'], outputLabels: ['计数值'] },
+    random: { title: '随机模块', inputs: 0, outputs: 1, contentHeight: 74, module: 'RandomChance', outputLabels: ['概率输出'] },
+    'edge-pulse': { title: '脉冲模块', inputs: 1, outputs: 1, contentHeight: 68, module: 'EdgePulse', sign: '↑', label: '上升沿', inputLabels: ['输入信号'], outputLabels: ['上升沿脉冲'] },
+    'material-change': { title: '材料变化模块', inputs: 0, outputs: 1, contentHeight: 92, module: 'MaterialChanged', outputLabels: ['变化脉冲'] },
+    'inventory-percent': { title: '网络占用率模块', inputs: 0, outputs: 1, contentHeight: 58, module: 'InventoryPercent', sign: '0-100%', label: '输出占用率', outputLabels: ['占用率 (0-100)'] },
+    'inventory-stored': { title: '已用容量模块', inputs: 0, outputs: 1, contentHeight: 58, module: 'InventoryStored', sign: 'kg', label: '已储存', outputLabels: ['已用容量 (kg)'] },
+    'inventory-remaining': { title: '剩余容量模块', inputs: 0, outputs: 1, contentHeight: 58, module: 'InventoryRemaining', sign: 'kg', label: '剩余容量', outputLabels: ['剩余容量 (kg)'] },
+    'inventory-capacity': { title: '总容量模块', inputs: 0, outputs: 1, contentHeight: 58, module: 'InventoryCapacity', sign: 'kg', label: '总容量', outputLabels: ['总容量 (kg)'] },
+    'power-percent': { title: '电量百分比模块', inputs: 0, outputs: 1, contentHeight: 58, module: 'PowerPercent', sign: '0-100%', label: '储能占比', outputLabels: ['电量占比 (0-100)'] },
+    'power-stored': { title: '当前电量模块', inputs: 0, outputs: 1, contentHeight: 58, module: 'PowerStored', sign: 'J', label: '当前电量', outputLabels: ['当前电量 (J)'] },
+    'power-remaining': { title: '剩余电池容量模块', inputs: 0, outputs: 1, contentHeight: 58, module: 'PowerRemaining', sign: 'J', label: '剩余容量', outputLabels: ['剩余容量 (J)'] },
+    'power-capacity': { title: '电池总容量模块', inputs: 0, outputs: 1, contentHeight: 58, module: 'PowerCapacity', sign: 'J', label: '电池容量', outputLabels: ['总容量 (J)'] },
+    'building-status': { title: '建筑可用模块', inputs: 0, outputs: 1, contentHeight: 78, module: 'BuildingStatus', outputLabels: ['可用=1,不可用=0'] },
+    'building-signal': { title: '建筑信号模块', inputs: 0, outputs: 1, contentHeight: 78, module: 'BuildingSignal', outputLabels: ['建筑输出信号值'] },
     comment: { title: '注释模块', inputs: 0, outputs: 0, contentHeight: 88, module: 'Comment' },
     group: { title: '分组框', inputs: 0, outputs: 0, contentHeight: 176, module: 'Group' },
-    output: { title: '输出模块', inputs: 4, outputs: 0, contentHeight: 130, module: 'Output' }
+    output: { title: '输出模块', inputs: 4, outputs: 0, contentHeight: 130, module: 'Output', inputLabels: ['Port0 (值1)', 'Port1 (值2)', 'Port2 (值4)', 'Port3 (值8)'] },
+    sequence: { title: '序列模块', inputs: 2, outputs: 2, contentHeight: 90, module: 'Sequence', width: 220, inputPortCenters: [18, 78], outputPortCenters: [18, 78], inputLabels: ['Advance 步进', 'Reset 重置'], outputLabels: ['信号值 (0-15)', '当前步数'] },
+    array: { title: '数组模块', inputs: 1, outputs: 1, contentHeight: 160, module: 'Array', width: 220, inputLabels: ['写入口'], outputLabels: ['读引用'] },
+    'array-get': { title: '数组取值', inputs: 3, outputs: 1, contentHeight: 86, module: 'ArrayGet', inputLabels: ['数组引用', '索引值', '激活读取'], outputLabels: ['值'] },
+    'array-set': { title: '数组写入', inputs: 3, outputs: 1, contentHeight: 68, module: 'ArraySet', sign: 'SET', label: '写入数组', inputLabels: ['索引', '写入值', '激活写入'], outputLabels: ['连到数组引用口'] },
+    split4: { title: '四路拆分模块', inputs: 1, outputs: 4, contentHeight: 130, module: 'Split4', outputPortCenters: [74, 90, 106, 122], inputLabels: ['合成信号 (0-15)'], outputLabels: ['Port0 (1)', 'Port1 (2)', 'Port2 (4)', 'Port3 (8)'] }
 };
 
 function getNodeText(type) {
@@ -1152,14 +1235,16 @@ function applyNodeTranslations() {
             'math-add': 'Numeric op', 'math-subtract': 'Numeric op', 'math-multiply': 'Numeric op', 'math-divide': 'Numeric op', 'math-mod': 'Remainder', 'math-clamp': 'Clamp range', 'math-negate': 'Numeric op', 'math-min': 'Numeric op', 'math-max': 'Numeric op',
             'bool-and': 'All true', 'bool-nand': 'Invert AND', 'bool-or': 'Any true', 'bool-nor': 'Invert OR', 'bool-xor': 'Different', 'bool-not': 'Invert signal', 'bool-selector': 'Choose value', 'bool-true': 'Constant signal', 'bool-false': 'Constant signal',
             latch: 'Hold output', counter: 'Pulse count', 'edge-pulse': 'Rising edge', random: 'Chance', 'inventory-percent': 'Usage %', 'inventory-stored': 'Stored', 'inventory-remaining': 'Remaining', 'inventory-capacity': 'Total capacity',
-            'power-percent': 'Power %', 'power-stored': 'Stored power', 'power-remaining': 'Remaining', 'power-capacity': 'Battery capacity'
+            'power-percent': 'Power %', 'power-stored': 'Stored power', 'power-remaining': 'Remaining', 'power-capacity': 'Battery capacity',
+            sequence: 'Step sequencer', array: 'Indexed store', split4: 'Bit splitter'
         }
         : {
             'logic-gt': '条件成立', 'logic-lt': '条件成立', 'logic-eq': '条件成立', 'logic-range': '范围内',
             'math-add': '数值运算', 'math-subtract': '数值运算', 'math-multiply': '数值运算', 'math-divide': '数值运算', 'math-mod': '余数', 'math-clamp': '限制范围', 'math-negate': '数值运算', 'math-min': '数值运算', 'math-max': '数值运算',
             'bool-and': '全部为真', 'bool-nand': '与后取反', 'bool-or': '任意为真', 'bool-nor': '或后取反', 'bool-xor': '真假不同', 'bool-not': '反转信号', 'bool-selector': '条件选择', 'bool-true': '常量信号', 'bool-false': '常量信号',
             latch: '保持输出', counter: '脉冲计数', 'edge-pulse': '上升沿', random: '概率输出', 'inventory-percent': '输出占用率', 'inventory-stored': '已储存', 'inventory-remaining': '剩余容量', 'inventory-capacity': '总容量',
-            'power-percent': '储能占比', 'power-stored': '当前电量', 'power-remaining': '剩余容量', 'power-capacity': '电池容量'
+            'power-percent': '储能占比', 'power-stored': '当前电量', 'power-remaining': '剩余容量', 'power-capacity': '电池容量',
+            sequence: '步进序列', array: '索引存储', split4: '位拆分'
         };
     Object.entries(labels).forEach(([type, label]) => {
         if (nodeMeta[type]) nodeMeta[type].label = label;
@@ -1201,9 +1286,10 @@ function createNodeAt(type, x, y) {
     const meta = nodeMeta[type];
     if (!meta) return null;
     const id = `node_${++nodeIdCounter}`;
+    const defH = type === 'sequence' ? seqCardHeight(4) : (type === 'array' ? arrayCardHeight(4) : Number(meta.contentHeight || 80) + 44);
     const size = type === 'group'
         ? { width: 280, height: 180 }
-        : { width: 180, height: Number(meta.contentHeight || 80) + 44 };
+        : { width: meta.width || 180, height: defH };
     const pos = clampToWorkspace(Number(x || 0), Number(y || 0), size.width, size.height);
     nodesData[id] = { type, x: pos.x, y: pos.y };
     const el = createNodeDOM(id, type, pos.x, pos.y);
@@ -1328,6 +1414,7 @@ const docGroups = [
             ['test-signal', '显示输入线的当前真假和值。本节点只显示，不参与输出。', '把任何节点接进来，红代表 0，绿代表非 0，右侧显示实际数值。'],
             ['timer', '按设定秒数周期性输出一次短暂绿信号。', '每 5 秒触发一次后续逻辑。'],
             ['cycle4', '按设定秒数在 4 个输出端口之间轮流输出 1。', '接到 4 端点输出，可以让 4 个自动化通道轮流变绿。'],
+            ['split4', '将 0-15 的合成信号拆成 4 个独立的布尔输出。Port0=1、Port1=2、Port2=4、Port3=8，与输出模块端口顺序一致。', '从另一个 Logic DIY 的四通道信号里拆分出某一路来判断。'],
             ['output', '把输入信号发送到游戏里的自动化输出端。4 个输入分别对应 Port0 到 Port3。', 'Port0=1，Port1=2，Port2=4，Port3=8，可组合成多路信号。']
         ]
     },
@@ -1370,7 +1457,9 @@ const docGroups = [
         items: [
             ['delay', '输入持续为真达到设定秒数后输出 1。输入变假会重新计时。', '条件稳定 10 秒后再启动。'],
             ['latch', 'Set 输入为真后保持输出 1，Reset 输入为真后清除为 0。', '触发后保持开启，直到另一个条件复位。'],
-            ['material-change', '选中材料数量变化时输出一次短脉冲。', '网络库存变化时触发一次刷新逻辑。']
+            ['material-change', '选中材料数量变化时输出一次短脉冲。', '网络库存变化时触发一次刷新逻辑。'],
+            ['sequence', 'Advance 上升沿切换到下一个步进值，Reset 上升沿回到第0步。输出端0=当前值，输出端1=步号。', '制作多阶段自动化：阶段1=100、阶段2=500、阶段3=1000...'],
+            ['array', '按索引读写数值槽位。Write Enable 上升沿时将 Value 写入 Index 槽。输出端0=当前槽值，输出端1=非零槽总数。', '存储多路状态或阈值；用计数器输出做索引实现多步检测。']
         ]
     },
     {
@@ -1600,15 +1689,19 @@ function pasteCopiedNodes() {
     if (!internalClipboard?.nodes?.length) return;
     clearSelection();
     const idMap = {};
-    internalClipboard.nodes.forEach(item => {
+    const firstNode = internalClipboard.nodes[0].data || {};
+    const offsetX = (lastMouseCanvasPoint?.x ?? 120) - Number(firstNode.x || 0);
+    const offsetY = (lastMouseCanvasPoint?.y ?? 120) - Number(firstNode.y || 0);
+    internalClipboard.nodes.forEach((item, idx) => {
         const oldId = item.oldId;
         const oldData = item.data || {};
         const newId = `node_${++nodeIdCounter}`;
         idMap[oldId] = newId;
+        const step = (idx + 1) * 26;
         nodesData[newId] = {
             ...structuredCloneSafe(oldData),
-            x: Number(oldData.x || 0) + 36,
-            y: Number(oldData.y || 0) + 36
+            x: Number(oldData.x || 0) + offsetX + step,
+            y: Number(oldData.y || 0) + offsetY + step
         };
         const el = createNodeDOM(newId, nodesData[newId].type, nodesData[newId].x, nodesData[newId].y);
         if (el) nodeLayer.appendChild(el);
@@ -1859,6 +1952,14 @@ function createNodeDOM(id, type, x, y) {
     node.dataset.type = type;
     node.style.left = `${x}px`;
     node.style.top = `${y}px`;
+    if (type === 'sequence') {
+        const sc = Array.isArray(nodesData[id]?.values) ? Math.max(1, nodesData[id].values.length) : 4;
+        node.style.height = seqCardHeight(sc) + 'px';
+    }
+    if (type === 'array') {
+        const vals = Array.isArray(nodesData[id]?.values) ? nodesData[id].values : [0,0,0,0];
+        node.style.height = arrayCardHeight(Math.max(1, vals.length)) + 'px';
+    }
     node.innerHTML = createNodeInnerHTML(id, type, meta);
 
     const titleEl = node.querySelector('.node-title');
@@ -2009,6 +2110,32 @@ function createNodeInnerHTML(id, type, meta) {
         const amount = formatTons(material?.MassKg ?? material?.massKg ?? serverState.selectedMaterialAmountKg ?? 0);
         return `<div class="node-title"><span>${meta.title}</span>${deleteHtml}</div><div class="material-content" title="${t('selectMaterial')}"><h3>${escapeHtml(name)}</h3><p>${t('current')} ${amount}</p></div>`;
     }
+    if (type === 'split4') {
+        return `<div class="node-title"><span>${meta.title}</span>${deleteHtml}</div><div class="output-rows-container"><div class="output-channel-row"><span>Port0</span><span>1</span></div><div class="output-channel-row"><span>Port1</span><span>2</span></div><div class="output-channel-row"><span>Port2</span><span>4</span></div><div class="output-channel-row"><span>Port3</span><span>8</span></div></div>`;
+    }
+    if (type === 'sequence') {
+        const values = Array.isArray(nodesData[id]?.values) && nodesData[id].values.length > 0 ? nodesData[id].values : [0, 0, 0, 0];
+        let rows = '';
+        values.forEach((value, idx) => {
+            const v = Number(value || 0);
+            const b3 = (v >> 3) & 1;
+            const b2 = (v >> 2) & 1;
+            const b1 = (v >> 1) & 1;
+            const b0 = v & 1;
+            rows += `<div class="sequence-row"><span>S${idx}</span><div class="sequence-bits"><span class="seq-bit ${b0?'on':''}" onclick="toggleSeqBit('${id}',${idx},0)">${b0?'1':''}</span><span class="seq-bit ${b1?'on':''}" onclick="toggleSeqBit('${id}',${idx},1)">${b1?'1':''}</span><span class="seq-bit ${b2?'on':''}" onclick="toggleSeqBit('${id}',${idx},2)">${b2?'1':''}</span><span class="seq-bit ${b3?'on':''}" onclick="toggleSeqBit('${id}',${idx},3)">${b3?'1':''}</span></div><button onclick="removeSequenceStep('${id}', ${idx})" title="${t('removeStep')}">×</button></div>`;
+        });
+        return `<div class="node-title"><span>${meta.title}</span>${deleteHtml}</div><div class="sequence-container"><div class="sequence-add-row"><button onclick="addSequenceStep('${id}')">+ ${t('addStep')}</button></div>${rows}</div>`;
+    }
+    if (type === 'array') {
+        const size = Math.max(1, Array.isArray(nodesData[id]?.values) ? nodesData[id].values.length : (Number(nodesData[id]?.arraySize) || 4));
+        const values = Array.isArray(nodesData[id]?.values) ? nodesData[id].values : new Array(size).fill(0);
+        while (values.length < size) values.push(0);
+        let rows = '';
+        for (let i = 0; i < size; i++) {
+            rows += `<div class="array-row"><span class="array-idx">${i}</span><input type="text" class="num-input array-value-input" data-field="values" data-index="${i}" value="${Number(values[i] || 0).toFixed(0)}"><button class="array-del" onclick="removeArraySlot('${id}', ${i})" title="${t('removeStep')}">✕</button></div>`;
+        }
+        return `<div class="node-title"><span>${meta.title}</span>${deleteHtml}</div><div class="array-container"><div class="array-add-row"><button onclick="addArraySlot('${id}')">+ ${t('addStep')}</button></div>${rows}</div>`;
+    }
     return `<div class="node-title"><span>${meta.title}</span>${deleteHtml}</div><div class="pure-condition-box"><div>${meta.label || t('logicOutput')}</div>${meta.sign}</div>`;
 }
 
@@ -2037,6 +2164,24 @@ function buildingHasLogicOutput(item) {
 
 function getBuildingSignalValue(item) {
     return Number(item?.SignalValue ?? item?.signalValue ?? 0);
+}
+
+function findArrayTargetForSetNode(nodeId) {
+    const output = connections.find(conn => conn.fromNode === nodeId && parsePortIndex(conn.fromPort) === 0);
+    if (!output) return null;
+    const target = nodesData[output.toNode];
+    return target?.type === 'array' ? output.toNode : null;
+}
+
+function updateArrayNodeDisplay(nodeId) {
+    const node = document.getElementById(nodeId);
+    const data = nodesData[nodeId];
+    if (!node || !data || data.type !== 'array' || !Array.isArray(data.values)) return;
+    node.querySelectorAll('.array-value-input').forEach(input => {
+        const index = Number(input.dataset.index || 0);
+        const nextValue = Number(data.values[index] || 0).toFixed(0);
+        if (input.value !== nextValue) input.value = nextValue;
+    });
 }
 
 function getBuildingsForNode(nodeId) {
@@ -2154,6 +2299,8 @@ function appendPort(node, direction, index, titleHeight, contentHeight, count, m
     const centerY = Array.isArray(customCenters) && customCenters[index] != null
         ? Number(customCenters[index])
         : titleHeight + contentHeight * ((index + 0.5) / count);
+    const labels = direction === 'output' ? meta?.outputLabels : meta?.inputLabels;
+    if (Array.isArray(labels) && labels[index]) port.title = labels[index];
     port.style.top = `${centerY - 6}px`;
     port.addEventListener('mousedown', e => {
         e.stopPropagation();
@@ -2184,6 +2331,19 @@ function syncNodeInputs(node) {
     if (!node || !nodesData[node.id]) return;
     node.querySelectorAll('.num-input[data-field]').forEach(input => {
         const field = input.dataset.field;
+        if (field === 'values') {
+            if (!Array.isArray(nodesData[node.id].values)) nodesData[node.id].values = [];
+            const index = Number(input.dataset.index || 0);
+            if (node.dataset.type === 'sequence') {
+                const cleaned = (input.value || '').replace(/[^01]/g, '').slice(0, 4).padStart(1, '0') || '0';
+                const parsed = parseInt(cleaned, 2);
+                nodesData[node.id].values[index] = Math.max(0, Math.min(15, Number.isNaN(parsed) ? 0 : parsed));
+                input.value = toBin4(nodesData[node.id].values[index]);
+            } else {
+                nodesData[node.id].values[index] = Math.max(0, Number(input.value || 0));
+            }
+            return;
+        }
         const minValue = field === 'intervalSeconds' ? 0.2 : 0;
         const maxValue = node.dataset.type === 'random' && field === 'value' ? 100 : Number.POSITIVE_INFINITY;
         nodesData[node.id][field] = Math.min(maxValue, Math.max(minValue, Number(input.value || minValue)));
@@ -2196,6 +2356,114 @@ window.syncCommentText = function(id, el) {
     nodesData[id].text = el.textContent || '';
     markDirty();
 };
+
+window.toggleSeqBit = function(id, idx, bit) {
+    if (!nodesData[id]) return;
+    if (!Array.isArray(nodesData[id].values)) nodesData[id].values = [0, 0, 0, 0];
+    while (nodesData[id].values.length <= idx) nodesData[id].values.push(0);
+    const current = Math.max(0, Math.min(15, Math.floor(Number(nodesData[id].values[idx] || 0))));
+    nodesData[id].values[idx] = current ^ (1 << bit);
+    refreshNodeDOM(id);
+    markDirty();
+};
+
+window.addSequenceStep = function(id) {
+    if (!nodesData[id]) return;
+    if (!Array.isArray(nodesData[id].values)) nodesData[id].values = [0, 0, 0, 0];
+    nodesData[id].values.push(0);
+    refreshNodeDOM(id);
+    markDirty();
+};
+
+window.removeSequenceStep = function(id, index) {
+    if (!nodesData[id]) return;
+    if (!Array.isArray(nodesData[id].values)) return;
+    if (nodesData[id].values.length <= 1) return;
+    nodesData[id].values.splice(index, 1);
+    refreshNodeDOM(id);
+    markDirty();
+};
+
+window.addArraySlot = function(id) {
+    if (!nodesData[id]) return;
+    if (!Array.isArray(nodesData[id].values)) nodesData[id].values = [0, 0, 0, 0];
+    nodesData[id].values.push(0);
+    refreshNodeDOM(id);
+    markDirty();
+};
+
+window.removeArraySlot = function(id, index) {
+    if (!nodesData[id]) return;
+    if (!Array.isArray(nodesData[id].values) || nodesData[id].values.length <= 1) return;
+    nodesData[id].values.splice(index, 1);
+    nodesData[id].arraySize = nodesData[id].values.length;
+    refreshNodeDOM(id);
+    markDirty();
+};
+
+window.setArraySize = function(id, size) {
+    if (!nodesData[id]) return;
+    nodesData[id].arraySize = size;
+    const values = Array.isArray(nodesData[id].values) ? nodesData[id].values : [];
+    while (values.length < size) values.push(0);
+    nodesData[id].values = values.slice(0, size);
+    refreshNodeDOM(id);
+    markDirty();
+};
+
+function seqCardHeight(stepCount) {
+    const contentH = 36 + Math.max(1, stepCount) * 24;
+    return Math.max(130, 28 + contentH + 30);
+}
+function arrayCardHeight(slotCount) {
+    const contentH = 26 + Math.max(1, slotCount) * 21;
+    return Math.max(100, 28 + contentH + 16);
+}
+
+function refreshNodeDOM(id) {
+    const el = document.getElementById(id);
+    if (!el || !nodesData[id]) return;
+    const meta = nodeMeta[nodesData[id].type];
+    if (!meta) return;
+    const type = nodesData[id].type;
+    if (type === 'sequence') {
+        const sc = Array.isArray(nodesData[id].values) ? Math.max(1, nodesData[id].values.length) : 1;
+        el.style.height = seqCardHeight(sc) + 'px';
+    }
+    if (type === 'array') {
+        const vals = Array.isArray(nodesData[id]?.values) ? nodesData[id].values : [0,0,0,0];
+        el.style.height = arrayCardHeight(Math.max(1, vals.length)) + 'px';
+    }
+    el.innerHTML = createNodeInnerHTML(id, type, meta);
+    const titleEl = el.querySelector('.node-title');
+    if (titleEl) {
+        titleEl.addEventListener('mousedown', e => {
+            if (e.target.classList.contains('node-delete')) return;
+            beginNodeDrag(e, id);
+            e.stopPropagation();
+        });
+    }
+    const titleHeight = 28;
+    for (let i = 0; i < meta.inputs; i++) appendPort(el, 'input', i, titleHeight, meta.contentHeight, meta.inputs, meta);
+    for (let i = 0; i < meta.outputs; i++) appendPort(el, 'output', i, titleHeight, meta.contentHeight, meta.outputs, meta);
+    el.querySelectorAll('.num-input').forEach(input => {
+        input.addEventListener('input', () => { syncNodeInputs(el); markDirty(); });
+    });
+    el.querySelectorAll('.chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+            el.querySelectorAll('.chip').forEach(item => item.classList.remove('active'));
+            chip.classList.add('active');
+            markDirty();
+        });
+    });
+    updateSignalMonitors();
+    renderConnections();
+}
+
+function toBin4(n) {
+    const v = Math.max(0, Math.min(15, Math.floor(Number(n || 0))));
+    return v.toString(2).padStart(4, '0');
+}
 
 function formatTons(kg) {
     const amount = Math.max(0, Number(kg || 0));
@@ -2222,7 +2490,21 @@ canvas.addEventListener('wheel', e => {
     if (docsPage.classList.contains('visible') || e.target.closest('.material-picker') || e.target.closest('.node-menu')) return;
     e.preventDefault();
     const direction = e.deltaY > 0 ? -1 : 1;
-    setCanvasZoom(canvasZoom + direction * 0.08);
+    const oldZoom = canvasZoom;
+    const newZoom = Math.min(2.2, Math.max(0.45, oldZoom + direction * 0.08));
+    if (oldZoom === newZoom) return;
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+    canvasPanX = mx - ((mx - canvasPanX) / oldZoom) * newZoom;
+    canvasPanY = my - ((my - canvasPanY) / oldZoom) * newZoom;
+    canvasZoom = newZoom;
+    canvas.style.setProperty('--canvas-zoom', canvasZoom);
+    canvas.style.setProperty('--canvas-pan-x', `${canvasPanX}px`);
+    canvas.style.setProperty('--canvas-pan-y', `${canvasPanY}px`);
+    zoomBadge.textContent = `${Math.round(canvasZoom * 100)}%`;
+    renderConnections();
+    persistLayout();
 }, { passive: false });
 
 canvas.addEventListener('contextmenu', e => {
@@ -2254,6 +2536,7 @@ canvas.addEventListener('mousedown', e => {
 });
 
 document.addEventListener('mousemove', e => {
+    lastMouseCanvasPoint = getCanvasPoint(e);
     if (isPanningCanvas && panStartPoint && panStartOffset) {
         if (rightMouseDownPoint && Math.hypot(e.clientX - rightMouseDownPoint.x, e.clientY - rightMouseDownPoint.y) > 5) {
             rightPanMoved = true;
@@ -2437,6 +2720,7 @@ function renderConnections() {
         const p2 = calculatePortAbsolutePos(toPortEl);
         const deltaX = Math.abs(p2.x - p1.x) * 0.5;
         const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.id = `conn-path-${conn.id}`;
         path.setAttribute('d', `M ${p1.x} ${p1.y} C ${p1.x + deltaX} ${p1.y}, ${p2.x - deltaX} ${p2.y}, ${p2.x} ${p2.y}`);
         path.setAttribute('stroke', '#7a8274');
         path.setAttribute('stroke-width', '3');
@@ -2449,6 +2733,7 @@ function renderConnections() {
         });
         svgLayer.appendChild(path);
     });
+    updateLiveSignals();
 }
 
 function getExportNodeSize(id) {
@@ -2710,9 +2995,11 @@ function loadLayoutState(data, persistLocal) {
     setCanvasZoom(data.canvasZoom || 1);
     setCanvasPan(data.canvasPanX || 0, data.canvasPanY || 0);
     Object.entries(nodesData).forEach(([id, node]) => {
+        const defH = node.type === 'sequence' ? seqCardHeight(Array.isArray(node.values) ? Math.max(1, node.values.length) : 4)
+            : (node.type === 'array' ? arrayCardHeight(Math.max(1, Math.min(16, Number(node.arraySize || 4)))) : Number(nodeMeta[node.type]?.contentHeight || 80) + 44);
         const size = node.type === 'group'
             ? getGroupSize(id)
-            : { width: 180, height: Number(nodeMeta[node.type]?.contentHeight || 80) + 44 };
+            : { width: nodeMeta[node.type]?.width || 180, height: defH };
         const pos = clampToWorkspace(node.x, node.y, size.width, size.height);
         node.x = pos.x;
         node.y = pos.y;
@@ -2744,6 +3031,37 @@ function createDefaultGraph() {
     persistLayout();
 }
 
+if (liveSignal) liveSignalBtn.classList.add('live-on');
+liveSignalBtn.addEventListener('click', () => {
+    liveSignal = !liveSignal;
+    liveSignalBtn.classList.toggle('live-on', liveSignal);
+    localStorage.setItem(LIVE_SIGNAL_KEY, liveSignal ? '1' : '0');
+    updateLiveSignals();
+});
+
+function updateLiveSignals() {
+    document.querySelectorAll('.port.output').forEach(p => p.classList.remove('active-out'));
+    document.querySelectorAll('.conn-live').forEach(c => c.classList.remove('conn-live'));
+    if (!liveSignal) return;
+    Object.entries(nodesData).forEach(([id, node]) => {
+        const meta = nodeMeta[node.type];
+        if (!meta || !meta.outputs) return;
+        const el = document.getElementById(id);
+        if (!el) return;
+        for (let pi = 0; pi < meta.outputs; pi++) {
+            const val = evaluatePreviewNode(id, pi, 0);
+            if (isPreviewTrue(val)) {
+                const port = el.querySelector(`.port.output[data-port="out-${pi}"]`);
+                if (port) port.classList.add('active-out');
+                connections.filter(c => c.fromNode === id && parsePortIndex(c.fromPort) === pi).forEach(conn => {
+                    const path = document.getElementById(`conn-path-${conn.id}`);
+                    if (path) path.classList.add('conn-live');
+                });
+            }
+        }
+    });
+}
+
 function updateSignalMonitors() {
     Object.entries(nodesData).forEach(([id, node]) => {
         if (node.type !== 'test-signal') return;
@@ -2761,6 +3079,7 @@ function updateSignalMonitors() {
             valueEl.title = String(value);
         }
     });
+    updateLiveSignals();
 }
 
 function findPreviewInputType(nodeId, portIndex) {
@@ -2828,6 +3147,58 @@ function evaluatePreviewNode(nodeId, outputPortIndex, depth = 0) {
     if (type === 'building-signal') {
         const building = getSelectedBuilding(nodeId);
         return building ? getBuildingSignalValue(building) : 0;
+    }
+    if (type === 'sequence') {
+        const values = Array.isArray(node.values) && node.values.length > 0 ? node.values : [0, 0, 0, 0];
+        const advanceValue = a;
+        const resetValue = b;
+        const advanceActive = isPreviewTrue(advanceValue);
+        const prevAdvance = node._seqPrevAdvance || false;
+        node._seqPrevAdvance = advanceActive;
+        const resetActive = isPreviewTrue(resetValue);
+        const prevReset = node._seqPrevReset || false;
+        node._seqPrevReset = resetActive;
+        if (resetActive && !prevReset) {
+            node._seqStep = 0;
+        } else if (advanceActive && !prevAdvance) {
+            node._seqStep = ((node._seqStep || 0) + 1) % values.length;
+        }
+        if (node._seqStep === undefined) node._seqStep = 0;
+        if (outputPortIndex === 1) return node._seqStep;
+        return Math.max(0, Math.min(15, Math.floor(Number(values[node._seqStep] || 0))));
+    }
+    if (type === 'array') {
+        if (!Array.isArray(node.values) || node.values.length === 0) node.values = [0,0,0,0];
+        return 0;
+    }
+    if (type === 'array-get') {
+        const indexValue = evaluatePreviewInput(nodeId, 1, depth + 1);
+        const refInput = connections.find(c => c.toNode === nodeId && parsePortIndex(c.toPort) === 0);
+        const refNodeId = refInput ? refInput.fromNode : null;
+        const refNode = refNodeId ? nodesData[refNodeId] : null;
+        if (!refNode || !Array.isArray(refNode.values) || refNode.values.length === 0) return 0;
+        const idx = Math.max(0, Math.min(refNode.values.length - 1, Math.floor(Number(indexValue || 0))));
+        return Number(refNode.values[idx] || 0);
+    }
+    if (type === 'array-set') {
+        const targetArrayId = findArrayTargetForSetNode(nodeId);
+        const targetArray = targetArrayId ? nodesData[targetArrayId] : null;
+        const writeEnabled = isPreviewTrue(evaluatePreviewInput(nodeId, 2, depth + 1));
+        if (!targetArrayId || !targetArray || !writeEnabled) return 0;
+        if (!Array.isArray(targetArray.values) || targetArray.values.length === 0) {
+            targetArray.values = [0, 0, 0, 0];
+        }
+        const indexValue = evaluatePreviewInput(nodeId, 0, depth + 1);
+        const writeValue = evaluatePreviewInput(nodeId, 1, depth + 1);
+        const idx = Math.max(0, Math.min(targetArray.values.length - 1, Math.floor(Number(indexValue || 0))));
+        targetArray.values[idx] = Math.max(0, Number(writeValue || 0));
+        updateArrayNodeDisplay(targetArrayId);
+        return 1;
+    }
+    if (type === 'split4') {
+        const raw = Math.max(0, Math.min(15, Math.floor(Number(a || 0))));
+        const bits = [raw & 1, (raw >> 1) & 1, (raw >> 2) & 1, (raw >> 3) & 1];
+        return bits[Math.min(3, Math.max(0, outputPortIndex))] || 0;
     }
     if (type === 'cycle4') return outputPortIndex === Math.floor(Date.now() / Math.max(200, Number(node.intervalSeconds || 5) * 1000)) % 4 ? 1 : 0;
     if (type === 'timer') return Math.floor(Date.now() / Math.max(200, Number(node.intervalSeconds || 5) * 1000)) % 2 === 0 ? 1 : 0;
@@ -2901,6 +3272,12 @@ function buildRuntimeBlueprintJson() {
         }
         if (node.type === 'building-status' || node.type === 'building-signal') {
             runtimeNode.SelectedBuildingInstanceId = Number(node.buildingInstanceId || 0);
+        }
+        if (node.type === 'sequence' || node.type === 'array') {
+            const values = Array.isArray(node.values) && node.values.length > 0 ? node.values : (node.type === 'sequence' ? [0, 0, 0, 0] : [0, 0, 0, 0]);
+            const maxVal = node.type === 'sequence' ? 15 : Number.POSITIVE_INFINITY;
+            const rawValues = values.slice().map(v => Math.min(maxVal, Math.max(0, Math.floor(Number(v || 0)))));
+            runtimeNode.Values = rawValues.length > 0 ? rawValues : (node.type === 'sequence' ? [0, 0, 0, 0] : [0, 0, 0, 0]);
         }
         nodes.push(runtimeNode);
     });
