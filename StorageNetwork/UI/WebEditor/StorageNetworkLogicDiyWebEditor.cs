@@ -237,6 +237,12 @@ namespace StorageNetwork.UI.WebEditor
                     return;
                 }
 
+                if (path == "/api/signals")
+                {
+                    WriteJson(context, BuildSignalState(context));
+                    return;
+                }
+
                 if (path == "/api/heartbeat")
                 {
                     MarkHeartbeat(context);
@@ -269,7 +275,7 @@ namespace StorageNetwork.UI.WebEditor
         private static WebEditorState BuildState(HttpListenerContext context)
         {
             int id = GetId(context);
-            if (id > 0)
+            if (id != 0)
             {
                 lock (sync)
                 {
@@ -286,6 +292,31 @@ namespace StorageNetwork.UI.WebEditor
             }
 
             return new WebEditorState();
+        }
+
+        private static WebEditorSignalState BuildSignalState(HttpListenerContext context)
+        {
+            int id = GetId(context);
+            lock (sync)
+            {
+                if (id != 0)
+                {
+                    activePages[id] = System.DateTime.UtcNow;
+                }
+
+                if (cachedStates.TryGetValue(id, out WebEditorState state) && state != null)
+                {
+                    return new WebEditorSignalState
+                    {
+                        OutputSignalValue = state.OutputSignalValue,
+                        NodeOutputValues = state.NodeOutputValues == null
+                            ? new Dictionary<string, float>()
+                            : new Dictionary<string, float>(state.NodeOutputValues)
+                    };
+                }
+            }
+
+            return new WebEditorSignalState();
         }
 
         private static WebEditorState BuildLightState(StorageNetworkLogicDiy logic)
@@ -360,7 +391,7 @@ namespace StorageNetwork.UI.WebEditor
         private static void MarkHeartbeat(HttpListenerContext context)
         {
             int id = GetId(context);
-            if (id <= 0)
+            if (id == 0)
             {
                 return;
             }
@@ -714,7 +745,7 @@ namespace StorageNetwork.UI.WebEditor
                 }
 
                 bool titleMatchesEditorId = title.IndexOf(idNeedle, StringComparison.OrdinalIgnoreCase) >= 0;
-                if (id > 0 && !titleMatchesEditorId)
+                if (id != 0 && !titleMatchesEditorId)
                 {
                     return true;
                 }
@@ -869,6 +900,12 @@ namespace StorageNetwork.UI.WebEditor
             public Dictionary<string, float> NodeOutputValues { get; set; } = new Dictionary<string, float>();
             public List<StorageNetworkLogicDiy.WebEditorMaterialOption> Materials { get; set; } = new List<StorageNetworkLogicDiy.WebEditorMaterialOption>();
             public List<StorageNetworkLogicDiy.WebEditorBuildingOption> Buildings { get; set; } = new List<StorageNetworkLogicDiy.WebEditorBuildingOption>();
+        }
+
+        private sealed class WebEditorSignalState
+        {
+            public int OutputSignalValue { get; set; }
+            public Dictionary<string, float> NodeOutputValues { get; set; } = new Dictionary<string, float>();
         }
 
         private sealed class WebEditorSaveRequest

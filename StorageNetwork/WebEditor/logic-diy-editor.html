@@ -2043,11 +2043,17 @@ let autoSaveTimer = 0;
 let heartbeatFailures = 0;
 let heartbeatTimer = 0;
 let stateRefreshTimer = 0;
+let signalStateRefreshTimer = 0;
 let monitorPreviewTimer = 0;
 let signalRefreshFrame = 0;
 let stateRefreshInFlight = false;
-const ACTIVE_REFRESH_MS = 100;
-const BACKGROUND_REFRESH_MS = 1000;
+let signalStateRefreshInFlight = false;
+const SIGNAL_REFRESH_MS = 100;
+const PREVIEW_REFRESH_MS = 200;
+const FULL_STATE_REFRESH_MS = 1000;
+const BACKGROUND_SIGNAL_REFRESH_MS = 500;
+const BACKGROUND_PREVIEW_REFRESH_MS = 1000;
+const BACKGROUND_FULL_STATE_REFRESH_MS = 2000;
 const SNAP_DISTANCE = 34;
 const LANG_STORAGE_KEY = 'storage-network-logic-diy-language';
 const SIDEBAR_COLLAPSED_STORAGE_KEY = 'storage-network-logic-diy-sidebar-collapsed';
@@ -2560,8 +2566,9 @@ function getNodeOutputUnit(type) {
 function handleGameDisconnected() {
     setStatus(t('gameClosed'));
     clearInterval(heartbeatTimer);
-    clearInterval(stateRefreshTimer);
-    clearInterval(monitorPreviewTimer);
+    clearTimeout(stateRefreshTimer);
+    clearTimeout(signalStateRefreshTimer);
+    clearTimeout(monitorPreviewTimer);
     document.body.classList.add('disconnected');
     setTimeout(() => {
         window.open('', '_self');
@@ -3692,8 +3699,16 @@ function scheduleSignalRefresh() {
     });
 }
 
-function currentRefreshDelay() {
-    return document.hidden ? BACKGROUND_REFRESH_MS : ACTIVE_REFRESH_MS;
+function currentSignalRefreshDelay() {
+    return document.hidden ? BACKGROUND_SIGNAL_REFRESH_MS : SIGNAL_REFRESH_MS;
+}
+
+function currentPreviewRefreshDelay() {
+    return document.hidden ? BACKGROUND_PREVIEW_REFRESH_MS : PREVIEW_REFRESH_MS;
+}
+
+function currentFullStateRefreshDelay() {
+    return document.hidden ? BACKGROUND_FULL_STATE_REFRESH_MS : FULL_STATE_REFRESH_MS;
 }
 
 function schedulePreviewLoop() {
@@ -3702,15 +3717,29 @@ function schedulePreviewLoop() {
         advancePreviewStateRound();
         scheduleSignalRefresh();
         schedulePreviewLoop();
-    }, currentRefreshDelay());
+    }, currentPreviewRefreshDelay());
 }
 
 function scheduleStateRefreshLoop() {
     clearTimeout(stateRefreshTimer);
     stateRefreshTimer = setTimeout(async () => {
-        await refreshGameState();
-        scheduleStateRefreshLoop();
-    }, currentRefreshDelay());
+        try {
+            await refreshGameState();
+        } finally {
+            scheduleStateRefreshLoop();
+        }
+    }, currentFullStateRefreshDelay());
+}
+
+function scheduleRuntimeSignalLoop() {
+    clearTimeout(signalStateRefreshTimer);
+    signalStateRefreshTimer = setTimeout(async () => {
+        try {
+            await refreshRuntimeSignals();
+        } finally {
+            scheduleRuntimeSignalLoop();
+        }
+    }, currentSignalRefreshDelay());
 }
 
 function findPreviewInputType(nodeId, portIndex) {
@@ -4153,6 +4182,16 @@ document.addEventListener('keydown', e => {
 });
 
 // ===== HTTP API (save / state / heartbeat) =====
+async function fetchWithTimeout(url, options = {}, timeoutMs = 1500) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+        return await fetch(url, { ...options, signal: controller.signal });
+    } finally {
+        clearTimeout(timeout);
+    }
+}
+
 async function saveToGame(savingText, savedText) {
     setStatus(savingText);
     const payload = {
@@ -4163,11 +4202,11 @@ async function saveToGame(savingText, savedText) {
         ConditionThresholdKg: currentThreshold(),
         ConditionItemKey: selectedMaterialKey || serverState.conditionItemKey || serverState.ConditionItemKey || ''
     };
-    const response = await fetch(`/api/save?id=${encodeURIComponent(editorId)}`, {
+    const response = await fetchWithTimeout(`/api/save?id=${encodeURIComponent(editorId)}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
-    });
+    }, 3000);
     if (!response.ok) {
         setStatus(t('saveFailed'));
         return;
@@ -4180,7 +4219,7 @@ async function refreshGameState() {
     if (stateRefreshInFlight) return;
     stateRefreshInFlight = true;
     try {
-        const response = await fetch(`/api/state?id=${encodeURIComponent(editorId)}`);
+        const response = await fetchWithTimeout(`/api/state?id=${encodeURIComponent(editorId)}`, {}, 3000);
         if (!response.ok) return;
         const nextState = await response.json();
         const previousMaterialKey = selectedMaterialKey;
@@ -4219,8 +4258,25 @@ async function refreshGameState() {
     }
 }
 
+async function refreshRuntimeSignals() {
+    if (signalStateRefreshInFlight) return;
+    signalStateRefreshInFlight = true;
+    try {
+        const response = await fetchWithTimeout(`/api/signals?id=${encodeURIComponent(editorId)}`);
+        if (!response.ok) return;
+        const nextSignals = await response.json();
+        serverState.OutputSignalValue = nextSignals.OutputSignalValue ?? nextSignals.outputSignalValue ?? 0;
+        serverState.NodeOutputValues = nextSignals.NodeOutputValues ?? nextSignals.nodeOutputValues ?? {};
+        scheduleSignalRefresh();
+    } catch {
+        // Heartbeat handles disconnected-game UI; the next signal tick retries automatically.
+    } finally {
+        signalStateRefreshInFlight = false;
+    }
+}
+
 function sendHeartbeat() {
-    fetch(`/api/heartbeat?id=${encodeURIComponent(editorId)}`)
+    fetchWithTimeout(`/api/heartbeat?id=${encodeURIComponent(editorId)}`)
         .then(response => {
             if (!response.ok) throw new Error('heartbeat failed');
             heartbeatFailures = 0;
@@ -4240,6 +4296,7 @@ async function boot() {
     setStatus(t('connected'));
     updateSignalMonitors();
     schedulePreviewLoop();
+    scheduleRuntimeSignalLoop();
     scheduleStateRefreshLoop();
     sendHeartbeat();
     heartbeatTimer = setInterval(sendHeartbeat, 2000);
@@ -4247,9 +4304,11 @@ async function boot() {
 
 document.addEventListener('visibilitychange', () => {
     schedulePreviewLoop();
+    scheduleRuntimeSignalLoop();
     scheduleStateRefreshLoop();
     if (!document.hidden) {
         refreshGameState();
+        refreshRuntimeSignals();
         scheduleSignalRefresh();
     }
 });
