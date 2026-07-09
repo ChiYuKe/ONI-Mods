@@ -110,6 +110,28 @@ namespace StorageNetwork.UI.WebEditor
             }
         }
 
+        public static void RefreshRuntimeSignalsIfActive(StorageNetworkLogicDiy logic)
+        {
+            if (logic == null)
+            {
+                return;
+            }
+
+            int id = logic.GetInstanceID();
+            int outputSignalValue = logic.OutputSignalValue;
+            Dictionary<string, float> nodeOutputValues = logic.GetRuntimeEvalSnapshot();
+            lock (sync)
+            {
+                if (!IsPageActiveLocked(id) || !cachedStates.TryGetValue(id, out WebEditorState state) || state == null)
+                {
+                    return;
+                }
+
+                state.OutputSignalValue = outputSignalValue;
+                state.NodeOutputValues = nodeOutputValues;
+            }
+        }
+
         public static void ApplyPending(StorageNetworkLogicDiy logic)
         {
             if (logic == null)
@@ -229,6 +251,13 @@ namespace StorageNetwork.UI.WebEditor
                     return;
                 }
 
+                string ext = Path.GetExtension(path)?.ToLowerInvariant();
+                if (ext == ".js" || ext == ".css" || ext == ".png" || ext == ".svg")
+                {
+                    ServeStaticFile(context, path.TrimStart('/'));
+                    return;
+                }
+
                 ServeEditor(context);
             }
             catch (Exception ex)
@@ -308,6 +337,8 @@ namespace StorageNetwork.UI.WebEditor
                 PowerCapacityJoules = metrics.PowerCapacityJoules,
                 PowerRemainingJoules = metrics.PowerRemainingJoules,
                 PowerJoulesLostPerCycle = metrics.PowerJoulesLostPerCycle,
+                OutputSignalValue = logic.OutputSignalValue,
+                NodeOutputValues = logic.GetRuntimeEvalSnapshot(),
                 Materials = logic.GetWebEditorMaterialOptions(),
                 Buildings = logic.GetWebEditorBuildingOptions()
             };
@@ -424,9 +455,47 @@ namespace StorageNetwork.UI.WebEditor
             byte[] bytes = Encoding.UTF8.GetBytes(html);
             context.Response.StatusCode = 200;
             context.Response.ContentType = "text/html; charset=utf-8";
+            AddNoCacheHeaders(context.Response);
             context.Response.ContentLength64 = bytes.Length;
             context.Response.OutputStream.Write(bytes, 0, bytes.Length);
             context.Response.OutputStream.Close();
+        }
+
+        private static void ServeStaticFile(HttpListenerContext context, string relativePath)
+        {
+            string directory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+            string filePath = Path.Combine(directory ?? string.Empty, "WebEditor", relativePath);
+            if (!File.Exists(filePath))
+            {
+                context.Response.StatusCode = 404;
+                context.Response.Close();
+                return;
+            }
+
+            string ext = Path.GetExtension(filePath)?.ToLowerInvariant();
+            string contentType = ext switch
+            {
+                ".js" => "application/javascript; charset=utf-8",
+                ".css" => "text/css; charset=utf-8",
+                ".png" => "image/png",
+                ".svg" => "image/svg+xml",
+                _ => "application/octet-stream"
+            };
+
+            byte[] bytes = File.ReadAllBytes(filePath);
+            context.Response.StatusCode = 200;
+            context.Response.ContentType = contentType;
+            AddNoCacheHeaders(context.Response);
+            context.Response.ContentLength64 = bytes.Length;
+            context.Response.OutputStream.Write(bytes, 0, bytes.Length);
+            context.Response.OutputStream.Close();
+        }
+
+        private static void AddNoCacheHeaders(HttpListenerResponse response)
+        {
+            response.Headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0";
+            response.Headers["Pragma"] = "no-cache";
+            response.Headers["Expires"] = "0";
         }
 
         private static string GetEditorPath()
@@ -796,6 +865,8 @@ namespace StorageNetwork.UI.WebEditor
             public float PowerCapacityJoules { get; set; }
             public float PowerRemainingJoules { get; set; }
             public float PowerJoulesLostPerCycle { get; set; }
+            public int OutputSignalValue { get; set; }
+            public Dictionary<string, float> NodeOutputValues { get; set; } = new Dictionary<string, float>();
             public List<StorageNetworkLogicDiy.WebEditorMaterialOption> Materials { get; set; } = new List<StorageNetworkLogicDiy.WebEditorMaterialOption>();
             public List<StorageNetworkLogicDiy.WebEditorBuildingOption> Buildings { get; set; } = new List<StorageNetworkLogicDiy.WebEditorBuildingOption>();
         }

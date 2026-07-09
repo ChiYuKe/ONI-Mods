@@ -1,5 +1,6 @@
 using KSerialization;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using StorageNetwork.Core;
 using StorageNetwork.Services;
@@ -68,6 +69,8 @@ namespace StorageNetwork.Components
         private readonly HashSet<string> timerPulseNodes = new HashSet<string>();
         private readonly Dictionary<string, int> cycleIndexByNode = new Dictionary<string, int>();
         private readonly Dictionary<string, float> runtimeEvalCache = new Dictionary<string, float>();
+        private readonly Dictionary<string, float> runtimeStableOutputSnapshot = new Dictionary<string, float>();
+        private readonly HashSet<string> runtimeEvalStack = new HashSet<string>();
         private readonly Dictionary<string, float> delayElapsedByNode = new Dictionary<string, float>();
         private readonly Dictionary<string, bool> latchStateByNode = new Dictionary<string, bool>();
         private readonly Dictionary<string, bool> previousInputStateByNode = new Dictionary<string, bool>();
@@ -76,8 +79,10 @@ namespace StorageNetwork.Components
         private readonly Dictionary<string, int> sequenceStepByNode = new Dictionary<string, int>();
         private readonly Dictionary<string, bool> sequencePrevAdvanceByNode = new Dictionary<string, bool>();
         private readonly Dictionary<string, bool> sequencePrevResetByNode = new Dictionary<string, bool>();
-        private readonly Dictionary<string, float[]> arraySlotValuesByNode = new Dictionary<string, float[]>();
-        private readonly Dictionary<string, bool> arrayPrevWriteByNode = new Dictionary<string, bool>();
+        private readonly Dictionary<string, bool> hysteresisStateByNode = new Dictionary<string, bool>();
+        private readonly Dictionary<string, bool> toggleStateByNode = new Dictionary<string, bool>();
+        private readonly Dictionary<string, bool> togglePrevInputByNode = new Dictionary<string, bool>();
+        private readonly Dictionary<string, float> pulseShaperRemainingByNode = new Dictionary<string, float>();
         private float runtimeEvalDt;
         private static readonly Dictionary<System.Type, PropertyInfo> switchLikeOutputPropertyByType = new Dictionary<System.Type, PropertyInfo>();
         private static readonly EventSystem.IntraObjectHandler<StorageNetworkLogicDiy> OnCopySettingsDelegate =
@@ -199,6 +204,7 @@ namespace StorageNetwork.Components
             runtimeEvalDt = Mathf.Max(0f, dt);
             UpdateRuntimeTimers(dt);
             runtimeEvalCache.Clear();
+            BuildRuntimeStableOutputSnapshot();
             if (startupRefreshTicks > 0)
             {
                 EvaluateWithForcedSnapshot();
@@ -221,6 +227,8 @@ namespace StorageNetwork.Components
             {
                 ForceLogicNetworkRefresh();
             }
+
+            StorageNetwork.UI.WebEditor.StorageNetworkLogicDiyWebEditor.RefreshRuntimeSignalsIfActive(this);
         }
 
         private void ForceLogicNetworkRefresh()
@@ -365,8 +373,7 @@ namespace StorageNetwork.Components
             }
 
             Dictionary<string, RuntimeBlueprintNode> nodes = BuildRuntimeNodeMap(blueprint);
-            EvaluateRuntimeSideEffects(blueprint, nodes);
-            if (OutputMode == ChannelMode.FourChannel)
+            if (UsesFourChannelRuntimeOutput(blueprint))
             {
                 bool hasAnyInput = false;
                 for (int portIndex = 0; portIndex < 4; portIndex++)
@@ -405,20 +412,32 @@ namespace StorageNetwork.Components
             return true;
         }
 
-        private void EvaluateRuntimeSideEffects(RuntimeBlueprint blueprint, Dictionary<string, RuntimeBlueprintNode> nodes)
+        private bool UsesFourChannelRuntimeOutput(RuntimeBlueprint blueprint)
         {
-            if (blueprint?.Nodes == null || nodes == null)
+            if (OutputMode == ChannelMode.FourChannel)
             {
-                return;
+                return true;
             }
 
-            foreach (RuntimeBlueprintNode node in blueprint.Nodes)
+            if (blueprint?.Connections == null)
             {
-                if (node?.Module == "ArraySet" && !string.IsNullOrEmpty(node.Id))
+                return false;
+            }
+
+            foreach (RuntimeBlueprintConnection connection in blueprint.Connections)
+            {
+                if (connection != null && connection.ToNodeId == "system:output" && connection.ToPortIndex > 0)
                 {
-                    EvaluateArraySetNode(node.Id, blueprint, nodes, 0);
+                    return true;
                 }
             }
+
+            return false;
+        }
+
+        private bool UsesFourChannelRuntimeOutput()
+        {
+            return UsesFourChannelRuntimeOutput(TryGetRuntimeBlueprint());
         }
 
         private float GetRuntimeCompareInputKg()
@@ -500,12 +519,27 @@ namespace StorageNetwork.Components
             }
 
             string cacheKey = nodeId + ":" + outputPortIndex;
+            string module = node.Module ?? string.Empty;
+            if (runtimeEvalStack.Contains(cacheKey))
+            {
+                return GetRuntimeStableOutput(nodeId, outputPortIndex, node, module);
+            }
+
             if (runtimeEvalCache.TryGetValue(cacheKey, out float cached))
             {
                 return cached;
             }
 
-            string module = node.Module ?? string.Empty;
+            runtimeEvalStack.Add(cacheKey);
+            try
+            {
+            if (module == "Counter")
+            {
+                float counterResult = EvaluateCounterNode(blueprint, nodes, nodeId, depth + 1);
+                runtimeEvalCache[cacheKey] = counterResult;
+                return counterResult;
+            }
+
             float a = EvaluateRuntimeInputNumber(blueprint, nodes, nodeId, 0, depth + 1);
             float b = EvaluateRuntimeInputNumber(blueprint, nodes, nodeId, 1, depth + 1);
             float result;
@@ -513,16 +547,18 @@ namespace StorageNetwork.Components
             switch (module)
             {
                 case "Add":
-                    result = a + b;
+                    result = EvaluateRuntimeInputValues(blueprint, nodes, nodeId, node.InputCount, depth + 1, 2)
+                        .Aggregate(0f, (sum, value) => sum + value);
                     break;
                 case "Subtract":
-                    result = a - b;
+                    result = EvaluateRuntimeFold(blueprint, nodes, nodeId, node.InputCount, depth + 1, 2, (current, value) => current - value);
                     break;
                 case "Multiply":
-                    result = a * b;
+                    result = EvaluateRuntimeInputValues(blueprint, nodes, nodeId, node.InputCount, depth + 1, 2)
+                        .Aggregate(1f, (product, value) => product * value);
                     break;
                 case "Divide":
-                    result = Mathf.Abs(b) < 0.0001f ? 0f : a / b;
+                    result = EvaluateRuntimeFold(blueprint, nodes, nodeId, node.InputCount, depth + 1, 2, (current, value) => Mathf.Abs(value) < 0.0001f ? 0f : current / value);
                     break;
                 case "Negate":
                     result = -a;
@@ -554,9 +590,6 @@ namespace StorageNetwork.Components
                     result = a >= Mathf.Min(b, c) && a <= Mathf.Max(b, c) ? 1f : 0f;
                     break;
                 case "Variable":
-                    result = ConditionThresholdKg;
-                    break;
-                case "Compare":
                     result = ConditionThresholdKg;
                     break;
                 case "Constant":
@@ -597,15 +630,6 @@ namespace StorageNetwork.Components
                 case "Sequence":
                     result = EvaluateSequenceNode(nodeId, outputPortIndex, a, b);
                     break;
-                case "Array":
-                    result = EvaluateArrayNode(nodeId, node);
-                    break;
-                case "ArrayGet":
-                    result = EvaluateArrayGetNode(nodeId, blueprint, nodes, depth);
-                    break;
-                case "ArraySet":
-                    result = EvaluateArraySetNode(nodeId, blueprint, nodes, depth) ? 1f : 0f;
-                    break;
                 case "Delay":
                     result = EvaluateDelayNode(nodeId, a, node.IntervalSeconds);
                     break;
@@ -615,8 +639,20 @@ namespace StorageNetwork.Components
                 case "EdgePulse":
                     result = EvaluateEdgePulseNode(nodeId, a);
                     break;
+                case "Hysteresis":
+                    result = EvaluateHysteresisNode(nodeId, a, node);
+                    break;
+                case "Toggle":
+                    result = EvaluateToggleNode(nodeId, a);
+                    break;
+                case "PulseShaper":
+                    result = EvaluatePulseShaperNode(nodeId, a, node);
+                    break;
+                case "MapRange":
+                    result = EvaluateMapRangeNode(nodeId, a, node);
+                    break;
                 case "Counter":
-                    result = EvaluateCounterNode(nodeId, a, b);
+                    result = EvaluateCounterNode(blueprint, nodes, nodeId, depth + 1);
                     break;
                 case "RandomChance":
                     result = UnityEngine.Random.value * 100f < Mathf.Clamp(node.Value, 0f, 100f) ? 1f : 0f;
@@ -669,9 +705,6 @@ namespace StorageNetwork.Components
                 case "BuildingSignal":
                     result = GetBuildingOutputSignal(node.SelectedBuildingInstanceId);
                     break;
-                case "FixedOutput":
-                    result = OutputSignalValue;
-                    break;
                 case "Output":
                     result = a;
                     break;
@@ -681,19 +714,136 @@ namespace StorageNetwork.Components
                 case "Merge4":
                     result = EvaluateMerge4Node(blueprint, nodes, nodeId, depth);
                     break;
+                case "Select":
+                    int portCount = node?.Value > 1f ? Mathf.FloorToInt(node.Value) : 6;
+                    int selIndex = Mathf.Clamp(Mathf.FloorToInt(a), 0, portCount - 1);
+                    result = EvaluateRuntimeInputNumber(blueprint, nodes, nodeId, selIndex + 1, depth + 1);
+                    break;
                 default:
+                    Debug.LogWarning($"StorageNetwork LogicDiy: Unknown module '{module}' for node '{nodeId}'");
                     result = 0f;
                     break;
             }
 
             runtimeEvalCache[cacheKey] = result;
             return result;
+            }
+            finally
+            {
+                runtimeEvalStack.Remove(cacheKey);
+            }
+        }
+
+        private float GetRuntimeStableOutput(string nodeId, int outputPortIndex, RuntimeBlueprintNode node, string module)
+        {
+            string cacheKey = nodeId + ":" + outputPortIndex;
+            if (runtimeStableOutputSnapshot.TryGetValue(cacheKey, out float snapshotted))
+            {
+                return snapshotted;
+            }
+
+            switch (module)
+            {
+                case "Counter":
+                    return counterValueByNode.TryGetValue(nodeId, out float count) ? count : 0f;
+                case "Sequence":
+                    int step = sequenceStepByNode.TryGetValue(nodeId, out int storedStep) ? storedStep : 0;
+                    if (outputPortIndex == 1)
+                    {
+                        return step;
+                    }
+
+                    List<float> values = node?.Values;
+                    if (values == null || values.Count == 0)
+                    {
+                        return 0f;
+                    }
+
+                    return Mathf.Max(0f, Mathf.Min(15f, Mathf.Floor(values[Mathf.Clamp(step, 0, values.Count - 1)])));
+                case "Latch":
+                    return latchStateByNode.TryGetValue(nodeId, out bool latch) && latch ? 1f : 0f;
+                case "Toggle":
+                    return toggleStateByNode.TryGetValue(nodeId, out bool toggle) && toggle ? 1f : 0f;
+                case "Hysteresis":
+                    return hysteresisStateByNode.TryGetValue(nodeId, out bool hysteresis) && hysteresis ? 1f : 0f;
+                case "PulseShaper":
+                    return pulseShaperRemainingByNode.TryGetValue(nodeId, out float remaining) && remaining > 0f ? 1f : 0f;
+                default:
+                    return 0f;
+            }
+        }
+
+        private void BuildRuntimeStableOutputSnapshot()
+        {
+            runtimeStableOutputSnapshot.Clear();
+            foreach (KeyValuePair<string, float> item in counterValueByNode)
+            {
+                runtimeStableOutputSnapshot[item.Key + ":0"] = item.Value;
+            }
+
+            foreach (KeyValuePair<string, bool> item in latchStateByNode)
+            {
+                runtimeStableOutputSnapshot[item.Key + ":0"] = item.Value ? 1f : 0f;
+            }
+
+            foreach (KeyValuePair<string, bool> item in toggleStateByNode)
+            {
+                runtimeStableOutputSnapshot[item.Key + ":0"] = item.Value ? 1f : 0f;
+            }
+
+            foreach (KeyValuePair<string, bool> item in hysteresisStateByNode)
+            {
+                runtimeStableOutputSnapshot[item.Key + ":0"] = item.Value ? 1f : 0f;
+            }
+
+            foreach (KeyValuePair<string, float> item in pulseShaperRemainingByNode)
+            {
+                runtimeStableOutputSnapshot[item.Key + ":0"] = item.Value > 0f ? 1f : 0f;
+            }
         }
 
         private float EvaluateRuntimeInputNumber(RuntimeBlueprint blueprint, Dictionary<string, RuntimeBlueprintNode> nodes, string nodeId, int portIndex, int depth)
         {
             RuntimeBlueprintConnection input = FindRuntimeInput(blueprint, nodeId, portIndex);
-            return input == null ? 0f : EvaluateRuntimeNumber(blueprint, nodes, input.FromNodeId, input.FromPortIndex, depth);
+            if (input == null)
+            {
+                RuntimeBlueprintNode currentNode = nodes != null && nodes.TryGetValue(nodeId, out RuntimeBlueprintNode found) ? found : null;
+                return currentNode?.InputValues != null && portIndex >= 0 && portIndex < currentNode.InputValues.Count ? currentNode.InputValues[portIndex] : 0f;
+            }
+
+            return EvaluateRuntimeNumber(blueprint, nodes, input.FromNodeId, input.FromPortIndex, depth);
+        }
+
+        private List<float> EvaluateRuntimeInputValues(RuntimeBlueprint blueprint, Dictionary<string, RuntimeBlueprintNode> nodes, string nodeId, int inputCount, int depth, int minimumCount)
+        {
+            int count = Mathf.Clamp(inputCount > 0 ? inputCount : minimumCount, minimumCount, 10);
+            List<float> values = new List<float>(count);
+            for (int i = 0; i < count; i++)
+            {
+                RuntimeBlueprintConnection input = FindRuntimeInput(blueprint, nodeId, i);
+                if (input == null)
+                {
+                    RuntimeBlueprintNode currentNode = nodes != null && nodes.TryGetValue(nodeId, out RuntimeBlueprintNode found) ? found : null;
+                    values.Add(currentNode?.InputValues != null && i < currentNode.InputValues.Count ? currentNode.InputValues[i] : 0f);
+                    continue;
+                }
+
+                values.Add(EvaluateRuntimeNumber(blueprint, nodes, input.FromNodeId, input.FromPortIndex, depth + 1));
+            }
+
+            return values;
+        }
+
+        private float EvaluateRuntimeFold(RuntimeBlueprint blueprint, Dictionary<string, RuntimeBlueprintNode> nodes, string nodeId, int inputCount, int depth, int minimumCount, System.Func<float, float, float> fold)
+        {
+            List<float> values = EvaluateRuntimeInputValues(blueprint, nodes, nodeId, inputCount, depth + 1, minimumCount);
+            float result = values.Count > 0 ? values[0] : 0f;
+            for (int i = 1; i < values.Count; i++)
+            {
+                result = fold(result, values[i]);
+            }
+
+            return result;
         }
 
         private float EvaluateDelayNode(string nodeId, float inputValue, float intervalSeconds)
@@ -735,26 +885,112 @@ namespace StorageNetwork.Components
             return current && !previous ? 1f : 0f;
         }
 
-        private float EvaluateCounterNode(string nodeId, float pulseValue, float resetValue)
+        private float EvaluateHysteresisNode(string nodeId, float inputValue, RuntimeBlueprintNode node)
         {
-            if (IsRuntimeTrue(resetValue))
+            float upper = node?.Upper ?? 500f;
+            float lower = node?.Lower ?? 200f;
+            if (upper < lower)
             {
-                counterValueByNode[nodeId] = 0f;
-                previousInputStateByNode[nodeId] = IsRuntimeTrue(pulseValue);
+                float temp = upper;
+                upper = lower;
+                lower = temp;
+            }
+
+            hysteresisStateByNode.TryGetValue(nodeId, out bool currentState);
+            if (inputValue >= upper)
+            {
+                hysteresisStateByNode[nodeId] = true;
+                return 1f;
+            }
+
+            if (inputValue <= lower)
+            {
+                hysteresisStateByNode[nodeId] = false;
                 return 0f;
             }
 
+            if (!hysteresisStateByNode.ContainsKey(nodeId))
+            {
+                hysteresisStateByNode[nodeId] = inputValue > lower;
+            }
+
+            return hysteresisStateByNode[nodeId] ? 1f : 0f;
+        }
+
+        private float EvaluateToggleNode(string nodeId, float inputValue)
+        {
+            bool current = IsRuntimeTrue(inputValue);
+            togglePrevInputByNode.TryGetValue(nodeId, out bool previous);
+            togglePrevInputByNode[nodeId] = current;
+            if (current && !previous)
+            {
+                toggleStateByNode.TryGetValue(nodeId, out bool currentState);
+                toggleStateByNode[nodeId] = !currentState;
+            }
+
+            toggleStateByNode.TryGetValue(nodeId, out bool state);
+            return state ? 1f : 0f;
+        }
+
+        private float EvaluatePulseShaperNode(string nodeId, float inputValue, RuntimeBlueprintNode node)
+        {
+            float holdSeconds = Mathf.Max(0.1f, node?.IntervalSeconds ?? 1f);
+            bool inputActive = IsRuntimeTrue(inputValue);
+            pulseShaperRemainingByNode.TryGetValue(nodeId, out float remaining);
+            if (inputActive)
+            {
+                pulseShaperRemainingByNode[nodeId] = holdSeconds;
+                return 1f;
+            }
+
+            if (remaining > 0f)
+            {
+                remaining -= runtimeEvalDt;
+                if (remaining > 0f)
+                {
+                    pulseShaperRemainingByNode[nodeId] = remaining;
+                    return 1f;
+                }
+            }
+
+            pulseShaperRemainingByNode[nodeId] = 0f;
+            return 0f;
+        }
+
+        private float EvaluateMapRangeNode(string nodeId, float inputValue, RuntimeBlueprintNode node)
+        {
+            float inMin = node?.InMin ?? 0f;
+            float inMax = node?.InMax ?? 100f;
+            float outMin = node?.OutMin ?? 0f;
+            float outMax = node?.OutMax ?? 100f;
+            float range = inMax - inMin;
+            if (Mathf.Abs(range) < 0.0001f)
+            {
+                return outMin;
+            }
+
+            float t = Mathf.Clamp01((inputValue - inMin) / range);
+            return outMin + t * (outMax - outMin);
+        }
+
+        private float EvaluateCounterNode(RuntimeBlueprint blueprint, Dictionary<string, RuntimeBlueprintNode> nodes, string nodeId, int depth)
+        {
+            float pulseValue = EvaluateRuntimeInputNumber(blueprint, nodes, nodeId, 0, depth + 1);
             bool current = IsRuntimeTrue(pulseValue);
             previousInputStateByNode.TryGetValue(nodeId, out bool previous);
             counterValueByNode.TryGetValue(nodeId, out float count);
-            if (current && !previous)
-            {
-                count += 1f;
-            }
+            float candidateCount = current && !previous ? count + 1f : count;
+            bool resetActive = IsRuntimeTrue(EvaluateRuntimeInputNumber(blueprint, nodes, nodeId, 1, depth + 1));
 
             previousInputStateByNode[nodeId] = current;
-            counterValueByNode[nodeId] = count;
-            return count;
+            if (resetActive)
+            {
+                counterValueByNode[nodeId] = 0f;
+                return candidateCount;
+            }
+
+            counterValueByNode[nodeId] = candidateCount;
+            return candidateCount;
         }
 
         private float EvaluateSequenceNode(string nodeId, int outputPortIndex, float advanceValue, float resetValue)
@@ -807,77 +1043,6 @@ namespace StorageNetwork.Components
             }
 
             return stepValue;
-        }
-
-        private float EvaluateArrayNode(string nodeId, RuntimeBlueprintNode node)
-        {
-            if (!arraySlotValuesByNode.TryGetValue(nodeId, out float[] slots))
-            {
-                if (node?.Values != null && node.Values.Count > 0)
-                {
-                    slots = node.Values.ToArray();
-                }
-                else
-                {
-                    slots = new float[4];
-                }
-
-                arraySlotValuesByNode[nodeId] = slots;
-            }
-
-            return 0f;
-        }
-
-        private bool EvaluateArraySetNode(string nodeId, RuntimeBlueprint blueprint, Dictionary<string, RuntimeBlueprintNode> nodes, int depth)
-        {
-            float indexValue = EvaluateRuntimeInputNumber(blueprint, nodes, nodeId, 0, depth + 1);
-            float writeValue = EvaluateRuntimeInputNumber(blueprint, nodes, nodeId, 1, depth + 1);
-
-            bool wrote = false;
-            if (blueprint?.Connections == null) return false;
-
-            foreach (RuntimeBlueprintConnection conn in blueprint.Connections)
-            {
-                if (conn == null || conn.FromNodeId != nodeId || conn.FromPortIndex != 0) continue;
-                string targetArrayId = conn.ToNodeId;
-                if (string.IsNullOrEmpty(targetArrayId)) continue;
-                if (!nodes.TryGetValue(targetArrayId, out RuntimeBlueprintNode targetNode) || targetNode?.Module != "Array") continue;
-
-                if (!arraySlotValuesByNode.TryGetValue(targetArrayId, out float[] slots) || slots == null || slots.Length == 0)
-                {
-                    if (targetNode.Values != null && targetNode.Values.Count > 0)
-                    {
-                        slots = targetNode.Values.ToArray();
-                    }
-                    else
-                    {
-                        slots = new float[4];
-                    }
-
-                    arraySlotValuesByNode[targetArrayId] = slots;
-                }
-
-                int writeIndex = Mathf.FloorToInt(indexValue);
-                if (writeIndex < 0 || writeIndex >= slots.Length) continue;
-                slots[writeIndex] = writeValue;
-                wrote = true;
-            }
-
-            return wrote;
-        }
-
-        private float EvaluateArrayGetNode(string nodeId, RuntimeBlueprint blueprint, Dictionary<string, RuntimeBlueprintNode> nodes, int depth)
-        {
-            float indexValue = EvaluateRuntimeInputNumber(blueprint, nodes, nodeId, 1, depth + 1);
-            RuntimeBlueprintConnection refConn = FindRuntimeInput(blueprint, nodeId, 0);
-            if (refConn == null || string.IsNullOrEmpty(refConn.FromNodeId)) return 0f;
-
-            if (!arraySlotValuesByNode.TryGetValue(refConn.FromNodeId, out float[] slots) || slots == null || slots.Length == 0)
-                return 0f;
-
-            int readIndex = Mathf.FloorToInt(indexValue);
-            if (readIndex < 0 || readIndex >= slots.Length) return 0f;
-            return slots[readIndex];
         }
 
         private static float EvaluateSplit4Node(int outputPortIndex, float inputValue)
@@ -1256,7 +1421,7 @@ namespace StorageNetwork.Components
 
         private int ClampOutputValue(int value)
         {
-            return OutputMode == ChannelMode.FourChannel
+            return UsesFourChannelRuntimeOutput()
                 ? Mathf.Clamp(value, 0, 15)
                 : Mathf.Clamp(value, 0, 1);
         }
@@ -1294,6 +1459,11 @@ namespace StorageNetwork.Components
             RuntimeLayoutJson = runtimeLayoutJson ?? string.Empty;
             ClearRuntimeNodeState();
             OutputModeValue = Mathf.Clamp(outputModeValue, 0, 1);
+            RuntimeBlueprint blueprint = TryGetRuntimeBlueprint();
+            if (UsesFourChannelRuntimeOutput(blueprint))
+            {
+                OutputModeValue = (int)ChannelMode.FourChannel;
+            }
             SourceModeValue = Mathf.Clamp(sourceModeValue, 0, 1);
             ConditionThresholdKg = Mathf.Max(0f, thresholdKg);
             ConditionItemKey = conditionItemKey ?? ConditionItemKey ?? string.Empty;
@@ -1305,6 +1475,11 @@ namespace StorageNetwork.Components
         internal float GetSelectedMaterialAmountKgForWebEditor()
         {
             return string.IsNullOrEmpty(ConditionItemKey) ? 0f : GetNetworkItemAmountKg(ConditionItemKey);
+        }
+
+        internal Dictionary<string, float> GetRuntimeEvalSnapshot()
+        {
+            return new Dictionary<string, float>(runtimeEvalCache);
         }
 
         internal WebEditorNetworkMetrics GetWebEditorNetworkMetrics()
@@ -1445,6 +1620,7 @@ namespace StorageNetwork.Components
         private void ClearRuntimeNodeState()
         {
             runtimeEvalCache.Clear();
+            runtimeStableOutputSnapshot.Clear();
             timerElapsedByNode.Clear();
             timerPulseNodes.Clear();
             cycleIndexByNode.Clear();
@@ -1456,8 +1632,10 @@ namespace StorageNetwork.Components
             sequenceStepByNode.Clear();
             sequencePrevAdvanceByNode.Clear();
             sequencePrevResetByNode.Clear();
-            arraySlotValuesByNode.Clear();
-            arrayPrevWriteByNode.Clear();
+            hysteresisStateByNode.Clear();
+            toggleStateByNode.Clear();
+            togglePrevInputByNode.Clear();
+            pulseShaperRemainingByNode.Clear();
         }
 
         internal sealed class WebEditorMaterialOption
@@ -1540,9 +1718,25 @@ namespace StorageNetwork.Components
 
             public float Value { get; set; }
 
+            public int InputCount { get; set; }
+
+            public List<float> InputValues { get; set; }
+
             public int SelectedBuildingInstanceId { get; set; }
 
             public List<float> Values { get; set; }
+
+            public float Upper { get; set; }
+
+            public float Lower { get; set; }
+
+            public float InMin { get; set; }
+
+            public float InMax { get; set; }
+
+            public float OutMin { get; set; }
+
+            public float OutMax { get; set; }
         }
 
         public sealed class RuntimeBlueprintConnection

@@ -77,7 +77,7 @@ namespace StorageNetwork.Components
                 }
 
                 int countBefore = storage.items.Count;
-                if (canonical.TryAbsorb(pickupable, hide_effects: true, allow_cross_storage: false))
+                if (MergeFluidChunk(canonical, pickupable))
                 {
                     mergedDuringPass = true;
                     if (storage.items.Count >= countBefore &&
@@ -88,6 +88,11 @@ namespace StorageNetwork.Components
                     }
 
                     continue;
+                }
+
+                if (!HasMergeRoom(canonical))
+                {
+                    canonicalChunks[primaryElement.ElementID] = pickupable;
                 }
 
                 scanIndex++;
@@ -132,6 +137,103 @@ namespace StorageNetwork.Components
 
             Element element = ElementLoader.FindElementByHash(primaryElement.ElementID);
             return element != null && (element.IsLiquid || element.IsGas);
+        }
+
+        private bool MergeFluidChunk(Pickupable canonical, Pickupable other)
+        {
+            if (canonical == null ||
+                other == null ||
+                canonical == other ||
+                canonical.wasAbsorbed ||
+                other.wasAbsorbed)
+            {
+                return false;
+            }
+
+            PrimaryElement canonicalElement = canonical.GetComponent<PrimaryElement>();
+            PrimaryElement otherElement = other.GetComponent<PrimaryElement>();
+            if (canonicalElement == null ||
+                otherElement == null ||
+                canonicalElement.ElementID != otherElement.ElementID)
+            {
+                return false;
+            }
+
+            float canonicalMass = Mathf.Max(0f, canonicalElement.Mass);
+            float otherMass = Mathf.Max(0f, otherElement.Mass);
+            if (otherMass <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+            {
+                RemoveMergedChunk(other.gameObject);
+                return true;
+            }
+
+            float mergeRoom = Mathf.Max(0f, PrimaryElement.MAX_MASS - canonicalMass);
+            if (mergeRoom <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+            {
+                return false;
+            }
+
+            float transferMass = Mathf.Min(otherMass, mergeRoom);
+            float finalTemperature = canonicalMass > 0f
+                ? GameUtil.GetFinalTemperature(canonicalElement.Temperature, canonicalMass, otherElement.Temperature, transferMass)
+                : otherElement.Temperature;
+
+            canonicalElement.KeepZeroMassObject = canonicalElement.KeepZeroMassObject || otherElement.KeepZeroMassObject;
+            canonicalElement.SetMassTemperature(canonicalMass + transferMass, finalTemperature);
+            if (otherElement.DiseaseIdx != byte.MaxValue && otherElement.DiseaseCount > 0)
+            {
+                int transferredDisease = transferMass + PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT >= otherMass
+                    ? otherElement.DiseaseCount
+                    : Mathf.RoundToInt(otherElement.DiseaseCount * Mathf.Clamp01(transferMass / otherMass));
+                if (transferredDisease > 0)
+                {
+                    canonicalElement.AddDisease(otherElement.DiseaseIdx, transferredDisease, "StorageNetworkFluidStorageCompactor.MergeFluidChunk");
+                    otherElement.ModifyDiseaseCount(-transferredDisease, "StorageNetworkFluidStorageCompactor.MergeFluidChunk");
+                }
+            }
+
+            GameObject canonicalObject = canonical.gameObject;
+            if (transferMass + PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT >= otherMass)
+            {
+                RemoveMergedChunk(other.gameObject);
+            }
+            else
+            {
+                otherElement.SetMassTemperature(otherMass - transferMass, otherElement.Temperature);
+            }
+
+            storage.Trigger(-1697596308, canonicalObject);
+            storage.OnStorageChange?.Invoke(canonicalObject);
+            storage.Trigger(-778359855, storage);
+            return true;
+        }
+
+        private static bool HasMergeRoom(Pickupable pickupable)
+        {
+            PrimaryElement primaryElement = pickupable != null ? pickupable.GetComponent<PrimaryElement>() : null;
+            return primaryElement != null &&
+                   PrimaryElement.MAX_MASS - Mathf.Max(0f, primaryElement.Mass) > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT;
+        }
+
+        private void RemoveMergedChunk(GameObject item)
+        {
+            if (item == null)
+            {
+                return;
+            }
+
+            if (storage != null && storage.items != null)
+            {
+                storage.items.Remove(item);
+            }
+
+            Pickupable pickupable = item.GetComponent<Pickupable>();
+            if (pickupable != null)
+            {
+                pickupable.storage = null;
+            }
+
+            Util.KDestroyGameObject(item);
         }
     }
 }
