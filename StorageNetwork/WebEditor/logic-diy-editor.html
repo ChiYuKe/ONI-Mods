@@ -5304,7 +5304,7 @@ if (exportBlueprintBtn && importBlueprintBtn && importBlueprintFile) {
                     canvasPanX: blueprint.canvasPanX || 0,
                     canvasPanY: blueprint.canvasPanY || 0
                 }, true);
-                if (ok) { setStatus('Imported'); markCircuitDirty(); }
+                if (ok) { setStatus('Imported'); markCircuitDirty(); fitAllNodesToView(); }
             } catch(e) { alert('Failed to parse blueprint file: ' + e.message); }
         };
         reader.readAsText(file);
