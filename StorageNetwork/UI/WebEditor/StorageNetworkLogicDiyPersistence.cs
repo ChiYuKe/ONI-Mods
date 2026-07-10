@@ -1,5 +1,6 @@
 using Newtonsoft.Json;
 using StorageNetwork.Components;
+using StorageNetwork.LogicDiy.Persistence;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -36,13 +37,7 @@ namespace StorageNetwork.UI.WebEditor
                     updatedAtUtcTicks = System.DateTime.UtcNow.Ticks
                 };
 
-                string directory = Path.GetDirectoryName(path);
-                if (!string.IsNullOrEmpty(directory))
-                {
-                    Directory.CreateDirectory(directory);
-                }
-
-                File.WriteAllText(path, JsonConvert.SerializeObject(store, Formatting.Indented));
+                LogicDiyConfigStore.WriteAtomically(path, JsonConvert.SerializeObject(store, Formatting.Indented));
             }
             catch (Exception ex)
             {
@@ -90,7 +85,7 @@ namespace StorageNetwork.UI.WebEditor
                 return new LogicDiyStore();
             }
 
-            LogicDiyStore store = JsonConvert.DeserializeObject<LogicDiyStore>(File.ReadAllText(path));
+            LogicDiyStore store = JsonConvert.DeserializeObject<LogicDiyStore>(LogicDiyConfigStore.ReadAllText(path));
             return store ?? new LogicDiyStore();
         }
 

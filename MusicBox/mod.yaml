@@ -1,0 +1,3 @@
+title: "音乐盒"
+description: "新增一个1x1大小的音乐盒，带有信号输入端，接受4-bit信号来播放对应钢琴音符。"
+staticID: "MusicBox"

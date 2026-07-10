@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using StorageNetwork.Core;
+using StorageNetwork.LogicDiy.Runtime;
 using StorageNetwork.Services;
 using StorageNetwork.UI;
 using UnityEngine;
@@ -83,7 +84,11 @@ namespace StorageNetwork.Components
         private readonly Dictionary<string, bool> toggleStateByNode = new Dictionary<string, bool>();
         private readonly Dictionary<string, bool> togglePrevInputByNode = new Dictionary<string, bool>();
         private readonly Dictionary<string, float> pulseShaperRemainingByNode = new Dictionary<string, float>();
+        private readonly Dictionary<string, float> previousNumberValueByNode = new Dictionary<string, float>();
+        private readonly Dictionary<string, int> numberChangeFlagsByNode = new Dictionary<string, int>();
+        private readonly HashSet<string> numberChangeUpdatedNodes = new HashSet<string>();
         private float runtimeEvalDt;
+        private readonly LogicDiyBlueprintCodec blueprintCodec = new LogicDiyBlueprintCodec();
         private static readonly Dictionary<System.Type, PropertyInfo> switchLikeOutputPropertyByType = new Dictionary<System.Type, PropertyInfo>();
         private static readonly EventSystem.IntraObjectHandler<StorageNetworkLogicDiy> OnCopySettingsDelegate =
             new EventSystem.IntraObjectHandler<StorageNetworkLogicDiy>((component, data) => component.OnCopySettings(data));
@@ -204,6 +209,7 @@ namespace StorageNetwork.Components
             runtimeEvalDt = Mathf.Max(0f, dt);
             UpdateRuntimeTimers(dt);
             runtimeEvalCache.Clear();
+            numberChangeUpdatedNodes.Clear();
             BuildRuntimeStableOutputSnapshot();
             if (startupRefreshTicks > 0)
             {
@@ -213,6 +219,12 @@ namespace StorageNetwork.Components
             {
                 EvaluateConditionOutput();
             }
+
+            // The editor renders node values from this cache. Evaluate every visual output as
+            // well as the graph's final output so counters and monitors on diagnostic branches
+            // keep advancing even when they are not wired to system:output.
+            EvaluateRuntimeDisplayNodes();
+            ApplyDeferredCounterResets();
 
             if (startupRefreshTicks > 0)
             {
@@ -352,10 +364,7 @@ namespace StorageNetwork.Components
             foreach (RuntimeBlueprintNode node in blueprint.Nodes)
             {
                 if (node != null && (node.Id == "system:material" ||
-                    node.Module == "MaterialCondition" ||
-                    node.Module == "MaterialLow" ||
-                    node.Module == "MaterialHigh" ||
-                    node.Module == "MaterialChanged"))
+                    LogicDiyNodeRegistry.UsesMaterialInput(node.Module)))
                 {
                     return true;
                 }
@@ -412,6 +421,73 @@ namespace StorageNetwork.Components
             return true;
         }
 
+        private void EvaluateRuntimeDisplayNodes()
+        {
+            RuntimeBlueprint blueprint = TryGetRuntimeBlueprint();
+            if (blueprint?.Nodes == null)
+            {
+                return;
+            }
+
+            Dictionary<string, RuntimeBlueprintNode> nodes = BuildRuntimeNodeMap(blueprint);
+            foreach (RuntimeBlueprintNode node in blueprint.Nodes)
+            {
+                if (node == null || string.IsNullOrEmpty(node.Id) || node.Module == "Output" ||
+                    node.Module == "Group")
+                {
+                    continue;
+                }
+
+                int outputCount = node.Module == "Cycle4" || node.Module == "Split4" ? 4 :
+                    node.Module == "NumberChanged" ? 3 :
+                    node.Module == "Sequence" ? 2 : 1;
+                for (int outputPort = 0; outputPort < outputCount; outputPort++)
+                {
+                    EvaluateRuntimeNumber(blueprint, nodes, node.Id, outputPort, 0);
+                }
+            }
+        }
+
+        // A Reset expression can legitimately feed back from a counter through a comparator:
+        // Counter -> Equal -> Counter.Reset.  Resolve it after all node values for this tick
+        // have been committed, so the comparator reads the current count rather than a value
+        // captured while the counter was still being evaluated.
+        private void ApplyDeferredCounterResets()
+        {
+            RuntimeBlueprint blueprint = TryGetRuntimeBlueprint();
+            if (blueprint?.Nodes == null)
+            {
+                return;
+            }
+
+            Dictionary<string, RuntimeBlueprintNode> nodes = BuildRuntimeNodeMap(blueprint);
+            foreach (RuntimeBlueprintNode node in blueprint.Nodes)
+            {
+                if (node == null || node.Module != "Counter" || string.IsNullOrEmpty(node.Id))
+                {
+                    continue;
+                }
+
+                RuntimeBlueprintConnection resetInput = FindRuntimeInput(blueprint, node.Id, 1);
+                if (resetInput == null)
+                {
+                    continue;
+                }
+
+                // The Reset source may have been evaluated before this counter published its
+                // final value. Recompute that source against the committed counter cache.
+                runtimeEvalCache.Remove(resetInput.FromNodeId + ":" + resetInput.FromPortIndex);
+                float resetValue = EvaluateRuntimeNumber(blueprint, nodes, resetInput.FromNodeId, resetInput.FromPortIndex, 0);
+                if (!IsRuntimeTrue(resetValue))
+                {
+                    continue;
+                }
+
+                counterValueByNode[node.Id] = 0f;
+                runtimeEvalCache[node.Id + ":0"] = 0f;
+            }
+        }
+
         private bool UsesFourChannelRuntimeOutput(RuntimeBlueprint blueprint)
         {
             if (OutputMode == ChannelMode.FourChannel)
@@ -460,21 +536,7 @@ namespace StorageNetwork.Components
 
         private RuntimeBlueprint TryGetRuntimeBlueprint()
         {
-            if (string.IsNullOrEmpty(RuntimeBlueprintJson))
-            {
-                return null;
-            }
-
-            try
-            {
-                return Newtonsoft.Json.JsonConvert.DeserializeObject<RuntimeBlueprint>(RuntimeBlueprintJson);
-            }
-            catch (System.Exception ex)
-            {
-                Debug.LogWarning($"StorageNetwork LogicDiy blueprint parse failed: {ex.Message}");
-                RuntimeBlueprintJson = string.Empty;
-                return null;
-            }
+            return blueprintCodec.Parse(RuntimeBlueprintJson);
         }
 
         private static Dictionary<string, RuntimeBlueprintNode> BuildRuntimeNodeMap(RuntimeBlueprint blueprint)
@@ -522,6 +584,12 @@ namespace StorageNetwork.Components
             string module = node.Module ?? string.Empty;
             if (runtimeEvalStack.Contains(cacheKey))
             {
+                // Stateful nodes may publish an in-progress candidate for feedback paths
+                // (for example: Counter -> Equal -> Counter.Reset).
+                if (runtimeEvalCache.TryGetValue(cacheKey, out float inProgressValue))
+                {
+                    return inProgressValue;
+                }
                 return GetRuntimeStableOutput(nodeId, outputPortIndex, node, module);
             }
 
@@ -648,6 +716,9 @@ namespace StorageNetwork.Components
                 case "PulseShaper":
                     result = EvaluatePulseShaperNode(nodeId, a, node);
                     break;
+                case "NumberChanged":
+                    result = EvaluateNumberChangedNode(nodeId, a, outputPortIndex);
+                    break;
                 case "MapRange":
                     result = EvaluateMapRangeNode(nodeId, a, node);
                     break;
@@ -718,6 +789,9 @@ namespace StorageNetwork.Components
                     int portCount = node?.Value > 1f ? Mathf.FloorToInt(node.Value) : 6;
                     int selIndex = Mathf.Clamp(Mathf.FloorToInt(a), 0, portCount - 1);
                     result = EvaluateRuntimeInputNumber(blueprint, nodes, nodeId, selIndex + 1, depth + 1);
+                    break;
+                case "PixelScreen":
+                    result = EvaluatePixelScreenNode(blueprint, nodes, nodeId, depth);
                     break;
                 default:
                     Debug.LogWarning($"StorageNetwork LogicDiy: Unknown module '{module}' for node '{nodeId}'");
@@ -957,6 +1031,28 @@ namespace StorageNetwork.Components
             return 0f;
         }
 
+        private float EvaluateNumberChangedNode(string nodeId, float inputValue, int outputPortIndex)
+        {
+            if (!numberChangeUpdatedNodes.Contains(nodeId))
+            {
+                previousNumberValueByNode.TryGetValue(nodeId, out float previousValue);
+                int flags = 0;
+                if (previousNumberValueByNode.ContainsKey(nodeId))
+                {
+                    if (inputValue > previousValue + 0.0001f) flags |= 1;
+                    else if (inputValue < previousValue - 0.0001f) flags |= 2;
+                    if (flags != 0) flags |= 4;
+                }
+
+                previousNumberValueByNode[nodeId] = inputValue;
+                numberChangeFlagsByNode[nodeId] = flags;
+                numberChangeUpdatedNodes.Add(nodeId);
+            }
+
+            return numberChangeFlagsByNode.TryGetValue(nodeId, out int flagsForOutput) &&
+                   outputPortIndex >= 0 && outputPortIndex < 3 && (flagsForOutput & (1 << outputPortIndex)) != 0 ? 1f : 0f;
+        }
+
         private float EvaluateMapRangeNode(string nodeId, float inputValue, RuntimeBlueprintNode node)
         {
             float inMin = node?.InMin ?? 0f;
@@ -980,13 +1076,16 @@ namespace StorageNetwork.Components
             previousInputStateByNode.TryGetValue(nodeId, out bool previous);
             counterValueByNode.TryGetValue(nodeId, out float count);
             float candidateCount = current && !previous ? count + 1f : count;
+            // Let a Reset expression that feeds back through this counter compare against
+            // the value this tick is about to publish, rather than the previous tick.
+            runtimeEvalCache[nodeId + ":0"] = candidateCount;
             bool resetActive = IsRuntimeTrue(EvaluateRuntimeInputNumber(blueprint, nodes, nodeId, 1, depth + 1));
 
             previousInputStateByNode[nodeId] = current;
             if (resetActive)
             {
                 counterValueByNode[nodeId] = 0f;
-                return candidateCount;
+                return 0f;
             }
 
             counterValueByNode[nodeId] = candidateCount;
@@ -1071,6 +1170,12 @@ namespace StorageNetwork.Components
                 }
             }
             return value;
+        }
+
+        private float EvaluatePixelScreenNode(RuntimeBlueprint blueprint, Dictionary<string, RuntimeBlueprintNode> nodes, string nodeId, int depth)
+        {
+            float a = EvaluateRuntimeInputNumber(blueprint, nodes, nodeId, 0, depth + 1);
+            return Mathf.Clamp(Mathf.FloorToInt(a), 0, 15);
         }
 
         private float EvaluateMaterialChangedNode(string nodeId)
@@ -1349,8 +1454,12 @@ namespace StorageNetwork.Components
                 return null;
             }
 
-            foreach (RuntimeBlueprintConnection connection in blueprint.Connections)
+            // Old layouts may contain more than one wire targeting the same input port.
+            // The editor treats the most recently created wire as the active one, so resolve
+            // from the end to match what the canvas displays.
+            for (int index = blueprint.Connections.Count - 1; index >= 0; index--)
             {
+                RuntimeBlueprintConnection connection = blueprint.Connections[index];
                 if (connection != null && connection.ToNodeId == nodeId && connection.ToPortIndex == portIndex)
                 {
                     return connection;
@@ -1432,6 +1541,18 @@ namespace StorageNetwork.Components
             StorageNetwork.UI.WebEditor.StorageNetworkLogicDiyPersistence.Save(this);
         }
 
+        internal void ResetRuntimeStateForEditor()
+        {
+            ClearRuntimeNodeState();
+            latchStateByNode.Clear();
+            counterValueByNode.Clear();
+            sequenceStepByNode.Clear();
+            hysteresisStateByNode.Clear();
+            toggleStateByNode.Clear();
+            OutputSignalValue = 0;
+            SendLogicSignal();
+        }
+
         private void OnCopySettings(object data)
         {
             GameObject sourceObject = data as GameObject;
@@ -1456,6 +1577,7 @@ namespace StorageNetwork.Components
         internal void ApplyPersistedWebEditorState(string runtimeBlueprintJson, int outputModeValue, int sourceModeValue, float thresholdKg, string conditionItemKey, string runtimeLayoutJson)
         {
             RuntimeBlueprintJson = runtimeBlueprintJson ?? string.Empty;
+            blueprintCodec.Invalidate();
             RuntimeLayoutJson = runtimeLayoutJson ?? string.Empty;
             ClearRuntimeNodeState();
             OutputModeValue = Mathf.Clamp(outputModeValue, 0, 1);
@@ -1619,23 +1741,32 @@ namespace StorageNetwork.Components
 
         private void ClearRuntimeNodeState()
         {
+            // Eval caches — always safe to clear (rebuilt each tick).
             runtimeEvalCache.Clear();
             runtimeStableOutputSnapshot.Clear();
+
+            // Transient timing state — rebuilt each tick.
             timerElapsedByNode.Clear();
             timerPulseNodes.Clear();
             cycleIndexByNode.Clear();
-            delayElapsedByNode.Clear();
-            latchStateByNode.Clear();
+
+            // Edge-detection & previous-value tracking — reset to avoid stale edges.
             previousInputStateByNode.Clear();
             previousMaterialAmountByNode.Clear();
-            counterValueByNode.Clear();
-            sequenceStepByNode.Clear();
+            togglePrevInputByNode.Clear();
             sequencePrevAdvanceByNode.Clear();
             sequencePrevResetByNode.Clear();
-            hysteresisStateByNode.Clear();
-            toggleStateByNode.Clear();
-            togglePrevInputByNode.Clear();
+            previousNumberValueByNode.Clear();
+            numberChangeFlagsByNode.Clear();
+            numberChangeUpdatedNodes.Clear();
+
+            // Transient duration-based state — reset to avoid stale durations.
+            delayElapsedByNode.Clear();
             pulseShaperRemainingByNode.Clear();
+
+            // Stateful memory is intentionally preserved here. Loading/saving layout
+            // and other non-topology edits must not reset a running circuit. Explicit
+            // topology/parameter edits call ResetRuntimeStateForEditor instead.
         }
 
         internal sealed class WebEditorMaterialOption

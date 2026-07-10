@@ -1,0 +1,40 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: MusicBox\n"
+"Language: en\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Application: Oxygen Not Included\n"
+
+msgctxt "MusicBox.STRINGS.BUILDINGS.PREFABS.MUSICBOX.NAME"
+msgid "音乐盒"
+msgstr "音乐盒"
+
+msgctxt "MusicBox.STRINGS.BUILDINGS.PREFABS.MUSICBOX.DESC"
+msgid "一个根据信号播放钢琴音符的小型音乐盒。"
+msgstr "一个根据信号播放钢琴音符的小型音乐盒。"
+
+msgctxt "MusicBox.STRINGS.BUILDINGS.PREFABS.MUSICBOX.EFFECT"
+msgid "信号值 1-12 对应 12 个半音:\n• 0: 休止符\n• 1: C   • 2: C#\n• 3: D   • 4: D#\n• 5: E   • 6: F\n• 7: F#  • 8: G\n• 9: G#  • 10: A\n• 11: A# • 12: B"
+msgstr "信号值 1-12 对应 12 个半音：\n• 0：休止符\n• 1：C   • 2：C#\n• 3：D   • 4：D#\n• 5：E   • 6：F\n• 7：F#  • 8：G\n• 9：G#  • 10：A\n• 11：A# • 12：B"
+
+msgctxt "MusicBox.STRINGS.BUILDINGS.PREFABS.MUSICBOX.LOGIC_PORT"
+msgid "音符信号输入"
+msgstr "音符信号输入"
+
+msgctxt "MusicBox.STRINGS.BUILDINGS.PREFABS.MUSICBOX.LOGIC_PORT_ACTIVE"
+msgid "接收音符信号：<b><color=#F44A4A>绿色</b></color> = 播放音符"
+msgstr "接收音符信号：<b><color=#F44A4A>绿色</b></color> = 播放音符"
+
+msgctxt "MusicBox.STRINGS.BUILDINGS.PREFABS.MUSICBOX.LOGIC_PORT_INACTIVE"
+msgid "接收音符信号：<b><color=#F44A4A>红色</b></color> = 休止／不播放"
+msgstr "接收音符信号：<b><color=#F44A4A>红色</b></color> = 休止／不播放"
+
+msgctxt "MusicBox.STRINGS.UI.UISIDESCREENS.MUSICBOX.VOLUME_TITLE"
+msgid "音乐盒音量"
+msgstr "音乐盒音量"
+
+msgctxt "MusicBox.STRINGS.UI.UISIDESCREENS.MUSICBOX.VOLUME_TOOLTIP"
+msgid "调整音乐盒播放音量"
+msgstr "调整音乐盒播放音量"

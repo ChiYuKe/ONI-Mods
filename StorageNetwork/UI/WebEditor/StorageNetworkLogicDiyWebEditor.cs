@@ -1,5 +1,6 @@
 using Newtonsoft.Json;
 using StorageNetwork.Components;
+using StorageNetwork.LogicDiy.Web;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -20,10 +21,12 @@ namespace StorageNetwork.UI.WebEditor
 
         private static readonly object sync = new object();
         private static readonly Dictionary<int, WeakReference<StorageNetworkLogicDiy>> registered = new Dictionary<int, WeakReference<StorageNetworkLogicDiy>>();
-        private static readonly Dictionary<int, WebEditorSaveRequest> pending = new Dictionary<int, WebEditorSaveRequest>();
+        private static readonly LogicDiyEditorSessionRegistry<StorageNetworkLogicDiy, object, WebEditorSaveRequest> sessions =
+            new LogicDiyEditorSessionRegistry<StorageNetworkLogicDiy, object, WebEditorSaveRequest>();
         private static readonly Dictionary<int, System.DateTime> activePages = new Dictionary<int, System.DateTime>();
         private static readonly Dictionary<int, System.DateTime> recentLaunches = new Dictionary<int, System.DateTime>();
         private static readonly Dictionary<int, WebEditorState> cachedStates = new Dictionary<int, WebEditorState>();
+        private static readonly HashSet<int> pendingRuntimeResets = new HashSet<int>();
         private static readonly Dictionary<int, float> lastFullStateRefreshTime = new Dictionary<int, float>();
         private static readonly Dictionary<int, IntPtr> editorWindowHandles = new Dictionary<int, IntPtr>();
 
@@ -108,6 +111,8 @@ namespace StorageNetwork.UI.WebEditor
             {
                 cachedStates[id] = state;
             }
+            sessions.Register(id, logic, null);
+            sessions.Prune(TimeSpan.FromMinutes(10));
         }
 
         public static void RefreshRuntimeSignalsIfActive(StorageNetworkLogicDiy logic)
@@ -139,15 +144,20 @@ namespace StorageNetwork.UI.WebEditor
                 return;
             }
 
-            WebEditorSaveRequest request = null;
             int id = logic.GetInstanceID();
             lock (sync)
             {
-                if (pending.TryGetValue(id, out request))
+                if (pendingRuntimeResets.Remove(id))
                 {
-                    pending.Remove(id);
+                    logic.ResetRuntimeStateForEditor();
+                    if (cachedStates.TryGetValue(id, out WebEditorState resetState) && resetState != null)
+                    {
+                        resetState.OutputSignalValue = 0;
+                        resetState.NodeOutputValues = new Dictionary<string, float>();
+                    }
                 }
             }
+            WebEditorSaveRequest request = sessions.TakeSave(id);
 
             if (request == null)
             {
@@ -243,6 +253,13 @@ namespace StorageNetwork.UI.WebEditor
                     return;
                 }
 
+                if (path == "/api/reset" && string.Equals(context.Request.HttpMethod, "POST", StringComparison.OrdinalIgnoreCase))
+                {
+                    bool queued = QueueRuntimeReset(context);
+                    WriteJson(context, new { ok = queued }, queued ? 200 : 404);
+                    return;
+                }
+
                 if (path == "/api/heartbeat")
                 {
                     MarkHeartbeat(context);
@@ -252,8 +269,8 @@ namespace StorageNetwork.UI.WebEditor
 
                 if (path == "/api/save" && string.Equals(context.Request.HttpMethod, "POST", StringComparison.OrdinalIgnoreCase))
                 {
-                    SaveState(context);
-                    WriteJson(context, new { ok = true });
+                    bool saved = SaveState(context);
+                    WriteJson(context, new { ok = saved }, saved ? 200 : 404);
                     return;
                 }
 
@@ -287,6 +304,7 @@ namespace StorageNetwork.UI.WebEditor
             {
                 if (cachedStates.TryGetValue(id, out WebEditorState state) && state != null)
                 {
+                    sessions.MarkSeen(id);
                     return state;
                 }
             }
@@ -317,6 +335,26 @@ namespace StorageNetwork.UI.WebEditor
             }
 
             return new WebEditorSignalState();
+        }
+
+        private static bool QueueRuntimeReset(HttpListenerContext context)
+        {
+            int id = GetId(context);
+            if (id == 0 || ResolveLogic(id) == null)
+            {
+                return false;
+            }
+
+            lock (sync)
+            {
+                pendingRuntimeResets.Add(id);
+                if (cachedStates.TryGetValue(id, out WebEditorState state) && state != null)
+                {
+                    state.OutputSignalValue = 0;
+                    state.NodeOutputValues = new Dictionary<string, float>();
+                }
+            }
+            return true;
         }
 
         private static WebEditorState BuildLightState(StorageNetworkLogicDiy logic)
@@ -375,16 +413,18 @@ namespace StorageNetwork.UI.WebEditor
             };
         }
 
-        private static void SaveState(HttpListenerContext context)
+        private static bool SaveState(HttpListenerContext context)
         {
             int id = GetId(context);
+            if (id == 0 || ResolveLogic(id) == null || context.Request.ContentLength64 > 1024 * 1024)
+            {
+                return false;
+            }
+
             using (StreamReader reader = new StreamReader(context.Request.InputStream, Encoding.UTF8))
             {
                 WebEditorSaveRequest request = JsonConvert.DeserializeObject<WebEditorSaveRequest>(reader.ReadToEnd()) ?? new WebEditorSaveRequest();
-                lock (sync)
-                {
-                    pending[id] = request;
-                }
+                return sessions.QueueSave(id, request);
             }
         }
 
@@ -400,6 +440,7 @@ namespace StorageNetwork.UI.WebEditor
             {
                 activePages[id] = System.DateTime.UtcNow;
             }
+            sessions.MarkSeen(id);
         }
 
         private static bool IsPageActiveLocked(int id)
@@ -495,7 +536,14 @@ namespace StorageNetwork.UI.WebEditor
         private static void ServeStaticFile(HttpListenerContext context, string relativePath)
         {
             string directory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-            string filePath = Path.Combine(directory ?? string.Empty, "WebEditor", relativePath);
+            string rootPath = Path.GetFullPath(Path.Combine(directory ?? string.Empty, "WebEditor"));
+            string filePath = Path.GetFullPath(Path.Combine(rootPath, relativePath ?? string.Empty));
+            if (!filePath.StartsWith(rootPath + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+            {
+                context.Response.StatusCode = 403;
+                context.Response.Close();
+                return;
+            }
             if (!File.Exists(filePath))
             {
                 context.Response.StatusCode = 404;
@@ -558,7 +606,11 @@ namespace StorageNetwork.UI.WebEditor
                     Arguments = $"--app=\"{url}\" --new-window",
                     UseShellExecute = false
                 };
-                System.Diagnostics.Process.Start(startInfo);
+                System.Diagnostics.Process process = System.Diagnostics.Process.Start(startInfo);
+                if (process != null)
+                {
+                    ThreadPool.QueueUserWorkItem(_ => SetEditorWindowTopmost(process, id, windowTitle));
+                }
                 return true;
             }
             catch (Exception ex)

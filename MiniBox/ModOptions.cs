@@ -136,7 +136,7 @@ namespace MiniBox
             [JsonProperty("MineralDeoxidizerEmissionValues")]
             public float MineralDeoxidizerOxygenOutputKgPerSecond { get; set; } = 0.5f;
             [Option("STRINGS.CONFIGURATIONITEM.BUILDDINGS.MINERALDEOXIDIZER.OUTPUTTEMPERATURE", "摄氏度", OptionStrings.Buildings.BuildingCategory, Format = "F0")]
-            [Limit(0, 1000000)]
+            [Limit(0, 100000000)]
             [JsonProperty]
             public float MineralDeoxidizerOutputTemperature { get; set; } = 30f;
             [Option("STRINGS.CONFIGURATIONITEM.BUILDDINGS.MINERALDEOXIDIZER.ENERGYCONSUMPTIONWHENACTIVE", "W", OptionStrings.Buildings.BuildingCategory, Format = "F0")]
