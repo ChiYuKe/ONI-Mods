@@ -5256,7 +5256,7 @@ var importBlueprintFile = document.getElementById('importBlueprintFile');
 if (exportBlueprintBtn && importBlueprintBtn && importBlueprintFile) {
     exportBlueprintBtn.addEventListener('click', () => {
         const blueprint = {
-            version: 1,
+            version: GRAPH_FORMAT_VERSION,
             nodesData, connections, nodeIdCounter, connectionIdCounter,
             canvasZoom, canvasPanX, canvasPanY
         };
