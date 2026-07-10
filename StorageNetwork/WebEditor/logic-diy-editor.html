@@ -4490,7 +4490,7 @@ function restoreLayout(layoutJson) {
 }
 
 function loadLayoutState(data, persistLocal) {
-    if (Number(data?.version) !== GRAPH_FORMAT_VERSION) {
+    if (!Number(data?.version) || Number(data.version) < 1 || Number(data.version) > GRAPH_FORMAT_VERSION) {
         createDefaultGraph();
         return true;
     }
@@ -5255,9 +5255,15 @@ var importBlueprintFile = document.getElementById('importBlueprintFile');
 
 if (exportBlueprintBtn && importBlueprintBtn && importBlueprintFile) {
     exportBlueprintBtn.addEventListener('click', () => {
+        const cleanNodes = {};
+        Object.entries(nodesData).forEach(([id, node]) => {
+            const clean = {};
+            Object.keys(node).forEach(k => { if (!k.startsWith('_')) clean[k] = node[k]; });
+            cleanNodes[id] = clean;
+        });
         const blueprint = {
             version: GRAPH_FORMAT_VERSION,
-            nodesData, connections, nodeIdCounter, connectionIdCounter,
+            nodesData: cleanNodes, connections, nodeIdCounter, connectionIdCounter,
             canvasZoom, canvasPanX, canvasPanY
         };
         const json = JSON.stringify(blueprint, null, 2);
