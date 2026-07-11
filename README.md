@@ -25,7 +25,7 @@
 | [**OxygenConsumingPlant**](./OxygenConsumingPlant) | 耗氧植物 | 引入消耗氧气的特殊植物增加挑战性。 |  |
 | [**MiniBox**](./MiniBox) | 游手的小工具箱 |  | [Steam 订阅](https://steamcommunity.com/sharedfiles/filedetails/?id=2890083659) |
 | [**StorageNetwork**](./StorageNetwork) | 储存网络 | 将场景储存、生产建筑、喷泉和订单调度整合到一个可视化管理窗口。 | [Steam 订阅](https://steamcommunity.com/sharedfiles/filedetails/?id=3732422991) |
-| [**MusicBox**](./MusicBox) | 音乐盒 | 新增一个 1x1 音乐盒建筑，接受 4-bit 信号播放对应钢琴音符。 |  |
+| [**MusicBox**](./MusicBox) | 音乐盒 | 新增一个 1x1 音乐盒建筑，接受 4-bit 信号播放对应钢琴音符。 | [Steam 订阅](https://steamcommunity.com/sharedfiles/filedetails/?id=3762583359) |
 
 > **提示**：点击“源码目录”可直接查看代码，点击“获取 / 下载”跳转至 Steam 创意工坊或发布页。
 
