@@ -68,9 +68,14 @@ namespace StorageNetwork.Buildings
                 }
             }
 
+            if (!spec.PowerPort)
+            {
+                buildingDef.LogicInputPorts = LogicOperationalController.CreateSingleInputPortList(
+                    spec.ParticlePort ? spec.ParticleOffset : spec.LogicOffset);
+            }
+
             if (spec.ParticlePort)
             {
-                buildingDef.LogicInputPorts = LogicOperationalController.CreateSingleInputPortList(spec.ParticleOffset);
                 if (spec.Direction == StorageNetworkPortDirection.Input)
                 {
                     buildingDef.UseHighEnergyParticleInputPort = true;
@@ -105,14 +110,13 @@ namespace StorageNetwork.Buildings
 
         public override void ConfigureBuildingTemplate(GameObject go, Tag prefabTag)
         {
-            if (!Spec.ParticlePort)
+            if (Spec.PowerPort)
             {
                 GeneratedBuildings.MakeBuildingAlwaysOperational(go);
             }
 
             go.AddOrGet<CodexEntryRedirector>().CodexID = Spec.Id;
             KPrefabID prefabId = go.GetComponent<KPrefabID>();
-            prefabId?.AddTag(RoomConstraints.ConstraintTags.IndustrialMachinery);
             prefabId?.AddTag(StorageSceneTags.ModStorage);
             prefabId?.AddTag(Spec.Direction == StorageNetworkPortDirection.Input
                 ? StorageSceneTags.CategoryInputPort
@@ -178,24 +182,32 @@ namespace StorageNetwork.Buildings
             {
                 StorageNetworkLiquidInputPortIngressConduit.Configure(go, storage, spec.CapacityKg * Config.Instance.PortCapacityMultiplier);
                 go.AddOrGet<CopyBuildingSettings>();
+                go.AddOrGet<Operational>();
+                go.AddOrGet<LogicOperationalController>();
                 go.AddOrGet<StorageNetworkLiquidInputPortIngress>();
             }
             else if (spec.Kind == StorageNetworkPortKind.LiquidOutput)
             {
                 StorageNetworkLiquidOutputPortEgressConduit.Configure(go, storage);
                 go.AddOrGet<CopyBuildingSettings>();
+                go.AddOrGet<Operational>();
+                go.AddOrGet<LogicOperationalController>();
                 go.AddOrGet<StorageNetworkLiquidOutputPortEgress>();
             }
             else if (spec.Kind == StorageNetworkPortKind.GasInput)
             {
                 StorageNetworkGasInputPortIngressConduit.Configure(go, storage, spec.CapacityKg * Config.Instance.PortCapacityMultiplier);
                 go.AddOrGet<CopyBuildingSettings>();
+                go.AddOrGet<Operational>();
+                go.AddOrGet<LogicOperationalController>();
                 go.AddOrGet<StorageNetworkGasInputPortIngress>();
             }
             else if (spec.Kind == StorageNetworkPortKind.GasOutput)
             {
                 StorageNetworkGasOutputPortEgressConduit.Configure(go, storage);
                 go.AddOrGet<CopyBuildingSettings>();
+                go.AddOrGet<Operational>();
+                go.AddOrGet<LogicOperationalController>();
                 go.AddOrGet<StorageNetworkGasOutputPortEgress>();
             }
             else if (spec.Kind == StorageNetworkPortKind.PowerInput)
@@ -255,6 +267,8 @@ namespace StorageNetwork.Buildings
                 filterable.uiHeight = TreeFilterable.UISideScreenHeight.Tall;
                 go.AddOrGet<CopyBuildingSettings>();
                 go.AddOrGet<StorageNetworkDefaultFilterInitializer>();
+                go.AddOrGet<Operational>();
+                go.AddOrGet<LogicOperationalController>();
                 go.AddOrGet<StorageNetworkSolidInputPortIngress>();
             }
             else if (spec.Kind == StorageNetworkPortKind.SolidOutput)
@@ -265,6 +279,8 @@ namespace StorageNetwork.Buildings
                 dispenser.solidOnly = true;
                 dispenser.alwaysDispense = true;
                 go.AddOrGet<CopyBuildingSettings>();
+                go.AddOrGet<Operational>();
+                go.AddOrGet<LogicOperationalController>();
                 go.AddOrGet<StorageNetworkSolidOutputPortEgress>();
             }
         }
@@ -412,6 +428,7 @@ namespace StorageNetwork.Buildings
         public CellOffset OutputOffset { get; set; }
         public CellOffset PowerOffset { get; set; }
         public CellOffset ParticleOffset { get; set; }
+        public CellOffset LogicOffset { get; set; }
         public float CapacityKg { get; set; }
         public List<Tag> Filters { get; set; }
     }
@@ -556,6 +573,7 @@ namespace StorageNetwork.Buildings
                 OutputOffset = AccessoryOutputOffset,
                 PowerOffset = AccessoryPowerOffset,
                 ParticleOffset = AccessoryParticleOffset,
+                LogicOffset = AccessoryInputOffset,
                 CapacityKg = capacityKg,
                 Filters = GetStorageFilters(kind, conduitType)
             };
@@ -578,6 +596,7 @@ namespace StorageNetwork.Buildings
                 OutputOffset = AccessoryOutputOffset,
                 PowerOffset = AccessoryPowerOffset,
                 ParticleOffset = AccessoryParticleOffset,
+                LogicOffset = AccessoryInputOffset,
                 CapacityKg = capacityJoules,
                 Filters = new List<Tag>()
             };
@@ -600,6 +619,7 @@ namespace StorageNetwork.Buildings
                 OutputOffset = AccessoryOutputOffset,
                 PowerOffset = AccessoryPowerOffset,
                 ParticleOffset = AccessoryParticleOffset,
+                LogicOffset = AccessoryParticleOffset,
                 CapacityKg = 0f,
                 Filters = new List<Tag>()
             };

@@ -98,6 +98,12 @@ namespace StorageNetwork.Components
 
         public void Sim1000ms(float dt)
         {
+            Operational operational = GetComponent<Operational>();
+            if (operational != null && !operational.IsOperational)
+            {
+                return;
+            }
+
             RefreshSolidOutputPortStatus();
             SyncDispenserState();
 
