@@ -60,7 +60,7 @@ namespace StorageNetwork.UI
                 112f);
             AddHealthTile(
                 Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.HEALTH_POWER_LEAK),
-                GameUtil.GetFormattedJoules(leak, "F1", GameUtil.TimeSlice.None) + "/周期",
+                string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TREND_PER_CYCLE), string.Empty, GameUtil.GetFormattedJoules(leak, "F1", GameUtil.TimeSlice.None)),
                 leak > 0f ? WarningColor() : PositiveColor(),
                 78f);
         }

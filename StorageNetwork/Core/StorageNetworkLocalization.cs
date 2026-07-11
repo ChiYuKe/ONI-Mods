@@ -7,10 +7,26 @@ namespace StorageNetwork.Core
     public static class StorageNetworkLocalization
     {
         private static string modPath;
+        private static Type translatedRoot;
+        private static string translatedLocaleCode;
 
         public static void SetModPath(string path)
         {
             modPath = path;
+            translatedRoot = null;
+            translatedLocaleCode = null;
+        }
+
+        public static void EnsureTranslated(Type root, bool generateTemplate = false)
+        {
+            string localeCode = GetLocaleCode();
+            if (translatedRoot == root &&
+                string.Equals(translatedLocaleCode, localeCode, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            Translate(root, generateTemplate);
         }
 
         /// <summary>
@@ -22,6 +38,8 @@ namespace StorageNetwork.Core
             RegisterBuildMenuStrings();
             LoadStrings();
             LocString.CreateLocStringKeys(root, null);
+            translatedRoot = root;
+            translatedLocaleCode = GetLocaleCode();
             if (generateTemplate)
             {
                 Localization.GenerateStringsTemplate(root, Path.Combine(GetModPath(), "translations"));
@@ -54,8 +72,7 @@ namespace StorageNetwork.Core
         {
             try
             {
-                Localization.Locale locale = Localization.GetLocale();
-                string localeCode = locale != null ? locale.Code : "en";
+                string localeCode = GetLocaleCode();
                 if (localeCode.IsNullOrWhiteSpace())
                 {
                     return;
@@ -87,6 +104,12 @@ namespace StorageNetwork.Core
             {
                 Debug.LogWarning("[StorageNetwork] Failed to load localization: " + ex.Message);
             }
+        }
+
+        private static string GetLocaleCode()
+        {
+            Localization.Locale locale = Localization.GetLocale();
+            return locale != null ? locale.Code : "en";
         }
 
         private static string GetModPath()

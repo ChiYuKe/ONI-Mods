@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using HarmonyLib;
+using StorageNetwork.Core;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -9,14 +10,16 @@ namespace StorageNetwork.ModConfig
     {
         private const float CompactButtonWidth = 52f;
         private const int PLibOptionsButtonIndex = 4;
-        internal const string DefaultButtonTextKey = "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OPTIONS_BUTTON";
-        internal const string DefaultButtonTextFallback = "选项";
+        internal const string DefaultButtonTextKey = "";
+        internal const string DefaultButtonTextFallback = "Config";
+        internal const string DefaultTooltipFallback = "Adjust StorageNetwork mod values";
 
         public string ModTitlePrefix { get; set; }
         public string ButtonName { get; set; }
         public string ButtonText { get; set; }
         public string ButtonTextKey { get; set; } = DefaultButtonTextKey;
         public string Tooltip { get; set; }
+        public string TooltipKey { get; set; }
         public Vector2 ButtonSize { get; set; } = new Vector2(CompactButtonWidth, 0f);
         public System.Action OnClick { get; set; }
 
@@ -46,6 +49,8 @@ namespace StorageNetwork.ModConfig
         {
             public static void Postfix(ModsScreen __instance)
             {
+                StorageNetworkLocalization.EnsureTranslated(typeof(STRINGS), false);
+
                 Transform entryParent = AccessTools.Field(typeof(ModsScreen), "entryParent")?.GetValue(__instance) as Transform;
                 if (entryParent == null)
                 {
@@ -110,8 +115,17 @@ namespace StorageNetwork.ModConfig
                 label.text = ResolveButtonText(definition);
             }
 
-            ToolTip tooltip = buttonObject.GetComponent<ToolTip>() ?? buttonObject.AddComponent<ToolTip>();
-            tooltip.toolTip = definition.Tooltip;
+            string tooltipText = ResolveText(definition.TooltipKey, definition.Tooltip);
+            ToolTip[] tooltips = buttonObject.GetComponentsInChildren<ToolTip>(true);
+            if (tooltips == null || tooltips.Length == 0)
+            {
+                tooltips = new[] { buttonObject.GetComponent<ToolTip>() ?? buttonObject.AddComponent<ToolTip>() };
+            }
+
+            foreach (ToolTip tooltip in tooltips)
+            {
+                tooltip.toolTip = tooltipText;
+            }
 
             RectTransform rect = buttonObject.GetComponent<RectTransform>();
             RectTransform sourceRect = manageButton.GetComponent<RectTransform>();
@@ -143,6 +157,18 @@ namespace StorageNetwork.ModConfig
 
             return string.IsNullOrEmpty(text) || text.StartsWith("MISSING", System.StringComparison.OrdinalIgnoreCase)
                 ? ModsScreenOptionsButtonDefinition.DefaultButtonTextFallback
+                : text;
+        }
+
+        private static string ResolveText(string key, string fallback)
+        {
+            const string namespacePrefix = "StorageNetwork.";
+            string runtimeKey = key != null && key.StartsWith(namespacePrefix, System.StringComparison.Ordinal)
+                ? key.Substring(namespacePrefix.Length)
+                : key;
+            string text = !string.IsNullOrEmpty(runtimeKey) ? Strings.Get(runtimeKey) : fallback;
+            return string.IsNullOrEmpty(text) || text.StartsWith("MISSING", System.StringComparison.OrdinalIgnoreCase)
+                ? fallback
                 : text;
         }
 

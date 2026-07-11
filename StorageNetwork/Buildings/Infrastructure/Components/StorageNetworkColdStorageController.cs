@@ -1,6 +1,7 @@
 using UnityEngine;
 using STRINGS;
 using System;
+using Loc = StorageNetwork.STRINGS;
 
 namespace StorageNetwork.Components
 {
@@ -234,8 +235,8 @@ namespace StorageNetwork.Components
 
                 coolingStatusItem = new StatusItem(
                     "StorageNetworkColdStorageCooling",
-                    "正在制冷",
-                    "冷库服务器正在将内容物冷却到目标温度。",
+                    Loc.Get(Loc.UI.STORAGE_NETWORK.COLD_STORAGE_COOLING_STATUS),
+                    Loc.Get(Loc.UI.STORAGE_NETWORK.COLD_STORAGE_COOLING_STATUS_TOOLTIP),
                     string.Empty,
                     StatusItem.IconType.Info,
                     NotificationType.Neutral,
@@ -255,8 +256,8 @@ namespace StorageNetwork.Components
 
                 steadyStatusItem = new StatusItem(
                     "StorageNetworkColdStorageSteady",
-                    "节能模式: {Power}",
-                    "内容物已经达到目标温度，冷库服务器正在以节能模式维持温度。",
+                    Loc.Get(Loc.UI.STORAGE_NETWORK.COLD_STORAGE_STEADY_STATUS),
+                    Loc.Get(Loc.UI.STORAGE_NETWORK.COLD_STORAGE_STEADY_STATUS_TOOLTIP),
                     string.Empty,
                     StatusItem.IconType.Info,
                     NotificationType.Neutral,
@@ -284,8 +285,8 @@ namespace StorageNetwork.Components
 
                 heatStatusItem = new StatusItem(
                     "StorageNetworkColdStorageHeatGenerated",
-                    "产热: {Heat}/秒",
-                    "冷库服务器降温时产生的热量。目标温度越低，产热越高。",
+                    Loc.Get(Loc.UI.STORAGE_NETWORK.COLD_STORAGE_HEAT_STATUS),
+                    Loc.Get(Loc.UI.STORAGE_NETWORK.COLD_STORAGE_HEAT_STATUS_TOOLTIP),
                     string.Empty,
                     StatusItem.IconType.Info,
                     NotificationType.Neutral,

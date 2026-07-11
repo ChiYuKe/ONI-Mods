@@ -2021,6 +2021,118 @@ msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_COMPLETED_RETENTION_DE
 msgid "完成/取消/异常订单在列表中保留多久。"
 msgstr "How long completed/cancelled/abnormal orders remain in the list."
 
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_SERVER_CAPACITY_MULTIPLIER"
+msgid "服务器容量倍率"
+msgstr "Server Capacity Multiplier"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_SERVER_CAPACITY_MULTIPLIER_DESC"
+msgid "影响新建储存服务器和电池服务器的容量。已存在建筑通常需要重建或重新加载后才完全刷新。"
+msgstr "Affects the capacity of newly built storage and battery servers. Existing buildings usually need to be rebuilt or the save reloaded to fully update."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_PORT_CAPACITY_MULTIPLIER"
+msgid "端口缓存容量倍率"
+msgstr "Port Buffer Capacity Multiplier"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_PORT_CAPACITY_MULTIPLIER_DESC"
+msgid "影响新建材料、液体、气体端口的缓存容量。"
+msgstr "Affects the buffer capacity of newly built solid, liquid, and gas ports."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_POWER_PORT_CAPACITY_MULTIPLIER"
+msgid "电力端口缓存倍率"
+msgstr "Power Port Buffer Multiplier"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_POWER_PORT_CAPACITY_MULTIPLIER_DESC"
+msgid "影响新建电力入网/出网端口的缓存电量。"
+msgstr "Affects the energy buffer of newly built power input and output ports."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_BATTERY_SERVER_LEAK"
+msgid "电池服务器漏电 J/周期"
+msgstr "Battery Server Leakage J/Cycle"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_BATTERY_SERVER_LEAK_DESC"
+msgid "所有电池服务器每周期损失的电量。"
+msgstr "Energy lost by every battery server each cycle."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_COLD_STORAGE_MIN_TEMPERATURE"
+msgid "冷库最低目标温度 °C"
+msgstr "Cold Storage Minimum Target Temperature °C"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_COLD_STORAGE_MIN_TEMPERATURE_DESC"
+msgid "冷库温度滑条允许设置的最低目标温度。"
+msgstr "Lowest target temperature allowed by the cold storage temperature slider."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_COLD_STORAGE_MAX_TEMPERATURE"
+msgid "冷库最高目标温度 °C"
+msgstr "Cold Storage Maximum Target Temperature °C"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_COLD_STORAGE_MAX_TEMPERATURE_DESC"
+msgid "冷库温度滑条允许设置的最高目标温度。"
+msgstr "Highest target temperature allowed by the cold storage temperature slider."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_COLD_STORAGE_ENERGY_SAVER_WATTS"
+msgid "冷库节能功耗 W"
+msgstr "Cold Storage Energy-Saving Power W"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_COLD_STORAGE_ENERGY_SAVER_WATTS_DESC"
+msgid "内容物达到目标温度后，冷库维持温度时的功耗。"
+msgstr "Power used to maintain temperature after the contents reach the target temperature."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_COLD_STORAGE_MAX_COOLING_WATTS"
+msgid "冷库最大制冷功耗 W"
+msgstr "Cold Storage Maximum Cooling Power W"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_COLD_STORAGE_MAX_COOLING_WATTS_DESC"
+msgid "目标温度越低越接近此功耗。"
+msgstr "Cooling power approaches this value as the target temperature decreases."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_COLD_STORAGE_MAX_COOLING_HEAT"
+msgid "冷库最大产热 kDTU/s"
+msgstr "Cold Storage Maximum Heat Output kDTU/s"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_COLD_STORAGE_MAX_COOLING_HEAT_DESC"
+msgid "目标温度越低越接近此产热。"
+msgstr "Heat output approaches this value as the target temperature decreases."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_SOLID_OUTPUT_MAX_RATE"
+msgid "材料出网最大速率 kg/s"
+msgstr "Solid Output Maximum Rate kg/s"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_SOLID_OUTPUT_MAX_RATE_DESC"
+msgid "材料出网端口设置滑条的最大输出速率。"
+msgstr "Maximum output rate available on the solid output port settings slider."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_LIQUID_OUTPUT_MAX_RATE"
+msgid "液体出网最大速率 kg/s"
+msgstr "Liquid Output Maximum Rate kg/s"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_LIQUID_OUTPUT_MAX_RATE_DESC"
+msgid "液体出网端口设置滑条的最大输出速率。"
+msgstr "Maximum output rate available on the liquid output port settings slider."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_GAS_OUTPUT_MAX_RATE"
+msgid "气体出网最大速率 kg/s"
+msgstr "Gas Output Maximum Rate kg/s"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_GAS_OUTPUT_MAX_RATE_DESC"
+msgid "气体出网端口设置滑条的最大输出速率。"
+msgstr "Maximum output rate available on the gas output port settings slider."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_POWER_INPUT_MAX_WATTS"
+msgid "电力入网最大功率 W"
+msgstr "Power Input Maximum Wattage W"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_POWER_INPUT_MAX_WATTS_DESC"
+msgid "电力入网端口滑条的最大输入功率。"
+msgstr "Maximum input wattage available on the power input port slider."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_POWER_OUTPUT_MAX_WATTS"
+msgid "电力出网最大功率 W"
+msgstr "Power Output Maximum Wattage W"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_POWER_OUTPUT_MAX_WATTS_DESC"
+msgid "电力出网端口滑条的最大输出功率。"
+msgstr "Maximum output wattage available on the power output port slider."
+
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_SETTINGS_TITLE"
 msgid "泉设置"
 msgstr "Geyser Settings"
@@ -3284,3 +3396,575 @@ msgstr "Charging requested"
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENERGY_SENSOR_SIGNAL_RED"
 msgid "停止充电"
 msgstr "Charging stopped"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_EDITOR_TITLE"
+msgid "逻辑编辑器"
+msgstr "Logic Editor"
+
+msgctxt "StorageNetwork.STRINGS.RESEARCH.TECHS.STORAGENETWORKSIGNAL.NAME"
+msgid "网络信号"
+msgstr "Network Signals"
+
+msgctxt "StorageNetwork.STRINGS.RESEARCH.TECHS.STORAGENETWORKSIGNAL.DESC"
+msgid "解锁可向自动化线路输出储存网络信号的信号输出器和电量传感器。"
+msgstr "Unlocks the Signal Output and Charge Sensor, which send Storage Network signals to automation wires."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKLOGICDIY.NAME"
+msgid "储存网络信号输出器"
+msgstr "Storage Network Signal Output"
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKLOGICDIY.DESC"
+msgid "用于向自动化线路输出储存网络信号的小型自动化建筑。"
+msgstr "A compact automation building that outputs Storage Network signals to automation wires."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKLOGICDIY.EFFECT"
+msgid "提供一个自动化信号输出端。"
+msgstr "Provides an automation signal output port."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKLOGICDIY.LOGIC_PORT"
+msgid "储存网络信号输出"
+msgstr "Storage Network Signal Output"
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKLOGICDIY.LOGIC_PORT_ACTIVE"
+msgid "输出绿色信号。"
+msgstr "Outputs a Green Signal."
+
+msgctxt "StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKLOGICDIY.LOGIC_PORT_INACTIVE"
+msgid "输出红色信号。"
+msgstr "Outputs a Red Signal."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.COLD_STORAGE_COOLING_POWER"
+msgid "制冷功耗: {0} W"
+msgstr "Cooling Power: {0} W"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.COLD_STORAGE_COOLING_POWER_TOOLTIP"
+msgid "主动降温时消耗 {0} W；保温节能时消耗 {1} W。"
+msgstr "Uses {0} W while actively cooling and {1} W while maintaining temperature."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.POWER_STORAGE_JOULES_STATUS"
+msgid "可用电力：{JoulesAvailable}/{JoulesCapacity}（{JoulesPercent}）"
+msgstr "Available Power: {JoulesAvailable}/{JoulesCapacity} ({JoulesPercent})"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.POWER_STORAGE_JOULES_TOOLTIP"
+msgid "当前电池服务器储存的电力。"
+msgstr "Power currently stored in this battery server."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.POWER_STORAGE_HEAT_STATUS"
+msgid "产热：{Heat}"
+msgstr "Heat Generated: {Heat}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.POWER_STORAGE_HEAT_TOOLTIP"
+msgid "电池服务器运行时产生的热量。"
+msgstr "Heat generated while the battery server operates."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.COLD_STORAGE_COOLING_STATUS"
+msgid "正在制冷"
+msgstr "Cooling"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.COLD_STORAGE_COOLING_STATUS_TOOLTIP"
+msgid "冷库服务器正在将内容物冷却到目标温度。"
+msgstr "The cold storage server is cooling its contents to the target temperature."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.COLD_STORAGE_STEADY_STATUS"
+msgid "节能模式: {Power}"
+msgstr "Energy-Saving Mode: {Power}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.COLD_STORAGE_STEADY_STATUS_TOOLTIP"
+msgid "内容物已经达到目标温度，冷库服务器正在以节能模式维持温度。"
+msgstr "Contents have reached the target temperature; the cold storage server is maintaining it in energy-saving mode."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.COLD_STORAGE_HEAT_STATUS"
+msgid "产热: {Heat}/秒"
+msgstr "Heat Generated: {Heat}/s"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.COLD_STORAGE_HEAT_STATUS_TOOLTIP"
+msgid "冷库服务器降温时产生的热量。目标温度越低，产热越高。"
+msgstr "Heat generated while the cold storage server cools. Lower target temperatures generate more heat."
++
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CLEAR_ABNORMAL_SUCCESS"
+msgid "订单追踪：已清理 {0} 条异常订单。"
+msgstr "Order tracking: cleared {0} abnormal orders."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CLEAR_COMPLETED_SUCCESS"
+msgid "订单追踪：已清理 {0} 条已完成订单。"
+msgstr "Order tracking: cleared {0} completed orders."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_RETRY_MISSING"
+msgid "订单重试失败：找不到目标订单。"
+msgstr "Order retry failed: target order was not found."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_RETRY_INVALID"
+msgid "订单重试失败：找不到原配方或生产路线。"
+msgstr "Order retry failed: the original recipe or production route is unavailable."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_RETRY_SUCCESS"
+msgid "订单追踪：已按订单 #{0} 的原参数重新提交。{1}"
+msgstr "Order tracking: resubmitted order #{0} with its original settings. {1}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_SIDE_SCREEN_TITLE"
+msgid "信号输出设置"
+msgstr "Signal Output Settings"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_OUTPUT_MODE"
+msgid "输出通道"
+msgstr "Output Channels"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_CURRENT_MODE"
+msgid "当前模式：{0}"
+msgstr "Current mode: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_OPEN_SETTINGS"
+msgid "打开本地逻辑编辑器"
+msgstr "Open Local Logic Editor"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_OPEN_SETTINGS_TOOLTIP"
+msgid "在浏览器中打开本地节点编辑器，保存后同步到这个信号输出器。"
+msgstr "Opens the local node editor in a browser. Saving synchronizes it with this signal output."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_CONFIG_PANEL_TITLE"
+msgid "信号输出器设置"
+msgstr "Signal Output Settings"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_SELECT_MODE"
+msgid "选择"
+msgstr "Select"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_SELECTED_MODE"
+msgid "已选择"
+msgstr "Selected"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_SINGLE_CHANNEL"
+msgid "单通道输出"
+msgstr "Single-Channel Output"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_SINGLE_CHANNEL_TOOLTIP"
+msgid "输出 1 位自动化信号，只使用红/绿状态。"
+msgstr "Outputs a 1-bit automation signal using only red and green states."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_SINGLE_CHANNEL_DESC"
+msgid "当前模式：单通道。输出值会限制为 0 或 1。"
+msgstr "Current mode: single channel. Output is limited to 0 or 1."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_FOUR_CHANNEL"
+msgid "4 通道输出"
+msgstr "4-Channel Output"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_FOUR_CHANNEL_TOOLTIP"
+msgid "输出 4 位自动化信号，可用于信号带网络。"
+msgstr "Outputs a 4-bit automation signal for signal ribbon networks."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_FOUR_CHANNEL_DESC"
+msgid "当前模式：4 通道。输出值可使用 0 到 15 的四位信号。"
+msgstr "Current mode: 4 channels. Output values range from 0 to 15."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_CURRENT_VALUE_SINGLE"
+msgid "固定输出：{0}"
+msgstr "Fixed output: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_CURRENT_VALUE_FOUR"
+msgid "固定输出：Value {0} / Binary {1}"
+msgstr "Fixed output: Value {0} / Binary {1}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_OUTPUT_ON"
+msgid "Port0：ON"
+msgstr "Port0: ON"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_OUTPUT_ON_DESC"
+msgid "输出绿色信号。"
+msgstr "Outputs a green signal."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_OUTPUT_ON_TOOLTIP"
+msgid "固定输出 ON。"
+msgstr "Fixed output ON."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_OUTPUT_OFF"
+msgid "Port0：OFF"
+msgstr "Port0: OFF"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_OUTPUT_OFF_DESC"
+msgid "输出红色信号。"
+msgstr "Outputs a red signal."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_OUTPUT_OFF_TOOLTIP"
+msgid "固定输出 OFF。"
+msgstr "Fixed output OFF."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_VALUE_TITLE"
+msgid "Value：{0}"
+msgstr "Value: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_VALUE_BINARY"
+msgid "Binary：{0}"
+msgstr "Binary: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_VALUE_TOOLTIP"
+msgid "固定输出 Value {0}，Binary {1}。"
+msgstr "Fixed output Value {0}, Binary {1}."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_SOURCE_FIXED"
+msgid "固定输出"
+msgstr "Fixed Output"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_SOURCE_FIXED_DESC"
+msgid "手动选择固定的自动化输出值。"
+msgstr "Manually selects a fixed automation output value."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_SOURCE_FIXED_TOOLTIP"
+msgid "不读取网络库存，直接输出指定值。"
+msgstr "Does not read network inventory; directly outputs the selected value."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_SOURCE_CONDITION"
+msgid "材料条件输出"
+msgstr "Material Condition Output"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_SOURCE_CONDITION_DESC"
+msgid "根据储存网络中的材料数量判断并输出信号。"
+msgstr "Outputs a signal according to the amount of material in the Storage Network."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_SOURCE_CONDITION_TOOLTIP"
+msgid "选择一种网络材料，设置大于等于或小于阈值后输出。"
+msgstr "Select a network material and output when its amount is at or above, or below, the threshold."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_MATERIAL"
+msgid "判断材料"
+msgstr "Material"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_MATERIAL_VALUE"
+msgid "{0}  当前 {1}"
+msgstr "{0}  Current {1}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_MATERIAL_CURRENT"
+msgid "当前 {0}"
+msgstr "Current {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_MATERIAL_TOOLTIP"
+msgid "选择储存网络服务器中已有的材料。"
+msgstr "Select a material currently stored in Storage Network servers."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_MATERIAL_NONE"
+msgid "未选择材料"
+msgstr "No Material Selected"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_MATERIAL_NONE_DESC"
+msgid "当前网络没有可选择的材料，或材料尚未进入服务器。"
+msgstr "There are no selectable materials in this network, or no material has entered a server yet."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_MATERIAL_PICKER_TITLE"
+msgid "选择判断材料"
+msgstr "Select Material"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_MATERIAL_PICKER_COUNT"
+msgid "可选材料：{0} 个"
+msgstr "Available materials: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_MATERIAL_PICKER_HINT"
+msgid "列表来自当前同星球储存网络服务器中的内容物；跨星球中继在线时会包含可达星球。"
+msgstr "The list contains contents from Storage Network servers on this asteroid, and reachable asteroids when an interplanetary relay is online."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_COMPARE_GE"
+msgid "条件：大于等于"
+msgstr "Condition: Greater Than or Equal To"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_COMPARE_GE_DESC"
+msgid "材料数量 >= 阈值时输出。"
+msgstr "Outputs when the material amount is at or above the threshold."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_COMPARE_GE_TOOLTIP"
+msgid "当选中材料数量大于等于阈值时，指定通道输出 ON。"
+msgstr "The selected channel outputs ON when the material amount is at or above the threshold."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_COMPARE_LT"
+msgid "条件：小于"
+msgstr "Condition: Less Than"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_COMPARE_LT_DESC"
+msgid "材料数量 < 阈值时输出。"
+msgstr "Outputs when the material amount is below the threshold."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_COMPARE_LT_TOOLTIP"
+msgid "当选中材料数量小于阈值时，指定通道输出 ON。"
+msgstr "The selected channel outputs ON when the material amount is below the threshold."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_THRESHOLD"
+msgid "变量值"
+msgstr "Variable Value"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_THRESHOLD_TOOLTIP"
+msgid "选择用于节点图比较的数值。"
+msgstr "Selects the value used by the node graph comparison."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_THRESHOLD_PICKER_TITLE"
+msgid "选择变量值"
+msgstr "Select Variable Value"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_THRESHOLD_CURRENT"
+msgid "当前变量值：{0}"
+msgstr "Current variable value: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_THRESHOLD_PICKER_HINT"
+msgid "第一版先提供常用档位；后续会接入储存网络已有的数字输入弹窗。"
+msgstr "The first version provides common presets; it will later use the Storage Network numeric input dialog."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_THRESHOLD_OPTION_DESC"
+msgid "设为材料判断阈值。"
+msgstr "Sets the material-condition threshold."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_OUTPUT_CHANNEL"
+msgid "Port{0}"
+msgstr "Port{0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_OUTPUT_CHANNEL_DESC"
+msgid "条件成立时输出数值 {0}。"
+msgstr "Outputs value {0} when the condition is met."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_OUTPUT_CHANNEL_TOOLTIP"
+msgid "4 通道模式下只点亮这个 bit，条件不成立时输出 0。"
+msgstr "In 4-channel mode, only this bit is set; the output is 0 when the condition is not met."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_OUTPUT_CHANNEL_SINGLE"
+msgid "Port0"
+msgstr "Port0"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_OUTPUT_CHANNEL_SINGLE_DESC"
+msgid "单通道模式下条件成立输出 ON，不成立输出 OFF。"
+msgstr "In single-channel mode, outputs ON when the condition is met and OFF otherwise."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_OUTPUT_CHANNEL_SINGLE_TOOLTIP"
+msgid "单通道只有 Port0。"
+msgstr "Single-channel mode only has Port0."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_CURRENT_CONDITION"
+msgid "{0} 当前 {1}，条件 {2} {3}，输出 {4}"
+msgstr "{0} current {1}, condition {2} {3}, output {4}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_SETTING_SOURCE"
+msgid "输出方式"
+msgstr "Output Method"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_SETTING_SOURCE_TOOLTIP"
+msgid "选择固定输出或根据网络材料条件输出。"
+msgstr "Choose fixed output or output based on a network material condition."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_SETTING_CHANNEL_MODE"
+msgid "通道模式"
+msgstr "Channel Mode"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_SETTING_CHANNEL_MODE_TOOLTIP"
+msgid "选择单通道或 4 通道输出。"
+msgstr "Choose single-channel or 4-channel output."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_SETTING_FIXED_VALUE"
+msgid "固定输出值"
+msgstr "Fixed Output Value"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_SETTING_MATERIAL"
+msgid "判断材料"
+msgstr "Material"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_SETTING_COMPARE"
+msgid "判断条件"
+msgstr "Condition"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_SETTING_COMPARE_TOOLTIP"
+msgid "选择材料数量与阈值的比较方式。"
+msgstr "Choose how to compare material amount with the threshold."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_SETTING_THRESHOLD"
+msgid "变量值"
+msgstr "Variable Value"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_SETTING_OUTPUT_PORT"
+msgid "输出端口"
+msgstr "Output Port"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_MODULE_LIBRARY"
+msgid "模块"
+msgstr "Modules"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_CONNECTION_GRAPH"
+msgid "条件连接"
+msgstr "Condition Connections"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_BLUEPRINT_HINT"
+msgid "从左侧拖入模块到画布；点击节点端点可连接模块。"
+msgstr "Drag modules from the left onto the canvas; click node ports to connect modules."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_SOURCE_MODULES"
+msgid "输出"
+msgstr "Output"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_MATH_MODULES"
+msgid "数学"
+msgstr "Math"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_COMPARE_MODULES"
+msgid "比较"
+msgstr "Comparison"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_BOOL_MODULES"
+msgid "布尔"
+msgstr "Boolean"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_FUTURE_MODULES"
+msgid "扩展模块"
+msgstr "Extension Modules"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_LUA_MODULE"
+msgid "Lua 模块"
+msgstr "Lua Module"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_LUA_MODULE_DESC"
+msgid "后续用于脚本控制输出。"
+msgstr "Reserved for future script-controlled output."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_TIMER_MODULE"
+msgid "定时模块"
+msgstr "Timer Module"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_TIMER_MODULE_DESC"
+msgid "后续用于动画、循环和波形输出。"
+msgstr "Reserved for future animation, looping, and waveform output."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_NODE_MATERIAL"
+msgid "材料数据源"
+msgstr "Material Source"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_NODE_COMPARE"
+msgid "变量模块"
+msgstr "Variable Module"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_NODE_FIXED"
+msgid "固定输出模块"
+msgstr "Fixed Output Module"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_NODE_OUTPUT"
+msgid "输出模块"
+msgstr "Output Module"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_NODE_ADD"
+msgid "加法"
+msgstr "Add"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_NODE_ADD_DESC"
+msgid "两个数值相加。"
+msgstr "Adds two values."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_NODE_SUBTRACT"
+msgid "减法"
+msgstr "Subtract"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_NODE_SUBTRACT_DESC"
+msgid "左输入减右输入。"
+msgstr "Subtracts the right input from the left input."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_NODE_MULTIPLY"
+msgid "乘法"
+msgstr "Multiply"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_NODE_MULTIPLY_DESC"
+msgid "两个数值相乘。"
+msgstr "Multiplies two values."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_NODE_DIVIDE"
+msgid "除法"
+msgstr "Divide"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_NODE_DIVIDE_DESC"
+msgid "左输入除以右输入。"
+msgstr "Divides the left input by the right input."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_NODE_GREATER"
+msgid "大于"
+msgstr "Greater Than"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_NODE_GREATER_DESC"
+msgid "A > B 时为真。"
+msgstr "True when A > B."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_NODE_EQUAL"
+msgid "等于"
+msgstr "Equal To"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_NODE_EQUAL_DESC"
+msgid "A = B 时为真。"
+msgstr "True when A = B."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_NODE_LESS"
+msgid "小于"
+msgstr "Less Than"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_NODE_LESS_DESC"
+msgid "A < B 时为真。"
+msgstr "True when A < B."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_NODE_BOOL_TRUE"
+msgid "TRUE"
+msgstr "TRUE"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_NODE_BOOL_TRUE_DESC"
+msgid "布尔真常量。"
+msgstr "Boolean true constant."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_NODE_BOOL_FALSE"
+msgid "FALSE"
+msgstr "FALSE"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_NODE_BOOL_FALSE_DESC"
+msgid "布尔假常量。"
+msgstr "Boolean false constant."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_NODE_BOOL_AND"
+msgid "与"
+msgstr "AND"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_NODE_BOOL_AND_DESC"
+msgid "两个输入都为真。"
+msgstr "True when both inputs are true."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_NODE_BOOL_OR"
+msgid "或"
+msgstr "OR"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_NODE_BOOL_OR_DESC"
+msgid "任意输入为真。"
+msgstr "True when either input is true."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_NODE_BOOL_NOT"
+msgid "非"
+msgstr "NOT"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_NODE_BOOL_NOT_DESC"
+msgid "反转一个布尔输入。"
+msgstr "Inverts a boolean input."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_CONNECT_TO_COMPARE"
+msgid "变量"
+msgstr "Variable"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOGIC_DIY_CONNECT_TO_OUTPUT"
+msgid "输出"
+msgstr "Output"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_ESTIMATED_FINISH_CYCLE"
+msgid "预计完成"
+msgstr "Estimated Finish"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_FINISHED_CYCLE"
+msgid "完成周期"
+msgstr "Finished Cycle"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_CYCLE_UNKNOWN"
+msgid "未知"
+msgstr "Unknown"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_ACTION_CLEAR_ABNORMAL"
+msgid "清异常"
+msgstr "Clear Abnormal"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_ACTION_CLEAR_COMPLETED"
+msgid "清完成"
+msgstr "Clear Completed"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_ACTION_RETRY"
+msgid "重试"
+msgstr "Retry"
