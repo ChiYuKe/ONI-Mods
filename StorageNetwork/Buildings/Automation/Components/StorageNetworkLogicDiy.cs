@@ -7,6 +7,7 @@ using StorageNetwork.LogicDiy.Runtime;
 using StorageNetwork.Services;
 using StorageNetwork.UI;
 using UnityEngine;
+using System;
 
 namespace StorageNetwork.Components
 {
@@ -91,6 +92,8 @@ namespace StorageNetwork.Components
         private readonly Dictionary<string, int> numberChangeFlagsByNode = new Dictionary<string, int>();
         private readonly HashSet<string> numberChangeUpdatedNodes = new HashSet<string>();
         private readonly Dictionary<string, int> remotePixelScreenTargetByNode = new Dictionary<string, int>();
+        private readonly Dictionary<string, int> networkSignalOutputTargetByNode = new Dictionary<string, int>();
+        private readonly Dictionary<int, Guid> signalForwardStatusHandleByTarget = new Dictionary<int, Guid>();
         private float runtimeEvalDt;
         private readonly LogicDiyBlueprintCodec blueprintCodec = new LogicDiyBlueprintCodec();
         private static readonly Dictionary<System.Type, PropertyInfo> switchLikeOutputPropertyByType = new Dictionary<System.Type, PropertyInfo>();
@@ -140,6 +143,7 @@ namespace StorageNetwork.Components
         protected override void OnCleanUp()
         {
             logicPorts?.SendSignal(PORT_ID, 0);
+            RemoveAllSignalForwardStatuses();
             base.OnCleanUp();
         }
 
@@ -231,6 +235,7 @@ namespace StorageNetwork.Components
             // keep advancing even when they are not wired to system:output.
             EvaluateRuntimeDisplayNodes();
             UpdateRemotePixelScreens();
+            UpdateNetworkSignalOutputStatus();
             ApplyDeferredCounterResets();
 
             if (startupRefreshTicks > 0)
@@ -1638,6 +1643,158 @@ namespace StorageNetwork.Components
                 newValue = value
             };
             pixelPackLogicValueChangedMethod?.Invoke(pixelPack, new object[] { change });
+        }
+
+        private static bool IsSignalForwardingNode(RuntimeBlueprintNode node)
+        {
+            return node != null && !string.IsNullOrEmpty(node.Id) &&
+                   (node.Module == "NetworkSignalOutput" || node.Module == "BuildingSignal");
+        }
+
+        private string cachedForwarderName;
+        private StatusItem instanceSignalForwardedStatusItem;
+
+        private void UpdateNetworkSignalOutputStatus()
+        {
+            RuntimeBlueprint blueprint = TryGetRuntimeBlueprint();
+            if (blueprint?.Nodes == null) return;
+
+            // Step 1: sync node → target mapping
+            HashSet<string> activeNodeIds = new HashSet<string>();
+            foreach (RuntimeBlueprintNode node in blueprint.Nodes)
+            {
+                if (!IsSignalForwardingNode(node)) continue;
+                activeNodeIds.Add(node.Id);
+
+                int targetId = node.SelectedBuildingInstanceId > 0 ? node.SelectedBuildingInstanceId : 0;
+                networkSignalOutputTargetByNode.TryGetValue(node.Id, out int previousTarget);
+                if (previousTarget != targetId)
+                {
+                    if (targetId > 0)
+                        networkSignalOutputTargetByNode[node.Id] = targetId;
+                    else
+                        networkSignalOutputTargetByNode.Remove(node.Id);
+                }
+            }
+
+            // Step 2: remove stale node entries
+            foreach (string staleId in networkSignalOutputTargetByNode.Keys
+                .Where(id => !activeNodeIds.Contains(id)).ToList())
+            {
+                networkSignalOutputTargetByNode.Remove(staleId);
+            }
+
+            // Step 3: collect unique active target IDs
+            HashSet<int> activeTargetIds = new HashSet<int>();
+            foreach (int id in networkSignalOutputTargetByNode.Values)
+            {
+                if (id > 0) activeTargetIds.Add(id);
+            }
+
+            // Step 4: detect name change – if renamed, recreate StatusItem and refresh all
+            string currentName = gameObject != null ? gameObject.GetProperName() : string.Empty;
+            bool nameChanged = currentName != cachedForwarderName;
+
+            if (nameChanged)
+            {
+                cachedForwarderName = currentName;
+                instanceSignalForwardedStatusItem = null;
+
+                // Remove all existing handles; they'll be re-created with the new name
+                foreach (int targetId in signalForwardStatusHandleByTarget.Keys.ToList())
+                {
+                    RemoveSignalForwardStatus(targetId);
+                }
+            }
+
+            // Step 5: remove status from targets no longer referenced
+            foreach (int targetId in signalForwardStatusHandleByTarget.Keys
+                .Where(id => !activeTargetIds.Contains(id)).ToList())
+            {
+                RemoveSignalForwardStatus(targetId);
+            }
+
+            // Step 6: add status to active targets that don't have one
+            foreach (int targetId in activeTargetIds)
+            {
+                if (!signalForwardStatusHandleByTarget.ContainsKey(targetId))
+                {
+                    AddSignalForwardStatus(targetId);
+                }
+            }
+        }
+
+        private void AddSignalForwardStatus(int targetInstanceId)
+        {
+            if (!StorageNetworkBuildingRegistry.TryGetBuilding(targetInstanceId, out GameObject target) ||
+                target == null || target == gameObject)
+                return;
+
+            KSelectable selectable = target.GetComponent<KSelectable>();
+            if (selectable == null) return;
+
+            Guid handle = selectable.AddStatusItem(GetOrCreateSignalForwardedStatusItem(), this);
+            if (handle == Guid.Empty) return;
+
+            signalForwardStatusHandleByTarget[targetInstanceId] = handle;
+        }
+
+        private void RemoveSignalForwardStatus(int targetInstanceId)
+        {
+            if (!signalForwardStatusHandleByTarget.TryGetValue(targetInstanceId, out Guid handle)) return;
+
+            if (StorageNetworkBuildingRegistry.TryGetBuilding(targetInstanceId, out GameObject target) &&
+                target != null)
+            {
+                KSelectable selectable = target.GetComponent<KSelectable>();
+                selectable?.RemoveStatusItem(handle);
+            }
+
+            signalForwardStatusHandleByTarget.Remove(targetInstanceId);
+        }
+
+        private void RemoveAllSignalForwardStatuses()
+        {
+            foreach (KeyValuePair<int, Guid> pair in signalForwardStatusHandleByTarget.ToList())
+            {
+                RemoveSignalForwardStatus(pair.Key);
+            }
+
+            signalForwardStatusHandleByTarget.Clear();
+        }
+
+        // Each forwarder instance creates its own StatusItem with a unique ID.
+        // This allows multiple forwarders to each show their own status line on
+        // the same target building. The forwarder name is baked into the text
+        // directly so it always reflects the current name after a refresh.
+        private StatusItem GetOrCreateSignalForwardedStatusItem()
+        {
+            if (instanceSignalForwardedStatusItem != null)
+            {
+                return instanceSignalForwardedStatusItem;
+            }
+
+            string forwarderName = gameObject != null ? gameObject.GetProperName() : string.Empty;
+            string highlightedName = $"<b><color=#FFD54F>{forwarderName}</color></b>";
+
+            string statusText = STRINGS.Get(STRINGS.UI.STORAGE_NETWORK.SIGNAL_FORWARDED_STATUS)
+                .Replace("{0}", highlightedName);
+            string tooltipText = STRINGS.Get(STRINGS.UI.STORAGE_NETWORK.SIGNAL_FORWARDED_STATUS_TOOLTIP)
+                .Replace("{0}", highlightedName);
+
+            instanceSignalForwardedStatusItem = new StatusItem(
+                "StorageNetworkSignalForwarded_" + GetInstanceID(),
+                statusText,
+                tooltipText,
+                "status_item_check",
+                StatusItem.IconType.Info,
+                NotificationType.Neutral,
+                false,
+                OverlayModes.None.ID,
+                129022,
+                false);
+
+            return instanceSignalForwardedStatusItem;
         }
 
         private float EvaluateMusicSequencerNode(string nodeId, float playValue, float resetValue, RuntimeBlueprintNode node)

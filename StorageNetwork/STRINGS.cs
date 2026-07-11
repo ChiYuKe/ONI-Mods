@@ -1165,6 +1165,8 @@ namespace StorageNetwork
                 public static LocString GEYSER_STATUS_MISSING_EMITTER = "缺少喷发组件";
                 public static LocString GEYSER_STATUS_TARGET_FULL = "有匹配服务器，但容量已满";
                 public static LocString GEYSER_STATUS_TARGET_SUMMARY = "{0} 个服务器，剩余 {1}";
+                public static LocString SIGNAL_FORWARDED_STATUS = "此建筑信号在{0}被使用";
+                public static LocString SIGNAL_FORWARDED_STATUS_TOOLTIP = "该建筑的逻辑输出信号正在被 {0} 读取并转发到自动化网络。";
             }
         }
     }
