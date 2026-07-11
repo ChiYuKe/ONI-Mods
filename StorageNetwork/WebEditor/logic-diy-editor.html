@@ -668,6 +668,9 @@
         .building-content h3 { font-size: 14px; margin-bottom: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .material-content p,
         .building-content p { font-size: 11px; opacity: 0.8; }
+        .remote-pixel-node .building-content { width: auto; box-sizing: border-box; }
+        .building-locate-btn { margin-top: 8px; width: 100%; min-height: 24px; border: 1px solid rgba(255,255,255,.28); background: rgba(18,31,49,.72); color: var(--text-light); cursor: pointer; font-size: 11px; }
+        .building-locate-btn:hover { border-color: var(--active); color: var(--active); }
         .variable-container .material-content {
             width: 100%;
             margin: 0;
@@ -776,6 +779,10 @@
         /* Pixel screen node — no card chrome, just the 4 blocks */
         .node.pixel-screen-node { background: transparent; border: none; box-shadow: none; padding: 0; min-width: 0; min-height: 0; width: auto !important; height: auto !important; }
         .node.pixel-screen-node .node-title { display: none; }
+        .music-sequencer { box-sizing: border-box; }
+        .music-rows-scroll { overflow-y: auto; scrollbar-width: thin; }
+        .music-sequencer::-webkit-scrollbar { width: 6px; }
+        .music-sequencer::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
         .signal-state { border: 2px solid var(--node-border); background: var(--signal-red-bg); color: var(--text-light); font-size: 12px; font-weight: bold; padding: 8px 0; text-align: center; }
         .signal-state.active { background: var(--signal-green-bg); }
         .signal-value { border: 2px solid var(--node-border); background: var(--panel-dark); color: var(--text-light); font-size: 12px; font-weight: bold; padding: 8px 4px; text-align: center; overflow-wrap: anywhere; min-height: 18px; }
@@ -817,6 +824,32 @@
         .seq-bit { width: 28px; height: 18px; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; font-family: monospace; cursor: pointer; border-radius: 2px; background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.2); border: 1px solid transparent; transition: all 0.1s; }
         .seq-bit.on { background: var(--port-active); color: #fff; box-shadow: 0 0 4px rgba(34,197,94,0.4); }
         .seq-bit:hover { border-color: rgba(255,255,255,0.3); }
+        .music-sequencer { margin: 6px 8px 8px; padding: 9px; background: var(--panel-dark); color: var(--text-light); display: grid; gap: 7px; }
+        .music-controls { display: grid; grid-template-columns: 1fr 1fr 76px; gap: 7px; align-items: end; }
+        .music-field { display: grid; gap: 3px; color: #aeb8c8; font-size: 10px; font-weight: 700; letter-spacing: .04em; }
+        .music-field input { width: 100%; box-sizing: border-box; min-width: 0; height: 27px; padding: 0 8px; border: 1px solid #4b5565; background: #151f31; color: #f8fafc; font-weight: 700; text-align: right; outline: none; }
+        .music-field input:focus { border-color: #a14270; box-shadow: 0 0 0 1px #a14270; }
+        .music-loop-toggle { height: 27px; display: flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid #4b5565; background: #1b2639; color: #cbd5e1; cursor: pointer; font-size: 11px; font-weight: 700; }
+        .music-loop-toggle input { position: absolute; opacity: 0; pointer-events: none; }
+        .music-toggle-track { width: 24px; height: 12px; border-radius: 8px; background: #566070; padding: 2px; transition: .15s ease; }
+        .music-toggle-knob { display: block; width: 8px; height: 8px; border-radius: 50%; background: #d9e1eb; transition: .15s ease; }
+        .music-loop-toggle input:checked + .music-toggle-track { background: #a14270; }
+        .music-loop-toggle input:checked + .music-toggle-track .music-toggle-knob { transform: translateX(12px); background: white; }
+        .music-step { display: grid; grid-template-columns: minmax(0,1fr) 70px 25px; gap: 6px; align-items: center; padding: 3px 4px; background: #1b2639; border-left: 2px solid transparent; }
+        .music-step:hover { border-left-color: #a14270; background: #202c41; }
+        .music-step select, .music-step input { min-width: 0; height: 25px; box-sizing: border-box; border: 1px solid #455064; background: #111a2a; color: #eef2f7; font-weight: 700; padding: 0 7px; }
+        .music-step input { text-align: center; }
+        .music-step button { width: 25px; height: 25px; border: 0; background: transparent; color: #8490a3; cursor: pointer; }
+        .music-step button:hover { background: #7f1d2d; color: white; }
+        .music-mode-row { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+        .music-mode-row button, .music-bulk-actions button { min-height: 27px; border: 1px solid #465166; background: #202b3e; color: #dce4ef; cursor: pointer; font-size: 11px; font-weight: 700; }
+        .music-mode-row button:hover, .music-bulk-actions button:hover { border-color: #a14270; color: white; }
+        .music-add-btn { min-height: 27px; border: 1px dashed #667085; background: transparent; color: #b8c2d1; cursor: pointer; font-size: 11px; }
+        .music-add-btn:hover { border-color: #a14270; color: white; }
+        .music-summary { padding: 10px; background: rgba(255,255,255,.06); font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+        .music-bulk-editor { width: 100%; min-height: 150px; resize: vertical; box-sizing: border-box; padding: 7px; font: 12px/1.5 Consolas, monospace; }
+        .music-bulk-help { font-size: 10px; opacity: .75; }
+        .music-bulk-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
         .sequence-bit-labels { display: flex; gap: 4px; flex: 1; justify-content: flex-end; padding-right: 0; }
         .sequence-bit-labels > span { width: 28px; text-align: center; font-size: 9px; color: rgba(255,255,255,0.3); font-family: monospace; }
         .select-container { background-color: var(--panel-dark); margin: 6px 14px 8px 14px; padding: 6px 8px 8px 8px; display: flex; flex-direction: column; gap: 2px; width: auto; box-sizing: border-box; border-radius: 3px; }
@@ -1280,8 +1313,8 @@ const sidebarGroups = [
     { key: 'conditions', types: ['logic-gt', 'logic-lt', 'logic-eq', 'logic-range', 'material-low', 'material-high'] },
     { key: 'math', types: ['math-add', 'math-subtract', 'math-multiply', 'math-divide', 'math-mod', 'math-clamp', 'math-negate', 'math-min', 'math-max'] },
     { key: 'bool', types: ['bool-and', 'bool-nand', 'bool-or', 'bool-nor', 'bool-xor', 'bool-not', 'bool-selector', 'bool-true', 'bool-false'] },
-    { key: 'state', types: ['delay', 'number-changed', 'latch', 'counter', 'random', 'edge-pulse', 'hysteresis', 'toggle', 'pulse-shaper', 'material-change', 'sequence'] },
-    { key: 'network', types: ['inventory-percent', 'inventory-stored', 'inventory-remaining', 'inventory-capacity', 'power-percent', 'power-stored', 'power-remaining', 'power-capacity', 'building-status', 'building-signal'] },
+    { key: 'state', types: ['music-sequencer', 'delay', 'number-changed', 'latch', 'counter', 'random', 'edge-pulse', 'hysteresis', 'toggle', 'pulse-shaper', 'material-change', 'sequence'] },
+    { key: 'network', types: ['inventory-percent', 'inventory-stored', 'inventory-remaining', 'inventory-capacity', 'power-percent', 'power-stored', 'power-remaining', 'power-capacity', 'network-signal-output', 'remote-pixel-screen', 'building-status', 'building-signal'] },
     { key: 'organize', types: ['reroute', 'group'] }
 ];
 
@@ -1342,9 +1375,12 @@ const sidebarText = {
         'power-capacity': ['电池总容量模块', '输出储能网络总电池容量，单位J。'],
         'building-status': ['建筑可用模块', '选择一个建筑，可运行时输出真。'],
         'building-signal': ['建筑信号模块', '选择一个带自动化输出端口的建筑，输出它当前的信号值；会排除当前建筑自身。'],
+        'network-signal-output': ['网络信号输出器', '选择可达星球上的储存网络信号输出器，并读取其当前输出。'],
+        'remote-pixel-screen': ['远程控制像素屏', '选择可达星球上的像素屏建筑，将4个输入按1/2/4/8合成为0-15信号并直接发送。'],
         group: ['分组框', '用于给一片节点做视觉分组。'],
         reroute: ['重路由点', '整理连线路径；拥有一个输入 Pin 和一个输出 Pin。'],
         sequence: ['步进序列器', 'Advance上升沿切换步进，Reset上升沿回到S0。输出当前步的合成信号值和步号。'],
+        'music-sequencer': ['音乐序列器', '按 BPM 播放音符和休止步骤，直接输出音乐盒使用的 0-12 信号。'],
         select: ['多路选择器', '根据选择端(Sel)的值，将6个输入之一路由到输出。Sel=0选输入0...Sel=5选输入5。']
     },
     en: {
@@ -1403,9 +1439,12 @@ const sidebarText = {
         'power-capacity': ['Battery Capacity', 'Outputs total battery capacity in J.'],
         'building-status': ['Building Ready', 'Choose a building; outputs true when it can operate.'],
         'building-signal': ['Building Signal', 'Choose a building with an automation output port and output its current signal value. The current building is excluded.'],
+        'network-signal-output': ['Network Signal Output', 'Reads a Storage Network signal output on reachable worlds.'],
+        'remote-pixel-screen': ['Remote Pixel Screen', 'Selects a reachable Pixel Pack and sends four inputs as one 0-15 automation value.'],
         group: ['Group Box', 'Visual grouping box for related nodes.'],
         reroute: ['Reroute Node', 'Routes a wire through one input pin and one output pin.'],
         sequence: ['Sequence', 'Advance rising edge moves to the next step, Reset returns to S0. Outputs the current step value and step index.'],
+        'music-sequencer': ['Music Sequencer', 'Plays notes and rests by BPM and outputs Music Box values 0-12.'],
         select: ['Select', 'Routes one of 6 inputs to the output based on the selector value (0-5).']
     }
 };
@@ -1417,7 +1456,9 @@ function createNodeDOM(id, type, x, y) {
     const node = document.createElement('div');
     const cardType = meta.card?.type || 'condition';
     node.className = type === 'group' ? 'node group-node' : (cardType === 'operator' ? 'node operator-node' : 'node');
+    if (type === 'music-sequencer') node.classList.add('music-sequencer-node');
     if (meta.card?.layout === 'wide-math') node.classList.add('wide-math-node');
+    if (type === 'remote-pixel-screen') node.classList.add('remote-pixel-node');
     node.id = id;
     node.dataset.type = type;
     node.style.left = `${x}px`;
@@ -1537,10 +1578,41 @@ function cardMaterial(id, meta) {
 function cardBuilding(id, meta) {
     const b = getSelectedBuilding(id);
     const name = stripGameRichText(b?.Name || b?.name || t('chooseBuilding'));
-    const info = meta.card?.showSignal
+    const isRemotePixel = nodesData[id]?.type === 'remote-pixel-screen';
+    const info = isRemotePixel && b
+        ? formatPixelScreenTargetStatus(b)
+        : meta.card?.showSignal
         ? (b ? `${t('signalValue')} ${getBuildingSignalValue(b)}` : t('noBuildingSelected'))
         : (b ? ((b.Operational ?? b.operational) ? t('currentAvailable') : t('currentUnavailable')) : t('noBuildingSelected'));
-    return cardTitle(meta, id) + `<div class="building-content" title="${t('selectBuilding')}"><h3>${escapeHtml(name)}</h3><p>${escapeHtml(info)}</p></div>`;
+    const locateButton = isRemotePixel && b
+        ? `<button class="building-locate-btn" type="button" onclick="locatePixelScreen(event,'${id}')">${currentLanguage === 'en' ? 'Locate in game' : '定位像素屏'}</button>`
+        : '';
+    return cardTitle(meta, id) + `<div class="building-content" title="${t('selectBuilding')}"><h3>${escapeHtml(name)}</h3><p>${escapeHtml(info)}</p>${locateButton}</div>`;
+}
+
+async function locatePixelScreen(event, nodeId) {
+    event?.preventDefault();
+    event?.stopPropagation();
+    const targetId = Number(nodesData[nodeId]?.buildingInstanceId || 0);
+    if (!targetId) return;
+    try {
+        const response = await fetchWithTimeout(`/api/focus-building?id=${encodeURIComponent(editorId)}&targetId=${encodeURIComponent(targetId)}`, { method: 'POST' }, 3000);
+        setStatus(response.ok ? (currentLanguage === 'en' ? 'Located target in game' : '已在游戏中定位目标') : t('saveFailed'));
+    } catch {
+        setStatus(t('saveFailed'));
+    }
+}
+
+function formatPixelScreenTargetStatus(building) {
+    const worldId = Number(building?.WorldId ?? building?.worldId ?? -1);
+    const x = Number(building?.CellX ?? building?.cellX ?? -1);
+    const y = Number(building?.CellY ?? building?.cellY ?? -1);
+    const connected = Boolean(building?.AutomationConnected ?? building?.automationConnected);
+    const controllerCount = Number(building?.RemoteControllerCount ?? building?.remoteControllerCount ?? 0);
+    const location = `${worldId >= 0 ? `W${worldId} ` : ''}(${x}, ${y})`;
+    if (!connected) return `${location} · ${currentLanguage === 'en' ? 'No ribbon wire' : '未连接自动化带'}`;
+    if (controllerCount > 1) return `${location} · ${currentLanguage === 'en' ? `${controllerCount} remote controllers (conflict)` : `${controllerCount}个远程控制器（冲突）`}`;
+    return `${location} · ${currentLanguage === 'en' ? 'Ready' : '可用'}`;
 }
 
 function cardCondition(id, meta) {
@@ -1664,6 +1736,28 @@ function cardPixelScreen(id, meta) {
     </div>`;
 }
 
+function cardMusicSequencer(id, meta) {
+    const node = nodesData[id] || {};
+    const notes = Array.isArray(node.values) && node.values.length ? node.values : [1, 3, 5, 0];
+    const durations = Array.isArray(node.durations) ? node.durations : notes.map(() => 1);
+    const names = ['休止', 'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+    const rows = notes.map((note, index) => `<div class="music-step"><select onchange="setMusicNote('${id}',${index},this.value)">${names.map((name,value)=>`<option value="${value}" ${Number(note)===value?'selected':''}>${name}</option>`).join('')}</select><input type="number" min="0.125" step="0.125" value="${Number(durations[index] || 1)}" onchange="setMusicDuration('${id}',${index},this.value)" title="拍数"><button onclick="removeMusicStep('${id}',${index})">×</button></div>`).join('');
+    const sequenceText = notes.map((note, index) => `${names[Math.max(0, Math.min(12, Number(note) || 0))] === '休止' ? 'R' : names[Math.max(0, Math.min(12, Number(note) || 0))]}:${Number(durations[index] || 1)}`).join(' ');
+    const view = node._musicView || (notes.length > 12 ? 'compact' : 'rows');
+    const maxRows = 15;
+    const rowLimited = view === 'rows' && notes.length > maxRows;
+    let body = '';
+    if (view === 'bulk') {
+        body = `<textarea class="music-bulk-editor" data-music-bulk="${id}" spellcheck="false">${escapeHtml(sequenceText)}</textarea><div class="music-bulk-help">${currentLanguage === 'en' ? 'Format: E:2 D:3 C#:4 R:1 (note:beats)' : '格式：E:2 D:3 C#:4 R:1（音符:拍数）'}</div><div class="music-bulk-actions"><button onclick="applyMusicBulk('${id}')">${currentLanguage === 'en' ? 'Apply all' : '应用全部'}</button><button onclick="setMusicView('${id}','compact')">${currentLanguage === 'en' ? 'Cancel' : '取消'}</button></div>`;
+    } else if (view === 'compact') {
+        const preview = sequenceText.length > 180 ? `${sequenceText.slice(0, 180)}…` : sequenceText;
+        body = `<div class="music-summary"><b>${currentLanguage === 'en' ? `${notes.length} steps` : `共 ${notes.length} 步`}</b><br>${escapeHtml(preview)}</div><div class="music-mode-row"><button onclick="setMusicView('${id}','bulk')">${currentLanguage === 'en' ? 'Bulk edit' : '批量编辑'}</button><button onclick="setMusicView('${id}','rows')">${currentLanguage === 'en' ? 'Edit rows' : '逐行微调'}</button></div>`;
+    } else {
+        body = `<div class="music-mode-row"><button onclick="setMusicView('${id}','bulk')">${currentLanguage === 'en' ? 'Bulk edit' : '批量编辑'}</button><button onclick="setMusicView('${id}','compact')">${currentLanguage === 'en' ? 'Collapse' : '收起列表'}</button></div><button class="music-add-btn" onclick="addMusicStep('${id}')">＋ ${currentLanguage === 'en' ? 'Add note' : '添加音符'}</button>${rows}`;
+    }
+    return cardTitle(meta, id) + `<div class="music-sequencer"><div class="music-controls"><label class="music-field"><span>BPM</span><input class="num-input" data-field="value" value="${Number(node.value || 120)}"></label><label class="music-field"><span>${currentLanguage === 'en' ? 'GAP' : '间隔'}</span><input class="num-input" data-field="gapSeconds" value="${Number(node.gapSeconds ?? 0.2)}" step="any"></label><label class="music-loop-toggle"><input type="checkbox" ${node.loop !== false?'checked':''} onchange="setMusicLoop('${id}',this.checked)"><span class="music-toggle-track"><span class="music-toggle-knob"></span></span><span>${currentLanguage === 'en' ? 'LOOP' : '循环'}</span></label></div>${view === 'rows' ? `<div class="music-mode-row"><button onclick="setMusicView('${id}','bulk')">${currentLanguage === 'en' ? 'Bulk edit' : '批量编辑'}</button><button onclick="setMusicView('${id}','compact')">${currentLanguage === 'en' ? 'Collapse' : '收起列表'}</button></div><button class="music-add-btn" onclick="addMusicStep('${id}')">＋ ${currentLanguage === 'en' ? 'Add note' : '添加音符'}</button><div class="music-rows-scroll" style="${notes.length > maxRows ? 'max-height:470px' : ''}">${rows}</div>` : body}</div>`;
+}
+
 function updatePixelScreen(id, value) {
     const body = document.querySelector(`.pixel-screen-body[data-pixel-id="${id}"]`);
     if (!body) return;
@@ -1690,6 +1784,7 @@ const CARD_RENDERERS = {
     group: cardGroup,
     'dynamic-rows': cardDynamicRows,
     'pixel-screen': cardPixelScreen,
+    'music-sequencer': cardMusicSequencer,
 };
 
 function createNodeInnerHTML(id, type, meta) {
@@ -1727,9 +1822,16 @@ function getBuildingSignalValue(item) {
 
 function getBuildingsForNode(nodeId) {
     const nodeType = nodesData[nodeId]?.type || '';
-    if (nodeType !== 'building-signal') return getBuildings();
+    if (nodeType === 'remote-pixel-screen') {
+        return getBuildings().filter(item => Boolean(item.IsPixelScreen ?? item.isPixelScreen));
+    }
+    if (nodeType !== 'building-signal' && nodeType !== 'network-signal-output') return getBuildings();
     const currentId = getCurrentBuildingInstanceId();
-    return getBuildings().filter(item => buildingHasLogicOutput(item) && getBuildingId(item) !== currentId);
+    return getBuildings().filter(item => {
+        const networkOutput = !!(item.IsNetworkSignalOutput ?? item.isNetworkSignalOutput);
+        return buildingHasLogicOutput(item) && getBuildingId(item) !== currentId &&
+            (nodeType === 'network-signal-output' ? networkOutput : !networkOutput);
+    });
 }
 
 function getSelectedBuilding(nodeId) {
@@ -1771,15 +1873,20 @@ function showBuildingPicker(node) {
     materialPicker.style.top = `${Math.max(8, nodeRect.bottom - canvasRect.top + 8)}px`;
     materialPicker.innerHTML = `<div class="material-picker-title">${t('chooseBuilding')}</div>`;
     if (!buildings.length) {
-        const emptyText = nodesData[node.id]?.type === 'building-signal' ? t('noSignalBuildings') : t('noBuildings');
+        const emptyText = ['building-signal', 'network-signal-output'].includes(nodesData[node.id]?.type) ? t('noSignalBuildings') : t('noBuildings');
         materialPicker.innerHTML += `<div class="material-empty">${emptyText}</div>`;
     } else {
         buildings.forEach(item => {
             const instanceId = getBuildingId(item);
             const name = stripGameRichText(item.Name || item.name || `${t('building')} ${instanceId}`);
             const operational = item.Operational ?? item.operational;
-            const rightText = nodesData[node.id]?.type === 'building-signal'
-                ? `${t('signalValue')} ${getBuildingSignalValue(item)}`
+            const signalNode = ['building-signal', 'network-signal-output'].includes(nodesData[node.id]?.type);
+            const remotePixelNode = nodesData[node.id]?.type === 'remote-pixel-screen';
+            const worldId = Number(item.WorldId ?? item.worldId ?? -1);
+            const rightText = remotePixelNode
+                ? formatPixelScreenTargetStatus(item)
+                : signalNode
+                ? `${worldId >= 0 ? `W${worldId} · ` : ''}${t('signalValue')} ${getBuildingSignalValue(item)}`
                 : (operational ? t('available') : t('unavailable'));
             const option = document.createElement('button');
             option.className = `material-option ${instanceId === selectedId ? 'active' : ''}`;
@@ -1799,9 +1906,19 @@ function selectBuilding(nodeId, instanceId) {
     const building = getSelectedBuilding(nodeId);
     if (content && building) {
         content.querySelector('h3').textContent = stripGameRichText(building.Name || building.name || `${t('building')} ${instanceId}`);
-        content.querySelector('p').textContent = nodesData[nodeId]?.type === 'building-signal'
+        content.querySelector('p').textContent = nodesData[nodeId]?.type === 'remote-pixel-screen'
+            ? formatPixelScreenTargetStatus(building)
+            : ['building-signal', 'network-signal-output'].includes(nodesData[nodeId]?.type)
             ? `${t('signalValue')} ${getBuildingSignalValue(building)}`
             : ((building.Operational ?? building.operational) ? t('currentAvailable') : t('currentUnavailable'));
+        if (nodesData[nodeId]?.type === 'remote-pixel-screen' && !content.querySelector('.building-locate-btn')) {
+            const locateButton = document.createElement('button');
+            locateButton.type = 'button';
+            locateButton.className = 'building-locate-btn';
+            locateButton.textContent = currentLanguage === 'en' ? 'Locate in game' : '定位像素屏';
+            locateButton.addEventListener('click', event => locatePixelScreen(event, nodeId));
+            content.appendChild(locateButton);
+        }
     }
     materialPicker.classList.remove('visible');
     updateSignalMonitors();
@@ -1980,7 +2097,7 @@ function sanitizeNumericText(value, allowDecimal = true) {
 }
 
 function sanitizeNumericInput(input) {
-    const allowDecimal = input.dataset.field === 'intervalSeconds' || input.dataset.field === 'mathInput';
+    const allowDecimal = input.dataset.field === 'intervalSeconds' || input.dataset.field === 'mathInput' || input.dataset.field === 'gapSeconds';
     const cleaned = sanitizeNumericText(input.value, allowDecimal);
     if (input.value !== cleaned) {
         const offset = input.value.length - (input.selectionStart ?? input.value.length);
@@ -1991,11 +2108,11 @@ function sanitizeNumericInput(input) {
 }
 
 function bindNumericInput(input, node) {
-    input.inputMode = (input.dataset.field === 'intervalSeconds' || input.dataset.field === 'mathInput') ? 'decimal' : 'numeric';
+    input.inputMode = (input.dataset.field === 'intervalSeconds' || input.dataset.field === 'mathInput' || input.dataset.field === 'gapSeconds') ? 'decimal' : 'numeric';
     input.autocomplete = 'off';
     input.addEventListener('beforeinput', e => {
         if (!e.data) return;
-        const allowDecimal = input.dataset.field === 'intervalSeconds' || input.dataset.field === 'mathInput';
+        const allowDecimal = input.dataset.field === 'intervalSeconds' || input.dataset.field === 'mathInput' || input.dataset.field === 'gapSeconds';
         if (!/^[\d.]+$/.test(e.data)) {
             e.preventDefault();
             return;
@@ -2103,6 +2220,77 @@ window.removeSequenceStep = function(id, index) {
     nodesData[id].values.splice(index, 1);
     refreshNodeDOM(id);
     markCircuitDirty(nodeReachesOutput(id));
+};
+
+window.setMusicNote = function(id, index, value) {
+    if (!nodesData[id]) return;
+    nodesData[id].values[index] = Math.max(0, Math.min(12, Number(value) || 0));
+    markCircuitDirty(nodeReachesOutput(id));
+};
+window.setMusicDuration = function(id, index, value) {
+    if (!nodesData[id]) return;
+    nodesData[id].durations[index] = Math.max(0.125, Number(value) || 1);
+    markCircuitDirty(nodeReachesOutput(id));
+};
+window.setMusicLoop = function(id, checked) { if (nodesData[id]) { nodesData[id].loop = !!checked; markCircuitDirty(nodeReachesOutput(id)); } };
+window.setMusicView = function(id, view) {
+    if (!nodesData[id]) return;
+    nodesData[id]._musicView = ['rows', 'compact', 'bulk'].includes(view) ? view : 'compact';
+    refreshNodeDOM(id); renderConnections(); persistLayout();
+};
+window.applyMusicBulk = function(id) {
+    const node = nodesData[id];
+    const editor = document.querySelector(`textarea[data-music-bulk="${id}"]`);
+    if (!node || !editor) return;
+    const noteMap = { R:0, REST:0, '休止':0, '-':0, C:1, 'C#':2, D:3, 'D#':4, E:5, F:6, 'F#':7, G:8, 'G#':9, A:10, 'A#':11, B:12 };
+    const tokens = editor.value.trim().split(/[\s,，;；]+/).filter(Boolean);
+    const values = [];
+    const durations = [];
+    const invalid = [];
+    tokens.slice(0, 2048).forEach(token => {
+        const parts = token.split(/[:：/]/);
+        const rawNote = String(parts[0] || '').trim().toUpperCase();
+        const numericNote = Number(rawNote);
+        const note = Object.prototype.hasOwnProperty.call(noteMap, rawNote) ? noteMap[rawNote]
+            : (Number.isFinite(numericNote) && numericNote >= 0 && numericNote <= 12 ? Math.floor(numericNote) : null);
+        const beats = parts.length > 1 ? Number(parts[1]) : 1;
+        if (note === null || !Number.isFinite(beats) || beats < 0.125) { invalid.push(token); return; }
+        values.push(note);
+        durations.push(beats);
+    });
+    if (invalid.length) {
+        alert(`${currentLanguage === 'en' ? 'Invalid entries' : '无法识别的条目'}: ${invalid.slice(0, 12).join(', ')}`);
+        return;
+    }
+    if (!values.length) {
+        alert(currentLanguage === 'en' ? 'Enter at least one note.' : '请至少输入一个音符。');
+        return;
+    }
+    node.values = values;
+    node.durations = durations;
+    node._musicView = 'compact';
+    refreshNodeDOM(id); renderConnections(); markCircuitDirty(nodeReachesOutput(id));
+};
+window.addMusicStep = function(id) {
+    if (!nodesData[id] || nodesData[id].values.length >= 2048) return;
+    if (!nodesData[id]._musicView) nodesData[id]._musicView = 'rows';
+    const ne = document.getElementById(id);
+    const se = ne ? ne.querySelector('.music-rows-scroll') : null;
+    const savedScrollTop = se ? se.scrollTop : 0;
+    const nearBottom = se && (savedScrollTop + se.clientHeight >= se.scrollHeight - 30);
+    nodesData[id].values.push(0); nodesData[id].durations.push(1);
+    refreshNodeDOM(id); renderConnections(); markCircuitDirty(nodeReachesOutput(id));
+    requestAnimationFrame(() => {
+        const ne2 = document.getElementById(id);
+        const ns = ne2 ? ne2.querySelector('.music-rows-scroll') : null;
+        if (!ns) return;
+        ns.scrollTop = nearBottom ? ns.scrollHeight : Math.min(savedScrollTop, ns.scrollHeight);
+    });
+};
+window.removeMusicStep = function(id, index) {
+    if (!nodesData[id] || nodesData[id].values.length <= 1) return;
+    nodesData[id].values.splice(index, 1); nodesData[id].durations.splice(index, 1);
+    refreshNodeDOM(id); renderConnections(); markCircuitDirty(nodeReachesOutput(id));
 };
 
 window.addSelectPort = function(id) {
@@ -2277,6 +2465,7 @@ function refreshNodeDOM(id) {
     const isSelected = selectedNodeIds.has(id);
     el.className = type === 'group' ? 'node group-node' : (cardType === 'operator' ? 'node operator-node' : 'node');
     if (type === 'pixel-screen') el.classList.add('pixel-screen-node');
+    if (type === 'music-sequencer') el.classList.add('music-sequencer-node');
     if (meta.card?.layout === 'wide-math') el.classList.add('wide-math-node');
     if (isSelected) el.classList.add('selected');
     if (type !== 'group' && type !== 'pixel-screen') {
@@ -2599,9 +2788,12 @@ const nodeMeta = {
     'power-capacity': { title: '电池总容量模块', inputs: 0, outputs: 1, contentHeight: 68, module: 'PowerCapacity', sign: 'J', label: '电池容量', outputLabels: ['总容量 (J)'], card: { type: 'condition' } },
     'building-status': { title: '建筑可用模块', inputs: 0, outputs: 1, contentHeight: 78, module: 'BuildingStatus', outputLabels: ['可用=1,不可用=0'], card: { type: 'building' } },
     'building-signal': { title: '建筑信号模块', inputs: 0, outputs: 1, contentHeight: 78, module: 'BuildingSignal', outputLabels: ['建筑输出信号值'], card: { type: 'building', showSignal: true } },
+    'network-signal-output': { title: '网络信号输出器', inputs: 0, outputs: 1, contentHeight: 78, module: 'NetworkSignalOutput', outputLabels: ['网络信号值'], card: { type: 'building', showSignal: true } },
+    'remote-pixel-screen': { title: '远程控制像素屏', inputs: 4, outputs: 0, contentHeight: 150, module: 'RemotePixelScreen', width: 260, inputPortCenters: [42, 74, 106, 138], inputLabels: ['Port0 (1)', 'Port1 (2)', 'Port2 (4)', 'Port3 (8)'], card: { type: 'building', showSignal: false } },
     group: { title: '分组框', inputs: 0, outputs: 0, contentHeight: 176, module: 'Group', card: { type: 'group' } },
     output: { title: '输出模块', inputs: 4, outputs: 0, contentHeight: 130, module: 'Output', inputPortCenters: [60, 90, 120, 150], inputLabels: ['Port0 (值1)', 'Port1 (值2)', 'Port2 (值4)', 'Port3 (值8)'], card: { type: 'port-rows', ports: [{label:'Port0',val:'1'},{label:'Port1',val:'2'},{label:'Port2',val:'4'},{label:'Port3',val:'8'}] } },
     sequence: { title: '步进序列器', inputs: 2, outputs: 2, contentHeight: 90, module: 'Sequence', width: 220, inputPortCenters: [42, 78], outputPortCenters: [42, 78], inputLabels: ['Advance 步进', 'Reset 重置'], outputLabels: ['信号值 (0-15)', '当前步数'], card: { type: 'dynamic-rows', getCount: id => Math.max(1, (Array.isArray(nodesData[id]?.values) ? nodesData[id].values.length : 4)), minRows: 1, maxRows: 100, rowLabel: 'S', addLabel: pc => '+ ' + t('addStep'), onAdd: 'addSequenceStep', onRemove: 'removeSequenceStep', renderRow: (id, idx) => { const v = Number((nodesData[id]?.values || [])[idx] || 0); const b = [(v)&1,(v>>1)&1,(v>>2)&1,(v>>3)&1]; return `<div class="sequence-row"><span>S${idx}</span><div class="sequence-bits">${b.map((on,i)=>`<span class="seq-bit ${on?'on':''}" onclick="toggleSeqBit('${id}',${idx},${i})">${[1,2,4,8][i]}</span>`).join('')}</div><button onclick="removeSequenceStep('${id}',${idx})" title="${t('removeStep')}">×</button></div>`; } } },
+    'music-sequencer': { title: '音乐序列器', inputs: 2, outputs: 1, contentHeight: 190, module: 'MusicSequencer', width: 290, inputLabels: ['播放/暂停', '重新开始'], outputLabels: ['音符值 (0-12)'], card: { type: 'music-sequencer' } },
     split4: { title: '4位信号拆分器', inputs: 1, outputs: 4, contentHeight: 130, module: 'Split4', outputPortCenters: [60, 90, 120, 150], inputLabels: ['合成信号 (0-15)'], outputLabels: ['Port0 (1)', 'Port1 (2)', 'Port2 (4)', 'Port3 (8)'], card: { type: 'port-rows', ports: [{label:'Port0',val:'1'},{label:'Port1',val:'2'},{label:'Port2',val:'4'},{label:'Port3',val:'8'}] } },
     merge4: { title: '4位信号合并器', inputs: 4, outputs: 1, contentHeight: 130, module: 'Merge4', sign: 'MERGE', label: '合并输出', inputPortCenters: [60, 90, 120, 150], inputLabels: ['Port0 (1)', 'Port1 (2)', 'Port2 (4)', 'Port3 (8)'], outputLabels: ['合成信号 (0-15)'], card: { type: 'port-rows', ports: [{label:'Port0',val:'1'},{label:'Port1',val:'2'},{label:'Port2',val:'4'},{label:'Port3',val:'8'}] } },
     select: { title: '多路选择器', inputs: 7, outputs: 1, contentHeight: 200, module: 'Select', width: 230, inputLabels: ['选择 (Sel)', '输入0', '输入1', '输入2', '输入3', '输入4', '输入5'], outputLabels: ['输出选中值'], defaultPortCount: 6, card: { type: 'dynamic-rows', variant: 'select', defaultRows: 6, minRows: 2, maxRows: 12, rowLabel: '输入', addLabel: pc => '+ 添加 (' + pc + ')', onAdd: 'addSelectPort', onRemove: 'removeSelectPort' } },
@@ -2672,6 +2864,8 @@ function applyNodeTranslations() {
         select:          { in:  ['Select (Sel)'], out: ['Selected input value'] },
         'building-status':{ out: ['1=Operational, 0=Not operational'] },
         'building-signal':{ out: ['Building output signal'] },
+        'network-signal-output':{ out: ['Storage Network signal value'] },
+        'remote-pixel-screen':{ in: ['Port0 (1)', 'Port1 (2)', 'Port2 (4)', 'Port3 (8)'] },
     };
     if (currentLanguage === 'en') {
         Object.entries(portLabelEn).forEach(([type, dirs]) => {
@@ -2786,6 +2980,7 @@ function createNodeAt(type, x, y) {
     nodesData[id] = { type, x: pos.x, y: pos.y };
     if (type === 'select') nodesData[id].portCount = (meta.defaultPortCount || 6);
     if (type === 'sequence') nodesData[id].values = [0, 0, 0, 0];
+    if (type === 'music-sequencer') Object.assign(nodesData[id], { values: [1,1,8,8,10,10,8,6,6,5,5,3,3,1,8,8,6,6,5,5,3,8,8,6,6,5,5,3,1,1,8,8,10,10,8,6,6,5,5,3,3,1], durations: [1,1,1,1,1,1,2,1,1,1,1,1,1,2,1,1,1,1,1,1,2,1,1,1,1,1,1,2,1,1,1,1,1,1,2,1,1,1,1,1,1,2], value: 120, gapSeconds: 0.2, loop: true, inputValues: [1, 0] });
     const el = createNodeDOM(id, type, pos.x, pos.y);
     if (el) nodeLayer.appendChild(el);
     clearSelection();
@@ -2805,6 +3000,11 @@ function getNodeVisualSize(type, id = null) {
     if (type === 'sequence') {
         const values = id && Array.isArray(nodesData[id]?.values) ? nodesData[id].values : null;
         return { width: Number(meta.width || 220), height: seqCardHeight(values ? Math.max(1, values.length) : 4) };
+    }
+    if (type === 'music-sequencer') {
+        const count = Math.max(1, nodesData[id]?.values?.length || 4);
+        const view = nodesData[id]?._musicView || (count > 12 ? 'compact' : 'rows');
+        return { width: 290, height: view === 'bulk' ? 320 : (view === 'compact' ? 180 + Math.min(count, 15) * 7 : 190 + Math.min(count, 15) * 32) };
     }
     if (type === 'select') {
         const portCount = id ? Math.max(2, Math.min(12, Number(nodesData[id]?.portCount ?? 6))) : 6;
@@ -3216,7 +3416,7 @@ function handleGameDisconnected() {
 
 function scheduleAutoSave() {
     clearTimeout(autoSaveTimer);
-    autoSaveTimer = setTimeout(() => saveToGame(t('autoSaving'), t('autoSaved')), 700);
+    autoSaveTimer = setTimeout(() => saveToGame(t('autoSaving'), t('autoSaved')), 250);
 }
 
 function localizePage(refreshNodes) {
@@ -3657,7 +3857,7 @@ canvas.addEventListener('drop', e => {
 });
 
 canvas.addEventListener('wheel', e => {
-    if (docsPage.classList.contains('visible') || e.target.closest('.material-picker') || e.target.closest('.node-menu')) return;
+    if (docsPage.classList.contains('visible') || e.target.closest('.material-picker') || e.target.closest('.node-menu') || e.target.closest('.music-sequencer') || e.target.closest('.music-rows-scroll')) return;
     e.preventDefault();
     const direction = e.deltaY > 0 ? -1 : 1;
     const oldZoom = canvasZoom;
@@ -4957,7 +5157,7 @@ function evaluatePreviewNodeUncached(nodeId, outputPortIndex, depth = 0) {
         const building = getSelectedBuilding(nodeId);
         return building && (building.Operational ?? building.operational) ? 1 : 0;
     }
-    if (type === 'building-signal') {
+    if (type === 'building-signal' || type === 'network-signal-output') {
         const building = getSelectedBuilding(nodeId);
         return building ? getBuildingSignalValue(building) : 0;
     }
@@ -5163,13 +5363,22 @@ function buildRuntimeBlueprintJson() {
             const rawVal = inputValue != null && inputValue !== '' ? Number(inputValue) : (node.value ?? fallback);
             runtimeNode.Value = Math.min(maxValue, Math.max(0, Number.isNaN(rawVal) ? fallback : rawVal));
         }
-        if (node.type === 'building-status' || node.type === 'building-signal') {
+        if (node.type === 'building-status' || node.type === 'building-signal' || node.type === 'network-signal-output' || node.type === 'remote-pixel-screen') {
             runtimeNode.SelectedBuildingInstanceId = Number(node.buildingInstanceId || 0);
         }
         if (node.type === 'sequence') {
             const values = Array.isArray(node.values) && node.values.length > 0 ? node.values : [0, 0, 0, 0];
             const rawValues = values.slice().map(v => Math.min(15, Math.max(0, Math.floor(Number(v || 0)))));
             runtimeNode.Values = rawValues.length > 0 ? rawValues : [0, 0, 0, 0];
+        }
+        if (node.type === 'music-sequencer') {
+            runtimeNode.Values = (node.values || [1]).map(value => Math.max(0, Math.min(12, Number(value) || 0)));
+            runtimeNode.Durations = (node.durations || []).map(value => Math.max(0.125, Number(value) || 1));
+            while (runtimeNode.Durations.length < runtimeNode.Values.length) runtimeNode.Durations.push(1);
+            runtimeNode.Value = Math.max(20, Math.min(400, Number(node.value) || 120));
+            runtimeNode.GapSeconds = Math.max(0.2, Number(node.gapSeconds) || 0.2);
+            runtimeNode.Loop = node.loop !== false;
+            runtimeNode.InputValues = [1, 0];
         }
         if (node.type === 'hysteresis') {
             runtimeNode.Upper = Math.max(0, Number(node.upper ?? 500));
@@ -5459,7 +5668,7 @@ document.addEventListener('keydown', e => {
         return;
     }
     if (e.key.toLowerCase() === 'r' && !activeDrawingLine) {
-        if (docsPage.classList.contains('visible') || e.target.closest('input') || e.target.isContentEditable) return;
+        if (docsPage.classList.contains('visible') || e.target.closest('input') || e.target.closest('textarea') || e.target.isContentEditable) return;
         reroutePlacementHeld = true;
         canvas.classList.add('reroute-placement');
         e.preventDefault();
@@ -5479,7 +5688,7 @@ document.addEventListener('keydown', e => {
         toggleDocsPage(false);
         return;
     }
-    if (docsPage.classList.contains('visible') || e.target.closest('input') || e.target.isContentEditable) {
+    if (docsPage.classList.contains('visible') || e.target.closest('input') || e.target.closest('textarea') || e.target.isContentEditable) {
         return;
     }
     if (e.ctrlKey && !e.altKey && e.key.toLowerCase() === 'z') {
@@ -5598,7 +5807,9 @@ async function refreshGameState() {
                 const building = node ? getSelectedBuilding(node.id) : null;
                 if (!building) return;
                 content.querySelector('h3').textContent = stripGameRichText(building.Name || building.name || `${t('building')} ${getBuildingId(building)}`);
-                content.querySelector('p').textContent = nodesData[node.id]?.type === 'building-signal'
+                content.querySelector('p').textContent = nodesData[node.id]?.type === 'remote-pixel-screen'
+                    ? formatPixelScreenTargetStatus(building)
+                    : ['building-signal', 'network-signal-output'].includes(nodesData[node.id]?.type)
                     ? `${t('signalValue')} ${getBuildingSignalValue(building)}`
                     : ((building.Operational ?? building.operational) ? t('currentAvailable') : t('currentUnavailable'));
             });

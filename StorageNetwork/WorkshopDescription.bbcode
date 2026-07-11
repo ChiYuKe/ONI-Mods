@@ -1,72 +1,85 @@
 [h1]储存网络[/h1]
 [h1][i]Storage Network[/i][/h1]
 
-为《缺氧》添加一个集中式管理窗口，用来查看储存、调度材料、管理生产订单，并接入部分建筑与喷泉输出。
+为《缺氧》添加一套集中式储存与生产网络。使用专用服务器统一保存固体、液体、气体、电力及高能粒子，通过端口接入运输轨道、管道和电路，并在同一个管理面板中调度物资、规划生产、供应建筑与监控整个网络。
 
-[i]Storage Network adds a compact management panel for storage, production requests, building status, and geyser output in Oxygen Not Included.[/i]
+[i]Storage Network adds a centralized storage and production network to Oxygen Not Included. Dedicated servers store solids, liquids, gases, power, and radbolts; ports connect the network to rails, pipes, and power circuits; and a unified panel handles inventory, production planning, building supply, and network monitoring.[/i]
 
 [img]https://i.imgur.com/0dvP5c4.gif[/img]
+[img]https://i.imgur.com/riz7EGb.png[/img]
 [img]https://i.imgur.com/w6xAHZD.gif[/img]
 
-[h2]功能[/h2]
-[h2][i]Features[/i][/h2]
+[h2]主要功能 / Main Features[/h2]
 [list]
-[*] 储存总览：分类、总量、容量和周期增减趋势。
-[*] [i]Storage overview with categories, item totals, capacity, and cycle trend.[/i]
+[*] [b]完整的网络基础设施[/b]：建造储存网络核心，以及小型、中型和大型固体、液体、气体、电池、冷库与高能粒子服务器。
+[*] [i][b]Complete network infrastructure:[/b] Build a Storage Network Core and small, medium, or large servers for solids, liquids, gases, power, refrigerated goods, and radbolts.[/i]
 
-[*] 支持接入储物箱、部分生产建筑和喷泉。
-[*] [i]Enroll storage lockers, supported production buildings, and geysers into the network.[/i]
+[*] [b]多种入网与出网端口[/b]：连接固体运输轨道、液体管道、气体管道、电路和高能粒子系统；可配置筛选、来源、目标、阈值与输出策略。
+[*] [i][b]Input and output ports:[/b] Connect conveyor rails, liquid pipes, gas pipes, power circuits, and radbolt systems, with configurable filters, sources, targets, thresholds, and output policies.[/i]
 
-[*] 拖动物品条目即可在已接入储存之间转移物品。
-[*] [i]Transfer items between enrolled storage buildings by dragging item rows.[/i]
+[*] [b]集中式管理面板[/b]：按星球和分类查看库存、容量、内容物、运行状态及周期趋势，并直接配置已接入建筑。
+[*] [i][b]Centralized management panel:[/b] Browse inventory, capacity, contents, operating status, and cycle trends by world and category, and configure enrolled buildings directly.[/i]
 
-[*] 生产建筑可从网络请求材料，并将成品存入匹配储存。
-[*] [i]Production buildings can request materials from the network and store finished products back into matching storage.[/i]
+[*] [b]网络化生产[/b]：生产建筑可从网络请求原料，并将成品自动存回匹配的服务器；农场、发电设施及部分储存建筑也可使用网络供料或输出。
+[*] [i][b]Networked production:[/b] Production buildings can request ingredients and return products to matching servers. Farms, generators, and supported storage buildings can also use network supply or output.[/i]
 
-[*] 复制人建造可从储存网络调拨材料。
-[*] [i]Duplicant construction can use materials from the network.[/i]
+[*] [b]生产订单系统[/b]：使用订单生产中心和刻录盘保存制造配方，创建生产订单，追踪原料缺口、生产进度与异常状态，并自动规划多级补产链。
+[*] [i][b]Production orders:[/b] Use the Order Production Center and Engraving Disks to store recipes, submit orders, track material shortages and progress, and automatically plan multi-step production chains.[/i]
 
-[*] 订单中心支持查看当前、全部、运行中、已完成和异常订单。
-[*] [i]Order center shows current, all, running, completed, and abnormal orders.[/i]
+[*] [b]建筑材料供应[/b]：复制人可从材料出网端口领取网络内的建造材料。
+[*] [i][b]Construction supply:[/b] Duplicants can fetch construction materials from solid output ports.[/i]
 
-[*] 窗口支持拖动、缩放和位置记忆。
-[*] [i]Draggable, resizable windows with saved positions.[/i]
+[*] [b]泉直接入网[/b]：支持将已接入的泉类建筑产物直接存入匹配服务器，并可配置网络满载时的处理方式。
+[*] [i][b]Direct geyser output:[/b] Enrolled geysers can send their output directly to matching servers, with configurable fallback behavior when the network is full.[/i]
+
+[*] [b]跨星球传输[/b]：在火箭上安装储存网络中继器，使网络在火箭进入太空后具备跨星球物资传输能力。
+[*] [i][b]Interplanetary transfer:[/b] Install a Storage Network Relay on a rocket to enable cross-world item transfers while the rocket is in space.[/i]
+
+[*] [b]自动化支持[/b]：使用网络电量传感器监控总充电比例；通过自定义逻辑输出器组合库存、建筑及网络状态并输出自动化信号。
+[*] [i][b]Automation support:[/b] Monitor total stored charge with the network energy sensor, or build custom logic from inventory, building, and network states and send it to automation wires.[/i]
+
+[*] [b]便捷界面[/b]：窗口支持拖动、缩放、筛选、平滑滚动和位置记忆。
+[*] [i][b]Flexible interface:[/b] Windows support dragging, resizing, filtering, smooth scrolling, and saved positions.[/i]
 [/list]
 
-[h2]使用方式[/h2]
-[h2][i]How to Use[/i][/h2]
+[h2]使用方式 / How to Use[/h2]
 [list]
-[*] 从管理菜单打开“储存网络”窗口。
-[*] [i]Open the Storage Network panel from the management menu.[/i]
+[*] 研究储存网络科技并建造“储存网络核心”。
+[*] [i]Research Storage Network technologies and build a Storage Network Core.[/i]
 
-[*] 选中支持的建筑，通过侧屏或用户菜单接入/移出网络。
-[*] [i]Select a supported building and use its side screen/user menu to join or leave the network.[/i]
+[*] 建造所需类型与容量的服务器，再用对应端口连接运输轨道、管道、电路或高能粒子系统。
+[*] [i]Build servers of the required type and capacity, then connect rails, pipes, circuits, or radbolt systems with the matching ports.[/i]
 
-[*] 在窗口中浏览物品、转移储存、配置建筑并查看生产订单。
-[*] [i]Use the panel to browse items, transfer storage, configure buildings, and track production orders.[/i]
+[*] 选中受支持的原版建筑，通过侧屏或用户菜单将其接入网络，并配置供料、输出与筛选策略。
+[*] [i]Select a supported vanilla building, enroll it through its side screen or user menu, and configure supply, output, and filter policies.[/i]
+
+[*] 从管理菜单打开“储存网络”面板，查看库存、管理设备并创建或追踪生产订单。
+[*] [i]Open the Storage Network panel from the management menu to inspect inventory, manage devices, and create or track production orders.[/i]
 [/list]
 
-[h2]说明[/h2]
-[h2][i]Notes[/i][/h2]
+[h2]重要说明 / Important Notes[/h2]
 [list]
-[*] 本模组是管理与转移工具，不会创建实体物流网络。
-[*] [i]This mod is a management and transfer tool, not a physical conveyor network.[/i]
+[*] 网络按星球管理；通常只有同一星球上的核心、服务器、端口和已接入建筑可以互相访问。跨星球传输需要火箭中继器。
+[*] [i]Networks are world-based. Cores, servers, ports, and enrolled buildings normally access devices on the same world; cross-world transfer requires a rocket relay.[/i]
 
-[*] 建筑需要手动接入后才会出现在网络中。
-[*] [i]Buildings must be manually enrolled before they appear in the network.[/i]
+[*] 服务器需要可用的储存网络核心，端口也必须正确连接到对应的运输系统后才能工作。
+[*] [i]Servers require an available Storage Network Core, and ports must be connected to the matching transport system before they can operate.[/i]
+
+[*] 固体物品通常通过材料入网端口进入服务器；关闭固体服务器的“允许人力操作”后，复制人将不能直接从中取物。
+[*] [i]Solid items normally enter servers through solid input ports. Disabling manual operation on a solid server prevents duplicants from taking items directly from it.[/i]
+
+[*] 本模组会改变物资储存与调度方式，但不会完全取代运输轨道、管道、电路及复制人的常规物流。
+[*] [i]The mod changes how resources are stored and routed, but does not completely replace rails, pipes, circuits, or normal duplicant logistics.[/i]
 [/list]
 
-[h2]相关资源[/h2]
-[h2][i]Resources[/i][/h2]
+[h2]资源 / Resources[/h2]
 [list]
 [*] [url=https://github.com/ChiYuKe/ONI-Mods/tree/master/StorageNetwork]GitHub 项目源码 / [i]Source Code[/i][/url]
 [*] [url=https://onimodtutorial.pages.dev/]缺氧 Mod 制作指南 / [i]ONI Mod Tutorial[/i][/url]
 [*] [url=https://qm.qq.com/q/WOBzk7yt4O]缺氧 Mod 吹水群 QQ[/url]
 [/list]
 
-[h2]反馈[/h2]
-[h2][i]Feedback[/i][/h2]
+[h2]反馈 / Feedback[/h2]
+如果遇到问题，请提供 [b]Player.log[/b]、简单复现步骤、当前星球及相关建筑配置；截图也会很有帮助。
 
-如果遇到问题，请提供 Player.log 和简单复现说明。
-
-[i]If you encounter a bug, please provide your Player.log and a short description.[/i]
+[i]If you encounter a bug, please provide your [b]Player.log[/b], reproduction steps, the affected world, and the relevant building settings. Screenshots are also helpful.[/i]

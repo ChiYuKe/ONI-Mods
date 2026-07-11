@@ -80,6 +80,9 @@ namespace StorageNetwork.Components
         private readonly Dictionary<string, int> sequenceStepByNode = new Dictionary<string, int>();
         private readonly Dictionary<string, bool> sequencePrevAdvanceByNode = new Dictionary<string, bool>();
         private readonly Dictionary<string, bool> sequencePrevResetByNode = new Dictionary<string, bool>();
+        private readonly Dictionary<string, int> musicStepByNode = new Dictionary<string, int>();
+        private readonly Dictionary<string, float> musicStepStartedAtByNode = new Dictionary<string, float>();
+        private readonly Dictionary<string, bool> musicPrevResetByNode = new Dictionary<string, bool>();
         private readonly Dictionary<string, bool> hysteresisStateByNode = new Dictionary<string, bool>();
         private readonly Dictionary<string, bool> toggleStateByNode = new Dictionary<string, bool>();
         private readonly Dictionary<string, bool> togglePrevInputByNode = new Dictionary<string, bool>();
@@ -87,9 +90,12 @@ namespace StorageNetwork.Components
         private readonly Dictionary<string, float> previousNumberValueByNode = new Dictionary<string, float>();
         private readonly Dictionary<string, int> numberChangeFlagsByNode = new Dictionary<string, int>();
         private readonly HashSet<string> numberChangeUpdatedNodes = new HashSet<string>();
+        private readonly Dictionary<string, int> remotePixelScreenTargetByNode = new Dictionary<string, int>();
         private float runtimeEvalDt;
         private readonly LogicDiyBlueprintCodec blueprintCodec = new LogicDiyBlueprintCodec();
         private static readonly Dictionary<System.Type, PropertyInfo> switchLikeOutputPropertyByType = new Dictionary<System.Type, PropertyInfo>();
+        private static readonly MethodInfo pixelPackLogicValueChangedMethod = typeof(PixelPack).GetMethod("OnLogicValueChanged", BindingFlags.Instance | BindingFlags.NonPublic);
+        private static readonly FieldInfo pixelPackLogicValueField = typeof(PixelPack).GetField("logicValue", BindingFlags.Instance | BindingFlags.NonPublic);
         private static readonly EventSystem.IntraObjectHandler<StorageNetworkLogicDiy> OnCopySettingsDelegate =
             new EventSystem.IntraObjectHandler<StorageNetworkLogicDiy>((component, data) => component.OnCopySettings(data));
 
@@ -224,6 +230,7 @@ namespace StorageNetwork.Components
             // well as the graph's final output so counters and monitors on diagnostic branches
             // keep advancing even when they are not wired to system:output.
             EvaluateRuntimeDisplayNodes();
+            UpdateRemotePixelScreens();
             ApplyDeferredCounterResets();
 
             if (startupRefreshTicks > 0)
@@ -698,6 +705,9 @@ namespace StorageNetwork.Components
                 case "Sequence":
                     result = EvaluateSequenceNode(nodeId, outputPortIndex, a, b);
                     break;
+                case "MusicSequencer":
+                    result = EvaluateMusicSequencerNode(nodeId, a, b, node);
+                    break;
                 case "Delay":
                     result = EvaluateDelayNode(nodeId, a, node.IntervalSeconds);
                     break;
@@ -774,6 +784,9 @@ namespace StorageNetwork.Components
                     result = GetBuildingStatusSignal(node.SelectedBuildingInstanceId);
                     break;
                 case "BuildingSignal":
+                    result = GetBuildingOutputSignal(node.SelectedBuildingInstanceId);
+                    break;
+                case "NetworkSignalOutput":
                     result = GetBuildingOutputSignal(node.SelectedBuildingInstanceId);
                     break;
                 case "Output":
@@ -1289,6 +1302,13 @@ namespace StorageNetwork.Components
                 return 0f;
             }
 
+            int sourceWorldId = gameObject != null ? gameObject.GetMyWorldId() : -1;
+            int targetWorldId = target.GetMyWorldId();
+            if (sourceWorldId >= 0 && targetWorldId >= 0 && sourceWorldId != targetWorldId && !StorageSceneRegistry.IsCrossPlanetRelayOnline())
+            {
+                return 0f;
+            }
+
             return ReadBuildingOutputSignal(target);
         }
 
@@ -1541,12 +1561,141 @@ namespace StorageNetwork.Components
             StorageNetwork.UI.WebEditor.StorageNetworkLogicDiyPersistence.Save(this);
         }
 
+        private void UpdateRemotePixelScreens()
+        {
+            RuntimeBlueprint blueprint = TryGetRuntimeBlueprint();
+            if (blueprint?.Nodes == null) return;
+
+            Dictionary<string, RuntimeBlueprintNode> nodes = BuildRuntimeNodeMap(blueprint);
+            HashSet<string> activeRemoteNodes = new HashSet<string>();
+            foreach (RuntimeBlueprintNode node in blueprint.Nodes)
+            {
+                if (node == null || node.Module != "RemotePixelScreen" || string.IsNullOrEmpty(node.Id)) continue;
+                activeRemoteNodes.Add(node.Id);
+                UpdateRemotePixelScreenBinding(node.Id, node.SelectedBuildingInstanceId);
+
+                int value = 0;
+                for (int bit = 0; bit < 4; bit++)
+                {
+                    if (IsRuntimeTrue(EvaluateRuntimeInputNumber(blueprint, nodes, node.Id, bit, 0))) value |= 1 << bit;
+                }
+
+                SendRemotePixelScreenSignal(node, value);
+            }
+
+            foreach (string staleNodeId in remotePixelScreenTargetByNode.Keys.Where(id => !activeRemoteNodes.Contains(id)).ToList())
+            {
+                UpdateRemotePixelScreenBinding(staleNodeId, 0);
+            }
+        }
+
+        private void UpdateRemotePixelScreenBinding(string nodeId, int newTargetInstanceId)
+        {
+            int previousTargetInstanceId = remotePixelScreenTargetByNode.TryGetValue(nodeId, out int previous) ? previous : 0;
+            if (previousTargetInstanceId == newTargetInstanceId) return;
+
+            if (previousTargetInstanceId > 0 && CountRemotePixelScreenControllers(previousTargetInstanceId) == 0 &&
+                StorageNetworkBuildingRegistry.TryGetBuilding(previousTargetInstanceId, out GameObject previousTarget))
+            {
+                WritePixelPackValue(previousTarget, 0);
+            }
+
+            if (newTargetInstanceId > 0) remotePixelScreenTargetByNode[nodeId] = newTargetInstanceId;
+            else remotePixelScreenTargetByNode.Remove(nodeId);
+        }
+
+        private void SendRemotePixelScreenSignal(RuntimeBlueprintNode node, int value)
+        {
+            if (node.SelectedBuildingInstanceId <= 0 ||
+                !StorageNetworkBuildingRegistry.TryGetBuilding(node.SelectedBuildingInstanceId, out GameObject target) ||
+                target == null || target.GetComponent<PixelPack>() == null)
+            {
+                return;
+            }
+
+            int sourceWorldId = gameObject != null ? gameObject.GetMyWorldId() : -1;
+            if (sourceWorldId >= 0 && target.GetMyWorldId() != sourceWorldId && !StorageSceneRegistry.IsCrossPlanetRelayOnline())
+            {
+                return;
+            }
+
+            value = Mathf.Clamp(value, 0, 15);
+            WritePixelPackValue(target, value);
+        }
+
+        private static void WritePixelPackValue(GameObject target, int value)
+        {
+            PixelPack pixelPack = target != null ? target.GetComponent<PixelPack>() : null;
+            if (pixelPack == null) return;
+            value = Mathf.Clamp(value, 0, 15);
+            int actualValue = pixelPackLogicValueField?.GetValue(pixelPack) is int currentValue ? currentValue : -1;
+            if (actualValue == value) return;
+
+            LogicValueChanged change = new LogicValueChanged
+            {
+                portID = PixelPack.PORT_ID,
+                prevValue = Mathf.Max(0, actualValue),
+                newValue = value
+            };
+            pixelPackLogicValueChangedMethod?.Invoke(pixelPack, new object[] { change });
+        }
+
+        private float EvaluateMusicSequencerNode(string nodeId, float playValue, float resetValue, RuntimeBlueprintNode node)
+        {
+            List<float> notes = node?.Values;
+            if (notes == null || notes.Count == 0) return 0f;
+            if (!IsRuntimeTrue(playValue))
+            {
+                musicStepStartedAtByNode[nodeId] = Time.time;
+                return 0f;
+            }
+            bool reset = IsRuntimeTrue(resetValue);
+            musicPrevResetByNode.TryGetValue(nodeId, out bool previousReset);
+            bool resetEdge = reset && !previousReset;
+            musicPrevResetByNode[nodeId] = reset;
+            if (!musicStepByNode.TryGetValue(nodeId, out int step) || resetEdge)
+            {
+                step = 0;
+                musicStepByNode[nodeId] = 0;
+                musicStepStartedAtByNode[nodeId] = Time.time;
+            }
+            if (!musicStepStartedAtByNode.TryGetValue(nodeId, out float startedAt))
+            {
+                startedAt = Time.time;
+                musicStepStartedAtByNode[nodeId] = startedAt;
+            }
+            float bpm = Mathf.Clamp(node.Value, 20f, 400f);
+            float beats = node.Durations != null && step < node.Durations.Count ? Mathf.Max(0.125f, node.Durations[step]) : 1f;
+            float totalSeconds = Mathf.Max(0.4f, beats * 60f / bpm);
+            float elapsed = Mathf.Max(0f, Time.time - startedAt);
+            if (elapsed >= totalSeconds)
+            {
+                step++;
+                if (step >= notes.Count)
+                {
+                    if (!node.Loop) return 0f;
+                    step = 0;
+                }
+                musicStepByNode[nodeId] = step;
+                musicStepStartedAtByNode[nodeId] = Time.time;
+                elapsed = 0f;
+                beats = node.Durations != null && step < node.Durations.Count ? Mathf.Max(0.125f, node.Durations[step]) : 1f;
+                totalSeconds = Mathf.Max(0.4f, beats * 60f / bpm);
+            }
+            int note = Mathf.Clamp(Mathf.RoundToInt(notes[step]), 0, 12);
+            float gap = Mathf.Clamp(node.GapSeconds, 0.2f, Mathf.Max(0.2f, totalSeconds - 0.2f));
+            return note > 0 && elapsed < Mathf.Max(0f, totalSeconds - gap) ? note : 0f;
+        }
+
         internal void ResetRuntimeStateForEditor()
         {
             ClearRuntimeNodeState();
             latchStateByNode.Clear();
             counterValueByNode.Clear();
             sequenceStepByNode.Clear();
+            musicStepByNode.Clear();
+            musicStepStartedAtByNode.Clear();
+            musicPrevResetByNode.Clear();
             hysteresisStateByNode.Clear();
             toggleStateByNode.Clear();
             OutputSignalValue = 0;
@@ -1684,11 +1833,12 @@ namespace StorageNetwork.Components
         {
             List<WebEditorBuildingOption> options = new List<WebEditorBuildingOption>();
             int worldId = gameObject != null ? gameObject.GetMyWorldId() : -1;
-            List<GameObject> buildings = StorageNetworkBuildingRegistry.GetBuildingsForWorld(worldId);
+            bool crossWorld = StorageSceneRegistry.IsCrossPlanetRelayOnline();
+            List<GameObject> buildings = StorageNetworkBuildingRegistry.GetBuildingsForWorld(crossWorld ? -1 : worldId);
             if (buildings.Count == 0)
             {
                 StorageNetworkBuildingRegistry.RebuildFromScene();
-                buildings = StorageNetworkBuildingRegistry.GetBuildingsForWorld(worldId);
+                buildings = StorageNetworkBuildingRegistry.GetBuildingsForWorld(crossWorld ? -1 : worldId);
             }
 
             foreach (GameObject target in buildings)
@@ -1697,6 +1847,7 @@ namespace StorageNetwork.Components
                 {
                     continue;
                 }
+                if (target == gameObject) continue;
 
                 KPrefabID prefabId = target.GetComponent<KPrefabID>();
                 if (prefabId == null || prefabId.InstanceID == KPrefabID.InvalidInstanceID)
@@ -1705,24 +1856,54 @@ namespace StorageNetwork.Components
                 }
 
                 bool hasLogicOutput = StorageNetworkBuildingRegistry.IsLogicOutputBuilding(target);
-                if (!IsStorageNetworkModBuilding(target, prefabId) && !hasLogicOutput)
+                bool isPixelScreen = target.GetComponent<PixelPack>() != null;
+                if (!IsStorageNetworkModBuilding(target, prefabId) && !hasLogicOutput && !isPixelScreen)
                 {
                     continue;
                 }
 
                 Operational operational = target.GetComponent<Operational>();
+                int cell = Grid.PosToCell(target);
+                Vector2I cellPosition = Grid.IsValidCell(cell) ? Grid.CellToXY(cell) : new Vector2I(-1, -1);
+                LogicPorts targetLogicPorts = isPixelScreen ? target.GetComponent<LogicPorts>() : null;
                 options.Add(new WebEditorBuildingOption
                 {
                     InstanceId = prefabId.InstanceID,
                     Name = StripWebEditorRichText(target.GetProperName()),
                     Operational = operational == null || operational.IsOperational,
                     HasLogicOutput = hasLogicOutput,
-                    SignalValue = hasLogicOutput ? ReadBuildingOutputSignal(target) : 0
+                    SignalValue = hasLogicOutput ? ReadBuildingOutputSignal(target) : 0,
+                    IsNetworkSignalOutput = target.GetComponent<StorageNetworkLogicDiy>() != null,
+                    IsPixelScreen = isPixelScreen,
+                    AutomationConnected = isPixelScreen && targetLogicPorts != null && targetLogicPorts.IsPortConnected(PixelPack.PORT_ID),
+                    RemoteControllerCount = isPixelScreen ? CountRemotePixelScreenControllers(prefabId.InstanceID) : 0,
+                    CellX = cellPosition.x,
+                    CellY = cellPosition.y,
+                    WorldId = target.GetMyWorldId()
                 });
             }
 
             options.Sort((a, b) => string.Compare(a.Name, b.Name, System.StringComparison.CurrentCulture));
             return options;
+        }
+
+        private static int CountRemotePixelScreenControllers(int targetInstanceId)
+        {
+            int count = 0;
+            foreach (GameObject building in StorageNetworkBuildingRegistry.GetBuildingsForWorld(-1))
+            {
+                StorageNetworkLogicDiy controller = building != null ? building.GetComponent<StorageNetworkLogicDiy>() : null;
+                RuntimeBlueprint blueprint = controller?.TryGetRuntimeBlueprint();
+                if (blueprint?.Nodes == null) continue;
+                foreach (RuntimeBlueprintNode node in blueprint.Nodes)
+                {
+                    if (node != null && node.Module == "RemotePixelScreen" && node.SelectedBuildingInstanceId == targetInstanceId)
+                    {
+                        count++;
+                    }
+                }
+            }
+            return count;
         }
 
         private static bool IsStorageNetworkModBuilding(GameObject target, KPrefabID prefabId)
@@ -1784,6 +1965,13 @@ namespace StorageNetwork.Components
             public bool Operational { get; set; }
             public bool HasLogicOutput { get; set; }
             public int SignalValue { get; set; }
+            public bool IsNetworkSignalOutput { get; set; }
+            public bool IsPixelScreen { get; set; }
+            public bool AutomationConnected { get; set; }
+            public int RemoteControllerCount { get; set; }
+            public int CellX { get; set; }
+            public int CellY { get; set; }
+            public int WorldId { get; set; }
         }
 
         internal sealed class WebEditorNetworkMetrics
@@ -1856,6 +2044,12 @@ namespace StorageNetwork.Components
             public int SelectedBuildingInstanceId { get; set; }
 
             public List<float> Values { get; set; }
+
+            public List<float> Durations { get; set; }
+
+            public float GapSeconds { get; set; }
+
+            public bool Loop { get; set; }
 
             public float Upper { get; set; }
 

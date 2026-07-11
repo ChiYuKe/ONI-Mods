@@ -28,17 +28,12 @@ namespace StorageNetwork.UI
 
         private void ApplyOrderWindowRootLayout(RectTransform rectTransform)
         {
-            float canvasWidth = GetCanvasWidth();
-            float canvasHeight = Screen.height;
-            float width = Mathf.Clamp(canvasWidth - (compactOrderWindow ? 48f : 144f), compactOrderWindow ? 980f : 1180f, OrderWindowMaxWidth);
-            float height = Mathf.Clamp(canvasHeight - (compactOrderWindow ? 104f : 136f), 620f, 980f);
-
             rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
             rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
             rectTransform.pivot = new Vector2(0.5f, 0.5f);
-            rectTransform.sizeDelta = new Vector2(width, height);
+            rectTransform.sizeDelta = new Vector2(1760f, 980f);
             rectTransform.anchoredPosition = Vector2.zero;
-            StorageNetworkWindowDrag.TryApplyLayout("orderCenter", rectTransform, new Vector2(940f, 560f), new Vector2(width, height));
+            StorageNetworkWindowDrag.TryApplyLayout("orderCenter", rectTransform, new Vector2(1760f, 980f), new Vector2(1760f, 980f));
             StorageNetworkWindowDrag.ClampToScreen(rectTransform);
         }
 

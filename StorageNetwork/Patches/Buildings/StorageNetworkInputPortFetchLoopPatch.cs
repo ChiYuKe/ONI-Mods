@@ -1,5 +1,9 @@
 using HarmonyLib;
+using System.Collections.Generic;
+using StorageNetwork.Components;
 using StorageNetwork.Core;
+using StorageNetwork.Services;
+using UnityEngine;
 
 namespace StorageNetwork.Patches
 {
@@ -24,6 +28,28 @@ namespace StorageNetwork.Patches
                 if (source == null || source == destination)
                 {
                     return;
+                }
+
+                StorageNetworkSolidInputPortIngress ingress = destination.GetComponent<StorageNetworkSolidInputPortIngress>();
+                if (ingress != null &&
+                    ingress.CurrentInputStoreMode == StorageNetworkMaterialRequester.OutputStoreMode.SpecificStorage)
+                {
+                    Storage target = ingress.ResolveInputStorage();
+                    GameObject item = pickup.gameObject;
+                    HashSet<Storage> excluded = StorageTargetSelector.BuildExclusionSet(new[] { destination });
+                    if (target == null ||
+                        StorageTargetSelector.FindOutputTarget(
+                            item,
+                            StorageItemUtility.GetStorageMatchTags(item),
+                            excluded,
+                            target,
+                            null,
+                            StorageTargetSelector.GetObjectWorldId(destination.gameObject),
+                            destination) == null)
+                    {
+                        __result = false;
+                        return;
+                    }
                 }
 
                 if (StorageNetworkStorageRules.IsServerStorage(source) ||

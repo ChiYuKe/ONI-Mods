@@ -27,6 +27,7 @@ namespace StorageNetwork.UI.WebEditor
         private static readonly Dictionary<int, System.DateTime> recentLaunches = new Dictionary<int, System.DateTime>();
         private static readonly Dictionary<int, WebEditorState> cachedStates = new Dictionary<int, WebEditorState>();
         private static readonly HashSet<int> pendingRuntimeResets = new HashSet<int>();
+        private static readonly Dictionary<int, int> pendingBuildingFocusTargets = new Dictionary<int, int>();
         private static readonly Dictionary<int, float> lastFullStateRefreshTime = new Dictionary<int, float>();
         private static readonly Dictionary<int, IntPtr> editorWindowHandles = new Dictionary<int, IntPtr>();
 
@@ -145,8 +146,13 @@ namespace StorageNetwork.UI.WebEditor
             }
 
             int id = logic.GetInstanceID();
+            int focusTargetId = 0;
             lock (sync)
             {
+                if (pendingBuildingFocusTargets.TryGetValue(id, out focusTargetId))
+                {
+                    pendingBuildingFocusTargets.Remove(id);
+                }
                 if (pendingRuntimeResets.Remove(id))
                 {
                     logic.ResetRuntimeStateForEditor();
@@ -156,6 +162,10 @@ namespace StorageNetwork.UI.WebEditor
                         resetState.NodeOutputValues = new Dictionary<string, float>();
                     }
                 }
+            }
+            if (focusTargetId > 0)
+            {
+                FocusBuilding(focusTargetId);
             }
             WebEditorSaveRequest request = sessions.TakeSave(id);
 
@@ -260,6 +270,13 @@ namespace StorageNetwork.UI.WebEditor
                     return;
                 }
 
+                if (path == "/api/focus-building" && string.Equals(context.Request.HttpMethod, "POST", StringComparison.OrdinalIgnoreCase))
+                {
+                    bool queued = QueueBuildingFocus(context);
+                    WriteJson(context, new { ok = queued }, queued ? 200 : 404);
+                    return;
+                }
+
                 if (path == "/api/heartbeat")
                 {
                     MarkHeartbeat(context);
@@ -355,6 +372,44 @@ namespace StorageNetwork.UI.WebEditor
                 }
             }
             return true;
+        }
+
+        private static bool QueueBuildingFocus(HttpListenerContext context)
+        {
+            int id = GetId(context);
+            Dictionary<string, string> query = ParseQuery(context.Request.Url.Query);
+            if (id == 0 || ResolveLogic(id) == null || !query.TryGetValue("targetId", out string rawTargetId) ||
+                !int.TryParse(rawTargetId, out int targetId) || targetId <= 0)
+            {
+                return false;
+            }
+
+            lock (sync)
+            {
+                pendingBuildingFocusTargets[id] = targetId;
+            }
+            return true;
+        }
+
+        private static void FocusBuilding(int targetInstanceId)
+        {
+            if (!StorageNetwork.Services.StorageNetworkBuildingRegistry.TryGetBuilding(targetInstanceId, out GameObject target) ||
+                target == null || target.GetComponent<PixelPack>() == null || SelectTool.Instance == null)
+            {
+                return;
+            }
+
+            int worldId = target.GetMyWorldId();
+            if (ClusterManager.Instance != null && worldId >= 0 && ClusterManager.Instance.activeWorldId != worldId)
+            {
+                ClusterManager.Instance.SetActiveWorld(worldId);
+            }
+
+            KSelectable selectable = target.GetComponent<KSelectable>();
+            if (selectable != null)
+            {
+                SelectTool.Instance.SelectAndFocus(target.transform.position, selectable, Vector3.zero);
+            }
         }
 
         private static WebEditorState BuildLightState(StorageNetworkLogicDiy logic)
