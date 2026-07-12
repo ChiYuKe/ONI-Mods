@@ -10,10 +10,10 @@
     <LangVersion>latest</LangVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-    <GameManagedDir>C:\Program Files (x86)\Steam\steamapps\common\OxygenNotIncluded\OxygenNotIncluded_Data\Managed</GameManagedDir>
+    <GameManagedDir>D:\Program Files (x86)\Steam\steamapps\common\OxygenNotIncluded\OxygenNotIncluded_Data\Managed</GameManagedDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <OutputPath>..\..\..\Documents\Klei\OxygenNotIncluded\mods\Dev\StorageNetwork\</OutputPath>
+    <OutputPath>..\..\..\..\Documents\Klei\OxygenNotIncluded\mods\Dev\StorageNetwork\</OutputPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <OutputPath>bin\Release\</OutputPath>
@@ -69,10 +69,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <None Include="mod.yaml" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="mod_info.yaml" CopyToOutputDirectory="PreserveNewest" />
     <None Include="translations\*.po" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="anim\**\*" CopyToOutputDirectory="PreserveNewest" />
     <None Include="Assets\Sprite\*.png" CopyToOutputDirectory="PreserveNewest" />
     <None Include="Assets\AssetBundles\**\*" CopyToOutputDirectory="PreserveNewest" Condition="Exists('Assets\AssetBundles')" />
     <None Include="WebEditor\**\*" CopyToOutputDirectory="PreserveNewest" />
