@@ -1,6 +1,7 @@
 using KSerialization;
 using System.Collections.Generic;
 using UnityEngine;
+using Loc = StorageNetwork.STRINGS;
 
 namespace StorageNetwork.Components
 {
@@ -268,8 +269,8 @@ namespace StorageNetwork.Components
             descriptors.Add(heatDescriptor);
 
             descriptors.Add(new Descriptor(
-                $"制冷功耗: {GetCoolingPowerWatts():0.#} W",
-                $"主动降温时消耗 {GetCoolingPowerWatts():0.#} W；保温节能时消耗 {GetEnergySaverPowerWatts():0.#} W。",
+                string.Format(Loc.Get(Loc.UI.STORAGE_NETWORK.COLD_STORAGE_COOLING_POWER), GetCoolingPowerWatts().ToString("0.#")),
+                string.Format(Loc.Get(Loc.UI.STORAGE_NETWORK.COLD_STORAGE_COOLING_POWER_TOOLTIP), GetCoolingPowerWatts().ToString("0.#"), GetEnergySaverPowerWatts().ToString("0.#")),
                 Descriptor.DescriptorType.Effect,
                 false));
             return descriptors;

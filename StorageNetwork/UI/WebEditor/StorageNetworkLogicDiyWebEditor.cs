@@ -10,6 +10,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using UnityEngine;
+using Loc = StorageNetwork.STRINGS;
 
 namespace StorageNetwork.UI.WebEditor
 {
@@ -857,7 +858,8 @@ namespace StorageNetwork.UI.WebEditor
                     return true;
                 }
 
-                bool titleLooksLikeEditor = title.IndexOf("逻辑编辑器", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                bool titleLooksLikeEditor = title.IndexOf(Loc.Get(Loc.UI.STORAGE_NETWORK.LOGIC_DIY_EDITOR_TITLE), StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                            title.IndexOf("逻辑编辑器", StringComparison.OrdinalIgnoreCase) >= 0 ||
                                             title.IndexOf("Logic Editor", StringComparison.OrdinalIgnoreCase) >= 0;
                 bool titleMatchesBuilding = string.IsNullOrEmpty(buildingNeedle) ||
                                             title.IndexOf(buildingNeedle, StringComparison.OrdinalIgnoreCase) >= 0 ||
@@ -912,8 +914,8 @@ namespace StorageNetwork.UI.WebEditor
         {
             string buildingName = StripWebEditorRichText(state?.BuildingName ?? string.Empty).Trim();
             return string.IsNullOrEmpty(buildingName)
-                ? "逻辑编辑器"
-                : buildingName + " - 逻辑编辑器";
+                ? Loc.Get(Loc.UI.STORAGE_NETWORK.LOGIC_DIY_EDITOR_TITLE)
+                : buildingName + " - " + Loc.Get(Loc.UI.STORAGE_NETWORK.LOGIC_DIY_EDITOR_TITLE);
         }
 
         [DllImport("user32.dll")]

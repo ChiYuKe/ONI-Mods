@@ -129,8 +129,8 @@ namespace StorageNetwork
         public float FinishedOrderRecordLifetimeCycles { get; set; }
 
         [ModConfigOption(
-            "",
-            "",
+            "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_SERVER_CAPACITY_MULTIPLIER",
+            "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_SERVER_CAPACITY_MULTIPLIER_DESC",
             "服务器容量倍率",
             "影响新建储存服务器和电池服务器的容量。已存在建筑通常需要重建或重新加载后才完全刷新。",
             0.1f,
@@ -139,8 +139,8 @@ namespace StorageNetwork
         public float ServerCapacityMultiplier { get; set; }
 
         [ModConfigOption(
-            "",
-            "",
+            "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_PORT_CAPACITY_MULTIPLIER",
+            "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_PORT_CAPACITY_MULTIPLIER_DESC",
             "端口缓存容量倍率",
             "影响新建材料、液体、气体端口的缓存容量。",
             0.1f,
@@ -149,8 +149,8 @@ namespace StorageNetwork
         public float PortCapacityMultiplier { get; set; }
 
         [ModConfigOption(
-            "",
-            "",
+            "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_POWER_PORT_CAPACITY_MULTIPLIER",
+            "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_POWER_PORT_CAPACITY_MULTIPLIER_DESC",
             "电力端口缓存倍率",
             "影响新建电力入网/出网端口的缓存电量。",
             0.1f,
@@ -159,8 +159,8 @@ namespace StorageNetwork
         public float PowerPortCapacityMultiplier { get; set; }
 
         [ModConfigOption(
-            "",
-            "",
+            "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_BATTERY_SERVER_LEAK",
+            "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_BATTERY_SERVER_LEAK_DESC",
             "电池服务器漏电 J/周期",
             "所有电池服务器每周期损失的电量。",
             0f,
@@ -169,8 +169,8 @@ namespace StorageNetwork
         public float BatteryServerLeakJoulesPerCycle { get; set; }
 
         [ModConfigOption(
-            "",
-            "",
+            "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_COLD_STORAGE_MIN_TEMPERATURE",
+            "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_COLD_STORAGE_MIN_TEMPERATURE_DESC",
             "冷库最低目标温度 °C",
             "冷库温度滑条允许设置的最低目标温度。",
             -100f,
@@ -179,8 +179,8 @@ namespace StorageNetwork
         public float ColdStorageMinTemperatureC { get; set; }
 
         [ModConfigOption(
-            "",
-            "",
+            "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_COLD_STORAGE_MAX_TEMPERATURE",
+            "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_COLD_STORAGE_MAX_TEMPERATURE_DESC",
             "冷库最高目标温度 °C",
             "冷库温度滑条允许设置的最高目标温度。",
             -20f,
@@ -189,8 +189,8 @@ namespace StorageNetwork
         public float ColdStorageMaxTemperatureC { get; set; }
 
         [ModConfigOption(
-            "",
-            "",
+            "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_COLD_STORAGE_ENERGY_SAVER_WATTS",
+            "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_COLD_STORAGE_ENERGY_SAVER_WATTS_DESC",
             "冷库节能功耗 W",
             "内容物达到目标温度后，冷库维持温度时的功耗。",
             0f,
@@ -199,8 +199,8 @@ namespace StorageNetwork
         public float ColdStorageEnergySaverWatts { get; set; }
 
         [ModConfigOption(
-            "",
-            "",
+            "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_COLD_STORAGE_MAX_COOLING_WATTS",
+            "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_COLD_STORAGE_MAX_COOLING_WATTS_DESC",
             "冷库最大制冷功耗 W",
             "目标温度越低越接近此功耗。",
             1f,
@@ -209,8 +209,8 @@ namespace StorageNetwork
         public float ColdStorageMaxCoolingWatts { get; set; }
 
         [ModConfigOption(
-            "",
-            "",
+            "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_COLD_STORAGE_MAX_COOLING_HEAT",
+            "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_COLD_STORAGE_MAX_COOLING_HEAT_DESC",
             "冷库最大产热 kDTU/s",
             "目标温度越低越接近此产热。",
             0f,
@@ -219,8 +219,8 @@ namespace StorageNetwork
         public float ColdStorageMaxCoolingHeatKW { get; set; }
 
         [ModConfigOption(
-            "",
-            "",
+            "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_SOLID_OUTPUT_MAX_RATE",
+            "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_SOLID_OUTPUT_MAX_RATE_DESC",
             "材料出网最大速率 kg/s",
             "材料出网端口设置滑条的最大输出速率。",
             1f,
@@ -229,8 +229,8 @@ namespace StorageNetwork
         public float SolidOutputMaxKgPerSecond { get; set; }
 
         [ModConfigOption(
-            "",
-            "",
+            "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_LIQUID_OUTPUT_MAX_RATE",
+            "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_LIQUID_OUTPUT_MAX_RATE_DESC",
             "液体出网最大速率 kg/s",
             "液体出网端口设置滑条的最大输出速率。",
             1f,
@@ -239,8 +239,8 @@ namespace StorageNetwork
         public float LiquidOutputMaxKgPerSecond { get; set; }
 
         [ModConfigOption(
-            "",
-            "",
+            "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_GAS_OUTPUT_MAX_RATE",
+            "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_GAS_OUTPUT_MAX_RATE_DESC",
             "气体出网最大速率 kg/s",
             "气体出网端口设置滑条的最大输出速率。",
             0.1f,
@@ -249,8 +249,8 @@ namespace StorageNetwork
         public float GasOutputMaxKgPerSecond { get; set; }
 
         [ModConfigOption(
-            "",
-            "",
+            "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_POWER_INPUT_MAX_WATTS",
+            "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_POWER_INPUT_MAX_WATTS_DESC",
             "电力入网最大功率 W",
             "电力入网端口滑条的最大输入功率。",
             100f,
@@ -259,8 +259,8 @@ namespace StorageNetwork
         public float PowerInputMaxWatts { get; set; }
 
         [ModConfigOption(
-            "",
-            "",
+            "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_POWER_OUTPUT_MAX_WATTS",
+            "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_POWER_OUTPUT_MAX_WATTS_DESC",
             "电力出网最大功率 W",
             "电力出网端口滑条的最大输出功率。",
             100f,
@@ -335,9 +335,9 @@ namespace StorageNetwork
             Controller.RegisterOptionsButton(
                 "StorageNetwork",
                 "StorageNetworkOptionsButton",
-                STRINGS.Get(STRINGS.UI.STORAGE_NETWORK.CONFIG_TOOLTIP),
-                STRINGS.Get(STRINGS.UI.STORAGE_NETWORK.CONFIG_TITLE),
-                STRINGS.Get(STRINGS.UI.STORAGE_NETWORK.CONFIG_HINT));
+                "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_TOOLTIP",
+                "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_TITLE",
+                "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_HINT");
         }
 
         public bool IsStorageOutputStoreToNetworkEnabled(Storage storage)

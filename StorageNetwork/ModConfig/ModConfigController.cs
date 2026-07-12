@@ -46,7 +46,7 @@ namespace StorageNetwork.ModConfig
             JsonConfigStore.Save(configPath, Instance, normalize, logPrefix);
         }
 
-        public void RegisterOptionsButton(string modTitlePrefix, string buttonName, string tooltip, string dialogTitle, string hint = null)
+        public void RegisterOptionsButton(string modTitlePrefix, string buttonName, string tooltipKey, string dialogTitleKey, string hintKey = null)
         {
             ModsScreenOptionsButton.Register(new ModsScreenOptionsButtonDefinition
             {
@@ -54,10 +54,11 @@ namespace StorageNetwork.ModConfig
                 ButtonName = buttonName,
                 ButtonTextKey = ModsScreenOptionsButtonDefinition.DefaultButtonTextKey,
                 ButtonText = ModsScreenOptionsButtonDefinition.DefaultButtonTextFallback,
-                Tooltip = StableText(tooltip, Loc.Get(Loc.UI.STORAGE_NETWORK.CONFIG_TOOLTIP)),
+                TooltipKey = tooltipKey,
+                Tooltip = ModsScreenOptionsButtonDefinition.DefaultTooltipFallback,
                 OnClick = () => ShowDialog(
-                    StableText(dialogTitle, Loc.Get(Loc.UI.STORAGE_NETWORK.CONFIG_TITLE)),
-                    StableText(hint, Loc.Get(Loc.UI.STORAGE_NETWORK.CONFIG_HINT)))
+                    ResolveText(dialogTitleKey, Loc.Get(Loc.UI.STORAGE_NETWORK.CONFIG_TITLE)),
+                    ResolveText(hintKey, Loc.Get(Loc.UI.STORAGE_NETWORK.CONFIG_HINT)))
             });
         }
 
@@ -133,8 +134,16 @@ namespace StorageNetwork.ModConfig
                 return fallback;
             }
 
-            string value = Strings.Get(key);
+            string value = Strings.Get(GetRuntimeKey(key));
             return StableText(value, fallback);
+        }
+
+        private static string GetRuntimeKey(string key)
+        {
+            const string namespacePrefix = "StorageNetwork.";
+            return key != null && key.StartsWith(namespacePrefix, StringComparison.Ordinal)
+                ? key.Substring(namespacePrefix.Length)
+                : key;
         }
 
         private static List<OptionBinding> BuildBindings(T config)

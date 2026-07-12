@@ -4,6 +4,7 @@ using KSerialization;
 using StorageNetwork.Buildings;
 using StorageNetwork.Core;
 using UnityEngine;
+using Loc = StorageNetwork.STRINGS;
 
 namespace StorageNetwork.Components
 {
@@ -184,8 +185,8 @@ namespace StorageNetwork.Components
 
             joulesStatusItem = new StatusItem(
                 "StorageNetworkPowerStorageJoules",
-                "可用电力：{JoulesAvailable}/{JoulesCapacity}（{JoulesPercent}）",
-                "当前电池服务器储存的电力。",
+                Loc.Get(Loc.UI.STORAGE_NETWORK.POWER_STORAGE_JOULES_STATUS),
+                Loc.Get(Loc.UI.STORAGE_NETWORK.POWER_STORAGE_JOULES_TOOLTIP),
                 "",
                 StatusItem.IconType.Info,
                 NotificationType.Neutral,
@@ -219,8 +220,8 @@ namespace StorageNetwork.Components
 
             heatStatusItem = new StatusItem(
                 "StorageNetworkPowerStorageHeat",
-                "产热：{Heat}",
-                "电池服务器运行时产生的热量。",
+                Loc.Get(Loc.UI.STORAGE_NETWORK.POWER_STORAGE_HEAT_STATUS),
+                Loc.Get(Loc.UI.STORAGE_NETWORK.POWER_STORAGE_HEAT_TOOLTIP),
                 "",
                 StatusItem.IconType.Info,
                 NotificationType.Neutral,
@@ -250,7 +251,7 @@ namespace StorageNetwork.Components
 
         private static string FormatJoulesPerCycle(float joules)
         {
-            return GameUtil.GetFormattedJoules(joules, "F1", GameUtil.TimeSlice.None) + "/周期";
+            return string.Format(Loc.Get(Loc.UI.STORAGE_NETWORK.TREND_PER_CYCLE), string.Empty, GameUtil.GetFormattedJoules(joules, "F1", GameUtil.TimeSlice.None));
         }
     }
 }

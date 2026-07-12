@@ -156,7 +156,7 @@ namespace StorageNetwork.UI
                 string.Format(
                     Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.VIRTUAL_POWER_ITEM_DETAILS),
                     GameUtil.GetFormattedJoules(powerStorage.CapacityJoules, "F1", GameUtil.TimeSlice.None),
-                    GameUtil.GetFormattedJoules(powerStorage.JoulesLostPerCycle, "F1", GameUtil.TimeSlice.None) + "/周期"),
+                    string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TREND_PER_CYCLE), string.Empty, GameUtil.GetFormattedJoules(powerStorage.JoulesLostPerCycle, "F1", GameUtil.TimeSlice.None))),
                 12,
                 TextAlignmentOptions.MidlineLeft);
             detailText.color = new Color(0.36f, 0.38f, 0.38f, 1f);
