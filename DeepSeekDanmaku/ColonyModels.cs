@@ -17,7 +17,28 @@ namespace DeepSeekDanmaku
 
     [Serializable] internal sealed class SnapshotBasic { public int cycle; public string activeWorld; public string scope; public float gameSpeed; public int duplicants; }
     [Serializable] internal sealed class WorldSnapshot { public int id; public string name; public int duplicants; public List<DuplicantSnapshot> people = new List<DuplicantSnapshot>(); public ResourceSnapshot resources = new ResourceSnapshot(); }
-    [Serializable] internal sealed class DuplicantSnapshot { public string name; public float stressPercent; public float health; public float caloriesKcal; public string chore; public bool idle; }
+    [Serializable] internal sealed class DuplicantSnapshot
+    {
+        public string name;
+        public string type;          // "复制人" or "仿生人"
+        public string job;           // current role name
+        public float stressPercent;
+        public float health;
+        public float caloriesKcal;
+        public string chore;
+        public bool idle;
+        public int cyclesAlive;      // approximate age in cycles
+        public List<string> traits = new List<string>();
+        public List<string> interests = new List<string>();
+        public int strength;
+        public int creativity;
+        public int athletics;
+        public int science;
+        public int machinery;
+        public int husbandry;
+        public int cooking;
+        public int medicine;
+    }
     [Serializable] internal sealed class ResourceSnapshot { public float foodKcal; public float breathableKg; public float farmableKg; public float industrialIngredients; public float industrialProducts; public float medicalSupplies; public float techComponents; }
     [Serializable] internal sealed class SnapshotTotals { public int duplicants; public float averageStressPercent; public float averageHealth; public float averageCaloriesKcal; public ResourceSnapshot resources = new ResourceSnapshot(); }
     [Serializable] internal sealed class DailyReportSnapshot { public int cycle; public float oxygenNetKg; public float energyUsedKJ; public float energyWastedKJ; public float workPercent; public float travelPercent; public float personalPercent; public float idlePercent; public int choresAdded; public int choresCompleted; public int choresNet; public int domesticatedCritters; public int wildCritters; public int rocketsInFlight; }

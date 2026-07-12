@@ -53,12 +53,14 @@ namespace DeepSeekDanmaku
                     stress += s; health += h; calories += kcal;
                     if (config.includeDuplicants)
                     {
-                        world.people.Add(new DuplicantSnapshot
+                        DuplicantSnapshot person = new DuplicantSnapshot
                         {
                             name = config.includeDuplicantNames ? minion.GetProperName() : $"复制人{world.people.Count + 1}",
                             stressPercent = Round(s), health = Round(h), caloriesKcal = Round(kcal), chore = choreName,
                             idle = chore == null || string.Equals(choreName, "Idle", StringComparison.OrdinalIgnoreCase)
-                        });
+                        };
+                        BuildDuplicantIdCard(minion, person);
+                        world.people.Add(person);
                     }
                 }
             }
@@ -155,6 +157,70 @@ namespace DeepSeekDanmaku
             else if (data.report?.oxygenNetKg < 0f) data.risks.Add("氧气净产出为负");
             if (data.report?.energyWastedKJ > 10000f) data.risks.Add("电力浪费严重");
             if (data.worlds.SelectMany(w => w.people).Any(p => p.caloriesKcal < 1000f)) data.risks.Add("有复制人接近饥饿");
+        }
+
+        private static void BuildDuplicantIdCard(MinionIdentity minion, DuplicantSnapshot person)
+        {
+            // Type: bionic vs regular
+            person.type = IsBionic(minion) ? "仿生人" : "复制人";
+
+            // Job / role
+            MinionResume resume = minion.GetComponent<MinionResume>();
+            if (resume != null)
+            {
+                person.job = !string.IsNullOrWhiteSpace(resume.CurrentRole) ? resume.CurrentRole : "无职业";
+                person.cyclesAlive = Mathf.RoundToInt(resume.TotalExperienceGained / 600f);
+
+                // Interests / aptitudes
+                if (resume.AptitudeBySkillGroup != null)
+                {
+                    foreach (KeyValuePair<HashedString, float> apt in resume.AptitudeBySkillGroup)
+                    {
+                        if (apt.Value > 0f)
+                            person.interests.Add(apt.Key.ToString());
+                    }
+                }
+            }
+            else
+            {
+                person.job = "无职业";
+            }
+
+            // Traits
+            Traits traits = minion.GetComponent<Traits>();
+            if (traits?.TraitList != null)
+            {
+                foreach (Trait trait in traits.TraitList)
+                    person.traits.Add(trait.Name);
+            }
+
+            // Key attributes (0-20+ scale)
+            AttributeLevels attr = minion.GetComponent<AttributeLevels>();
+            if (attr != null)
+            {
+                var attrs = Db.Get().Attributes;
+                person.strength = Mathf.RoundToInt(GetLevel(attr, attrs.Strength));
+                person.creativity = Mathf.RoundToInt(GetLevel(attr, attrs.Art));
+                person.athletics = Mathf.RoundToInt(GetLevel(attr, attrs.Athletics));
+                person.science = Mathf.RoundToInt(GetLevel(attr, attrs.Learning));
+                person.machinery = Mathf.RoundToInt(GetLevel(attr, attrs.Machinery));
+                person.husbandry = Mathf.RoundToInt(GetLevel(attr, attrs.Ranching));
+                person.cooking = Mathf.RoundToInt(GetLevel(attr, attrs.Cooking));
+                person.medicine = Mathf.RoundToInt(GetLevel(attr, attrs.Caring));
+            }
+        }
+
+        private static bool IsBionic(MinionIdentity minion)
+        {
+            if (minion == null || minion.gameObject == null) return false;
+            try { return minion.gameObject.GetComponent("BionicMinion") != null; }
+            catch { return false; }
+        }
+
+        private static float GetLevel(AttributeLevels attrLevels, Klei.AI.Attribute attribute)
+        {
+            AttributeLevel level = attrLevels?.GetAttributeLevel(attribute?.Id);
+            return level != null ? level.level : 0f;
         }
 
         private static void RecordHistory(ColonySnapshotData data)
