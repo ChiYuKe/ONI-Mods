@@ -351,12 +351,10 @@ namespace StorageNetwork.Components
                 return null;
             }
 
-            foreach (StorageInfo info in StorageSceneCollector.Collect().Storages)
+            foreach (Storage target in StorageSceneCollector.CollectLightweightForWorld(GetWorldId()).Storages)
             {
-                Storage target = info?.Storage;
                 KPrefabID prefabId = target != null ? target.GetComponent<KPrefabID>() : null;
-                if (info?.Minion == null &&
-                    prefabId != null &&
+                if (prefabId != null &&
                     prefabId.InstanceID == InputStorageInstanceId &&
                     target.GetComponent<StorageNetworkPowerStorage>() != null &&
                     StorageNetworkStorageRules.IsConnectedNetworkStorage(target))
