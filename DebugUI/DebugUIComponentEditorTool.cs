@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
@@ -21,6 +22,10 @@ namespace DebugUI
         private bool showFields = true;
         private bool showProperties = true;
         private bool includeNonPublic;
+        private bool showNested = true;
+
+        private const int MaxNestedDepth = 5;
+        private const int MaxCollectionItems = 256;
 
         public DebugUIComponentEditorTool(Component component)
         {
@@ -62,6 +67,8 @@ namespace DebugUI
             ImGui.Checkbox("Readonly / 只读", ref showReadonly);
             ImGui.SameLine();
             ImGui.Checkbox("NonPublic / 非公开", ref includeNonPublic);
+            ImGui.SameLine();
+            ImGui.Checkbox("Nested / 嵌套", ref showNested);
             ImGui.Separator();
 
             DrawDuplicantEditors();
@@ -543,13 +550,177 @@ namespace DebugUI
         private void DrawMember(string name, Type type, object value, bool canWrite, Action<object> setValue)
         {
             string label = name + "##" + componentInstanceId + "_" + name;
-            if (!canWrite || !TryDrawEditable(label, type, value, setValue))
+            if (canWrite && TryDrawEditable(label, type, value, setValue))
             {
-                if (showReadonly)
+                return;
+            }
+
+            if (showNested && value != null && CanExpand(type))
+            {
+                DrawNested(name, type, value, 0, componentInstanceId + "_" + name);
+                return;
+            }
+
+            if (showReadonly)
+            {
+                DrawReadOnly(name, type, FormatValue(value));
+            }
+        }
+
+        private void DrawNested(string name, Type declaredType, object value, int depth, string path)
+        {
+            Type runtimeType = value == null ? declaredType : value.GetType();
+            string summary = name + " (" + GetFriendlyTypeName(runtimeType) + ")";
+            if (!ImGui.TreeNode(summary + "##nested_" + path))
+            {
+                return;
+            }
+
+            try
+            {
+                if (depth >= MaxNestedDepth)
                 {
-                    DrawReadOnly(name, type, FormatValue(value));
+                    ImGui.Text("<maximum nested depth / 已达到最大嵌套深度>");
+                    return;
+                }
+
+                IDictionary dictionary = value as IDictionary;
+                if (dictionary != null)
+                {
+                    DrawDictionary(dictionary, depth + 1, path);
+                    return;
+                }
+
+                IList list = value as IList;
+                if (list != null)
+                {
+                    DrawList(list, runtimeType, depth + 1, path);
+                    return;
+                }
+
+                DrawObjectMembers(value, runtimeType, depth + 1, path);
+            }
+            catch (Exception e)
+            {
+                ImGui.Text("<inspect failed: " + e.GetType().Name + ": " + e.Message + ">");
+            }
+            finally
+            {
+                ImGui.TreePop();
+            }
+        }
+
+        private void DrawList(IList list, Type listType, int depth, string path)
+        {
+            ImGui.Text("Count / 数量: " + list.Count);
+            int count = Math.Min(list.Count, MaxCollectionItems);
+            Type elementType = listType.IsArray ? listType.GetElementType() : GetCollectionElementType(listType);
+            for (int i = 0; i < count; i++)
+            {
+                int index = i;
+                object item;
+                try { item = list[index]; }
+                catch (Exception e) { ImGui.Text("[" + index + "]: <get failed: " + e.GetType().Name + ">"); continue; }
+                Type itemType = elementType ?? (item == null ? typeof(object) : item.GetType());
+                DrawNestedValue("[" + index + "]", itemType, item, !list.IsReadOnly,
+                    newValue => list[index] = newValue, depth, path + "_" + index);
+            }
+            if (list.Count > count)
+            {
+                ImGui.Text("... " + (list.Count - count) + " more items / 其余项目未显示");
+            }
+        }
+
+        private void DrawDictionary(IDictionary dictionary, int depth, string path)
+        {
+            ImGui.Text("Count / 数量: " + dictionary.Count);
+            int index = 0;
+            foreach (DictionaryEntry entry in dictionary)
+            {
+                if (index >= MaxCollectionItems) break;
+                object key = entry.Key;
+                object item = entry.Value;
+                Type itemType = item == null ? typeof(object) : item.GetType();
+                string keyText = FormatValue(key);
+                DrawNestedValue("[" + keyText + "]", itemType, item, !dictionary.IsReadOnly,
+                    newValue => dictionary[key] = newValue, depth, path + "_" + index);
+                index++;
+            }
+            if (dictionary.Count > index)
+            {
+                ImGui.Text("... " + (dictionary.Count - index) + " more items / 其余项目未显示");
+            }
+        }
+
+        private void DrawObjectMembers(object owner, Type ownerType, int depth, string path)
+        {
+            BindingFlags flags = BindingFlags.Instance | BindingFlags.Public;
+            if (includeNonPublic) flags |= BindingFlags.NonPublic;
+
+            if (showFields)
+            {
+                FieldInfo[] fields = ownerType.GetFields(flags);
+                for (int i = 0; i < fields.Length; i++)
+                {
+                    FieldInfo field = fields[i];
+                    if (!ShouldShow(field.Name) && !CanExpand(field.FieldType)) continue;
+                    object fieldValue;
+                    try { fieldValue = field.GetValue(owner); }
+                    catch (Exception e) { if (showReadonly) DrawReadOnly(field.Name, field.FieldType, "<get failed: " + e.GetType().Name + ">"); continue; }
+                    DrawNestedValue(field.Name, field.FieldType, fieldValue, !field.IsInitOnly && !field.IsLiteral,
+                        newValue => field.SetValue(owner, newValue), depth, path + "_f_" + field.Name);
                 }
             }
+
+            if (showProperties)
+            {
+                PropertyInfo[] properties = ownerType.GetProperties(flags);
+                for (int i = 0; i < properties.Length; i++)
+                {
+                    PropertyInfo property = properties[i];
+                    if (property.GetIndexParameters().Length != 0 || (!ShouldShow(property.Name) && !CanExpand(property.PropertyType))) continue;
+                    MethodInfo getter = property.GetGetMethod(includeNonPublic);
+                    if (getter == null) continue;
+                    object propertyValue;
+                    try { propertyValue = property.GetValue(owner, null); }
+                    catch (Exception e) { if (showReadonly) DrawReadOnly(property.Name, property.PropertyType, "<get failed: " + e.GetType().Name + ">"); continue; }
+                    bool writable = property.GetSetMethod(includeNonPublic) != null;
+                    DrawNestedValue(property.Name, property.PropertyType, propertyValue, writable,
+                        newValue => property.SetValue(owner, newValue, null), depth, path + "_p_" + property.Name);
+                }
+            }
+        }
+
+        private void DrawNestedValue(string name, Type type, object value, bool canWrite, Action<object> setValue, int depth, string path)
+        {
+            string label = name + "##" + componentInstanceId + "_" + path;
+            if (canWrite && TryDrawEditable(label, type, value, setValue)) return;
+            if (value != null && CanExpand(type))
+            {
+                DrawNested(name, type, value, depth, path);
+            }
+            else if (showReadonly)
+            {
+                DrawReadOnly(name, type, FormatValue(value));
+            }
+        }
+
+        private static bool CanExpand(Type type)
+        {
+            if (type == null || type == typeof(string) || type.IsPrimitive || type.IsEnum || type.IsPointer || typeof(Delegate).IsAssignableFrom(type)) return false;
+            if (typeof(UnityEngine.Object).IsAssignableFrom(type)) return false;
+            return type != typeof(decimal) && type != typeof(DateTime) && type != typeof(TimeSpan);
+        }
+
+        private static Type GetCollectionElementType(Type type)
+        {
+            if (type.IsGenericType && type.GetGenericArguments().Length == 1) return type.GetGenericArguments()[0];
+            Type[] interfaces = type.GetInterfaces();
+            for (int i = 0; i < interfaces.Length; i++)
+            {
+                if (interfaces[i].IsGenericType && interfaces[i].GetGenericTypeDefinition() == typeof(IList<>)) return interfaces[i].GetGenericArguments()[0];
+            }
+            return null;
         }
 
         private bool TryDrawEditable(string label, Type type, object value, Action<object> setValue)
