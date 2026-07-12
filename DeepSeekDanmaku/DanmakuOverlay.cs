@@ -20,11 +20,11 @@ namespace DeepSeekDanmaku
             Color.white
         };
 
-        public static void Show(string message, float delaySeconds = 0f)
+        public static void Show(string message, float delaySeconds = 0f, DanmakuSeverity severity = DanmakuSeverity.Normal)
         {
             if (string.IsNullOrWhiteSpace(message)) return;
             EnsureCreated();
-            if (current != null) current.StartCoroutine(current.Spawn(message, delaySeconds));
+            if (current != null) current.StartCoroutine(current.Spawn(message, delaySeconds, severity));
         }
 
         private static void EnsureCreated()
@@ -50,7 +50,7 @@ namespace DeepSeekDanmaku
             current = null;
         }
 
-        private IEnumerator Spawn(string message, float delaySeconds)
+        private IEnumerator Spawn(string message, float delaySeconds, DanmakuSeverity severity)
         {
             if (delaySeconds > 0f)
                 yield return new WaitForSecondsRealtime(delaySeconds);
@@ -59,7 +59,7 @@ namespace DeepSeekDanmaku
             transform.SetAsLastSibling();
             TextMeshProUGUI text = item.GetComponent<TextMeshProUGUI>();
             int fontSize = Random.Range(ModConfig.Instance.minFontSize, ModConfig.Instance.maxFontSize + 1);
-            text.text = message; text.fontSize = fontSize; text.color = Colors[Random.Range(0, Colors.Length)]; text.fontStyle = FontStyles.Bold;
+            text.text = message; text.fontSize = fontSize; text.color = PickColor(severity); text.fontStyle = FontStyles.Bold;
             text.alignment = TextAlignmentOptions.MidlineLeft; text.enableWordWrapping = false; text.raycastTarget = false;
             text.outlineWidth = 0.18f; text.outlineColor = new Color32(0, 0, 0, 220);
             float width = Mathf.Max(100f, text.preferredWidth + 24f);
@@ -78,6 +78,16 @@ namespace DeepSeekDanmaku
                 yield return null;
             }
             Destroy(item);
+        }
+
+        private static Color PickColor(DanmakuSeverity severity)
+        {
+            if (severity == DanmakuSeverity.Warning)
+                return Random.value < 0.5f ? new Color32(255, 84, 100, 255) : new Color32(255, 126, 182, 255);
+            if (severity == DanmakuSeverity.Notice)
+                return Random.value < 0.5f ? new Color32(255, 222, 89, 255) : new Color32(255, 166, 92, 255);
+            Color[] normal = { Colors[0], Colors[3], Colors[6] };
+            return normal[Random.Range(0, normal.Length)];
         }
     }
 }
