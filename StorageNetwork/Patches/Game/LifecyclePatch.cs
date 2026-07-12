@@ -1,5 +1,6 @@
 using HarmonyLib;
 using StorageNetwork.Core;
+using StorageNetwork.ProductionOrders;
 using StorageNetwork.Services;
 
 namespace StorageNetwork.Patches
@@ -19,6 +20,7 @@ namespace StorageNetwork.Patches
             public static void Postfix(Game __instance)
             {
                 StorageNetworkFrameProfileTool.InstallIfEnabled(__instance);
+                __instance.gameObject.AddOrGet<ProductionOrderBackgroundMaintenance>();
             }
         }
 

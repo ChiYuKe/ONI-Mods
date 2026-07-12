@@ -161,6 +161,64 @@ namespace StorageNetwork.UI
             clearLayout.preferredWidth = 44f;
             clearLayout.preferredHeight = 24f;
             clearButton.GetComponent<KButton>().isInteractable = rule != null;
+
+        }
+
+        private void AddKeepRuleMetrics(Transform parent, ProductDisplayGroup product)
+        {
+            ProductionKeepRule rule = productionOrderService.GetKeepRule(product.ProductTag);
+            float currentStock = productionOrderService.GetNetworkRawAmount(product.ProductTag);
+            float automaticPending = productionOrderService.GetActiveOrdersForProduct(product.ProductTag, 100)
+                .Where(order => order.IsAutomatic)
+                .Sum(order => Mathf.Max(0f, order.RequestedAmount - order.ProducedAtSubmit));
+            float targetStock = rule != null ? rule.TargetAmount : keepRuleDraftAmount;
+            float shortage = rule != null
+                ? Mathf.Max(0f, targetStock - currentStock - automaticPending)
+                : Mathf.Max(0f, targetStock - currentStock);
+
+            GameObject metrics = new GameObject("KeepRuleMetrics");
+            metrics.transform.SetParent(parent, false);
+            metrics.AddComponent<RectTransform>();
+            LayoutElement metricsElement = metrics.AddComponent<LayoutElement>();
+            metricsElement.preferredHeight = 48f;
+            metricsElement.minHeight = 48f;
+            metricsElement.flexibleHeight = 0f;
+            HorizontalLayoutGroup metricsLayout = metrics.AddComponent<HorizontalLayoutGroup>();
+            metricsLayout.spacing = 5f;
+            metricsLayout.childControlWidth = true;
+            metricsLayout.childControlHeight = true;
+            metricsLayout.childForceExpandWidth = true;
+            metricsLayout.childForceExpandHeight = true;
+
+            AddKeepRuleMetric(metrics.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_KEEP_CURRENT_STOCK), currentStock, PositiveColor());
+            AddKeepRuleMetric(metrics.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_KEEP_TARGET_STOCK), targetStock, NeutralTextColor());
+            AddKeepRuleMetric(metrics.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_KEEP_PENDING), automaticPending, WarningColor());
+            AddKeepRuleMetric(metrics.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_KEEP_SHORTAGE), shortage, shortage > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ? WarningColor() : PositiveColor());
+        }
+
+        private void AddKeepRuleMetric(Transform parent, string format, float amount, Color valueColor)
+        {
+            GameObject card = CreatePlainImage("KeepRuleMetric", parent, new Color(0.72f, 0.73f, 0.68f, 1f));
+            LayoutElement cardLayout = card.AddComponent<LayoutElement>();
+            cardLayout.preferredHeight = 48f;
+            cardLayout.minHeight = 48f;
+            cardLayout.flexibleHeight = 0f;
+            VerticalLayoutGroup cardContentLayout = card.AddComponent<VerticalLayoutGroup>();
+            cardContentLayout.padding = new RectOffset(3, 3, 4, 4);
+            cardContentLayout.childAlignment = TextAnchor.MiddleCenter;
+            cardContentLayout.childControlWidth = true;
+            cardContentLayout.childControlHeight = true;
+            cardContentLayout.childForceExpandWidth = true;
+            cardContentLayout.childForceExpandHeight = false;
+            TextMeshProUGUI text = CreateText("Value", card.transform, string.Format(format, GameUtil.GetFormattedMass(amount)), 10, TextAlignmentOptions.Center);
+            text.color = valueColor;
+            text.fontStyle = FontStyles.Bold;
+            text.textWrappingMode = TextWrappingModes.Normal;
+            LayoutElement textLayout = text.gameObject.AddComponent<LayoutElement>();
+            textLayout.flexibleWidth = 1f;
+            textLayout.preferredHeight = 38f;
+            textLayout.minHeight = 38f;
+            textLayout.flexibleHeight = 0f;
         }
 
         private void AddRouteEditor(Transform parent, ProductDisplayGroup product)

@@ -54,5 +54,26 @@ namespace StorageNetwork.ProductionOrders
             PurgeExpiredFinishedOrders();
             RunKeepRules();
         }
+
+        public void RefreshBackground(bool rebuildRecipeCatalog)
+        {
+            EnsureOrdersLoaded();
+            if (KeepRules.Count == 0 && ActiveOrders.Count == 0)
+            {
+                return;
+            }
+
+            StorageNetworkFabricatorProgress.BeginRefresh();
+            networkInventory.Refresh();
+            RefreshConnectedFabricatorOutputAmounts();
+            if (rebuildRecipeCatalog || craftableRecipes.Count == 0)
+            {
+                craftableRecipes = ProductionRecipeCatalog.GetCraftableRecipeDisplayInfos();
+            }
+
+            UpdateProductionOrderStates();
+            PurgeExpiredFinishedOrders();
+            RunKeepRules();
+        }
     }
 }

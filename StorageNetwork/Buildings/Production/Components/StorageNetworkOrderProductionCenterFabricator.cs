@@ -74,7 +74,6 @@ namespace StorageNetwork.Components
 
         protected override void OnCleanUp()
         {
-            SyncOperationalActive(false);
             ClearWorldProgressBars();
             base.OnCleanUp();
         }

@@ -59,13 +59,26 @@ namespace StorageNetwork.ProductionOrders
                     continue;
                 }
 
-                if (FindAutomaticDuplicateOrder(rule.ProductTag, route.Recipe) != null)
+                ProductionOrderRecord automaticOrder = FindAutomaticDuplicateOrder(rule.ProductTag, route.Recipe);
+                float stockAmount = GetProducedAmountForOrder(rule.ProductTag);
+                float otherCommittedAmount = ActiveOrders.Values
+                    .Where(order => order != automaticOrder &&
+                                    order.ProductTag == rule.ProductTag &&
+                                    IsOrderActive(order))
+                    .Sum(order => Mathf.Max(0f, order.RequestedAmount - order.ProducedAtSubmit));
+                float missingAmount = Mathf.Max(0f, rule.TargetAmount - stockAmount - otherCommittedAmount);
+                if (automaticOrder != null)
                 {
-                    continue;
+                    // Keep the existing order stable while stock remains below the target.
+                    // Replanning for every partial deposit causes cancel/recreate thrashing.
+                    if (missingAmount > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+                    {
+                        continue;
+                    }
+
+                    CancelKeepRuleOrder(automaticOrder, currentCycle);
                 }
 
-                float committedAmount = GetProducedAmountForOrder(rule.ProductTag) + GetPendingProducedAmountAhead(rule.ProductTag);
-                float missingAmount = rule.TargetAmount - committedAmount;
                 if (missingAmount <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
                 {
                     continue;
@@ -73,6 +86,20 @@ namespace StorageNetwork.ProductionOrders
 
                 SubmitOrder(product, route, missingAmount, currentCycle, true);
             }
+        }
+
+        private static void CancelKeepRuleOrder(ProductionOrderRecord order, float currentCycle)
+        {
+            if (order == null || !order.IsAutomatic || !IsOrderActive(order))
+            {
+                return;
+            }
+
+            CancelOrderQueues(order);
+            ReleaseOrderAutomation(order.Key);
+            order.State = ProductionOrderState.Cancelled;
+            order.CompletedCycle = currentCycle;
+            order.AbnormalReason = string.Empty;
         }
     }
 }

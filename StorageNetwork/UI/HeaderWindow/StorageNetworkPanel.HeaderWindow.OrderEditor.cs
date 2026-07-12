@@ -63,7 +63,11 @@ namespace StorageNetwork.UI
                 productionOrderService.GetKeepRule(product.ProductTag),
                 selectedRouteIndex,
                 requestedProductAmount,
-                lastOrderStatus);
+                lastOrderStatus) + string.Format("|stock:{0:0.###}|auto:{1:0.###}",
+                    productionOrderService.GetNetworkRawAmount(product.ProductTag),
+                    productionOrderService.GetActiveOrdersForProduct(product.ProductTag, 100)
+                        .Where(order => order.IsAutomatic)
+                        .Sum(order => Mathf.Max(0f, order.RequestedAmount - order.ProducedAtSubmit)));
             if (signature == orderDetailsSignature)
             {
                 RebuildOrderTracking(product);
@@ -111,6 +115,7 @@ namespace StorageNetwork.UI
 
             GameObject preview = CreateOrderWorkspaceColumn(workspace.transform, "OrderPreviewColumn", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_PREVIEW_TITLE), 0f, workspaceHeight - 16f, 1f);
             AddPlanMetrics(preview.transform, draft);
+            AddKeepRuleMetrics(preview.transform, product);
             AddProductionChain(preview.transform, draft);
             AddMaterialSchedulePanel(preview.transform, draft);
         }

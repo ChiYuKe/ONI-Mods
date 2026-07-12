@@ -353,8 +353,7 @@ namespace StorageNetwork.UI
                 SelectProduct(orderProducts[0].ProductKey, false);
             }
 
-            orderDetailsSignature = null;
-            RebuildOrderTracking(GetSelectedProduct());
+            RebuildOrderDetails();
         }
 
     }

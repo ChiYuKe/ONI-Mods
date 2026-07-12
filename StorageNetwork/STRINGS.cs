@@ -902,6 +902,10 @@ namespace StorageNetwork
                 public static LocString ORDER_KEEP_BUTTON = "保持";
                 public static LocString ORDER_KEEP_ENABLED_STATUS = "货物保持：{0} 低于 {1} 时自动下单。";
                 public static LocString ORDER_KEEP_CLEARED_STATUS = "货物保持：已关闭 {0}。";
+                public static LocString ORDER_KEEP_CURRENT_STOCK = "当前库存\n{0}";
+                public static LocString ORDER_KEEP_TARGET_STOCK = "保持目标\n{0}";
+                public static LocString ORDER_KEEP_PENDING = "自动待产\n{0}";
+                public static LocString ORDER_KEEP_SHORTAGE = "实际缺口\n{0}";
                 public static LocString ORDER_ROUTE_SECTION = "生产设备 ({0})";
                 public static LocString ORDER_ROUTE_DEVICE_MULTI = "{0}台 / {1}个配方";
                 public static LocString ORDER_ROUTE_DEVICE_SINGLE = "{0}台";

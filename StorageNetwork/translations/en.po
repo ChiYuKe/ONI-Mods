@@ -1193,6 +1193,22 @@ msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_KEEP_CLEARED_STATUS"
 msgid "货物保持：已关闭 {0}。"
 msgstr "Keep Stock: disabled for {0}."
 
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_KEEP_CURRENT_STOCK"
+msgid "当前库存\n{0}"
+msgstr "Current stock\n{0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_KEEP_TARGET_STOCK"
+msgid "保持目标\n{0}"
+msgstr "Keep target\n{0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_KEEP_PENDING"
+msgid "自动待产\n{0}"
+msgstr "Auto pending\n{0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_KEEP_SHORTAGE"
+msgid "实际缺口\n{0}"
+msgstr "Actual shortage\n{0}"
+
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_ROUTE_SECTION"
 msgid "生产设备 ({0})"
 msgstr "Production Equipment ({0})"
