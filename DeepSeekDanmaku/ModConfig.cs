@@ -135,7 +135,7 @@ namespace DeepSeekDanmaku
         public bool IsGemini => selectedProvider == AiProvider.Gemini;
         public string EffectiveApiKey => IsGemini ? geminiApiKey : (!string.IsNullOrWhiteSpace(deepseekApiKey) ? deepseekApiKey : apiKey);
         public bool HasApiKey => !string.IsNullOrWhiteSpace(EffectiveApiKey) && !EffectiveApiKey.Contains("请填写");
-        public string EffectiveApiUrl => IsGemini ? "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions" : apiUrl;
+        public string EffectiveApiUrl => IsGemini ? "https://generativelanguage.googleapis.com/v1beta/interactions" : apiUrl;
         public string EffectiveModel => IsGemini
             ? (string.IsNullOrWhiteSpace(geminiModel) ? "gemini-3.5-flash" : geminiModel)
             : (string.IsNullOrWhiteSpace(deepseekModel) ? "deepseek-chat" : deepseekModel);

@@ -182,9 +182,44 @@ namespace StorageNetwork.Components
                 true,
                 true);
 
+            if (CurrentInputStoreMode == StorageNetworkMaterialRequester.OutputStoreMode.SpecificStorage &&
+                result.MovedKg <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT &&
+                !string.IsNullOrEmpty(result.BlockedItem))
+            {
+                DropItemsRejectedBySpecificTarget();
+            }
+
             lastStatus = FormatInputStoreStatus(result);
             retryTimer = result.MovedKg > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ? 0f : EmptyRetrySeconds;
             UpdateCachedStatusText();
+        }
+
+        private void DropItemsRejectedBySpecificTarget()
+        {
+            Storage target = ResolveInputStorage();
+            if (storage?.items == null)
+            {
+                return;
+            }
+
+            var excluded = StorageTargetSelector.BuildExclusionSet(new[] { storage });
+            var items = new System.Collections.Generic.List<GameObject>(storage.items);
+            int sourceWorldId = StorageTargetSelector.GetObjectWorldId(gameObject);
+            foreach (GameObject item in items)
+            {
+                if (item != null &&
+                    (target == null || StorageTargetSelector.FindOutputTarget(
+                        item,
+                        StorageItemUtility.GetStorageMatchTags(item),
+                        excluded,
+                        target,
+                        null,
+                        sourceWorldId,
+                        storage) == null))
+                {
+                    storage.Drop(item, true);
+                }
+            }
         }
 
         public void SetInputStorage(Storage target)

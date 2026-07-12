@@ -149,7 +149,7 @@ namespace StorageNetwork.Components
                 }
 
                 requestedAny = true;
-                float moved = RequestIngredient(recipe, ingredient.material, Mathf.Min(missing, remainingLimit));
+                float moved = RequestIngredient(recipe, ingredient.material, missing, remainingLimit);
                 if (moved <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
                 {
                     lastStatus = string.Format(Loc.Get(Loc.UI.STORAGE_NETWORK.MATERIAL_STATUS_MISSING_SOURCE), GetTagDisplayName(ingredient.material));
@@ -379,8 +379,11 @@ namespace StorageNetwork.Components
             return Mathf.Clamp(count, 1, Config.Instance.MaxRequestBatchCount);
         }
 
-        private float RequestIngredient(ComplexRecipe recipe, Tag tag, float amount)
+        private float RequestIngredient(ComplexRecipe recipe, Tag tag, float amountUnits, float maximumMassKg)
         {
+            float massPerUnit = GetMassPerUnit(tag);
+            float allowedUnits = Mathf.Min(amountUnits, maximumMassKg / massPerUnit);
+            float amount = allowedUnits * massPerUnit;
             float moved = 0f;
             if (CurrentMode == RequestMode.SearchNetwork)
             {
@@ -394,7 +397,7 @@ namespace StorageNetwork.Components
                     break;
                 }
 
-                float sourceAmount = GetMatchingAmountAvailable(source, tag);
+                float sourceAmount = GetMatchingMassAvailable(source, tag);
                 if (sourceAmount <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
                 {
                     continue;
@@ -406,8 +409,9 @@ namespace StorageNetwork.Components
                     break;
                 }
 
-                float transferred = NetworkStorageTransferService.TransferMatchingItemsFromStorage(source, fabricator.inStorage, tag, transferAmount);
-                moved += transferred;
+                float requestedUnits = transferAmount / massPerUnit;
+                float transferredUnits = NetworkStorageTransferService.TransferMatchingItemUnitsFromStorage(source, fabricator.inStorage, tag, requestedUnits);
+                moved += transferredUnits * massPerUnit;
             }
 
             return moved;
@@ -465,11 +469,38 @@ namespace StorageNetwork.Components
             {
                 if (item != null && StorageItemUtility.MatchesStorageTag(item, tag))
                 {
+                    PrimaryElement primaryElement = item.GetComponent<PrimaryElement>();
+                    amount += primaryElement != null ? primaryElement.Units : 0f;
+                }
+            }
+
+            return amount;
+        }
+
+        private static float GetMatchingMassAvailable(Storage storage, Tag tag)
+        {
+            if (storage?.items == null || tag == Tag.Invalid)
+            {
+                return 0f;
+            }
+
+            float amount = 0f;
+            foreach (GameObject item in storage.items)
+            {
+                if (item != null && StorageItemUtility.MatchesStorageTag(item, tag))
+                {
                     amount += StorageItemUtility.GetMass(item);
                 }
             }
 
             return amount;
+        }
+
+        private static float GetMassPerUnit(Tag tag)
+        {
+            GameObject prefab = tag != Tag.Invalid ? Assets.GetPrefab(tag) : null;
+            PrimaryElement primaryElement = prefab != null ? prefab.GetComponent<PrimaryElement>() : null;
+            return primaryElement != null && primaryElement.MassPerUnit > 0f ? primaryElement.MassPerUnit : 1f;
         }
 
         private void EnsureFabricator()

@@ -24,12 +24,6 @@ namespace StorageNetwork.Patches
                     return;
                 }
 
-                Storage source = pickup.storage;
-                if (source == null || source == destination)
-                {
-                    return;
-                }
-
                 StorageNetworkSolidInputPortIngress ingress = destination.GetComponent<StorageNetworkSolidInputPortIngress>();
                 if (ingress != null &&
                     ingress.CurrentInputStoreMode == StorageNetworkMaterialRequester.OutputStoreMode.SpecificStorage)
@@ -50,6 +44,12 @@ namespace StorageNetwork.Patches
                         __result = false;
                         return;
                     }
+                }
+
+                Storage source = pickup.storage;
+                if (source == null || source == destination)
+                {
+                    return;
                 }
 
                 if (StorageNetworkStorageRules.IsServerStorage(source) ||

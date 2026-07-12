@@ -325,6 +325,66 @@ namespace StorageNetwork.Services
             return moved;
         }
 
+        public static float TransferMatchingItemUnitsFromStorage(
+            Storage source,
+            Storage destination,
+            Tag tag,
+            float units)
+        {
+            if (source?.items == null || destination == null || tag == Tag.Invalid || units <= 0f)
+            {
+                return 0f;
+            }
+
+            float movedUnits = 0f;
+            List<GameObject> items = new List<GameObject>(source.items);
+            foreach (GameObject item in items)
+            {
+                if (item == null || !StorageItemUtility.MatchesStorageTag(item, tag) || movedUnits >= units)
+                {
+                    continue;
+                }
+
+                PrimaryElement element = item.GetComponent<PrimaryElement>();
+                Pickupable pickupable = item.GetComponent<Pickupable>();
+                if (element == null || pickupable == null || element.Units <= 0f || element.MassPerUnit <= 0f)
+                {
+                    continue;
+                }
+
+                float transferableUnits = Mathf.Min(
+                    units - movedUnits,
+                    element.Units,
+                    Mathf.Max(0f, destination.RemainingCapacity()) / element.MassPerUnit);
+                if (transferableUnits <= 0f)
+                {
+                    break;
+                }
+
+                if (transferableUnits + PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT >= element.Units)
+                {
+                    float itemUnits = element.Units;
+                    if (source.Transfer(item, destination, block_events: false, hide_popups: true))
+                    {
+                        movedUnits += itemUnits;
+                    }
+                }
+                else
+                {
+                    Pickupable taken = pickupable.TakeUnit(transferableUnits);
+                    if (taken != null)
+                    {
+                        destination.Store(taken.gameObject, hide_popups: true, block_events: false, do_disease_transfer: true, is_deserializing: false);
+                        movedUnits += taken.GetComponent<PrimaryElement>()?.Units ?? 0f;
+                        source.Trigger(-1697596308, item);
+                        source.OnStorageChange?.Invoke(item);
+                    }
+                }
+            }
+
+            return movedUnits;
+        }
+
         public static StorageTransferResult TransferAnyLiquidFromNetworkToStorage(
             Storage destination,
             float amount,
