@@ -1,0 +1,20 @@
+{
+  "provider": "gemini",
+  "selectedProvider": "Gemini",
+  "apiKey": "请填写 sk-...",
+  "deepseekApiKey": "",
+  "geminiApiKey": "",
+  "apiUrl": "https://api.deepseek.com/chat/completions",
+  "model": "gemini-3.5-flash",
+  "geminiModel": "gemini-3.5-flash",
+  "deepseekModel": "deepseek-chat",
+  "intervalSeconds": 60,
+  "systemPrompt": "你是《缺氧》的殖民地观察员。根据数据给出简短、有趣且有帮助的中文点评。只输出1到3句，每句不超过45字，不要使用Markdown。",
+  "danmakuSpeed": 180,
+  "fontSize": 24,
+  "minFontSize": 20,
+  "maxFontSize": 34,
+  "maxResponseCharacters": 280,
+  "minSentenceDelaySeconds": 0.8,
+  "maxSentenceDelaySeconds": 2.5
+}

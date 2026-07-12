@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <AssemblyName>DeepSeekDanmaku</AssemblyName>
+    <RootNamespace>DeepSeekDanmaku</RootNamespace>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <GenerateDependencyFile>false</GenerateDependencyFile>
+    <GenerateRuntimeConfigurationFiles>false</GenerateRuntimeConfigurationFiles>
+    <LangVersion>latest</LangVersion>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <GameManagedDir>D:\Program Files (x86)\Steam\steamapps\common\OxygenNotIncluded\OxygenNotIncluded_Data\Managed</GameManagedDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)'=='Debug'">
+    <OutputPath>..\..\..\..\Documents\Klei\OxygenNotIncluded\mods\Dev\DeepSeekDanmaku\</OutputPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)'=='Release'">
+    <OutputPath>bin\Release\</OutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="0Harmony"><HintPath>$(GameManagedDir)\0Harmony.dll</HintPath><Private>False</Private></Reference>
+    <Reference Include="Assembly-CSharp"><HintPath>$(GameManagedDir)\Assembly-CSharp.dll</HintPath><Private>False</Private></Reference>
+    <Reference Include="Assembly-CSharp-firstpass"><HintPath>$(GameManagedDir)\Assembly-CSharp-firstpass.dll</HintPath><Private>False</Private></Reference>
+    <Reference Include="Newtonsoft.Json"><HintPath>$(GameManagedDir)\Newtonsoft.Json.dll</HintPath><Private>False</Private></Reference>
+    <Reference Include="PLib"><HintPath>..\Managed\PLib.dll</HintPath><Private>False</Private></Reference>
+    <Reference Include="UnityEngine.CoreModule"><HintPath>$(GameManagedDir)\UnityEngine.CoreModule.dll</HintPath><Private>False</Private></Reference>
+    <Reference Include="UnityEngine.JSONSerializeModule"><HintPath>$(GameManagedDir)\UnityEngine.JSONSerializeModule.dll</HintPath><Private>False</Private></Reference>
+    <Reference Include="UnityEngine.UI"><HintPath>$(GameManagedDir)\UnityEngine.UI.dll</HintPath><Private>False</Private></Reference>
+    <Reference Include="UnityEngine.UIModule"><HintPath>$(GameManagedDir)\UnityEngine.UIModule.dll</HintPath><Private>False</Private></Reference>
+    <Reference Include="Unity.TextMeshPro"><HintPath>$(GameManagedDir)\Unity.TextMeshPro.dll</HintPath><Private>False</Private></Reference>
+    <Reference Include="UnityEngine.UnityWebRequestModule"><HintPath>$(GameManagedDir)\UnityEngine.UnityWebRequestModule.dll</HintPath><Private>False</Private></Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="mod.yaml" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="mod_info.yaml" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="config.example.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <Target Name="MergePLib" AfterTargets="Build">
+    <Exec Command="&quot;$(MSBuildProjectDirectory)\..\packages\ILRepack.2.0.44\tools\ILRepack.exe&quot; /out:&quot;$(TargetPath)&quot; &quot;$(TargetPath)&quot; &quot;$(MSBuildProjectDirectory)\..\Managed\PLib.dll&quot; /lib:&quot;$(MSBuildProjectDirectory)\..\Managed&quot;" />
+  </Target>
+</Project>
