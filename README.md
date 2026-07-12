@@ -8,24 +8,47 @@
 
 ---
 
-## 🛠️ Mod 列表说明
+## 🛠️ Mod 列表
 
-本仓库采用多项目管理，以下是各个 Mod 的功能简述：
+本仓库采用多项目管理，每个目录对应一个 Mod 或开发工具。
+
+### 功能型 Mod
+
 | 源码目录 | Mod 名称 | 功能描述 | 获取 / 下载 |
 | :--- | :--- | :--- | :--- |
-| [**AutomaticHarvest**](./AutomaticHarvest) | 自动收获 | 优化植物收获逻辑，智能处理成熟作物。 | [Steam 订阅](https://steamcommunity.com/sharedfiles/filedetails/?id=3623778703) |
-| [**MinionAge**](./MinionAge)| 复制人年龄年龄 | 记录并显示复制人的生存天数，且达到目标天数死亡 | [Steam 订阅](https://steamcommunity.com/sharedfiles/filedetails/?id=3323127058) |
-| [**MinionAge_Dlc**](./MinionAge_DLC) | 复制人年龄扩展 | 对MinionAge的扩展 |  |
-| [**ElementExpansion**](./ElementExpansion) | 元素扩展 | 增加新元素或调整现有元素属性。 |  |
-| [**MoreFood**](./MoreFood) | 更多食物 | 丰富游戏内菜谱，提供更多饮食选择。 | [Steam 订阅](https://steamcommunity.com/sharedfiles/filedetails/?id=2957924585) |
-| [**WireAnywhere**](./WireAnywhere) | 任意布线 | 优化电线建造规则，减少地形限制。 | [Steam 订阅](https://steamcommunity.com/sharedfiles/filedetails/?id=2923332049) |
-| [**VignetteBegone**](./VignetteBegone) | 移除晕影 | 去除游戏 界面 边缘暗影，画面更通透。 | [Steam 订阅](https://steamcommunity.com/sharedfiles/filedetails/?id=3460554894) |
-| [**DarkMoonGalaxyTree**](./DarkMoonGalaxyTree) | 食碳草桩 | 增加了一种吃二氧化碳的植物 | [Steam 订阅](https://steamcommunity.com/sharedfiles/filedetails/?id=2919913185) |
-| [**EternalDecay**](./EternalDecay) | 复制人年龄 | 给复制添加年龄系统 | |
-| [**OxygenConsumingPlant**](./OxygenConsumingPlant) | 耗氧植物 | 引入消耗氧气的特殊植物增加挑战性。 |  |
-| [**MiniBox**](./MiniBox) | 游手的小工具箱 |  | [Steam 订阅](https://steamcommunity.com/sharedfiles/filedetails/?id=2890083659) |
-| [**StorageNetwork**](./StorageNetwork) | 储存网络 | 将场景储存、生产建筑、喷泉和订单调度整合到一个可视化管理窗口。 | [Steam 订阅](https://steamcommunity.com/sharedfiles/filedetails/?id=3732422991) |
-| [**MusicBox**](./MusicBox) | 音乐盒 | 新增一个 1x1 音乐盒建筑，接受 4-bit 信号播放对应钢琴音符。 | [Steam 订阅](https://steamcommunity.com/sharedfiles/filedetails/?id=3762583359) |
+| [AutomaticHarvest](./AutomaticHarvest) | 自动收获 | 优化植物收获流程，自动处理成熟作物。 | [Steam 订阅](https://steamcommunity.com/sharedfiles/filedetails/?id=3623778703) |
+| [DarkMoonGalaxyTree](./DarkMoonGalaxyTree) | 食碳草桩 | 新增以二氧化碳为资源的特殊植物及产物。 | [Steam 订阅](https://steamcommunity.com/sharedfiles/filedetails/?id=2919913185) |
+| [DeepSeekDanmaku](./DeepSeekDanmaku) | DeepSeek 殖民地弹幕 | 定期汇总殖民地状态并请求 AI 点评，以滚动弹幕显示。 | 源码 |
+| [ElementExpansion](./ElementExpansion) | 元素扩展 | 添加新元素或调整现有元素属性。 | 源码 |
+| [EternalDecay](./EternalDecay) | 永恒衰老 | 为复制人增加随时间变化的衰老机制。 | 源码 |
+| [MiniBox](./MiniBox) | 游手的小工具箱 | 提供一组便捷的游戏内小工具和可配置功能。 | [Steam 订阅](https://steamcommunity.com/sharedfiles/filedetails/?id=2890083659) |
+| [MinionAge](./MinionAge) | 复制人年龄 | 记录并显示复制人年龄，并提供寿命相关机制。 | [Steam 订阅](https://steamcommunity.com/sharedfiles/filedetails/?id=3323127058) |
+| [MinionAge_DLC](./MinionAge_DLC) | 复制人年龄扩展 | MinionAge 的扩展内容和交互功能。 | 源码 |
+| [MoreFood](./MoreFood) | 更多食物 | 丰富游戏菜谱，提供更多食物和饮食选择。 | [Steam 订阅](https://steamcommunity.com/sharedfiles/filedetails/?id=2957924585) |
+| [MusicBox](./MusicBox) | 音乐盒 | 新增 1×1 音乐盒建筑，接收 4-bit 信号并播放对应钢琴音符。 | [Steam 订阅](https://steamcommunity.com/sharedfiles/filedetails/?id=3762583359) |
+| [NewMap](./NewMap) | 葱翠裂谷 | 新增资源较宽裕、保持原版风格的自定义地图。 | 源码 |
+| [ONIVisualEnhancer](./ONIVisualEnhancer) | ONI Visual Enhancer | 提供色调、暗角、颗粒和扫描线等轻量画面预设。 | 源码 |
+| [OxygenConsumingPlant](./OxygenConsumingPlant) | 耗氧植物 | 引入消耗氧气的特殊植物及其产物。 | 源码 |
+| [RunningOutOfTime](./RunningOutOfTime) | Running Out of Time | 为复制人增加时间与寿命相关机制。 | 源码 |
+| [StorageNetwork](./StorageNetwork) | 储存网络 | 将储存、生产建筑、喷泉和订单调度整合到可视化管理窗口。 | [Steam 订阅](https://steamcommunity.com/sharedfiles/filedetails/?id=3732422991) |
+| [TAccessories](./TAccessories) | TAccessories | 扩展复制人饰品、效果及相关游戏内容。 | 源码 |
+| [VignetteBegone](./VignetteBegone) | 移除晕影 | 移除或切换游戏边缘暗角与警报晕影。 | [Steam 订阅](https://steamcommunity.com/sharedfiles/filedetails/?id=3460554894) |
+| [WASDMinionControl](./WASDMinionControl) | WASD 复制人控制 | 使用 WASD 直接控制当前跟随镜头中的复制人。 | 源码 |
+| [WireAnywhere](./WireAnywhere) | 任意布线 | 放宽电线与高压电线的建造限制。 | [Steam 订阅](https://steamcommunity.com/sharedfiles/filedetails/?id=2923332049) |
+
+### 开发工具与示例
+
+| 源码目录 | 项目 | 用途 |
+| :--- | :--- | :--- |
+| [CykModUtils](./CykModUtils) | CykModUtils | 仓库内 Mod 共用的工具库。 |
+| [DebugUI](./DebugUI) | Debug UI | 用于查看实体、组件、日志和纹理的游戏内调试界面。 |
+| [FunnyComponents](./FunnyComponents) | Funny Components | 组件和 Mod 机制实验项目。 |
+| [NewElementRegistration](./NewElementRegistration) | 新元素注册示例 | 演示通过 elements YAML 和 Substance 补丁注册自定义元素。 |
+| [ONIResourceBridge](./ONIResourceBridge) | ONI Resource Bridge | 将游戏已加载的 KAnim 资源通过本机接口提供给 KAnimGUI。 |
+| [SN_DuplicantGenetics](./SN_DuplicantGenetics) | StorageNetwork 扩展示例 | 演示储存网络组件接口和主面板扩展。 |
+| [TestMod](./TestMod) | AB UI Toolkit | 用于测试 AssetBundle UI 预制体和运行时辅助功能。 |
+| [TestPlanter](./TestPlanter) | 植物测试 | 自定义植物、果实和作物机制的测试项目。 |
+| [FoodandFoodBuffTutorialCase](./TutorialCase/FoodandFoodBuffTutorialCase) | 食物与 Buff 教程 | 演示自定义食物和 Buff 的教程工程。 |
 
 > **提示**：点击“源码目录”可直接查看代码，点击“获取 / 下载”跳转至 Steam 创意工坊或发布页。
 
