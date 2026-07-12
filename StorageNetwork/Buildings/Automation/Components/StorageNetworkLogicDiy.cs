@@ -67,6 +67,7 @@ namespace StorageNetwork.Components
 
         private int startupRefreshTicks;
         private bool forceInventorySnapshot;
+        private static readonly Dictionary<int, LogicDiyInventoryCacheEntry> sharedInventoryCache = new Dictionary<int, LogicDiyInventoryCacheEntry>();
         private readonly Dictionary<string, float> timerElapsedByNode = new Dictionary<string, float>();
         private readonly HashSet<string> timerPulseNodes = new HashSet<string>();
         private readonly Dictionary<string, int> cycleIndexByNode = new Dictionary<string, int>();
@@ -1522,7 +1523,13 @@ namespace StorageNetwork.Components
         private float GetNetworkItemAmountKg(string itemKey)
         {
             int worldId = gameObject != null ? gameObject.GetMyWorldId() : -1;
-            StorageSceneSnapshot snapshot = StorageSceneCollector.CollectForWorld(worldId, force: forceInventorySnapshot);
+            LogicDiyInventoryCacheEntry cache = GetSharedInventoryCache(worldId);
+            if (!forceInventorySnapshot && cache.Amounts.TryGetValue(itemKey ?? string.Empty, out float cachedAmount))
+            {
+                return cachedAmount;
+            }
+
+            StorageSceneSnapshot snapshot = cache.Snapshot;
             if (snapshot?.Storages == null || !snapshot.NetworkOnline)
             {
                 return 0f;
@@ -1545,7 +1552,35 @@ namespace StorageNetwork.Components
                 }
             }
 
+            if (!forceInventorySnapshot)
+            {
+                cache.Amounts[itemKey ?? string.Empty] = amount;
+            }
             return amount;
+        }
+
+        private LogicDiyInventoryCacheEntry GetSharedInventoryCache(int worldId)
+        {
+            if (forceInventorySnapshot || !sharedInventoryCache.TryGetValue(worldId, out LogicDiyInventoryCacheEntry cache) || cache.Frame != Time.frameCount)
+            {
+                cache = new LogicDiyInventoryCacheEntry
+                {
+                    Frame = Time.frameCount,
+                    Snapshot = StorageSceneCollector.CollectForWorld(worldId, force: forceInventorySnapshot)
+                };
+                if (!forceInventorySnapshot)
+                {
+                    sharedInventoryCache[worldId] = cache;
+                }
+            }
+            return cache;
+        }
+
+        private sealed class LogicDiyInventoryCacheEntry
+        {
+            public int Frame;
+            public StorageSceneSnapshot Snapshot;
+            public readonly Dictionary<string, float> Amounts = new Dictionary<string, float>();
         }
 
         private void ClampOutputValue()

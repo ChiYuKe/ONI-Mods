@@ -171,10 +171,8 @@ namespace StorageNetwork.UI
             float automaticPending = productionOrderService.GetActiveOrdersForProduct(product.ProductTag, 100)
                 .Where(order => order.IsAutomatic)
                 .Sum(order => Mathf.Max(0f, order.RequestedAmount - order.ProducedAtSubmit));
-            float targetStock = rule != null ? rule.TargetAmount : keepRuleDraftAmount;
-            float shortage = rule != null
-                ? Mathf.Max(0f, targetStock - currentStock - automaticPending)
-                : Mathf.Max(0f, targetStock - currentStock);
+            float targetStock = rule != null ? rule.TargetAmount : 0f;
+            float shortage = rule != null ? Mathf.Max(0f, targetStock - currentStock - automaticPending) : 0f;
 
             GameObject metrics = new GameObject("KeepRuleMetrics");
             metrics.transform.SetParent(parent, false);
@@ -191,12 +189,31 @@ namespace StorageNetwork.UI
             metricsLayout.childForceExpandHeight = true;
 
             AddKeepRuleMetric(metrics.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_KEEP_CURRENT_STOCK), currentStock, PositiveColor());
-            AddKeepRuleMetric(metrics.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_KEEP_TARGET_STOCK), targetStock, NeutralTextColor());
+            if (rule != null)
+            {
+                AddKeepRuleMetric(metrics.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_KEEP_TARGET_STOCK), targetStock, NeutralTextColor());
+            }
+            else
+            {
+                AddKeepRuleMetricText(metrics.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_KEEP_TARGET_STOCK), Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_KEEP_DISABLED), MutedTextColor());
+            }
             AddKeepRuleMetric(metrics.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_KEEP_PENDING), automaticPending, WarningColor());
-            AddKeepRuleMetric(metrics.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_KEEP_SHORTAGE), shortage, shortage > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ? WarningColor() : PositiveColor());
+            if (rule != null)
+            {
+                AddKeepRuleMetric(metrics.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_KEEP_SHORTAGE), shortage, shortage > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ? WarningColor() : PositiveColor());
+            }
+            else
+            {
+                AddKeepRuleMetricText(metrics.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_KEEP_SHORTAGE), Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_KEEP_DISABLED), MutedTextColor());
+            }
         }
 
         private void AddKeepRuleMetric(Transform parent, string format, float amount, Color valueColor)
+        {
+            AddKeepRuleMetricText(parent, format, GameUtil.GetFormattedMass(amount), valueColor);
+        }
+
+        private void AddKeepRuleMetricText(Transform parent, string format, string value, Color valueColor)
         {
             GameObject card = CreatePlainImage("KeepRuleMetric", parent, new Color(0.72f, 0.73f, 0.68f, 1f));
             LayoutElement cardLayout = card.AddComponent<LayoutElement>();
@@ -210,7 +227,7 @@ namespace StorageNetwork.UI
             cardContentLayout.childControlHeight = true;
             cardContentLayout.childForceExpandWidth = true;
             cardContentLayout.childForceExpandHeight = false;
-            TextMeshProUGUI text = CreateText("Value", card.transform, string.Format(format, GameUtil.GetFormattedMass(amount)), 10, TextAlignmentOptions.Center);
+            TextMeshProUGUI text = CreateText("Value", card.transform, string.Format(format, value), 10, TextAlignmentOptions.Center);
             text.color = valueColor;
             text.fontStyle = FontStyles.Bold;
             text.textWrappingMode = TextWrappingModes.Normal;

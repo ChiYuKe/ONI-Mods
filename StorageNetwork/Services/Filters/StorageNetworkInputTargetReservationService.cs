@@ -8,6 +8,9 @@ namespace StorageNetwork.Services
 {
     internal static class StorageNetworkInputTargetReservationService
     {
+        private static readonly Dictionary<int, List<InputTargetReservation>> inputReservationsByTarget = new Dictionary<int, List<InputTargetReservation>>();
+        private static int inputReservationIndexFrame = -1;
+
         public static bool IsReservedForAutoInput(Storage target, Storage currentInputStorage)
         {
             if (!IsReservableTarget(target) || !IsInputReservationSource(currentInputStorage))
@@ -49,31 +52,62 @@ namespace StorageNetwork.Services
 
         public static List<InputTargetReservation> GetReservationsForTarget(Storage target)
         {
-            List<InputTargetReservation> reservations = new List<InputTargetReservation>();
             if (!IsReservableTarget(target))
             {
-                return reservations;
+                return new List<InputTargetReservation>();
             }
 
             int targetInstanceId = GetStorageInstanceId(target);
             if (targetInstanceId == KPrefabID.InvalidInstanceID)
             {
-                return reservations;
+                return new List<InputTargetReservation>();
             }
 
-            foreach (Storage inputStorage in StorageSceneRegistry.GetStorages())
+            EnsureInputReservationIndex();
+            return inputReservationsByTarget.TryGetValue(targetInstanceId, out List<InputTargetReservation> reservations)
+                ? reservations
+                : new List<InputTargetReservation>();
+        }
+
+        private static void EnsureInputReservationIndex()
+        {
+            if (inputReservationIndexFrame == Time.frameCount)
             {
-                if (!StorageSceneRegistry.IsLive(inputStorage) || inputStorage == target)
-                {
-                    continue;
-                }
-
-                AddSolidInputReservation(inputStorage, target, targetInstanceId, reservations);
-                AddLiquidInputReservation(inputStorage, target, targetInstanceId, reservations);
-                AddGasInputReservation(inputStorage, target, targetInstanceId, reservations);
+                return;
             }
 
-            return reservations;
+            inputReservationIndexFrame = Time.frameCount;
+            inputReservationsByTarget.Clear();
+            List<Storage> storages = new List<Storage>(StorageSceneRegistry.GetStorages());
+            Dictionary<int, Storage> targets = new Dictionary<int, Storage>();
+            foreach (Storage storage in storages)
+            {
+                if (IsReservableTarget(storage))
+                {
+                    targets[GetStorageInstanceId(storage)] = storage;
+                }
+            }
+
+            foreach (Storage inputStorage in storages)
+            {
+                if (!StorageSceneRegistry.IsLive(inputStorage)) continue;
+                int targetId = KPrefabID.InvalidInstanceID;
+                StorageNetworkSolidInputPortIngress solid = inputStorage.GetComponent<StorageNetworkSolidInputPortIngress>();
+                StorageNetworkLiquidInputPortIngress liquid = inputStorage.GetComponent<StorageNetworkLiquidInputPortIngress>();
+                StorageNetworkGasInputPortIngress gas = inputStorage.GetComponent<StorageNetworkGasInputPortIngress>();
+                if (solid != null && solid.CurrentInputStoreMode == StorageNetworkMaterialRequester.OutputStoreMode.SpecificStorage) targetId = solid.InputStorageInstanceId;
+                else if (liquid != null && liquid.CurrentInputStoreMode == StorageNetworkMaterialRequester.OutputStoreMode.SpecificStorage) targetId = liquid.InputStorageInstanceId;
+                else if (gas != null && gas.CurrentInputStoreMode == StorageNetworkMaterialRequester.OutputStoreMode.SpecificStorage) targetId = gas.InputStorageInstanceId;
+                if (!targets.TryGetValue(targetId, out Storage target)) continue;
+                if (!inputReservationsByTarget.TryGetValue(targetId, out List<InputTargetReservation> reservations))
+                {
+                    reservations = new List<InputTargetReservation>();
+                    inputReservationsByTarget[targetId] = reservations;
+                }
+                AddSolidInputReservation(inputStorage, target, targetId, reservations);
+                AddLiquidInputReservation(inputStorage, target, targetId, reservations);
+                AddGasInputReservation(inputStorage, target, targetId, reservations);
+            }
         }
 
         public static bool ClearReservation(InputTargetReservation reservation)

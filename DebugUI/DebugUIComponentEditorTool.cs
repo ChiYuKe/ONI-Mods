@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using ImGuiNET;
+using Klei.AI;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -63,6 +64,7 @@ namespace DebugUI
             ImGui.Checkbox("NonPublic / 非公开", ref includeNonPublic);
             ImGui.Separator();
 
+            DrawDuplicantEditors();
             DrawUnityUiResourceInfo();
 
             BindingFlags flags = BindingFlags.Instance | BindingFlags.Public;
@@ -87,6 +89,57 @@ namespace DebugUI
                 {
                     DrawProperty(properties[i]);
                 }
+            }
+        }
+
+        private void DrawDuplicantEditors()
+        {
+            AttributeLevels attributeLevels = component as AttributeLevels;
+            if (attributeLevels == null)
+            {
+                return;
+            }
+
+            if (!ImGui.CollapsingHeader("Duplicant Attributes / 复制人属性", ImGuiTreeNodeFlags.DefaultOpen))
+            {
+                return;
+            }
+
+            ImGui.Text("Changes are applied through AttributeLevels, so derived bonuses refresh immediately. / 修改会立即刷新派生加成。");
+            foreach (AttributeLevel attributeLevel in attributeLevels)
+            {
+                if (attributeLevel == null || attributeLevel.attribute == null || attributeLevel.attribute.Attribute == null)
+                {
+                    continue;
+                }
+
+                string attributeId = attributeLevel.attribute.Attribute.Id;
+                if (!ShouldShow(attributeId))
+                {
+                    continue;
+                }
+
+                ImGui.PushID("duplicant_attribute_" + attributeId);
+                int level = attributeLevel.GetLevel();
+                ImGui.PushItemWidth(150f);
+                if (ImGui.InputInt(attributeId + " Level / 等级", ref level))
+                {
+                    attributeLevels.SetLevel(attributeId, Mathf.Max(0, level));
+                }
+                ImGui.PopItemWidth();
+
+                float experience = attributeLevel.experience;
+                ImGui.PushItemWidth(150f);
+                if (ImGui.InputFloat("Experience / 经验", ref experience))
+                {
+                    attributeLevels.SetExperience(attributeId, Mathf.Max(0f, experience));
+                }
+                ImGui.PopItemWidth();
+
+                ImGui.SameLine();
+                ImGui.Text(string.Format("Next: {0:0.##}  Progress: {1:P1}", attributeLevel.GetExperienceForNextLevel(), attributeLevel.GetPercentComplete()));
+                ImGui.Separator();
+                ImGui.PopID();
             }
         }
 
@@ -526,6 +579,22 @@ namespace DebugUI
                     if (changed)
                     {
                         setValue(current);
+                    }
+                    return true;
+                }
+
+                if (type == typeof(byte) || type == typeof(sbyte) || type == typeof(short) || type == typeof(ushort))
+                {
+                    int current = value == null ? 0 : Convert.ToInt32(value);
+                    ImGui.PushItemWidth(180f);
+                    bool changed = ImGui.DragInt(label, ref current, 1f);
+                    ImGui.PopItemWidth();
+                    if (changed)
+                    {
+                        if (type == typeof(byte)) setValue((byte)Mathf.Clamp(current, byte.MinValue, byte.MaxValue));
+                        else if (type == typeof(sbyte)) setValue((sbyte)Mathf.Clamp(current, sbyte.MinValue, sbyte.MaxValue));
+                        else if (type == typeof(short)) setValue((short)Mathf.Clamp(current, short.MinValue, short.MaxValue));
+                        else setValue((ushort)Mathf.Clamp(current, ushort.MinValue, ushort.MaxValue));
                     }
                     return true;
                 }
