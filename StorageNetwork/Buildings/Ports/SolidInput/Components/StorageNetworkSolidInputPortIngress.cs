@@ -243,11 +243,9 @@ namespace StorageNetwork.Components
                 return null;
             }
 
-            foreach (StorageInfo info in StorageSceneCollector.Collect().Storages)
+            foreach (Storage target in StorageSceneCollector.CollectLightweightForWorld(GetWorldId()).Storages)
             {
-                Storage target = info?.Storage;
-                if (info?.Minion == null &&
-                    StorageNetworkStorageRules.IsNetworkStorageTarget(target, storage) &&
+                if (StorageNetworkStorageRules.IsNetworkStorageTarget(target, storage) &&
                     GetStorageInstanceId(target) == InputStorageInstanceId)
                 {
                     return target;

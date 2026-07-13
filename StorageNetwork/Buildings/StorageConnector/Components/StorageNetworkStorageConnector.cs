@@ -122,9 +122,9 @@ namespace StorageNetwork.Components
                 return null;
             }
 
-            foreach (StorageInfo info in StorageSceneCollector.Collect().Storages)
+            int worldId = StorageTargetSelector.GetObjectWorldId(gameObject);
+            foreach (Storage candidate in StorageSceneCollector.CollectLightweightForWorld(worldId).Storages)
             {
-                Storage candidate = info?.Storage;
                 if (StorageNetworkStorageRules.IsServerStorage(candidate) &&
                     StorageNetworkStorageRules.IsStorageCompatibleWithFilters(candidate, storage?.storageFilters) &&
                     GetStorageInstanceId(candidate) == OutputStorageInstanceId)

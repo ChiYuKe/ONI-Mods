@@ -9,6 +9,17 @@ namespace StorageNetwork.Services
 {
     internal static partial class StorageTargetSelector
     {
+        private const float OutputTargetCacheSeconds = 1f;
+        private static readonly Dictionary<OutputTargetCacheKey, CachedOutputTarget> OutputTargetCache =
+            new Dictionary<OutputTargetCacheKey, CachedOutputTarget>();
+        private static int outputTargetCacheRegistryVersion = -1;
+
+        public static void ResetRuntimeState()
+        {
+            OutputTargetCache.Clear();
+            outputTargetCacheRegistryVersion = -1;
+        }
+
         public static bool MatchesAllowedTags(GameObject item, HashSet<Tag> allowedTags)
         {
             if (allowedTags == null || allowedTags.Count == 0)
@@ -62,20 +73,29 @@ namespace StorageNetwork.Services
             int sourceWorldId = -1,
             Storage sourceStorage = null)
         {
+            StorageItemUtility.StorageMatchTags cacheMatchTags = StorageItemUtility.GetStorageMatchTagsNonAlloc(item);
             if (specificTarget != null)
             {
                 return IsUsableOutputTarget(specificTarget, item, matchTags, excludedStorages, sourceWorldId) ? specificTarget : null;
             }
 
+            if (TryGetCachedOutputTarget(item, cacheMatchTags, excludedStorages, sourceWorldId, sourceStorage, false, out Storage cachedTarget))
+            {
+                return cachedTarget;
+            }
+
+            Storage target;
             if (snapshot == null && sourceWorldId >= 0)
             {
-                return FindOutputTargetInStorages(
+                target = FindOutputTargetInStorages(
                     item,
                     matchTags,
                     excludedStorages,
                     StorageSceneCollector.CollectLightweightForWorld(sourceWorldId).Storages,
                     sourceWorldId,
                     sourceStorage);
+                CacheOutputTarget(cacheMatchTags, sourceWorldId, false, target);
+                return target;
             }
 
             snapshot = snapshot ?? StorageSceneCollector.Collect();
@@ -88,7 +108,9 @@ namespace StorageNetwork.Services
                 }
             }
 
-            return FindOutputTargetInStorages(item, matchTags, excludedStorages, storages, sourceWorldId, sourceStorage);
+            target = FindOutputTargetInStorages(item, matchTags, excludedStorages, storages, sourceWorldId, sourceStorage);
+            CacheOutputTarget(cacheMatchTags, sourceWorldId, false, target);
+            return target;
         }
 
         public static Storage FindOutputTarget(
@@ -105,15 +127,23 @@ namespace StorageNetwork.Services
                 return IsUsableOutputTarget(specificTarget, item, matchTags, excludedStorages, sourceWorldId) ? specificTarget : null;
             }
 
+            if (TryGetCachedOutputTarget(item, matchTags, excludedStorages, sourceWorldId, sourceStorage, false, out Storage cachedTarget))
+            {
+                return cachedTarget;
+            }
+
+            Storage target;
             if (snapshot == null && sourceWorldId >= 0)
             {
-                return FindOutputTargetInStorages(
+                target = FindOutputTargetInStorages(
                     item,
                     matchTags,
                     excludedStorages,
                     StorageSceneCollector.CollectLightweightForWorld(sourceWorldId).Storages,
                     sourceWorldId,
                     sourceStorage);
+                CacheOutputTarget(matchTags, sourceWorldId, false, target);
+                return target;
             }
 
             snapshot = snapshot ?? StorageSceneCollector.Collect();
@@ -126,7 +156,9 @@ namespace StorageNetwork.Services
                 }
             }
 
-            return FindOutputTargetInStorages(item, matchTags, excludedStorages, storages, sourceWorldId, sourceStorage);
+            target = FindOutputTargetInStorages(item, matchTags, excludedStorages, storages, sourceWorldId, sourceStorage);
+            CacheOutputTarget(matchTags, sourceWorldId, false, target);
+            return target;
         }
 
         public static Storage FindFoodOutputTarget(
@@ -138,9 +170,15 @@ namespace StorageNetwork.Services
             int sourceWorldId = -1,
             Storage sourceStorage = null)
         {
+            StorageItemUtility.StorageMatchTags cacheMatchTags = StorageItemUtility.GetStorageMatchTagsNonAlloc(item);
             if (specificTarget != null)
             {
                 return FindOutputTarget(item, matchTags, excludedStorages, specificTarget, snapshot, sourceWorldId, sourceStorage);
+            }
+
+            if (TryGetCachedOutputTarget(item, cacheMatchTags, excludedStorages, sourceWorldId, sourceStorage, true, out Storage cachedTarget))
+            {
+                return cachedTarget;
             }
 
             Storage coldTarget;
@@ -153,7 +191,13 @@ namespace StorageNetwork.Services
                     StorageSceneCollector.CollectLightweightForWorld(sourceWorldId).Storages,
                     sourceWorldId,
                     sourceStorage);
-                return coldTarget ?? FindOutputTarget(item, matchTags, excludedStorages, null, null, sourceWorldId, sourceStorage);
+                if (coldTarget != null)
+                {
+                    CacheOutputTarget(cacheMatchTags, sourceWorldId, true, coldTarget);
+                    return coldTarget;
+                }
+
+                return FindOutputTarget(item, matchTags, excludedStorages, null, null, sourceWorldId, sourceStorage);
             }
 
             snapshot = snapshot ?? StorageSceneCollector.Collect();
@@ -167,7 +211,116 @@ namespace StorageNetwork.Services
             }
 
             coldTarget = FindColdStorageOutputTargetInStorages(item, matchTags, excludedStorages, storages, sourceWorldId, sourceStorage);
-            return coldTarget ?? FindOutputTargetInStorages(item, matchTags, excludedStorages, storages, sourceWorldId, sourceStorage);
+            if (coldTarget != null)
+            {
+                CacheOutputTarget(cacheMatchTags, sourceWorldId, true, coldTarget);
+                return coldTarget;
+            }
+
+            return FindOutputTargetInStorages(item, matchTags, excludedStorages, storages, sourceWorldId, sourceStorage);
+        }
+
+        private static bool TryGetCachedOutputTarget(
+            GameObject item,
+            StorageItemUtility.StorageMatchTags matchTags,
+            HashSet<Storage> excludedStorages,
+            int sourceWorldId,
+            Storage sourceStorage,
+            bool coldStorage,
+            out Storage target)
+        {
+            RefreshOutputTargetCacheVersion();
+            OutputTargetCacheKey key = new OutputTargetCacheKey(sourceWorldId, matchTags.TransferTag, coldStorage);
+            if (OutputTargetCache.TryGetValue(key, out CachedOutputTarget cached) &&
+                Time.unscaledTime - cached.CreatedAt <= OutputTargetCacheSeconds &&
+                cached.Target != null &&
+                (!coldStorage || StorageNetworkStorageRules.IsColdStorageServer(cached.Target)) &&
+                IsUsableOutputTarget(cached.Target, item, matchTags, excludedStorages, sourceWorldId) &&
+                !StorageNetworkInputTargetReservationService.IsReservedForAutoInput(cached.Target, sourceStorage) &&
+                IsAutoOutputMatch(cached.Target, matchTags))
+            {
+                target = cached.Target;
+                return true;
+            }
+
+            OutputTargetCache.Remove(key);
+            target = null;
+            return false;
+        }
+
+        private static void CacheOutputTarget(
+            StorageItemUtility.StorageMatchTags matchTags,
+            int sourceWorldId,
+            bool coldStorage,
+            Storage target)
+        {
+            if (target == null || matchTags.TransferTag == Tag.Invalid)
+            {
+                return;
+            }
+
+            RefreshOutputTargetCacheVersion();
+            OutputTargetCache[new OutputTargetCacheKey(sourceWorldId, matchTags.TransferTag, coldStorage)] =
+                new CachedOutputTarget(target, Time.unscaledTime);
+        }
+
+        private static void RefreshOutputTargetCacheVersion()
+        {
+            int registryVersion = StorageSceneRegistry.Version;
+            if (outputTargetCacheRegistryVersion == registryVersion)
+            {
+                return;
+            }
+
+            OutputTargetCache.Clear();
+            outputTargetCacheRegistryVersion = registryVersion;
+        }
+
+        private readonly struct OutputTargetCacheKey : System.IEquatable<OutputTargetCacheKey>
+        {
+            private readonly int worldId;
+            private readonly Tag transferTag;
+            private readonly bool coldStorage;
+
+            public OutputTargetCacheKey(int worldId, Tag transferTag, bool coldStorage)
+            {
+                this.worldId = worldId;
+                this.transferTag = transferTag;
+                this.coldStorage = coldStorage;
+            }
+
+            public bool Equals(OutputTargetCacheKey other)
+            {
+                return worldId == other.worldId && transferTag == other.transferTag && coldStorage == other.coldStorage;
+            }
+
+            public override bool Equals(object obj)
+            {
+                return obj is OutputTargetCacheKey other && Equals(other);
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    int hashCode = worldId;
+                    hashCode = (hashCode * 397) ^ transferTag.GetHashCode();
+                    return (hashCode * 397) ^ coldStorage.GetHashCode();
+                }
+            }
+        }
+
+        private readonly struct CachedOutputTarget
+        {
+            public CachedOutputTarget(Storage target, float createdAt)
+            {
+                Target = target;
+                CreatedAt = createdAt;
+            }
+
+            public Storage Target { get; }
+
+            public float CreatedAt { get; }
         }
 
         public static Storage FindFoodOutputTarget(
@@ -184,6 +337,11 @@ namespace StorageNetwork.Services
                 return FindOutputTarget(item, matchTags, excludedStorages, specificTarget, snapshot, sourceWorldId, sourceStorage);
             }
 
+            if (TryGetCachedOutputTarget(item, matchTags, excludedStorages, sourceWorldId, sourceStorage, true, out Storage cachedTarget))
+            {
+                return cachedTarget;
+            }
+
             Storage coldTarget;
             if (snapshot == null && sourceWorldId >= 0)
             {
@@ -194,7 +352,13 @@ namespace StorageNetwork.Services
                     StorageSceneCollector.CollectLightweightForWorld(sourceWorldId).Storages,
                     sourceWorldId,
                     sourceStorage);
-                return coldTarget ?? FindOutputTarget(item, matchTags, excludedStorages, null, null, sourceWorldId, sourceStorage);
+                if (coldTarget != null)
+                {
+                    CacheOutputTarget(matchTags, sourceWorldId, true, coldTarget);
+                    return coldTarget;
+                }
+
+                return FindOutputTarget(item, matchTags, excludedStorages, null, null, sourceWorldId, sourceStorage);
             }
 
             snapshot = snapshot ?? StorageSceneCollector.Collect();
@@ -208,7 +372,13 @@ namespace StorageNetwork.Services
             }
 
             coldTarget = FindColdStorageOutputTargetInStorages(item, matchTags, excludedStorages, storages, sourceWorldId, sourceStorage);
-            return coldTarget ?? FindOutputTargetInStorages(item, matchTags, excludedStorages, storages, sourceWorldId, sourceStorage);
+            if (coldTarget != null)
+            {
+                CacheOutputTarget(matchTags, sourceWorldId, true, coldTarget);
+                return coldTarget;
+            }
+
+            return FindOutputTargetInStorages(item, matchTags, excludedStorages, storages, sourceWorldId, sourceStorage);
         }
 
         private static Storage FindOutputTargetInStorages(

@@ -116,12 +116,11 @@ namespace StorageNetwork.Components
                 return null;
             }
 
-            foreach (StorageInfo info in StorageSceneCollector.Collect().Storages)
+            int worldId = StorageTargetSelector.GetObjectWorldId(gameObject);
+            foreach (Storage source in StorageSceneCollector.CollectLightweightForWorld(worldId).Storages)
             {
-                Storage source = info?.Storage;
                 KPrefabID prefabId = source != null ? source.GetComponent<KPrefabID>() : null;
-                if (info?.Minion == null &&
-                    prefabId != null &&
+                if (prefabId != null &&
                     prefabId.InstanceID == SourceStorageInstanceId &&
                     StorageNetworkStorageRules.IsParticleStorageServer(source))
                 {

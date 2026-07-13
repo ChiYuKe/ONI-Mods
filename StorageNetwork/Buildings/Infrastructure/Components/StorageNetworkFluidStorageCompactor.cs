@@ -10,9 +10,15 @@ namespace StorageNetwork.Components
     /// </summary>
     public sealed class StorageNetworkFluidStorageCompactor : KMonoBehaviour, ISim1000ms
     {
-        private const int MaxItemsPerTick = 64;
-        private const double MaxMillisecondsPerTick = 0.5d;
+        private const int MaxItemsPerGlobalTick = 64;
+        private const double MaxMillisecondsPerGlobalTick = 0.5d;
         private const float CompletedRescanSeconds = 30f;
+
+        private static readonly List<StorageNetworkFluidStorageCompactor> Instances =
+            new List<StorageNetworkFluidStorageCompactor>();
+
+        private static int nextInstanceIndex;
+        private static int lastProcessedFrame = -1;
 
         [MyCmpGet]
         private Storage storage = null;
@@ -23,37 +29,102 @@ namespace StorageNetwork.Components
         private int scanIndex;
         private bool mergedDuringPass;
         private bool completed;
-        private float completedRescanTimer;
+        private float nextCompletedRescanAt;
 
         protected override void OnSpawn()
         {
             base.OnSpawn();
             ResetPass();
+            if (!Instances.Contains(this))
+            {
+                Instances.Add(this);
+            }
+        }
+
+        protected override void OnCleanUp()
+        {
+            int removedIndex = Instances.IndexOf(this);
+            if (removedIndex >= 0)
+            {
+                Instances.RemoveAt(removedIndex);
+                if (removedIndex < nextInstanceIndex)
+                {
+                    nextInstanceIndex--;
+                }
+            }
+
+            NormalizeNextInstanceIndex();
+            base.OnCleanUp();
         }
 
         public void Sim1000ms(float dt)
         {
-            if (storage?.items == null)
+            RunGlobalCompactionPass();
+        }
+
+        public static void ResetRuntimeState()
+        {
+            Instances.Clear();
+            nextInstanceIndex = 0;
+            lastProcessedFrame = -1;
+        }
+
+        private static void RunGlobalCompactionPass()
+        {
+            if (lastProcessedFrame == Time.frameCount || Instances.Count == 0)
             {
                 return;
             }
 
+            lastProcessedFrame = Time.frameCount;
+            Stopwatch stopwatch = Stopwatch.StartNew();
+            int remainingItems = MaxItemsPerGlobalTick;
+            int instancesVisited = 0;
+            int instancesAtStart = Instances.Count;
+
+            while (Instances.Count > 0 &&
+                   instancesVisited < instancesAtStart &&
+                   remainingItems > 0 &&
+                   stopwatch.Elapsed.TotalMilliseconds < MaxMillisecondsPerGlobalTick)
+            {
+                NormalizeNextInstanceIndex();
+                StorageNetworkFluidStorageCompactor compactor = Instances[nextInstanceIndex];
+                if (compactor == null)
+                {
+                    Instances.RemoveAt(nextInstanceIndex);
+                    instancesAtStart--;
+                    continue;
+                }
+
+                nextInstanceIndex++;
+                instancesVisited++;
+                remainingItems -= compactor.ProcessSlice(remainingItems, stopwatch);
+            }
+
+            NormalizeNextInstanceIndex();
+        }
+
+        private int ProcessSlice(int maxItems, Stopwatch stopwatch)
+        {
+            if (storage?.items == null)
+            {
+                return 0;
+            }
+
             if (completed)
             {
-                completedRescanTimer -= dt;
-                if (completedRescanTimer > 0f)
+                if (Time.time < nextCompletedRescanAt)
                 {
-                    return;
+                    return 0;
                 }
 
                 ResetPass();
             }
 
-            Stopwatch stopwatch = Stopwatch.StartNew();
             int processed = 0;
             while (scanIndex < storage.items.Count &&
-                   processed < MaxItemsPerTick &&
-                   stopwatch.Elapsed.TotalMilliseconds < MaxMillisecondsPerTick)
+                   processed < maxItems &&
+                   stopwatch.Elapsed.TotalMilliseconds < MaxMillisecondsPerGlobalTick)
             {
                 GameObject item = storage.items[scanIndex];
                 processed++;
@@ -100,18 +171,19 @@ namespace StorageNetwork.Components
 
             if (scanIndex < storage.items.Count)
             {
-                return;
+                return processed;
             }
 
             if (mergedDuringPass)
             {
                 ResetPass();
-                return;
+                return processed;
             }
 
             completed = true;
-            completedRescanTimer = CompletedRescanSeconds;
+            nextCompletedRescanAt = Time.time + CompletedRescanSeconds;
             canonicalChunks.Clear();
+            return processed;
         }
 
         private void ResetPass()
@@ -119,8 +191,22 @@ namespace StorageNetwork.Components
             scanIndex = 0;
             mergedDuringPass = false;
             completed = false;
-            completedRescanTimer = 0f;
+            nextCompletedRescanAt = 0f;
             canonicalChunks.Clear();
+        }
+
+        private static void NormalizeNextInstanceIndex()
+        {
+            if (Instances.Count == 0)
+            {
+                nextInstanceIndex = 0;
+                return;
+            }
+
+            if (nextInstanceIndex < 0 || nextInstanceIndex >= Instances.Count)
+            {
+                nextInstanceIndex = 0;
+            }
         }
 
         private static bool TryGetFluidChunk(

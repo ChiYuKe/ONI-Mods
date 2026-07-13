@@ -121,18 +121,40 @@ namespace StorageNetwork.Services
 
                 foreach (Tag tag in StorageItemUtility.GetStorageMatchTags(item))
                 {
-                    if (amounts.TryGetValue(tag, out float existing))
-                    {
-                        amounts[tag] = existing + amount;
-                    }
-                    else
-                    {
-                        amounts[tag] = amount;
-                    }
+                    AddAmount(amounts, tag, amount);
+                }
+
+                PrimaryElement primaryElement = item.GetComponent<PrimaryElement>();
+                Element element = primaryElement != null
+                    ? ElementLoader.FindElementByHash(primaryElement.ElementID)
+                    : null;
+                if (element != null)
+                {
+                    AddAmount(
+                        amounts,
+                        element.IsLiquid ? GameTags.Liquid : element.IsGas ? GameTags.Gas : GameTags.Solid,
+                        amount);
                 }
             }
 
             return amounts;
+        }
+
+        private static void AddAmount(Dictionary<Tag, float> amounts, Tag tag, float amount)
+        {
+            if (tag == Tag.Invalid)
+            {
+                return;
+            }
+
+            if (amounts.TryGetValue(tag, out float existing))
+            {
+                amounts[tag] = existing + amount;
+            }
+            else
+            {
+                amounts[tag] = amount;
+            }
         }
 
         private static bool IsUsableSource(Storage source, IEnumerable<Tag> tags, HashSet<Storage> excludedStorages, int destinationWorldId)
@@ -167,7 +189,41 @@ namespace StorageNetwork.Services
             float amount = 0f;
             foreach (Tag tag in tags)
             {
-                amount = Mathf.Max(amount, storage.GetAmountAvailable(tag));
+                amount = Mathf.Max(amount, GetAmountAvailable(storage, tag));
+            }
+
+            return amount;
+        }
+
+        private static float GetAmountAvailable(Storage storage, Tag tag)
+        {
+            if (storage?.items == null || tag == Tag.Invalid)
+            {
+                return 0f;
+            }
+
+            if (tag != GameTags.Liquid && tag != GameTags.Gas && tag != GameTags.Solid)
+            {
+                return storage.GetAmountAvailable(tag);
+            }
+
+            float amount = 0f;
+            foreach (GameObject item in storage.items)
+            {
+                PrimaryElement primaryElement = item != null ? item.GetComponent<PrimaryElement>() : null;
+                Element element = primaryElement != null
+                    ? ElementLoader.FindElementByHash(primaryElement.ElementID)
+                    : null;
+                if (element == null ||
+                    tag == GameTags.Liquid && !element.IsLiquid ||
+                    tag == GameTags.Gas && !element.IsGas ||
+                    tag == GameTags.Solid && (element.IsLiquid || element.IsGas))
+                {
+                    continue;
+                }
+
+                Pickupable pickupable = item.GetComponent<Pickupable>();
+                amount += pickupable != null ? pickupable.TotalAmount : StorageItemUtility.GetMass(item);
             }
 
             return amount;

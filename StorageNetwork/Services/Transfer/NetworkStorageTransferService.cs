@@ -399,6 +399,7 @@ namespace StorageNetwork.Services
                 specificSource,
                 liquidFilter,
                 IsLiquidItem,
+                GameTags.Liquid,
                 GameTags.Liquid.ProperName());
         }
 
@@ -416,6 +417,7 @@ namespace StorageNetwork.Services
                 specificSource,
                 gasFilter,
                 IsGasItem,
+                GameTags.Gas,
                 GameTags.Gas.ProperName());
         }
 
@@ -442,9 +444,18 @@ namespace StorageNetwork.Services
             HashSet<Tag> allowed = BuildAllowedTagSet(allowedTags);
             HashSet<Storage> excluded = StorageTargetSelector.BuildExclusionSet(excludedStorages);
             excluded.Add(destination);
-            IEnumerable<Storage> sources = specificSource != null
-                ? new[] { specificSource }
-                : StorageSceneCollector.CollectLightweightForWorld(destinationWorldId).Storages;
+            IEnumerable<Tag> sourceTags = allowed != null && allowed.Count > 0
+                ? (IEnumerable<Tag>)allowed
+                : new[] { GameTags.Solid };
+            IEnumerable<Storage> sources = EnumerateIndexedSourcesWithLiveFallback(
+                StorageNetworkSourceIndexService.GetSourceStorages(
+                    destinationWorldId,
+                    true,
+                    sourceTags,
+                    excluded,
+                    specificSource),
+                destinationWorldId,
+                specificSource);
 
             float moved = 0f;
             string blockedItem = null;
@@ -536,6 +547,7 @@ namespace StorageNetwork.Services
             Storage specificSource,
             SimHashes? elementFilter,
             System.Func<PrimaryElement, SimHashes?, bool> itemPredicate,
+            Tag sourceCategoryTag,
             string fallbackBlockedItem)
         {
             if (destination == null ||
@@ -553,21 +565,18 @@ namespace StorageNetwork.Services
 
             HashSet<Storage> excluded = StorageTargetSelector.BuildExclusionSet(excludedStorages);
             excluded.Add(destination);
-            List<Storage> sources = new List<Storage>();
-            if (specificSource != null)
-            {
-                sources.Add(specificSource);
-            }
-            else
-            {
-                foreach (Storage source in StorageSceneCollector.CollectLightweightForWorld(destinationWorldId).Storages)
-                {
-                    if (source != null)
-                    {
-                        sources.Add(source);
-                    }
-                }
-            }
+            Tag sourceTag = elementFilter.HasValue
+                ? elementFilter.Value.CreateTag()
+                : sourceCategoryTag;
+            IEnumerable<Storage> sources = EnumerateIndexedSourcesWithLiveFallback(
+                StorageNetworkSourceIndexService.GetSourceStorages(
+                    destinationWorldId,
+                    true,
+                    new[] { sourceTag },
+                    excluded,
+                    specificSource),
+                destinationWorldId,
+                specificSource);
 
             float moved = 0f;
             string blockedItem = null;
@@ -636,6 +645,37 @@ namespace StorageNetwork.Services
             return moved > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT
                 ? new StorageTransferResult(moved, null)
                 : StorageTransferResult.Blocked(blockedItem ?? fallbackBlockedItem);
+        }
+
+        private static IEnumerable<Storage> EnumerateIndexedSourcesWithLiveFallback(
+            IEnumerable<Storage> indexedSources,
+            int worldId,
+            Storage specificSource)
+        {
+            HashSet<Storage> yielded = new HashSet<Storage>();
+            if (indexedSources != null)
+            {
+                foreach (Storage source in indexedSources)
+                {
+                    if (source != null && yielded.Add(source))
+                    {
+                        yield return source;
+                    }
+                }
+            }
+
+            if (specificSource != null)
+            {
+                yield break;
+            }
+
+            foreach (Storage source in StorageSceneCollector.CollectLightweightForWorld(worldId).Storages)
+            {
+                if (source != null && yielded.Add(source))
+                {
+                    yield return source;
+                }
+            }
         }
 
         public static List<SimHashes> GetAvailableLiquidElementsInNetwork(Storage ownerStorage, Storage specificSource = null)

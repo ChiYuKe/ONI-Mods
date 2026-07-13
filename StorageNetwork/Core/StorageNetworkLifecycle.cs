@@ -1,4 +1,5 @@
 using StorageNetwork.API;
+using StorageNetwork.Components;
 using StorageNetwork.ModConfig;
 using StorageNetwork.ProductionOrders;
 using StorageNetwork.Services;
@@ -24,6 +25,8 @@ namespace StorageNetwork.Core
             StorageNetworkInterfaceResolver.ResetRuntimeState();
             StorageNetworkInventoryIndexService.ResetRuntimeState();
             StorageNetworkSourceIndexService.ResetRuntimeState();
+            StorageNetworkFluidStorageCompactor.ResetRuntimeState();
+            StorageTargetSelector.ResetRuntimeState();
             StorageNetworkPerformanceCounters.ResetRuntimeState();
             StorageNetworkFrameProfileTool.ResetRuntimeState();
         }
