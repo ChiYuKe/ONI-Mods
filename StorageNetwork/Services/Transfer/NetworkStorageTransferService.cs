@@ -447,11 +447,14 @@ namespace StorageNetwork.Services
             IEnumerable<Tag> sourceTags = allowed != null && allowed.Count > 0
                 ? (IEnumerable<Tag>)allowed
                 : new[] { GameTags.Solid };
-            IEnumerable<Storage> sources = StorageNetworkSourceIndexService.GetSourceStorages(
+            IEnumerable<Storage> sources = EnumerateIndexedSourcesWithLiveFallback(
+                StorageNetworkSourceIndexService.GetSourceStorages(
+                    destinationWorldId,
+                    true,
+                    sourceTags,
+                    excluded,
+                    specificSource),
                 destinationWorldId,
-                true,
-                sourceTags,
-                excluded,
                 specificSource);
 
             float moved = 0f;
@@ -565,11 +568,14 @@ namespace StorageNetwork.Services
             Tag sourceTag = elementFilter.HasValue
                 ? elementFilter.Value.CreateTag()
                 : sourceCategoryTag;
-            List<Storage> sources = StorageNetworkSourceIndexService.GetSourceStorages(
+            IEnumerable<Storage> sources = EnumerateIndexedSourcesWithLiveFallback(
+                StorageNetworkSourceIndexService.GetSourceStorages(
+                    destinationWorldId,
+                    true,
+                    new[] { sourceTag },
+                    excluded,
+                    specificSource),
                 destinationWorldId,
-                true,
-                new[] { sourceTag },
-                excluded,
                 specificSource);
 
             float moved = 0f;
@@ -639,6 +645,37 @@ namespace StorageNetwork.Services
             return moved > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT
                 ? new StorageTransferResult(moved, null)
                 : StorageTransferResult.Blocked(blockedItem ?? fallbackBlockedItem);
+        }
+
+        private static IEnumerable<Storage> EnumerateIndexedSourcesWithLiveFallback(
+            IEnumerable<Storage> indexedSources,
+            int worldId,
+            Storage specificSource)
+        {
+            HashSet<Storage> yielded = new HashSet<Storage>();
+            if (indexedSources != null)
+            {
+                foreach (Storage source in indexedSources)
+                {
+                    if (source != null && yielded.Add(source))
+                    {
+                        yield return source;
+                    }
+                }
+            }
+
+            if (specificSource != null)
+            {
+                yield break;
+            }
+
+            foreach (Storage source in StorageSceneCollector.CollectLightweightForWorld(worldId).Storages)
+            {
+                if (source != null && yielded.Add(source))
+                {
+                    yield return source;
+                }
+            }
         }
 
         public static List<SimHashes> GetAvailableLiquidElementsInNetwork(Storage ownerStorage, Storage specificSource = null)
