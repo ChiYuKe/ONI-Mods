@@ -12,7 +12,8 @@ namespace StorageNetwork
             StorageNetworkSprites.SetModPath(mod.ContentPath);
             StorageNetworkAssetBundles.SetModPath(mod.ContentPath);
             StorageNetworkLocalization.SetModPath(mod.ContentPath);
-            // StorageNetworkFrameProfileTool.SetModPath(mod.ContentPath);
+            StorageNetworkFrameProfileTool.SetModPath(mod.ContentPath);
+
             StorageNetworkHarmonyProfileTool.SetModPath(mod.ContentPath);
             StorageNetworkHarmonyProfileTool.DumpIfEnabled();
 
