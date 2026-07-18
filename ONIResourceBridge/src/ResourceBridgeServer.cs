@@ -14,7 +14,7 @@ namespace ONIResourceBridge
     internal static class ResourceBridgeServer
     {
         private const string ModName = "ONIResourceBridge";
-        private const string Version = "0.1.0";
+        private const string Version = "0.2.0";
         private const int DefaultPort = 17871;
         private const int MaxPort = 17890;
 
