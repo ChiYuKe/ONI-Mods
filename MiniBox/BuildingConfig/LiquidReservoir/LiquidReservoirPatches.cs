@@ -10,8 +10,7 @@ namespace MiniBox.BuildingConfig.LiquidReservoir
         {
             Storage storage = BuildingTemplates.CreateDefaultStorage(go, false);
             storage.capacityKg = ModSettings.Current.LiquidReservoirCapacityKg;
-            storage.SetDefaultStoredItemModifiers(Storage.StandardInsulatedStorage);
-            storage.allowUIItemRemoval = true;
+            storage.SetDefaultStoredItemModifiers(GasReservoirConfig.ReservoirStoredItemModifiers);
 
             ConduitConsumer conduitConsumer = go.AddOrGet<ConduitConsumer>();
             conduitConsumer.capacityKG = storage.capacityKg;

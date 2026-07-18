@@ -11,7 +11,7 @@ namespace MiniBox.PowerConfig.WireCapacity
             switch (rating)
             {
                 case Wire.WattageRating.Max500:
-                    __result = 500f;
+                    __result = cfg.Wire500WLoad;
                     break;
                 case Wire.WattageRating.Max1000:
                     __result = cfg.WireLoadKw * 1000f;
@@ -25,8 +25,10 @@ namespace MiniBox.PowerConfig.WireCapacity
                 case Wire.WattageRating.Max50000:
                     __result = cfg.HighLoadConductiveWireLoadKw * 1000f;
                     break;
+                case Wire.WattageRating.Max4000:
+                    __result = cfg.RubberWireLoadKw * 1000f;
+                    break;
                 default:
-                    __result = 0f;
                     break;
             }
         }

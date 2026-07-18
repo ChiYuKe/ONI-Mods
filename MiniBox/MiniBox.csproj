@@ -76,4 +76,10 @@
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
     <Exec Command="&quot;$(ILRepackTool)&quot; /out:&quot;$(TargetDir)MiniBox.dll&quot; &quot;$(TargetDir)MiniBox.dll&quot; &quot;$(RepoManagedDir)\PLib.dll&quot; /lib:&quot;$(RepoManagedDir)&quot;" />
   </Target>
+  <Target Name="CopyTranslations" AfterTargets="Build">
+    <ItemGroup>
+      <TranslationFiles Include="translations\*.po" />
+    </ItemGroup>
+    <Copy SourceFiles="@(TranslationFiles)" DestinationFolder="$(OutputPath)translations" SkipUnchangedFiles="true" />
+  </Target>
 </Project>

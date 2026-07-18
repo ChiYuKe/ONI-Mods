@@ -1,0 +1,376 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: MiniBox\n"
+"Language: en\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Application: Oxygen Not Included\n"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.TRANSPORTROUTECONFIG.TRANSPORTTRACK.TITLE"
+msgid "运输轨道单包质量上限（kg）"
+msgstr "Conveyor Rail Package Mass Limit (kg)"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.TRANSPORTROUTECONFIG.TRANSPORTTRACK.TOOLTIP"
+msgid "设置运输轨道上每个包裹的最大质量。原版为 20 kg，数值越大，单个包裹可承载的材料越多。"
+msgstr "Sets the maximum mass of each package on conveyor rails. The vanilla value is 20 kg; higher values let each package carry more material."
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.TRANSPORTROUTECONFIG.TRANSPORTTRACK.CATEGORY"
+msgid "容量与运输"
+msgstr "Capacity and Transport"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.MISCCONFIG.CATEGORY"
+msgid "通用功能"
+msgstr "General Features"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.MISCCONFIG.DIGGINGDROPRATE.TITLE"
+msgid "挖掘资源产出倍率"
+msgstr "Digging Resource Yield Multiplier"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.MISCCONFIG.DIGGINGDROPRATE.TOOLTIP"
+msgid "调整挖掘完成时生成的资源质量。原版为 0.5；数值越大，挖掘获得的资源越多。"
+msgstr "Adjusts the mass of resources generated when digging is completed. The vanilla value is 0.5; higher values produce more resources."
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.MISCCONFIG.MINIONSLEEP.TITLE"
+msgid "复制人无需睡眠"
+msgstr "Duplicants Do Not Need Sleep"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.MISCCONFIG.MINIONSLEEP.TOOLTIP"
+msgid "开启后，普通复制人的耐力不会自然下降，因此不会因疲劳主动睡觉。"
+msgstr "When enabled, normal Duplicants do not lose stamina naturally and will not sleep because of fatigue."
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.MISCCONFIG.WATERING.TITLE"
+msgid "清理液体时忽略质量限制"
+msgstr "Ignore Mass Limits When Mopping"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.MISCCONFIG.WATERING.TOOLTIP"
+msgid "开启后，拖把不受液体质量上限限制，可以清理任意质量的液体。"
+msgstr "When enabled, the Mop ignores the liquid mass limit and can clean up liquids of any mass."
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.MISCCONFIG.SUPERSPACESUIT.TITLE"
+msgid "强化太空服属性"
+msgstr "Enhanced Atmo Suit Stats"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.MISCCONFIG.SUPERSPACESUIT.TOOLTIP"
+msgid "提高太空服的挖掘、保温、耐高温和移动属性，并显著降低环境温度影响。"
+msgstr "Improves the Atmo Suit's digging, insulation, heat resistance, and movement stats while greatly reducing environmental temperature effects."
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.MISCCONFIG.NOFOOD.TITLE"
+msgid "复制人无需进食"
+msgstr "Duplicants Do Not Need Food"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.MISCCONFIG.NOFOOD.TOOLTIP"
+msgid "开启后，普通复制人不会消耗卡路里，也不会因饥饿影响工作。"
+msgstr "When enabled, normal Duplicants do not consume calories or suffer work penalties from hunger."
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.MISCCONFIG.NOBLADDER.TITLE"
+msgid "复制人无需如厕"
+msgstr "Duplicants Do Not Need Toilets"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.MISCCONFIG.NOBLADDER.TOOLTIP"
+msgid "开启后，普通复制人的膀胱不会增长，不需要使用厕所或厕所替代物。"
+msgstr "When enabled, normal Duplicants' bladder does not fill, so they do not need toilets or latrines."
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.MISCCONFIG.NOSTRESS.TITLE"
+msgid "复制人压力不会上升"
+msgstr "Duplicant Stress Does Not Increase"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.MISCCONFIG.NOSTRESS.TOOLTIP"
+msgid "开启后，复制人不会获得正向压力变化；已有压力仍可通过休息和娱乐降低。"
+msgstr "When enabled, Duplicants do not gain positive stress; existing stress can still decrease through rest and recreation."
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.MISCCONFIG.CARRYCAPACITY.TITLE"
+msgid "复制人搬运能力倍率（x）"
+msgstr "Duplicant Carry Capacity Multiplier (x)"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.MISCCONFIG.CARRYCAPACITY.TOOLTIP"
+msgid "调整普通复制人的最大搬运重量。原版为 200 kg；1.0 表示原版，2.0 表示两倍。"
+msgstr "Adjusts the maximum mass normal Duplicants can carry. The vanilla value is 200 kg; 1.0 is vanilla and 2.0 is double."
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.BUILDDINGS.CATEGORY"
+msgid "建筑属性"
+msgstr "Building Properties"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.BUILDDINGS.CAPACITY_TOOLTIP"
+msgid "设置该建筑的储存上限，单位为 kg。"
+msgstr "Sets this building's storage limit in kg."
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.BUILDDINGS.TOGGLE_TOOLTIP"
+msgid "开启后，该建筑会启用标题所描述的行为；关闭后恢复原版行为。"
+msgstr "When enabled, this building uses the behavior described by the option; when disabled, it uses the vanilla behavior."
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.BUILDDINGS.POWERCONSUMPTION_TOOLTIP"
+msgid "设置建筑运行时的功耗，单位为 W。"
+msgstr "Sets the building's active power consumption in W."
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.BUILDDINGS.GASRESERVOIR.CAPACITY"
+msgid "储气库容量（kg）"
+msgstr "Gas Reservoir Capacity (kg)"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.BUILDDINGS.GASRESERVOIR.OVERHEATABLE"
+msgid "允许储气库过热"
+msgstr "Allow Gas Reservoir to Overheat"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.BUILDDINGS.GASRESERVOIR.FOUNDATION"
+msgid "储气库需要地基"
+msgstr "Require Foundation for Gas Reservoir"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.BUILDDINGS.LIQUIDRESERVOIR.CAPACITY"
+msgid "储液库容量（kg）"
+msgstr "Liquid Reservoir Capacity (kg)"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.BUILDDINGS.LIQUIDRESERVOIR.OVERHEATABLE"
+msgid "允许储液库过热"
+msgstr "Allow Liquid Reservoir to Overheat"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.BUILDDINGS.LIQUIDRESERVOIR.FOUNDATION"
+msgid "储液库需要地基"
+msgstr "Require Foundation for Liquid Reservoir"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.BUILDDINGS.MINERALDEOXIDIZER.TITLE"
+msgid "氧气扩散器产氧量（kg/s）"
+msgstr "Electrolyzer Oxygen Output (kg/s)"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.BUILDDINGS.MINERALDEOXIDIZER.OXYGENOUTPUT_TOOLTIP"
+msgid "设置氧气扩散器每秒产出的氧气质量，单位为 kg/s。"
+msgstr "Sets the mass of oxygen produced by the Electrolyzer each second, in kg/s."
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.BUILDDINGS.MINERALDEOXIDIZER.ENERGYCONSUMPTIONWHENACTIVE"
+msgid "氧气扩散器运行功耗（W）"
+msgstr "Electrolyzer Active Power Consumption (W)"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.BUILDDINGS.MINERALDEOXIDIZER.FLOODABLE"
+msgid "允许氧气扩散器被淹没"
+msgstr "Allow Electrolyzer to Be Flooded"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.BUILDDINGS.MINERALDEOXIDIZER.OVERHEATABLE"
+msgid "允许氧气扩散器过热"
+msgstr "Allow Electrolyzer to Overheat"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.BUILDDINGS.MINERALDEOXIDIZER.HEATGENERATION"
+msgid "氧气扩散器产生自热"
+msgstr "Electrolyzer Generates Heat"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.BUILDDINGS.MINERALDEOXIDIZER.OUTPUTTEMPERATURE"
+msgid "产出氧气温度（°C）"
+msgstr "Oxygen Output Temperature (°C)"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.BUILDDINGS.MINERALDEOXIDIZER.OUTPUTTEMPERATURE_TOOLTIP"
+msgid "设置氧气扩散器产出氧气的温度，单位为 °C。"
+msgstr "Sets the temperature of the oxygen produced by the Electrolyzer, in °C."
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.BUILDDINGS.POWERTRANSFORMERSMALL.HEATGENERATION"
+msgid "小型变压器产生自热"
+msgstr "Small Transformer Generates Heat"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.BUILDDINGS.POWERTRANSFORMER.HEATGENERATION"
+msgid "大型变压器产生自热"
+msgstr "Large Transformer Generates Heat"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.BUILDDINGS.REFRIGERATOR.ENERGYCONSUMPTIONWHENACTIVE"
+msgid "冰箱运行功耗（W）"
+msgstr "Refrigerator Active Power Consumption (W)"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.BUILDDINGS.REFRIGERATOR.FLOODABLE"
+msgid "允许冰箱被淹没"
+msgstr "Allow Refrigerator to Be Flooded"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.BUILDDINGS.REFRIGERATOR.OVERHEATABLE"
+msgid "允许冰箱过热"
+msgstr "Allow Refrigerator to Overheat"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.BUILDDINGS.REFRIGERATOR.CAPACITY"
+msgid "冰箱容量（kg）"
+msgstr "Refrigerator Capacity (kg)"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.BUILDDINGS.SOLIDCONDUITOUTBOX.CAPACITY"
+msgid "运输存放器容量（kg）"
+msgstr "Conveyor Solid Receiver Capacity (kg)"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.BUILDDINGS.SOLIDCONDUITINBOX.CAPACITY"
+msgid "运输装载器容量（kg）"
+msgstr "Conveyor Solid Loader Capacity (kg)"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.BUILDDINGS.STORAGELOCKER.CAPACITY"
+msgid "储物箱容量（kg）"
+msgstr "Storage Bin Capacity (kg)"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.POWERCONFIG.WIRING.CATEGORY"
+msgid "电线容量"
+msgstr "Wire Capacity"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.POWERCONFIG.WIRING.TOOLTIP"
+msgid "设置对应电线的最大输电功率，单位以选项标题为准。"
+msgstr "Sets the maximum power transmission for each wire type; use the unit shown in the option title."
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.POWERCONFIG.WIRING.WIRE500W"
+msgid "500 W 线路最大功率（W）"
+msgstr "500 W Wire Maximum Power (W)"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.POWERCONFIG.WIRING.WIRES"
+msgid "普通电线最大功率（kW）"
+msgstr "Wire Maximum Power (kW)"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.POWERCONFIG.WIRING.CONDUCTORS"
+msgid "导电线最大功率（kW）"
+msgstr "Conductive Wire Maximum Power (kW)"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.POWERCONFIG.WIRING.RUBBERWIRES"
+msgid "橡胶电线最大功率（kW）"
+msgstr "Rubber Wire Maximum Power (kW)"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.POWERCONFIG.WIRING.HIGHLOADWIRES"
+msgid "高负荷电线最大功率（kW）"
+msgstr "Heavy-Watt Wire Maximum Power (kW)"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.POWERCONFIG.WIRING.HIGHLOADCONDUCTORS"
+msgid "高负荷导电线最大功率（kW）"
+msgstr "Heavy-Watt Conductive Wire Maximum Power (kW)"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.PLANTCONFIG.PLANT.CATEGORY"
+msgid "作物调整"
+msgstr "Crop Adjustments"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.PLANTCONFIG.PLANT.ENABLECROPPATCH"
+msgid "启用作物调整"
+msgstr "Enable Crop Adjustments"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.PLANTCONFIG.PLANT.ENABLECROPPATCH_TOOLTIP"
+msgid "开启后，下面的植物生长周期和每次收获数量设置才会生效。"
+msgstr "When enabled, the plant growth cycle and harvest amount settings below take effect."
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.PLANTCONFIG.PLANT.CROPDURATION"
+msgid "生长周期（秒）"
+msgstr "Growth Cycle (s)"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.PLANTCONFIG.PLANT.CROPDURATION_TOOLTIP"
+msgid "植物完成一次生长所需的时间，单位为秒；数值越小，成熟越快。"
+msgstr "The time a plant needs to complete one growth cycle, in seconds. Lower values make plants mature faster."
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.PLANTCONFIG.PLANT.NUMPRODUCED"
+msgid "每次收获数量"
+msgstr "Harvest Amount"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.PLANTCONFIG.PLANT.NUMPRODUCED_TOOLTIP"
+msgid "植物每次成熟时产出的数量。"
+msgstr "The amount produced by the plant each time it matures."
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.PLANTCONFIG.PLANT.BASICPLANTFOOD"
+msgid "米虱木"
+msgstr "Mealwood"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.PLANTCONFIG.PLANT.PRICKLEFRUIT"
+msgid "毛刺花"
+msgstr "Bristle Blossom"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.PLANTCONFIG.PLANT.SWAMPFRUIT"
+msgid "沼浆笼"
+msgstr "Bog Bucket"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.PLANTCONFIG.PLANT.MUSHROOM"
+msgid "夜幕菇"
+msgstr "Mushroom"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.PLANTCONFIG.PLANT.COLDWHEATSEED"
+msgid "冰霜小麦"
+msgstr "Sleet Wheat"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.PLANTCONFIG.PLANT.SPICENUT"
+msgid "火椒藤"
+msgstr "Pincha Pepperplant"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.PLANTCONFIG.PLANT.BASICFABRIC"
+msgid "顶针芦苇"
+msgstr "Thimble Reed"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.PLANTCONFIG.PLANT.SWAMPLILYFLOWER"
+msgid "芳香百合"
+msgstr "Balm Lily"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.PLANTCONFIG.PLANT.PLANTFIBER"
+msgid "植物纤维（释气草产出）"
+msgstr "Reed Fiber (from Thimble Reed)"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.PLANTCONFIG.PLANT.WOODLOG"
+msgid "乔木木材"
+msgstr "Arbor Tree Wood"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.PLANTCONFIG.PLANT.SUGARWATER"
+msgid "花蜜"
+msgstr "Nectar"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.PLANTCONFIG.PLANT.SPACETREEBRANCH"
+msgid "糖心树枝杈"
+msgstr "Space Tree Branch"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.PLANTCONFIG.PLANT.HARDSKINBERRY"
+msgid "刺壳果"
+msgstr "Hard Skin Berry"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.PLANTCONFIG.PLANT.CARROT"
+msgid "羽叶果薯"
+msgstr "Hexalent"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.PLANTCONFIG.PLANT.OXYROCK"
+msgid "气囊芦荟"
+msgstr "Oxyrock"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.PLANTCONFIG.PLANT.VINEFRUIT"
+msgid "漫花果"
+msgstr "Vine Fruit"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.PLANTCONFIG.PLANT.LETTUCE"
+msgid "海生菜"
+msgstr "Lettuce"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.PLANTCONFIG.PLANT.KELP"
+msgid "海梳蕨叶"
+msgstr "Kelp"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.PLANTCONFIG.PLANT.BEANPLANTSEED"
+msgid "小吃芽"
+msgstr "Bean Plant"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.PLANTCONFIG.PLANT.OXYFERNSEED"
+msgid "氧蕨种子"
+msgstr "Oxyfern Seed"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.PLANTCONFIG.PLANT.PLANTMEAT"
+msgid "土星动物捕草"
+msgstr "Saturn Critter Trap"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.PLANTCONFIG.PLANT.WORMSBASICFRUIT"
+msgid "贫瘠虫果"
+msgstr "Basic Worm Fruit"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.PLANTCONFIG.PLANT.WORMSUPERFRUIT"
+msgid "虫果"
+msgstr "Worm Fruit"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.PLANTCONFIG.PLANT.DEWDRIP"
+msgid "露珠"
+msgstr "Dew Drip"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.PLANTCONFIG.PLANT.FERNFOOD"
+msgid "巨蕨谷粒"
+msgstr "Fern Food"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.PLANTCONFIG.PLANT.SALT"
+msgid "沙盐藤"
+msgstr "Salt Vine"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.PLANTCONFIG.PLANT.WATER"
+msgid "仙水掌"
+msgstr "Waterweed"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.PLANTCONFIG.PLANT.AMBER"
+msgid "露饵花"
+msgstr "Amber"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.PLANTCONFIG.PLANT.GARDENFOODPLANTFOOD"
+msgid "汗甜玉米"
+msgstr "Grubfruit"
+
+msgctxt "MiniBox.STRINGS.CONFIGURATIONITEM.PLANTCONFIG.PLANT.BUTTERFLY"
+msgid "拟蛾"
+msgstr "Butterfly"

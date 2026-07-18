@@ -87,6 +87,10 @@ namespace DarkMoonGalaxy
             //if (animController != null)
             //{
             //    animController.animScale = 0.0007f;
+
+
+            //    animController.animWidth = 1f;
+            //    animController.animHeight = 1f;
             //}
 
 
