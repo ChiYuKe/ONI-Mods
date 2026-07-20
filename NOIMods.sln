@@ -66,6 +66,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MusicBox", "MusicBox\MusicB
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DeepSeekDanmaku", "DeepSeekDanmaku\DeepSeekDanmaku.csproj", "{CCE2E39D-E4B2-4063-89E8-B89EF4917B47}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LogicNetwork", "LogicNetwork\LogicNetwork.csproj", "{39C90B2F-5D72-4CD6-B218-25C0E564C811}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -388,6 +390,18 @@ Global
 		{CCE2E39D-E4B2-4063-89E8-B89EF4917B47}.Release|x64.Build.0 = Release|Any CPU
 		{CCE2E39D-E4B2-4063-89E8-B89EF4917B47}.Release|x86.ActiveCfg = Release|Any CPU
 		{CCE2E39D-E4B2-4063-89E8-B89EF4917B47}.Release|x86.Build.0 = Release|Any CPU
+		{39C90B2F-5D72-4CD6-B218-25C0E564C811}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{39C90B2F-5D72-4CD6-B218-25C0E564C811}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{39C90B2F-5D72-4CD6-B218-25C0E564C811}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{39C90B2F-5D72-4CD6-B218-25C0E564C811}.Debug|x64.Build.0 = Debug|Any CPU
+		{39C90B2F-5D72-4CD6-B218-25C0E564C811}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{39C90B2F-5D72-4CD6-B218-25C0E564C811}.Debug|x86.Build.0 = Debug|Any CPU
+		{39C90B2F-5D72-4CD6-B218-25C0E564C811}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{39C90B2F-5D72-4CD6-B218-25C0E564C811}.Release|Any CPU.Build.0 = Release|Any CPU
+		{39C90B2F-5D72-4CD6-B218-25C0E564C811}.Release|x64.ActiveCfg = Release|Any CPU
+		{39C90B2F-5D72-4CD6-B218-25C0E564C811}.Release|x64.Build.0 = Release|Any CPU
+		{39C90B2F-5D72-4CD6-B218-25C0E564C811}.Release|x86.ActiveCfg = Release|Any CPU
+		{39C90B2F-5D72-4CD6-B218-25C0E564C811}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

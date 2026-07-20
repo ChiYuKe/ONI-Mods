@@ -1,0 +1,7 @@
+title: "Logic Network"
+description: "提供独立的可编程自动化信号输出器。"
+staticID: "LogicNetwork"
+supportedContent: ALL
+minimumSupportedBuild: 525812
+version: 0.1.0
+APIVersion: 2

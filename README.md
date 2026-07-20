@@ -31,6 +31,7 @@
 | [OxygenConsumingPlant](./OxygenConsumingPlant) | 耗氧植物 | 引入消耗氧气的特殊植物及其产物。 | 源码 |
 | [RunningOutOfTime](./RunningOutOfTime) | Running Out of Time | 为复制人增加时间与寿命相关机制。 | 源码 |
 | [StorageNetwork](./StorageNetwork) | 储存网络 | 将储存、生产建筑、喷泉和订单调度整合到可视化管理窗口。 | [Steam 订阅](https://steamcommunity.com/sharedfiles/filedetails/?id=3732422991) |
+| [LogicNetwork](./LogicNetwork) | 逻辑网络 | 独立的可编程自动化信号输出器。 | |
 | [TAccessories](./TAccessories) | TAccessories | 扩展复制人饰品、效果及相关游戏内容。 | 源码 |
 | [VignetteBegone](./VignetteBegone) | 移除晕影 | 移除或切换游戏边缘暗角与警报晕影。 | [Steam 订阅](https://steamcommunity.com/sharedfiles/filedetails/?id=3460554894) |
 | [WASDMinionControl](./WASDMinionControl) | WASD 复制人控制 | 使用 WASD 直接控制当前跟随镜头中的复制人。 | 源码 |
