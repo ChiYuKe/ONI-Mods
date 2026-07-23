@@ -9,19 +9,61 @@ namespace StorageNetwork.Services
     internal static class StorageNetworkInventoryIndexService
     {
         private const float InventoryIndexTtlSeconds = 5f;
+        private const float HotContentRefreshSeconds = 0.25f;
         private static readonly Dictionary<InventoryIndexKey, InventoryIndexSnapshot> Snapshots = new Dictionary<InventoryIndexKey, InventoryIndexSnapshot>();
         private static readonly List<InventoryIndexKey> ExpiredSnapshotKeys = new List<InventoryIndexKey>();
         private static int cachedRegistryVersion = -1;
+        private static int contentVersion;
 
-        public static float GetAmount(int worldId, bool includeRelatedWorlds, Tag tag, Tag[] forbiddenTags = null)
+        public static float GetAmount(
+            int worldId,
+            bool includeRelatedWorlds,
+            Tag tag,
+            Tag[] forbiddenTags = null,
+            bool allowStaleContent = false)
         {
             if (worldId < 0 || tag == Tag.Invalid)
             {
                 return 0f;
             }
 
-            InventoryIndexSnapshot snapshot = GetSnapshot(worldId, includeRelatedWorlds);
+            InventoryIndexSnapshot snapshot = GetSnapshot(worldId, includeRelatedWorlds, allowStaleContent);
             return snapshot != null ? snapshot.GetAmount(tag, forbiddenTags) : 0f;
+        }
+
+        public static float GetMass(
+            int worldId,
+            bool includeRelatedWorlds,
+            Tag tag,
+            Tag[] forbiddenTags = null,
+            bool allowStaleContent = false)
+        {
+            if (worldId < 0 || tag == Tag.Invalid)
+            {
+                return 0f;
+            }
+
+            InventoryIndexSnapshot snapshot = GetSnapshot(worldId, includeRelatedWorlds, allowStaleContent);
+            return snapshot != null ? snapshot.GetMass(tag, forbiddenTags) : 0f;
+        }
+
+        public static StorageNetworkInventoryMetrics GetMetrics(
+            int worldId,
+            bool includeRelatedWorlds,
+            bool allowStaleContent = false)
+        {
+            if (worldId < 0)
+            {
+                return default;
+            }
+
+            InventoryIndexSnapshot snapshot = GetSnapshot(worldId, includeRelatedWorlds, allowStaleContent);
+            return snapshot != null
+                ? new StorageNetworkInventoryMetrics(
+                    snapshot.NetworkOnline,
+                    snapshot.TotalStoredKg,
+                    snapshot.TotalCapacityKg)
+                : default;
         }
 
         public static bool HasAnyAmount(int worldId, bool includeRelatedWorlds, IEnumerable<Tag> tags)
@@ -94,45 +136,56 @@ namespace StorageNetwork.Services
 
         public static void Invalidate()
         {
-            Snapshots.Clear();
-            cachedRegistryVersion = StorageSceneRegistry.Version;
+            unchecked
+            {
+                contentVersion++;
+            }
         }
 
         public static void ResetRuntimeState()
         {
             Snapshots.Clear();
             cachedRegistryVersion = -1;
+            contentVersion = 0;
         }
 
-        private static InventoryIndexSnapshot GetSnapshot(int worldId, bool includeRelatedWorlds)
+        private static InventoryIndexSnapshot GetSnapshot(
+            int worldId,
+            bool includeRelatedWorlds,
+            bool allowStaleContent = false)
         {
             PruneSnapshots();
             InventoryIndexKey key = new InventoryIndexKey(worldId, includeRelatedWorlds);
             if (Snapshots.TryGetValue(key, out InventoryIndexSnapshot snapshot) &&
-                (snapshot.Frame == Time.frameCount || Time.unscaledTime - snapshot.CreatedAt <= InventoryIndexTtlSeconds))
+                (snapshot.ContentVersion == contentVersion &&
+                 (snapshot.Frame == Time.frameCount || Time.unscaledTime - snapshot.CreatedAt <= InventoryIndexTtlSeconds) ||
+                 allowStaleContent && Time.unscaledTime - snapshot.CreatedAt <= HotContentRefreshSeconds))
             {
                 return snapshot;
             }
 
-            snapshot = BuildSnapshot(worldId, includeRelatedWorlds);
+            snapshot = BuildSnapshot(worldId, includeRelatedWorlds, snapshot);
+            snapshot.ContentVersion = contentVersion;
             Snapshots[key] = snapshot;
             StorageNetworkPerformanceCounters.RecordInventoryIndexRebuild();
             return snapshot;
         }
 
-        private static InventoryIndexSnapshot BuildSnapshot(int worldId, bool includeRelatedWorlds)
+        private static InventoryIndexSnapshot BuildSnapshot(
+            int worldId,
+            bool includeRelatedWorlds,
+            InventoryIndexSnapshot snapshot)
         {
+            snapshot = snapshot ?? new InventoryIndexSnapshot();
             if (!StorageSceneRegistry.HasOnlineCoreInWorld(worldId))
             {
-                return new InventoryIndexSnapshot(
-                    new Dictionary<Tag, float>(),
-                    new List<InventoryIndexItem>(),
-                    Time.frameCount,
-                    Time.unscaledTime);
+                snapshot.Reset(false, 0f, 0f);
+                return snapshot;
             }
 
-            Dictionary<Tag, float> amountsByTag = new Dictionary<Tag, float>();
-            List<InventoryIndexItem> items = new List<InventoryIndexItem>();
+            snapshot.Reset(true, 0f, 0f);
+            float totalStoredKg = 0f;
+            float totalCapacityKg = 0f;
             StorageSceneLightweightSnapshot sceneSnapshot = StorageSceneCollector.CollectLightweightForWorld(worldId, includeRelatedWorlds);
             foreach (Storage storage in sceneSnapshot.Storages)
             {
@@ -143,6 +196,12 @@ namespace StorageNetwork.Services
                     continue;
                 }
 
+                if (StorageNetworkStorageRules.CountsTowardNetworkCapacity(storage))
+                {
+                    totalStoredKg += storage.MassStored();
+                    totalCapacityKg += storage.Capacity();
+                }
+
                 foreach (GameObject item in storage.items)
                 {
                     InventoryIndexItem indexItem = CreateIndexItem(item);
@@ -151,22 +210,16 @@ namespace StorageNetwork.Services
                         continue;
                     }
 
-                    items.Add(indexItem);
+                    snapshot.AddItem(indexItem);
                     foreach (Tag itemTag in indexItem.Tags)
                     {
-                        if (amountsByTag.TryGetValue(itemTag, out float amount))
-                        {
-                            amountsByTag[itemTag] = amount + indexItem.Amount;
-                        }
-                        else
-                        {
-                            amountsByTag[itemTag] = indexItem.Amount;
-                        }
+                        snapshot.AddAmount(itemTag, indexItem.Amount);
                     }
                 }
             }
 
-            return new InventoryIndexSnapshot(amountsByTag, items, Time.frameCount, Time.unscaledTime);
+            snapshot.SetTotals(totalStoredKg, totalCapacityKg);
+            return snapshot;
         }
 
         private static InventoryIndexItem CreateIndexItem(GameObject item)
@@ -186,6 +239,10 @@ namespace StorageNetwork.Services
             {
                 Snapshots.Clear();
                 cachedRegistryVersion = registryVersion;
+                unchecked
+                {
+                    contentVersion++;
+                }
                 return;
             }
 
@@ -269,21 +326,66 @@ namespace StorageNetwork.Services
 
         private sealed class InventoryIndexSnapshot
         {
-            private readonly Dictionary<Tag, float> amountsByTag;
-            private readonly List<InventoryIndexItem> items;
+            private readonly Dictionary<Tag, float> amountsByTag = new Dictionary<Tag, float>();
+            private readonly List<InventoryIndexItem> items = new List<InventoryIndexItem>();
             private readonly Dictionary<ForbiddenAmountKey, float> forbiddenAmountCache = new Dictionary<ForbiddenAmountKey, float>();
 
-            public InventoryIndexSnapshot(Dictionary<Tag, float> amountsByTag, List<InventoryIndexItem> items, int frame, float createdAt)
+            public int ContentVersion { get; set; }
+
+            public bool NetworkOnline { get; private set; }
+
+            public float TotalStoredKg { get; private set; }
+
+            public float TotalCapacityKg { get; private set; }
+
+            public int Frame { get; private set; }
+
+            public float CreatedAt { get; private set; }
+
+            public void Reset(bool networkOnline, float totalStoredKg, float totalCapacityKg)
             {
-                this.amountsByTag = amountsByTag;
-                this.items = items;
-                Frame = frame;
-                CreatedAt = createdAt;
+                NetworkOnline = networkOnline;
+                TotalStoredKg = totalStoredKg;
+                TotalCapacityKg = totalCapacityKg;
+                Frame = Time.frameCount;
+                CreatedAt = Time.unscaledTime;
+                amountsByTag.Clear();
+                items.Clear();
+                forbiddenAmountCache.Clear();
             }
 
-            public int Frame { get; }
+            public void AddItem(InventoryIndexItem item)
+            {
+                items.Add(item);
+            }
 
-            public float CreatedAt { get; }
+            public void AddAmount(Tag tag, float amount)
+            {
+                if (tag == Tag.Invalid)
+                {
+                    return;
+                }
+
+                if (amountsByTag.TryGetValue(tag, out float existing))
+                {
+                    amountsByTag[tag] = existing + amount;
+                }
+                else
+                {
+                    amountsByTag[tag] = amount;
+                }
+            }
+
+            public void SetTotals(float totalStoredKg, float totalCapacityKg)
+            {
+                TotalStoredKg = totalStoredKg;
+                TotalCapacityKg = totalCapacityKg;
+            }
+
+            public float GetMass(Tag tag, Tag[] forbiddenTags)
+            {
+                return GetAmount(tag, forbiddenTags);
+            }
 
             public float GetAmount(Tag tag, Tag[] forbiddenTags)
             {
@@ -429,5 +531,21 @@ namespace StorageNetwork.Services
                 return tag != Tag.Invalid && prefabId != null && prefabId.HasTag(tag);
             }
         }
+    }
+
+    internal readonly struct StorageNetworkInventoryMetrics
+    {
+        public StorageNetworkInventoryMetrics(bool networkOnline, float totalStoredKg, float totalCapacityKg)
+        {
+            NetworkOnline = networkOnline;
+            TotalStoredKg = totalStoredKg;
+            TotalCapacityKg = totalCapacityKg;
+        }
+
+        public bool NetworkOnline { get; }
+
+        public float TotalStoredKg { get; }
+
+        public float TotalCapacityKg { get; }
     }
 }

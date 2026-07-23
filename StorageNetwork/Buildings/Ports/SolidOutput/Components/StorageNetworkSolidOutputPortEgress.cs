@@ -57,6 +57,8 @@ namespace StorageNetwork.Components
         private string lastStatus;
         private string cachedStatusText;
         private string cachedStatusSignature;
+        private readonly StorageNetworkTransferWorkspace transferWorkspace = new StorageNetworkTransferWorkspace();
+        private readonly HashSet<Tag> selectedOutputTags = new HashSet<Tag>();
 
         public StorageNetworkMaterialRequester.RequestMode CurrentSourceMode
         {
@@ -87,6 +89,12 @@ namespace StorageNetwork.Components
             SyncDispenserState();
             RefreshSolidOutputPortStatus();
             Subscribe((int)GameHashes.CopySettings, OnCopySettingsDelegate);
+        }
+
+        protected override void OnPrefabInit()
+        {
+            base.OnPrefabInit();
+            simRenderLoadBalance = true;
         }
 
         protected override void OnCleanUp()
@@ -176,12 +184,14 @@ namespace StorageNetwork.Components
                 return;
             }
 
+            StorageNetworkPerformanceCounters.RecordPortRequestAttempt(gameObject.GetInstanceID());
             StorageTransferResult result = NetworkStorageTransferService.TransferAnySolidFromNetworkToStorage(
                 storage,
                 requestCapacity,
-                new[] { storage },
+                null,
                 source,
-                GetSelectedOutputTags());
+                GetSelectedOutputTags(),
+                transferWorkspace);
 
             lastStatus = NetworkStorageTransferService.FormatOutputStatus(result, Loc.Get(Loc.UI.STORAGE_NETWORK.MATERIAL_STATUS_WAITING_CONTENTS));
             if (OutputLimitEnabled && result.MovedKg > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
@@ -429,13 +439,15 @@ namespace StorageNetwork.Components
 
         private HashSet<Tag> GetSelectedOutputTags()
         {
+            selectedOutputTags.Clear();
             Tag? selected = GetSelectedOutputTag();
             if (!selected.HasValue || selected.Value == Tag.Invalid)
             {
                 return null;
             }
 
-            return new HashSet<Tag> { selected.Value };
+            selectedOutputTags.Add(selected.Value);
+            return selectedOutputTags;
         }
 
         private void ReturnMismatchedBufferedItemsToNetwork(Tag? selected)
@@ -472,9 +484,10 @@ namespace StorageNetwork.Components
                 NetworkStorageTransferService.TransferStoredItemToNetwork(
                     storage,
                     item,
-                    new[] { storage },
                     null,
-                    preferColdStorageForFood: true);
+                    null,
+                    preferColdStorageForFood: true,
+                    workspace: transferWorkspace);
             }
         }
 

@@ -7,13 +7,17 @@ namespace StorageNetwork.Services
 {
     internal static class NetworkStorageTransferService
     {
+        [System.ThreadStatic]
+        private static StorageNetworkTransferWorkspace threadWorkspace;
+
         public static StorageTransferResult TransferStoredItemsToNetwork(
             Storage source,
             IEnumerable<Storage> excludedStorages,
             Storage specificTarget = null,
             HashSet<Tag> allowedTags = null,
             bool skipPortReservedItems = false,
-            bool preferColdStorageForFood = false)
+            bool preferColdStorageForFood = false,
+            StorageNetworkTransferWorkspace workspace = null)
         {
             if (source == null || source.items == null)
             {
@@ -26,10 +30,16 @@ namespace StorageNetwork.Services
                 return StorageTransferResult.Offline;
             }
 
-            HashSet<Storage> excluded = StorageTargetSelector.BuildExclusionSet(excludedStorages);
+            workspace = GetWorkspace(workspace);
+            HashSet<Storage> excluded = workspace.PrepareExcluded(excludedStorages, source);
             float totalMoved = 0f;
             string blockedItem = null;
-            List<GameObject> items = new List<GameObject>(source.items.Count);
+            List<GameObject> items = workspace.Items;
+            items.Clear();
+            if (items.Capacity < source.items.Count)
+            {
+                items.Capacity = source.items.Count;
+            }
             foreach (GameObject item in source.items)
             {
                 if (item != null)
@@ -58,6 +68,11 @@ namespace StorageNetwork.Services
                 }
             }
 
+            if (totalMoved > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+            {
+                InvalidateContentIndexes();
+            }
+
             return new StorageTransferResult(totalMoved, blockedItem);
         }
 
@@ -65,7 +80,8 @@ namespace StorageNetwork.Services
             Storage source,
             IEnumerable<Storage> excludedStorages,
             ConduitType conduitType,
-            Storage specificTarget = null)
+            Storage specificTarget = null,
+            StorageNetworkTransferWorkspace workspace = null)
         {
             if (source == null || source.items == null)
             {
@@ -78,10 +94,16 @@ namespace StorageNetwork.Services
                 return StorageTransferResult.Offline;
             }
 
-            HashSet<Storage> excluded = StorageTargetSelector.BuildExclusionSet(excludedStorages);
+            workspace = GetWorkspace(workspace);
+            HashSet<Storage> excluded = workspace.PrepareExcluded(excludedStorages, source);
             float totalMoved = 0f;
             string blockedItem = null;
-            List<GameObject> items = new List<GameObject>(source.items.Count);
+            List<GameObject> items = workspace.Items;
+            items.Clear();
+            if (items.Capacity < source.items.Count)
+            {
+                items.Capacity = source.items.Count;
+            }
             foreach (GameObject item in source.items)
             {
                 if (IsExpectedFluid(item, conduitType))
@@ -106,6 +128,11 @@ namespace StorageNetwork.Services
                 }
             }
 
+            if (totalMoved > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+            {
+                InvalidateContentIndexes();
+            }
+
             return new StorageTransferResult(totalMoved, blockedItem);
         }
 
@@ -113,7 +140,8 @@ namespace StorageNetwork.Services
             GameObject item,
             IEnumerable<Storage> excludedStorages,
             Storage specificTarget = null,
-            HashSet<Tag> allowedTags = null)
+            HashSet<Tag> allowedTags = null,
+            StorageNetworkTransferWorkspace workspace = null)
         {
             if (item == null || StorageItemUtility.GetMass(item) <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
             {
@@ -132,8 +160,9 @@ namespace StorageNetwork.Services
                 return StorageTransferResult.Idle;
             }
 
+            workspace = GetWorkspace(workspace);
             HashSet<Tag> matchTags = StorageItemUtility.GetStorageMatchTags(item);
-            HashSet<Storage> excluded = StorageTargetSelector.BuildExclusionSet(excludedStorages);
+            HashSet<Storage> excluded = workspace.PrepareExcluded(excludedStorages, null);
             Pickupable pickupable = item.GetComponent<Pickupable>();
             Storage target = StorageTargetSelector.FindOutputTarget(item, matchTags, excluded, specificTarget, null, sourceWorldId, null);
             if (pickupable == null || target == null)
@@ -170,6 +199,11 @@ namespace StorageNetwork.Services
                 }
             }
 
+            if (moved > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+            {
+                InvalidateContentIndexes();
+            }
+
             return moved > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT
                 ? new StorageTransferResult(moved, null)
                 : StorageTransferResult.Blocked(StorageItemUtility.GetItemDisplayName(item, tag));
@@ -180,7 +214,8 @@ namespace StorageNetwork.Services
             GameObject item,
             IEnumerable<Storage> excludedStorages,
             Storage specificTarget = null,
-            bool preferColdStorageForFood = false)
+            bool preferColdStorageForFood = false,
+            StorageNetworkTransferWorkspace workspace = null)
         {
             if (source == null || item == null || source.items == null || !source.items.Contains(item))
             {
@@ -193,7 +228,8 @@ namespace StorageNetwork.Services
                 return StorageTransferResult.Offline;
             }
 
-            HashSet<Storage> excluded = StorageTargetSelector.BuildExclusionSet(excludedStorages);
+            workspace = GetWorkspace(workspace);
+            HashSet<Storage> excluded = workspace.PrepareExcluded(excludedStorages, source);
             return TransferStoredItem(source, item, excluded, specificTarget, null, sourceWorldId, preferColdStorageForFood);
         }
 
@@ -202,7 +238,8 @@ namespace StorageNetwork.Services
             float amount,
             Storage destination,
             IEnumerable<Storage> excludedStorages = null,
-            Storage specificSource = null)
+            Storage specificSource = null,
+            StorageNetworkTransferWorkspace workspace = null)
         {
             if (tags == null ||
                 destination == null ||
@@ -236,12 +273,19 @@ namespace StorageNetwork.Services
                 return 0f;
             }
 
-            HashSet<Storage> excluded = StorageTargetSelector.BuildExclusionSet(excludedStorages);
-            excluded.Add(destination);
-            List<Storage> sources = StorageTargetSelector.FindNetworkSources(wantedTags, excluded, specificSource, destinationWorldId);
+            workspace = GetWorkspace(workspace);
+            HashSet<Storage> excluded = workspace.PrepareExcluded(excludedStorages, destination);
+            StorageNetworkSourceIndexService.FillSourceStorages(
+                destinationWorldId,
+                true,
+                wantedTags,
+                excluded,
+                specificSource,
+                workspace.Sources,
+                allowStaleContent: true);
 
             float moved = 0f;
-            foreach (Storage source in sources)
+            foreach (Storage source in workspace.Sources)
             {
                 if (amount - moved <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ||
                     destination.RemainingCapacity() <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
@@ -271,6 +315,11 @@ namespace StorageNetwork.Services
 
                     moved += source.Transfer(destination, tag, transferAmount, block_events: false, hide_popups: true);
                 }
+            }
+
+            if (moved > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+            {
+                InvalidateContentIndexes();
             }
 
             return moved;
@@ -382,6 +431,11 @@ namespace StorageNetwork.Services
                 }
             }
 
+            if (movedUnits > 0f)
+            {
+                InvalidateContentIndexes();
+            }
+
             return movedUnits;
         }
 
@@ -390,7 +444,8 @@ namespace StorageNetwork.Services
             float amount,
             IEnumerable<Storage> excludedStorages = null,
             Storage specificSource = null,
-            SimHashes? liquidFilter = null)
+            SimHashes? liquidFilter = null,
+            StorageNetworkTransferWorkspace workspace = null)
         {
             return TransferAnyElementStateFromNetworkToStorage(
                 destination,
@@ -400,7 +455,8 @@ namespace StorageNetwork.Services
                 liquidFilter,
                 IsLiquidItem,
                 GameTags.Liquid,
-                GameTags.Liquid.ProperName());
+                GameTags.Liquid.ProperName(),
+                workspace);
         }
 
         public static StorageTransferResult TransferAnyGasFromNetworkToStorage(
@@ -408,7 +464,8 @@ namespace StorageNetwork.Services
             float amount,
             IEnumerable<Storage> excludedStorages = null,
             Storage specificSource = null,
-            SimHashes? gasFilter = null)
+            SimHashes? gasFilter = null,
+            StorageNetworkTransferWorkspace workspace = null)
         {
             return TransferAnyElementStateFromNetworkToStorage(
                 destination,
@@ -418,7 +475,8 @@ namespace StorageNetwork.Services
                 gasFilter,
                 IsGasItem,
                 GameTags.Gas,
-                GameTags.Gas.ProperName());
+                GameTags.Gas.ProperName(),
+                workspace);
         }
 
         public static StorageTransferResult TransferAnySolidFromNetworkToStorage(
@@ -426,7 +484,8 @@ namespace StorageNetwork.Services
             float amount,
             IEnumerable<Storage> excludedStorages = null,
             Storage specificSource = null,
-            IEnumerable<Tag> allowedTags = null)
+            IEnumerable<Tag> allowedTags = null,
+            StorageNetworkTransferWorkspace workspace = null)
         {
             if (destination == null ||
                 amount <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ||
@@ -441,25 +500,30 @@ namespace StorageNetwork.Services
                 return StorageTransferResult.Offline;
             }
 
-            HashSet<Tag> allowed = BuildAllowedTagSet(allowedTags);
-            HashSet<Storage> excluded = StorageTargetSelector.BuildExclusionSet(excludedStorages);
-            excluded.Add(destination);
+            workspace = GetWorkspace(workspace);
+            HashSet<Tag> allowed = workspace.PrepareAllowedTags(allowedTags);
+            HashSet<Storage> excluded = workspace.PrepareExcluded(excludedStorages, destination);
             IEnumerable<Tag> sourceTags = allowed != null && allowed.Count > 0
                 ? (IEnumerable<Tag>)allowed
-                : new[] { GameTags.Solid };
-            IEnumerable<Storage> sources = EnumerateIndexedSourcesWithLiveFallback(
-                StorageNetworkSourceIndexService.GetSourceStorages(
-                    destinationWorldId,
-                    true,
-                    sourceTags,
-                    excluded,
-                    specificSource),
+                : workspace.PrepareSingleSourceTag(GameTags.Solid);
+            StorageNetworkSourceIndexService.FillSourceStorages(
                 destinationWorldId,
-                specificSource);
+                true,
+                sourceTags,
+                excluded,
+                specificSource,
+                workspace.Sources,
+                allowStaleContent: true);
+            IEnumerable<Storage> sources = EnumerateIndexedSourcesWithLiveFallback(
+                workspace.Sources,
+                destinationWorldId,
+                specificSource,
+                workspace);
 
             float moved = 0f;
             string blockedItem = null;
-            List<GameObject> items = new List<GameObject>();
+            List<GameObject> items = workspace.Items;
+            items.Clear();
             foreach (Storage source in sources)
             {
                 if (amount - moved <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ||
@@ -548,7 +612,8 @@ namespace StorageNetwork.Services
             SimHashes? elementFilter,
             System.Func<PrimaryElement, SimHashes?, bool> itemPredicate,
             Tag sourceCategoryTag,
-            string fallbackBlockedItem)
+            string fallbackBlockedItem,
+            StorageNetworkTransferWorkspace workspace)
         {
             if (destination == null ||
                 amount <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ||
@@ -563,24 +628,30 @@ namespace StorageNetwork.Services
                 return StorageTransferResult.Offline;
             }
 
-            HashSet<Storage> excluded = StorageTargetSelector.BuildExclusionSet(excludedStorages);
-            excluded.Add(destination);
+            workspace = GetWorkspace(workspace);
+            HashSet<Storage> excluded = workspace.PrepareExcluded(excludedStorages, destination);
             Tag sourceTag = elementFilter.HasValue
                 ? elementFilter.Value.CreateTag()
                 : sourceCategoryTag;
-            IEnumerable<Storage> sources = EnumerateIndexedSourcesWithLiveFallback(
-                StorageNetworkSourceIndexService.GetSourceStorages(
-                    destinationWorldId,
-                    true,
-                    new[] { sourceTag },
-                    excluded,
-                    specificSource),
+            IEnumerable<Tag> sourceTags = workspace.PrepareSingleSourceTag(sourceTag);
+            StorageNetworkSourceIndexService.FillSourceStorages(
                 destinationWorldId,
-                specificSource);
+                true,
+                sourceTags,
+                excluded,
+                specificSource,
+                workspace.Sources,
+                allowStaleContent: true);
+            IEnumerable<Storage> sources = EnumerateIndexedSourcesWithLiveFallback(
+                workspace.Sources,
+                destinationWorldId,
+                specificSource,
+                workspace);
 
             float moved = 0f;
             string blockedItem = null;
-            List<GameObject> items = new List<GameObject>();
+            List<GameObject> items = workspace.Items;
+            items.Clear();
             foreach (Storage source in sources)
             {
                 if (amount - moved <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ||
@@ -650,9 +721,12 @@ namespace StorageNetwork.Services
         private static IEnumerable<Storage> EnumerateIndexedSourcesWithLiveFallback(
             IEnumerable<Storage> indexedSources,
             int worldId,
-            Storage specificSource)
+            Storage specificSource,
+            StorageNetworkTransferWorkspace workspace)
         {
-            HashSet<Storage> yielded = new HashSet<Storage>();
+            workspace = GetWorkspace(workspace);
+            HashSet<Storage> yielded = workspace.YieldedSources;
+            yielded.Clear();
             if (indexedSources != null)
             {
                 foreach (Storage source in indexedSources)
@@ -1100,7 +1174,13 @@ namespace StorageNetwork.Services
             float transferAmount = Mathf.Min(amount, mass);
             if (transferAmount + PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT >= mass)
             {
-                return source.Transfer(item, target, block_events: false, hide_popups: true) ? mass : 0f;
+                if (!source.Transfer(item, target, block_events: false, hide_popups: true))
+                {
+                    return 0f;
+                }
+
+                InvalidateContentIndexes();
+                return mass;
             }
 
             Pickupable pickupable = item.GetComponent<Pickupable>();
@@ -1119,7 +1199,14 @@ namespace StorageNetwork.Services
             target.Store(taken.gameObject, hide_popups: true, block_events: false, do_disease_transfer: true, is_deserializing: false);
             source.Trigger(-1697596308, item);
             source.OnStorageChange?.Invoke(item);
+            InvalidateContentIndexes();
             return moved;
+        }
+
+        private static void InvalidateContentIndexes()
+        {
+            StorageNetworkInventoryIndexService.Invalidate();
+            StorageNetworkSourceIndexService.Invalidate();
         }
 
         private static bool IsLiquidItem(PrimaryElement primaryElement, SimHashes? liquidFilter)
@@ -1190,37 +1277,87 @@ namespace StorageNetwork.Services
             return StorageItemUtility.GetMass(item);
         }
 
-        private static HashSet<Tag> BuildAllowedTagSet(IEnumerable<Tag> tags)
-        {
-            if (tags == null)
-            {
-                return null;
-            }
-
-            HashSet<Tag> allowed = tags as HashSet<Tag>;
-            if (allowed != null)
-            {
-                return allowed;
-            }
-
-            allowed = new HashSet<Tag>();
-            foreach (Tag tag in tags)
-            {
-                if (tag != Tag.Invalid)
-                {
-                    allowed.Add(tag);
-                }
-            }
-
-            return allowed;
-        }
-
         private static string GetElementName(SimHashes elementHash)
         {
             Element element = ElementLoader.FindElementByHash(elementHash);
             return element != null ? element.name : elementHash.ToString();
         }
 
+        private static StorageNetworkTransferWorkspace GetWorkspace(StorageNetworkTransferWorkspace workspace)
+        {
+            if (workspace != null)
+            {
+                return workspace;
+            }
+
+            return threadWorkspace ?? (threadWorkspace = new StorageNetworkTransferWorkspace());
+        }
+
+    }
+
+    internal sealed class StorageNetworkTransferWorkspace
+    {
+        private readonly HashSet<Storage> excluded = new HashSet<Storage>();
+        private readonly HashSet<Tag> allowedTags = new HashSet<Tag>();
+        private readonly HashSet<Tag> sourceTags = new HashSet<Tag>();
+
+        public List<Storage> Sources { get; } = new List<Storage>();
+
+        public List<GameObject> Items { get; } = new List<GameObject>();
+
+        public HashSet<Storage> YieldedSources { get; } = new HashSet<Storage>();
+
+        public HashSet<Storage> PrepareExcluded(IEnumerable<Storage> storages, Storage required)
+        {
+            excluded.Clear();
+            if (storages != null)
+            {
+                foreach (Storage storage in storages)
+                {
+                    if (storage != null)
+                    {
+                        excluded.Add(storage);
+                    }
+                }
+            }
+
+            if (required != null)
+            {
+                excluded.Add(required);
+            }
+
+            return excluded;
+        }
+
+        public HashSet<Tag> PrepareAllowedTags(IEnumerable<Tag> tags)
+        {
+            if (tags == null)
+            {
+                return null;
+            }
+
+            allowedTags.Clear();
+            foreach (Tag tag in tags)
+            {
+                if (tag != Tag.Invalid)
+                {
+                    allowedTags.Add(tag);
+                }
+            }
+
+            return allowedTags;
+        }
+
+        public HashSet<Tag> PrepareSingleSourceTag(Tag tag)
+        {
+            sourceTags.Clear();
+            if (tag != Tag.Invalid)
+            {
+                sourceTags.Add(tag);
+            }
+
+            return sourceTags;
+        }
     }
 
     internal sealed class StorageTransferResult

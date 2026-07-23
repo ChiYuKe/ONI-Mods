@@ -14,6 +14,10 @@ namespace StorageNetwork.Components
         [MyCmpGet]
         private Automatable automatable = null;
 
+        private FilteredStorage filteredStorage;
+        private bool manualFetchEnabled;
+        private bool manualFetchInitialized;
+
         protected override void OnSpawn()
         {
             base.OnSpawn();
@@ -24,6 +28,12 @@ namespace StorageNetwork.Components
             }
 
             SyncManualOperation();
+        }
+
+        protected override void OnCleanUp()
+        {
+            CleanupFilteredStorage();
+            base.OnCleanUp();
         }
 
         public void Sim1000ms(float dt)
@@ -44,6 +54,47 @@ namespace StorageNetwork.Components
             storage.fetchCategory = allowManualOperation
                 ? Storage.FetchCategory.GeneralStorage
                 : Storage.FetchCategory.Building;
+
+            if (!manualFetchInitialized || manualFetchEnabled != allowManualOperation)
+            {
+                manualFetchInitialized = true;
+                manualFetchEnabled = allowManualOperation;
+                if (allowManualOperation)
+                {
+                    EnsureFilteredStorage();
+                    filteredStorage.FilterChanged();
+                }
+                else
+                {
+                    CleanupFilteredStorage();
+                }
+            }
+        }
+
+        private void EnsureFilteredStorage()
+        {
+            if (filteredStorage != null)
+            {
+                return;
+            }
+
+            filteredStorage = new FilteredStorage(
+                this,
+                null,
+                null,
+                false,
+                Db.Get().ChoreTypes.StorageFetch);
+        }
+
+        private void CleanupFilteredStorage()
+        {
+            if (filteredStorage == null)
+            {
+                return;
+            }
+
+            filteredStorage.CleanUp();
+            filteredStorage = null;
         }
     }
 }

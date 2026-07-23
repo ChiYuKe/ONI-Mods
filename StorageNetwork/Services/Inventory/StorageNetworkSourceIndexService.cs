@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using StorageNetwork.Core;
 using UnityEngine;
 
@@ -9,9 +8,11 @@ namespace StorageNetwork.Services
     internal static class StorageNetworkSourceIndexService
     {
         private const float SourceIndexTtlSeconds = 2f;
+        private const float HotContentRefreshSeconds = 0.25f;
         private static readonly Dictionary<SourceIndexKey, SourceIndexSnapshot> Snapshots = new Dictionary<SourceIndexKey, SourceIndexSnapshot>();
         private static readonly List<SourceIndexKey> ExpiredSnapshotKeys = new List<SourceIndexKey>();
         private static int cachedRegistryVersion = -1;
+        private static int contentVersion;
 
         public static List<Storage> GetSourceStorages(
             int worldId,
@@ -20,50 +21,109 @@ namespace StorageNetwork.Services
             HashSet<Storage> excludedStorages,
             Storage specificSource = null)
         {
-            StorageNetworkPerformanceCounters.RecordNetworkSourceScan();
             HashSet<Tag> tags = BuildTagSet(wantedTags);
-            if (worldId < 0 || tags.Count == 0)
+            List<Storage> result = new List<Storage>();
+            FillSourceStorages(
+                worldId,
+                includeReachableWorlds,
+                tags,
+                excludedStorages,
+                specificSource,
+                result);
+            return result;
+        }
+
+        public static void FillSourceStorages(
+            int worldId,
+            bool includeReachableWorlds,
+            IEnumerable<Tag> wantedTags,
+            HashSet<Storage> excludedStorages,
+            Storage specificSource,
+            List<Storage> result,
+            bool allowStaleContent = false)
+        {
+            StorageNetworkPerformanceCounters.RecordNetworkSourceScan();
+            if (result == null)
             {
-                return new List<Storage>();
+                return;
+            }
+
+            result.Clear();
+            bool hasWantedTag = false;
+            if (wantedTags != null)
+            {
+                foreach (Tag tag in wantedTags)
+                {
+                    if (tag != Tag.Invalid)
+                    {
+                        hasWantedTag = true;
+                        break;
+                    }
+                }
+            }
+
+            if (worldId < 0 || !hasWantedTag)
+            {
+                return;
             }
 
             if (specificSource != null)
             {
-                return IsUsableSource(specificSource, tags, excludedStorages, worldId)
-                    ? new List<Storage> { specificSource }
-                    : new List<Storage>();
+                if (IsUsableSource(specificSource, wantedTags, excludedStorages, worldId))
+                {
+                    result.Add(specificSource);
+                }
+
+                return;
             }
 
-            SourceIndexSnapshot snapshot = GetSnapshot(worldId, includeReachableWorlds);
-            return snapshot != null
-                ? snapshot.GetSources(tags, excludedStorages)
-                : new List<Storage>();
+            SourceIndexSnapshot snapshot = GetSnapshot(worldId, includeReachableWorlds, allowStaleContent);
+            snapshot?.FillSources(wantedTags, excludedStorages, result);
         }
 
         public static void ResetRuntimeState()
         {
             Snapshots.Clear();
             cachedRegistryVersion = -1;
+            contentVersion = 0;
         }
 
-        private static SourceIndexSnapshot GetSnapshot(int worldId, bool includeReachableWorlds)
+        public static void Invalidate()
+        {
+            unchecked
+            {
+                contentVersion++;
+            }
+        }
+
+        private static SourceIndexSnapshot GetSnapshot(
+            int worldId,
+            bool includeReachableWorlds,
+            bool allowStaleContent = false)
         {
             PruneSnapshots();
             SourceIndexKey key = new SourceIndexKey(worldId, includeReachableWorlds);
             if (Snapshots.TryGetValue(key, out SourceIndexSnapshot snapshot) &&
-                (snapshot.Frame == Time.frameCount || Time.unscaledTime - snapshot.CreatedAt <= SourceIndexTtlSeconds))
+                (snapshot.ContentVersion == contentVersion &&
+                 (snapshot.Frame == Time.frameCount || Time.unscaledTime - snapshot.CreatedAt <= SourceIndexTtlSeconds) ||
+                 allowStaleContent && Time.unscaledTime - snapshot.CreatedAt <= HotContentRefreshSeconds))
             {
                 return snapshot;
             }
 
-            snapshot = BuildSnapshot(worldId, includeReachableWorlds);
+            snapshot = BuildSnapshot(worldId, includeReachableWorlds, snapshot);
+            snapshot.ContentVersion = contentVersion;
             Snapshots[key] = snapshot;
             return snapshot;
         }
 
-        private static SourceIndexSnapshot BuildSnapshot(int worldId, bool includeReachableWorlds)
+        private static SourceIndexSnapshot BuildSnapshot(
+            int worldId,
+            bool includeReachableWorlds,
+            SourceIndexSnapshot snapshot)
         {
-            Dictionary<Tag, List<StorageAmount>> sourcesByTag = new Dictionary<Tag, List<StorageAmount>>();
+            snapshot = snapshot ?? new SourceIndexSnapshot();
+            snapshot.Reset();
             StorageSceneLightweightSnapshot sceneSnapshot = StorageSceneCollector.CollectLightweightForWorld(worldId, includeReachableWorlds);
             foreach (Storage storage in sceneSnapshot.Storages)
             {
@@ -84,22 +144,12 @@ namespace StorageNetwork.Services
                         continue;
                     }
 
-                    if (!sourcesByTag.TryGetValue(pair.Key, out List<StorageAmount> sources))
-                    {
-                        sources = new List<StorageAmount>();
-                        sourcesByTag[pair.Key] = sources;
-                    }
-
-                    sources.Add(new StorageAmount(storage, pair.Value));
+                    snapshot.AddSource(pair.Key, storage, pair.Value);
                 }
             }
 
-            foreach (List<StorageAmount> sources in sourcesByTag.Values)
-            {
-                sources.Sort((left, right) => right.Amount.CompareTo(left.Amount));
-            }
-
-            return new SourceIndexSnapshot(sourcesByTag, Time.frameCount, Time.unscaledTime);
+            snapshot.Complete();
+            return snapshot;
         }
 
         private static Dictionary<Tag, float> BuildStorageAmounts(Storage storage)
@@ -255,6 +305,10 @@ namespace StorageNetwork.Services
             {
                 Snapshots.Clear();
                 cachedRegistryVersion = registryVersion;
+                unchecked
+                {
+                    contentVersion++;
+                }
                 return;
             }
 
@@ -321,22 +375,56 @@ namespace StorageNetwork.Services
 
         private sealed class SourceIndexSnapshot
         {
-            private readonly Dictionary<Tag, List<StorageAmount>> sourcesByTag;
+            private readonly Dictionary<Tag, List<StorageAmount>> sourcesByTag = new Dictionary<Tag, List<StorageAmount>>();
+            private readonly Dictionary<Storage, float> bestAmounts = new Dictionary<Storage, float>();
+            private readonly List<KeyValuePair<Storage, float>> orderedSources = new List<KeyValuePair<Storage, float>>();
 
-            public SourceIndexSnapshot(Dictionary<Tag, List<StorageAmount>> sourcesByTag, int frame, float createdAt)
+            public int ContentVersion { get; set; }
+
+            public int Frame { get; private set; }
+
+            public float CreatedAt { get; private set; }
+
+            public void Reset()
             {
-                this.sourcesByTag = sourcesByTag;
-                Frame = frame;
-                CreatedAt = createdAt;
+                foreach (List<StorageAmount> sources in sourcesByTag.Values)
+                {
+                    sources.Clear();
+                }
+
+                bestAmounts.Clear();
+                orderedSources.Clear();
+                Frame = Time.frameCount;
+                CreatedAt = Time.unscaledTime;
             }
 
-            public int Frame { get; }
-
-            public float CreatedAt { get; }
-
-            public List<Storage> GetSources(IEnumerable<Tag> tags, HashSet<Storage> excludedStorages)
+            public void AddSource(Tag tag, Storage storage, float amount)
             {
-                Dictionary<Storage, float> bestAmounts = new Dictionary<Storage, float>();
+                if (!sourcesByTag.TryGetValue(tag, out List<StorageAmount> sources))
+                {
+                    sources = new List<StorageAmount>();
+                    sourcesByTag[tag] = sources;
+                }
+
+                sources.Add(new StorageAmount(storage, amount));
+            }
+
+            public void Complete()
+            {
+                foreach (List<StorageAmount> sources in sourcesByTag.Values)
+                {
+                    sources.Sort((left, right) => right.Amount.CompareTo(left.Amount));
+                }
+            }
+
+            public void FillSources(IEnumerable<Tag> tags, HashSet<Storage> excludedStorages, List<Storage> result)
+            {
+                if (tags == null || result == null)
+                {
+                    return;
+                }
+
+                bestAmounts.Clear();
                 foreach (Tag tag in tags)
                 {
                     if (!sourcesByTag.TryGetValue(tag, out List<StorageAmount> sources))
@@ -364,9 +452,17 @@ namespace StorageNetwork.Services
                     }
                 }
 
-                List<KeyValuePair<Storage, float>> ordered = bestAmounts.ToList();
-                ordered.Sort((left, right) => right.Value.CompareTo(left.Value));
-                return ordered.Select(pair => pair.Key).ToList();
+                orderedSources.Clear();
+                foreach (KeyValuePair<Storage, float> pair in bestAmounts)
+                {
+                    orderedSources.Add(pair);
+                }
+
+                orderedSources.Sort((left, right) => right.Value.CompareTo(left.Value));
+                foreach (KeyValuePair<Storage, float> pair in orderedSources)
+                {
+                    result.Add(pair.Key);
+                }
             }
         }
     }

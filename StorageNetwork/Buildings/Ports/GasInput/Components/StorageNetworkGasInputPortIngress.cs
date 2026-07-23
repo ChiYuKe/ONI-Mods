@@ -32,6 +32,7 @@ namespace StorageNetwork.Components
         private float retryTimer;
         private string lastStatus;
         private string cachedStatusText;
+        private readonly StorageNetworkTransferWorkspace transferWorkspace = new StorageNetworkTransferWorkspace();
 
         public StorageNetworkMaterialRequester.OutputStoreMode CurrentInputStoreMode
         {
@@ -41,16 +42,24 @@ namespace StorageNetwork.Components
 
         public string LastStatus => lastStatus;
 
+        protected override void OnPrefabInit()
+        {
+            base.OnPrefabInit();
+            simRenderLoadBalance = true;
+        }
+
         protected override void OnSpawn()
         {
             base.OnSpawn();
             storage?.SetDefaultStoredItemModifiers(Storage.StandardInsulatedStorage);
             RefreshGasInputPortStatus();
             Subscribe((int)GameHashes.CopySettings, OnCopySettingsDelegate);
+            StorageNetworkInputTargetReservationService.Invalidate();
         }
 
         protected override void OnCleanUp()
         {
+            StorageNetworkInputTargetReservationService.Invalidate();
             RemoveGasInputPortStatus();
             base.OnCleanUp();
         }
@@ -83,13 +92,15 @@ namespace StorageNetwork.Components
                 return;
             }
 
+            StorageNetworkPerformanceCounters.RecordPortRequestAttempt(gameObject.GetInstanceID());
             StorageTransferResult result = NetworkStorageTransferService.TransferStoredFluidsToNetwork(
                 storage,
-                new[] { storage },
+                null,
                 ConduitType.Gas,
                 specificTarget: CurrentInputStoreMode == StorageNetworkMaterialRequester.OutputStoreMode.SpecificStorage
                     ? ResolveInputStorage()
-                    : null);
+                    : null,
+                workspace: transferWorkspace);
 
             lastStatus = FormatInputStoreStatus(result);
             retryTimer = result.MovedKg > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ? 0f : EmptyRetrySeconds;

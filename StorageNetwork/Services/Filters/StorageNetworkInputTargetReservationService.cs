@@ -11,6 +11,11 @@ namespace StorageNetwork.Services
         private static readonly Dictionary<int, List<InputTargetReservation>> inputReservationsByTarget = new Dictionary<int, List<InputTargetReservation>>();
         private static int inputReservationIndexFrame = -1;
 
+        public static void Invalidate()
+        {
+            inputReservationIndexFrame = -1;
+        }
+
         public static bool IsReservedForAutoInput(Storage target, Storage currentInputStorage)
         {
             if (!IsReservableTarget(target) || !IsInputReservationSource(currentInputStorage))
@@ -77,6 +82,7 @@ namespace StorageNetwork.Services
             }
 
             inputReservationIndexFrame = Time.frameCount;
+            StorageNetworkPerformanceCounters.RecordInputReservationIndexRebuild();
             inputReservationsByTarget.Clear();
             List<Storage> storages = new List<Storage>(StorageSceneRegistry.GetStorages());
             Dictionary<int, Storage> targets = new Dictionary<int, Storage>();

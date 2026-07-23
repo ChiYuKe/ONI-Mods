@@ -207,6 +207,8 @@ namespace StorageNetwork.Core
             WorldSnapshots.Clear();
             LightweightSnapshots.Clear();
             cachedWorldRegistryVersion = -1;
+            StorageNetworkInventoryIndexService.Invalidate();
+            StorageNetworkSourceIndexService.Invalidate();
         }
 
         public static void ResetRuntimeState()

@@ -25,6 +25,7 @@ namespace StorageNetwork.Core
             StorageNetworkInterfaceResolver.ResetRuntimeState();
             StorageNetworkInventoryIndexService.ResetRuntimeState();
             StorageNetworkSourceIndexService.ResetRuntimeState();
+            StorageNetworkInputTargetReservationService.Invalidate();
             StorageNetworkFluidStorageCompactor.ResetRuntimeState();
             StorageTargetSelector.ResetRuntimeState();
             StorageNetworkPerformanceCounters.ResetRuntimeState();

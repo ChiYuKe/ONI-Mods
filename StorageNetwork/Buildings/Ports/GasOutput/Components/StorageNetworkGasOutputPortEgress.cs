@@ -55,6 +55,7 @@ namespace StorageNetwork.Components
         private float retryTimer;
         private string lastStatus;
         private string cachedStatusText;
+        private readonly StorageNetworkTransferWorkspace transferWorkspace = new StorageNetworkTransferWorkspace();
 
         public StorageNetworkMaterialRequester.RequestMode CurrentSourceMode
         {
@@ -84,6 +85,12 @@ namespace StorageNetwork.Components
             SyncDispenserState();
             RefreshGasOutputPortStatus();
             Subscribe((int)GameHashes.CopySettings, OnCopySettingsDelegate);
+        }
+
+        protected override void OnPrefabInit()
+        {
+            base.OnPrefabInit();
+            simRenderLoadBalance = true;
         }
 
         protected override void OnCleanUp()
@@ -136,12 +143,14 @@ namespace StorageNetwork.Components
             Storage source = CurrentSourceMode == StorageNetworkMaterialRequester.RequestMode.SpecificStorage
                 ? ResolveSourceStorage()
                 : null;
+            StorageNetworkPerformanceCounters.RecordPortRequestAttempt(gameObject.GetInstanceID());
             StorageTransferResult result = NetworkStorageTransferService.TransferAnyGasFromNetworkToStorage(
                 storage,
                 requestCapacity,
-                new[] { storage },
+                null,
                 source,
-                GetSelectedOutputElement());
+                GetSelectedOutputElement(),
+                transferWorkspace);
 
             lastStatus = FormatRequestStatus(result);
             if (OutputLimitEnabled && result.MovedKg > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
@@ -382,7 +391,12 @@ namespace StorageNetwork.Components
                 return;
             }
 
-            NetworkStorageTransferService.TransferStoredItemsToNetwork(storage, new[] { storage }, null, mismatchedTags);
+            NetworkStorageTransferService.TransferStoredItemsToNetwork(
+                storage,
+                null,
+                null,
+                mismatchedTags,
+                workspace: transferWorkspace);
         }
 
         private bool IsOutputLimitSatisfied()

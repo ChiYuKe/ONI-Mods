@@ -17,7 +17,12 @@ namespace StorageNetwork.Services
                 return 0f;
             }
 
-            return StorageNetworkInventoryIndexService.GetAmount(worldId, includeRelatedWorlds, tag, forbiddenTags);
+            return StorageNetworkInventoryIndexService.GetAmount(
+                worldId,
+                includeRelatedWorlds,
+                tag,
+                forbiddenTags,
+                allowStaleContent: true);
         }
 
         public static float GetMirroredEdibleCalories(WorldInventory inventory, bool includeRelatedWorlds, System.Collections.Generic.Dictionary<string, float> unitsById = null)

@@ -46,6 +46,7 @@ namespace StorageNetwork.Components
         private string cachedStatusText;
         private bool shouldMigrateManualOperation;
         private bool wasInputEnabled;
+        private readonly StorageNetworkTransferWorkspace transferWorkspace = new StorageNetworkTransferWorkspace();
 
         public StorageNetworkMaterialRequester.OutputStoreMode CurrentInputStoreMode
         {
@@ -58,6 +59,7 @@ namespace StorageNetwork.Components
         protected override void OnPrefabInit()
         {
             base.OnPrefabInit();
+            simRenderLoadBalance = true;
             filteredStorage = new FilteredStorage(
                 this,
                 new[] { StorageNetworkTags.SolidOutputPortBufferedItem, StorageNetworkTags.ReservedForConstruction, StorageNetworkTags.ReservedForFarming, StorageNetworkTags.ReservedForFabricator },
@@ -93,6 +95,7 @@ namespace StorageNetwork.Components
 
             RefreshSolidInputPortStatus();
             Subscribe((int)GameHashes.CopySettings, OnCopySettingsDelegate);
+            StorageNetworkInputTargetReservationService.Invalidate();
         }
 
         [OnDeserialized]
@@ -103,6 +106,7 @@ namespace StorageNetwork.Components
 
         protected override void OnCleanUp()
         {
+            StorageNetworkInputTargetReservationService.Invalidate();
             CleanupFilteredStorage();
             RemoveSolidInputPortStatus();
             base.OnCleanUp();
@@ -130,13 +134,15 @@ namespace StorageNetwork.Components
                 wasInputEnabled = false;
                 if (storage.items != null && storage.items.Count > 0)
                 {
+                    StorageNetworkPerformanceCounters.RecordPortRequestAttempt(gameObject.GetInstanceID());
                     NetworkStorageTransferService.TransferStoredItemsToNetwork(
                         storage,
-                        new[] { storage },
+                        null,
                         null,
                         null,
                         true,
-                        true);
+                        true,
+                        transferWorkspace);
                     UpdateCachedStatusText();
                 }
 
@@ -174,13 +180,15 @@ namespace StorageNetwork.Components
                 return;
             }
 
+            StorageNetworkPerformanceCounters.RecordPortRequestAttempt(gameObject.GetInstanceID());
             StorageTransferResult result = NetworkStorageTransferService.TransferStoredItemsToNetwork(
                 storage,
-                new[] { storage },
+                null,
                 CurrentInputStoreMode == StorageNetworkMaterialRequester.OutputStoreMode.SpecificStorage ? ResolveInputStorage() : null,
                 null,
                 true,
-                true);
+                true,
+                transferWorkspace);
 
             if (CurrentInputStoreMode == StorageNetworkMaterialRequester.OutputStoreMode.SpecificStorage &&
                 result.MovedKg <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT &&

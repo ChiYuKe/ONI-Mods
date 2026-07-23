@@ -32,6 +32,7 @@ namespace StorageNetwork.Components
         private float retryTimer;
         private string lastStatus;
         private string cachedStatusText;
+        private readonly StorageNetworkTransferWorkspace transferWorkspace = new StorageNetworkTransferWorkspace();
 
         public StorageNetworkMaterialRequester.OutputStoreMode CurrentInputStoreMode
         {
@@ -40,6 +41,12 @@ namespace StorageNetwork.Components
         }
 
         public string LastStatus => lastStatus;
+
+        protected override void OnPrefabInit()
+        {
+            base.OnPrefabInit();
+            simRenderLoadBalance = true;
+        }
 
         protected override void OnSpawn()
         {
@@ -51,10 +58,12 @@ namespace StorageNetwork.Components
 
             RefreshLiquidInputPortStatus();
             Subscribe((int)GameHashes.CopySettings, OnCopySettingsDelegate);
+            StorageNetworkInputTargetReservationService.Invalidate();
         }
 
         protected override void OnCleanUp()
         {
+            StorageNetworkInputTargetReservationService.Invalidate();
             RemoveLiquidInputPortStatus();
             base.OnCleanUp();
         }
@@ -88,13 +97,15 @@ namespace StorageNetwork.Components
                 return;
             }
 
+            StorageNetworkPerformanceCounters.RecordPortRequestAttempt(gameObject.GetInstanceID());
             StorageTransferResult result = NetworkStorageTransferService.TransferStoredFluidsToNetwork(
                 storage,
-                new[] { storage },
+                null,
                 ConduitType.Liquid,
                 specificTarget: CurrentInputStoreMode == StorageNetworkMaterialRequester.OutputStoreMode.SpecificStorage
                     ? ResolveInputStorage()
-                    : null);
+                    : null,
+                workspace: transferWorkspace);
 
             lastStatus = FormatInputStoreStatus(result);
             retryTimer = result.MovedKg > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ? 0f : EmptyRetrySeconds;

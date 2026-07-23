@@ -66,8 +66,6 @@ namespace StorageNetwork.Components
         private LogicPorts logicPorts = null;
 
         private int startupRefreshTicks;
-        private bool forceInventorySnapshot;
-        private static readonly Dictionary<int, LogicDiyInventoryCacheEntry> sharedInventoryCache = new Dictionary<int, LogicDiyInventoryCacheEntry>();
         private readonly Dictionary<string, float> timerElapsedByNode = new Dictionary<string, float>();
         private readonly HashSet<string> timerPulseNodes = new HashSet<string>();
         private readonly Dictionary<string, int> cycleIndexByNode = new Dictionary<string, int>();
@@ -124,6 +122,7 @@ namespace StorageNetwork.Components
         protected override void OnPrefabInit()
         {
             base.OnPrefabInit();
+            simRenderLoadBalance = true;
             Subscribe((int)GameHashes.CopySettings, OnCopySettingsDelegate);
         }
 
@@ -268,15 +267,7 @@ namespace StorageNetwork.Components
 
         private void EvaluateWithForcedSnapshot()
         {
-            try
-            {
-                forceInventorySnapshot = true;
-                EvaluateConditionOutput();
-            }
-            finally
-            {
-                forceInventorySnapshot = false;
-            }
+            EvaluateConditionOutput();
         }
 
         public void EvaluateConditionOutput()
@@ -326,8 +317,7 @@ namespace StorageNetwork.Components
             }
 
             int worldId = gameObject != null ? gameObject.GetMyWorldId() : -1;
-            StorageSceneSnapshot snapshot = StorageSceneCollector.CollectForWorld(worldId, force: true);
-            return snapshot == null || !snapshot.NetworkOnline;
+            return !StorageSceneRegistry.HasOnlineCoreInWorld(worldId);
         }
 
         private void EnsureRuntimeBlueprintForLegacyState()
@@ -1213,38 +1203,39 @@ namespace StorageNetwork.Components
 
         private float GetNetworkFillPercent()
         {
-            int worldId = gameObject != null ? gameObject.GetMyWorldId() : -1;
-            StorageSceneSnapshot snapshot = StorageSceneCollector.CollectForWorld(worldId, force: forceInventorySnapshot);
-            if (snapshot == null || !snapshot.NetworkOnline || snapshot.TotalCapacityKg <= 0f)
+            StorageNetworkInventoryMetrics metrics = GetCurrentInventoryMetrics();
+            if (!metrics.NetworkOnline || metrics.TotalCapacityKg <= 0f)
             {
                 return 0f;
             }
 
-            return Mathf.Clamp01(snapshot.TotalStoredKg / snapshot.TotalCapacityKg) * 100f;
+            return Mathf.Clamp01(metrics.TotalStoredKg / metrics.TotalCapacityKg) * 100f;
         }
 
         private float GetNetworkStoredKg()
         {
-            StorageSceneSnapshot snapshot = GetCurrentStorageSnapshot();
-            return snapshot == null || !snapshot.NetworkOnline ? 0f : Mathf.Max(0f, snapshot.TotalStoredKg);
+            StorageNetworkInventoryMetrics metrics = GetCurrentInventoryMetrics();
+            return metrics.NetworkOnline ? Mathf.Max(0f, metrics.TotalStoredKg) : 0f;
         }
 
         private float GetNetworkRemainingKg()
         {
-            StorageSceneSnapshot snapshot = GetCurrentStorageSnapshot();
-            return snapshot == null || !snapshot.NetworkOnline ? 0f : Mathf.Max(0f, snapshot.TotalCapacityKg - snapshot.TotalStoredKg);
+            StorageNetworkInventoryMetrics metrics = GetCurrentInventoryMetrics();
+            return metrics.NetworkOnline
+                ? Mathf.Max(0f, metrics.TotalCapacityKg - metrics.TotalStoredKg)
+                : 0f;
         }
 
         private float GetNetworkCapacityKg()
         {
-            StorageSceneSnapshot snapshot = GetCurrentStorageSnapshot();
-            return snapshot == null || !snapshot.NetworkOnline ? 0f : Mathf.Max(0f, snapshot.TotalCapacityKg);
+            StorageNetworkInventoryMetrics metrics = GetCurrentInventoryMetrics();
+            return metrics.NetworkOnline ? Mathf.Max(0f, metrics.TotalCapacityKg) : 0f;
         }
 
-        private StorageSceneSnapshot GetCurrentStorageSnapshot()
+        private StorageNetworkInventoryMetrics GetCurrentInventoryMetrics()
         {
             int worldId = gameObject != null ? gameObject.GetMyWorldId() : -1;
-            return StorageSceneCollector.CollectForWorld(worldId, force: forceInventorySnapshot);
+            return StorageNetworkInventoryIndexService.GetMetrics(worldId, true, allowStaleContent: true);
         }
 
         private float GetNetworkPowerPercent()
@@ -1523,64 +1514,13 @@ namespace StorageNetwork.Components
         private float GetNetworkItemAmountKg(string itemKey)
         {
             int worldId = gameObject != null ? gameObject.GetMyWorldId() : -1;
-            LogicDiyInventoryCacheEntry cache = GetSharedInventoryCache(worldId);
-            if (!forceInventorySnapshot && cache.Amounts.TryGetValue(itemKey ?? string.Empty, out float cachedAmount))
-            {
-                return cachedAmount;
-            }
-
-            StorageSceneSnapshot snapshot = cache.Snapshot;
-            if (snapshot?.Storages == null || !snapshot.NetworkOnline)
-            {
-                return 0f;
-            }
-
-            float amount = 0f;
-            foreach (StorageInfo info in snapshot.Storages)
-            {
-                if (info?.StoredItems == null)
-                {
-                    continue;
-                }
-
-                foreach (GameObject item in info.StoredItems)
-                {
-                    if (item != null && StorageItemUtility.GetStoredItemKey(item) == itemKey)
-                    {
-                        amount += StorageItemUtility.GetMass(item);
-                    }
-                }
-            }
-
-            if (!forceInventorySnapshot)
-            {
-                cache.Amounts[itemKey ?? string.Empty] = amount;
-            }
-            return amount;
-        }
-
-        private LogicDiyInventoryCacheEntry GetSharedInventoryCache(int worldId)
-        {
-            if (forceInventorySnapshot || !sharedInventoryCache.TryGetValue(worldId, out LogicDiyInventoryCacheEntry cache) || cache.Frame != Time.frameCount)
-            {
-                cache = new LogicDiyInventoryCacheEntry
-                {
-                    Frame = Time.frameCount,
-                    Snapshot = StorageSceneCollector.CollectForWorld(worldId, force: forceInventorySnapshot)
-                };
-                if (!forceInventorySnapshot)
-                {
-                    sharedInventoryCache[worldId] = cache;
-                }
-            }
-            return cache;
-        }
-
-        private sealed class LogicDiyInventoryCacheEntry
-        {
-            public int Frame;
-            public StorageSceneSnapshot Snapshot;
-            public readonly Dictionary<string, float> Amounts = new Dictionary<string, float>();
+            return string.IsNullOrEmpty(itemKey)
+                ? 0f
+                : StorageNetworkInventoryIndexService.GetMass(
+                    worldId,
+                    true,
+                    new Tag(itemKey),
+                    allowStaleContent: true);
         }
 
         private void ClampOutputValue()
@@ -1947,12 +1887,12 @@ namespace StorageNetwork.Components
 
         internal WebEditorNetworkMetrics GetWebEditorNetworkMetrics()
         {
-            StorageSceneSnapshot storage = GetCurrentStorageSnapshot();
+            StorageNetworkInventoryMetrics storage = GetCurrentInventoryMetrics();
             StorageNetworkPowerSnapshot power = GetCurrentPowerSnapshot();
             return new WebEditorNetworkMetrics
             {
-                TotalStoredKg = storage == null || !storage.NetworkOnline ? 0f : storage.TotalStoredKg,
-                TotalCapacityKg = storage == null || !storage.NetworkOnline ? 0f : storage.TotalCapacityKg,
+                TotalStoredKg = !storage.NetworkOnline ? 0f : storage.TotalStoredKg,
+                TotalCapacityKg = !storage.NetworkOnline ? 0f : storage.TotalCapacityKg,
                 PowerStoredJoules = power.NetworkOnline ? power.StoredJoules : 0f,
                 PowerCapacityJoules = power.NetworkOnline ? power.CapacityJoules : 0f,
                 PowerRemainingJoules = power.NetworkOnline ? power.AvailableCapacityJoules : 0f,
@@ -1964,7 +1904,7 @@ namespace StorageNetwork.Components
         {
             Dictionary<string, WebEditorMaterialAccumulator> totals = new Dictionary<string, WebEditorMaterialAccumulator>();
             int worldId = gameObject != null ? gameObject.GetMyWorldId() : -1;
-            StorageSceneSnapshot snapshot = StorageSceneCollector.CollectForWorld(worldId, force: forceInventorySnapshot);
+            StorageSceneSnapshot snapshot = StorageSceneCollector.CollectForWorld(worldId);
             if (snapshot?.Storages == null || !snapshot.NetworkOnline)
             {
                 return new List<WebEditorMaterialOption>();
