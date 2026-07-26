@@ -370,6 +370,9 @@ Managed/
 templates/
 docs/
 
+# Local StorageNetwork test harness (not part of the mod source tree)
+StorageNetwork.Tests/
+
 # Game animation/asset folders
 **/anim/
 !TutorialCase/FoodandFoodBuffTutorialCase/anim/
