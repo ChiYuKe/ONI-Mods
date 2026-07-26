@@ -19,6 +19,8 @@ namespace StorageNetwork.Services
             bool preferColdStorageForFood = false,
             StorageNetworkTransferWorkspace workspace = null)
         {
+            using (StorageNetworkFrameProfileTool.BeginWork())
+            {
             if (source == null || source.items == null)
             {
                 return StorageTransferResult.Idle;
@@ -74,6 +76,7 @@ namespace StorageNetwork.Services
             }
 
             return new StorageTransferResult(totalMoved, blockedItem);
+            }
         }
 
         public static StorageTransferResult TransferStoredFluidsToNetwork(
@@ -83,6 +86,8 @@ namespace StorageNetwork.Services
             Storage specificTarget = null,
             StorageNetworkTransferWorkspace workspace = null)
         {
+            using (StorageNetworkFrameProfileTool.BeginWork())
+            {
             if (source == null || source.items == null)
             {
                 return StorageTransferResult.Idle;
@@ -134,6 +139,7 @@ namespace StorageNetwork.Services
             }
 
             return new StorageTransferResult(totalMoved, blockedItem);
+            }
         }
 
         public static StorageTransferResult TransferLooseItemToNetwork(
@@ -241,6 +247,8 @@ namespace StorageNetwork.Services
             Storage specificSource = null,
             StorageNetworkTransferWorkspace workspace = null)
         {
+            using (StorageNetworkFrameProfileTool.BeginWork())
+            {
             if (tags == null ||
                 destination == null ||
                 amount <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ||
@@ -323,6 +331,7 @@ namespace StorageNetwork.Services
             }
 
             return moved;
+            }
         }
 
         public static float TransferMatchingItemsFromStorage(
@@ -487,6 +496,8 @@ namespace StorageNetwork.Services
             IEnumerable<Tag> allowedTags = null,
             StorageNetworkTransferWorkspace workspace = null)
         {
+            using (StorageNetworkFrameProfileTool.BeginWork())
+            {
             if (destination == null ||
                 amount <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ||
                 destination.RemainingCapacity() <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
@@ -514,10 +525,8 @@ namespace StorageNetwork.Services
                 specificSource,
                 workspace.Sources,
                 allowStaleContent: true);
-            IEnumerable<Storage> sources = EnumerateIndexedSourcesWithLiveFallback(
+            IEnumerable<Storage> sources = EnumerateIndexedSources(
                 workspace.Sources,
-                destinationWorldId,
-                specificSource,
                 workspace);
 
             float moved = 0f;
@@ -592,6 +601,7 @@ namespace StorageNetwork.Services
             return moved > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT
                 ? new StorageTransferResult(moved, null)
                 : StorageTransferResult.Blocked(blockedItem ?? GameTags.Solid.ProperName());
+            }
         }
 
         private static bool IsPortReservedItem(GameObject item)
@@ -615,6 +625,8 @@ namespace StorageNetwork.Services
             string fallbackBlockedItem,
             StorageNetworkTransferWorkspace workspace)
         {
+            using (StorageNetworkFrameProfileTool.BeginWork())
+            {
             if (destination == null ||
                 amount <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ||
                 destination.RemainingCapacity() <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
@@ -642,10 +654,8 @@ namespace StorageNetwork.Services
                 specificSource,
                 workspace.Sources,
                 allowStaleContent: true);
-            IEnumerable<Storage> sources = EnumerateIndexedSourcesWithLiveFallback(
+            IEnumerable<Storage> sources = EnumerateIndexedSources(
                 workspace.Sources,
-                destinationWorldId,
-                specificSource,
                 workspace);
 
             float moved = 0f;
@@ -716,12 +726,11 @@ namespace StorageNetwork.Services
             return moved > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT
                 ? new StorageTransferResult(moved, null)
                 : StorageTransferResult.Blocked(blockedItem ?? fallbackBlockedItem);
+            }
         }
 
-        private static IEnumerable<Storage> EnumerateIndexedSourcesWithLiveFallback(
+        private static IEnumerable<Storage> EnumerateIndexedSources(
             IEnumerable<Storage> indexedSources,
-            int worldId,
-            Storage specificSource,
             StorageNetworkTransferWorkspace workspace)
         {
             workspace = GetWorkspace(workspace);
@@ -735,19 +744,6 @@ namespace StorageNetwork.Services
                     {
                         yield return source;
                     }
-                }
-            }
-
-            if (specificSource != null)
-            {
-                yield break;
-            }
-
-            foreach (Storage source in StorageSceneCollector.CollectLightweightForWorld(worldId).Storages)
-            {
-                if (source != null && yielded.Add(source))
-                {
-                    yield return source;
                 }
             }
         }

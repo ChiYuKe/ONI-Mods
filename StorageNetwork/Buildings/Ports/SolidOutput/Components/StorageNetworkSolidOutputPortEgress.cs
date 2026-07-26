@@ -232,16 +232,10 @@ namespace StorageNetwork.Components
                 return null;
             }
 
-            foreach (Storage source in StorageSceneCollector.CollectLightweightForWorld(GetWorldId()).Storages)
-            {
-                if (StorageNetworkStorageRules.IsNetworkStorageTarget(source, storage) &&
-                    GetStorageInstanceId(source) == SourceStorageInstanceId)
-                {
-                    return source;
-                }
-            }
-
-            return null;
+            return StorageSceneRegistry.TryGetReachableStorage(SourceStorageInstanceId, GetWorldId(), out Storage source) &&
+                   StorageNetworkStorageRules.IsNetworkStorageTarget(source, storage)
+                ? source
+                : null;
         }
 
         public void SetOutputLimitEnabled(bool enabled)

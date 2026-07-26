@@ -8,7 +8,10 @@ namespace StorageNetwork.Services
     internal static class StorageNetworkSourceIndexService
     {
         private const float SourceIndexTtlSeconds = 2f;
-        private const float HotContentRefreshSeconds = 0.25f;
+        // Port transfer callers explicitly allow short-lived stale content. Keep
+        // this aligned with the lightweight scene snapshot cache to amortize
+        // repeated source-index rebuilds during high-frequency port requests.
+        private const float HotContentRefreshSeconds = 0.5f;
         private static readonly Dictionary<SourceIndexKey, SourceIndexSnapshot> Snapshots = new Dictionary<SourceIndexKey, SourceIndexSnapshot>();
         private static readonly List<SourceIndexKey> ExpiredSnapshotKeys = new List<SourceIndexKey>();
         private static int cachedRegistryVersion = -1;
@@ -111,7 +114,10 @@ namespace StorageNetwork.Services
                 return snapshot;
             }
 
-            snapshot = BuildSnapshot(worldId, includeReachableWorlds, snapshot);
+            using (StorageNetworkFrameProfileTool.BeginWork())
+            {
+                snapshot = BuildSnapshot(worldId, includeReachableWorlds, snapshot);
+            }
             snapshot.ContentVersion = contentVersion;
             Snapshots[key] = snapshot;
             return snapshot;
@@ -424,6 +430,29 @@ namespace StorageNetwork.Services
                     return;
                 }
 
+                // Most port transfers query a single material/category tag. The source list
+                // for each tag is already sorted in Complete(), so rebuilding the temporary
+                // merge dictionary and sorting it again only adds work to every port tick.
+                if (TryGetSingleTag(tags, out Tag singleTag))
+                {
+                    if (!sourcesByTag.TryGetValue(singleTag, out List<StorageAmount> singleTagSources))
+                    {
+                        return;
+                    }
+
+                    foreach (StorageAmount source in singleTagSources)
+                    {
+                        Storage storage = source.Storage;
+                        if (StorageSceneRegistry.IsLive(storage) &&
+                            (excludedStorages == null || !excludedStorages.Contains(storage)))
+                        {
+                            result.Add(storage);
+                        }
+                    }
+
+                    return;
+                }
+
                 bestAmounts.Clear();
                 foreach (Tag tag in tags)
                 {
@@ -463,6 +492,29 @@ namespace StorageNetwork.Services
                 {
                     result.Add(pair.Key);
                 }
+            }
+
+            private static bool TryGetSingleTag(IEnumerable<Tag> tags, out Tag singleTag)
+            {
+                singleTag = Tag.Invalid;
+                bool found = false;
+                foreach (Tag tag in tags)
+                {
+                    if (tag == Tag.Invalid)
+                    {
+                        continue;
+                    }
+
+                    if (found)
+                    {
+                        return false;
+                    }
+
+                    singleTag = tag;
+                    found = true;
+                }
+
+                return found;
             }
         }
     }

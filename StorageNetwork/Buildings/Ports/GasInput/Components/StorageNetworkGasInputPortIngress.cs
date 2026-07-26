@@ -30,6 +30,7 @@ namespace StorageNetwork.Components
 
         private Guid gasInputPortStatusHandle = Guid.Empty;
         private float retryTimer;
+        private float flushElapsed;
         private string lastStatus;
         private string cachedStatusText;
         private readonly StorageNetworkTransferWorkspace transferWorkspace = new StorageNetworkTransferWorkspace();
@@ -86,9 +87,19 @@ namespace StorageNetwork.Components
 
             if (storage.items == null || storage.items.Count == 0)
             {
+                flushElapsed = 0f;
                 lastStatus = Loc.Get(Loc.UI.STORAGE_NETWORK.MATERIAL_STATUS_WAITING_CONTENTS);
                 retryTimer = EmptyRetrySeconds;
                 UpdateCachedStatusText();
+                return;
+            }
+
+            flushElapsed += dt;
+            if (!StorageNetworkPortTransferPolicy.ShouldFlushInput(
+                    storage.MassStored(),
+                    storage.Capacity(),
+                    flushElapsed))
+            {
                 return;
             }
 
@@ -104,6 +115,10 @@ namespace StorageNetwork.Components
 
             lastStatus = FormatInputStoreStatus(result);
             retryTimer = result.MovedKg > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ? 0f : EmptyRetrySeconds;
+            if (result.MovedKg > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+            {
+                flushElapsed = 0f;
+            }
             UpdateCachedStatusText();
         }
 
@@ -128,16 +143,10 @@ namespace StorageNetwork.Components
                 return null;
             }
 
-            foreach (Storage target in StorageSceneCollector.CollectLightweightForWorld(GetWorldId()).Storages)
-            {
-                if (StorageNetworkStorageRules.IsNetworkStorageTarget(target, storage) &&
-                    GetStorageInstanceId(target) == InputStorageInstanceId)
-                {
-                    return target;
-                }
-            }
-
-            return null;
+            return StorageSceneRegistry.TryGetReachableStorage(InputStorageInstanceId, GetWorldId(), out Storage target) &&
+                   StorageNetworkStorageRules.IsNetworkStorageTarget(target, storage)
+                ? target
+                : null;
         }
 
         private void OnCopySettings(object data)
@@ -156,6 +165,7 @@ namespace StorageNetwork.Components
             InputStorageInstanceId = source.InputStorageInstanceId;
             StorageNetworkFilterCopyHelper.CopyFilters(gameObject, sourceObject);
             retryTimer = 0f;
+            flushElapsed = 0f;
             lastStatus = string.Empty;
             cachedStatusText = null;
         }

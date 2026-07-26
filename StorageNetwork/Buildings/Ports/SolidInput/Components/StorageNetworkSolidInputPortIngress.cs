@@ -42,6 +42,7 @@ namespace StorageNetwork.Components
         private Guid solidInputPortStatusHandle = Guid.Empty;
         private FilteredStorage filteredStorage;
         private float retryTimer;
+        private float flushElapsed;
         private string lastStatus;
         private string cachedStatusText;
         private bool shouldMigrateManualOperation;
@@ -132,6 +133,7 @@ namespace StorageNetwork.Components
             {
                 // 用户关闭了输入：将缓存物品退回网络，撤销 FilteredStorage 阻止新送货
                 wasInputEnabled = false;
+                flushElapsed = 0f;
                 if (storage.items != null && storage.items.Count > 0)
                 {
                     StorageNetworkPerformanceCounters.RecordPortRequestAttempt(gameObject.GetInstanceID());
@@ -158,6 +160,7 @@ namespace StorageNetwork.Components
                 EnsureFilteredStorage();
                 filteredStorage?.FilterChanged();
                 retryTimer = 0f;
+                flushElapsed = 0f;
                 // 继续执行正常传输逻辑
             }
 
@@ -174,9 +177,19 @@ namespace StorageNetwork.Components
 
             if (storage.items == null || storage.items.Count == 0)
             {
+                flushElapsed = 0f;
                 lastStatus = Loc.Get(Loc.UI.STORAGE_NETWORK.MATERIAL_STATUS_WAITING_CONTENTS);
                 retryTimer = EmptyRetrySeconds;
                 UpdateCachedStatusText();
+                return;
+            }
+
+            flushElapsed += dt;
+            if (!StorageNetworkPortTransferPolicy.ShouldFlushInput(
+                    StorageItemUtility.GetStoredMass(storage),
+                    storage.Capacity(),
+                    flushElapsed))
+            {
                 return;
             }
 
@@ -199,6 +212,10 @@ namespace StorageNetwork.Components
 
             lastStatus = FormatInputStoreStatus(result);
             retryTimer = result.MovedKg > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ? 0f : EmptyRetrySeconds;
+            if (result.MovedKg > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+            {
+                flushElapsed = 0f;
+            }
             UpdateCachedStatusText();
         }
 
@@ -251,16 +268,10 @@ namespace StorageNetwork.Components
                 return null;
             }
 
-            foreach (Storage target in StorageSceneCollector.CollectLightweightForWorld(GetWorldId()).Storages)
-            {
-                if (StorageNetworkStorageRules.IsNetworkStorageTarget(target, storage) &&
-                    GetStorageInstanceId(target) == InputStorageInstanceId)
-                {
-                    return target;
-                }
-            }
-
-            return null;
+            return StorageSceneRegistry.TryGetReachableStorage(InputStorageInstanceId, GetWorldId(), out Storage target) &&
+                   StorageNetworkStorageRules.IsNetworkStorageTarget(target, storage)
+                ? target
+                : null;
         }
 
         private void OnCopySettings(object data)

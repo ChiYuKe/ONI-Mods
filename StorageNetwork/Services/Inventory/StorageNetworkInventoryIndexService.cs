@@ -9,7 +9,10 @@ namespace StorageNetwork.Services
     internal static class StorageNetworkInventoryIndexService
     {
         private const float InventoryIndexTtlSeconds = 5f;
-        private const float HotContentRefreshSeconds = 0.25f;
+        // Port and automation callers explicitly allow short-lived stale content.
+        // Match the lightweight scene snapshot cache so rapid transfers do not
+        // force a full inventory rebuild twice inside the same scene-cache window.
+        private const float HotContentRefreshSeconds = 0.5f;
         private static readonly Dictionary<InventoryIndexKey, InventoryIndexSnapshot> Snapshots = new Dictionary<InventoryIndexKey, InventoryIndexSnapshot>();
         private static readonly List<InventoryIndexKey> ExpiredSnapshotKeys = new List<InventoryIndexKey>();
         private static int cachedRegistryVersion = -1;
@@ -164,7 +167,10 @@ namespace StorageNetwork.Services
                 return snapshot;
             }
 
-            snapshot = BuildSnapshot(worldId, includeRelatedWorlds, snapshot);
+            using (StorageNetworkFrameProfileTool.BeginWork())
+            {
+                snapshot = BuildSnapshot(worldId, includeRelatedWorlds, snapshot);
+            }
             snapshot.ContentVersion = contentVersion;
             Snapshots[key] = snapshot;
             StorageNetworkPerformanceCounters.RecordInventoryIndexRebuild();

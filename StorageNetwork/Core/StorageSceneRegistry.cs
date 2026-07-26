@@ -8,6 +8,7 @@ namespace StorageNetwork.Core
     public static class StorageSceneRegistry
     {
         private static readonly HashSet<Storage> Storages = new HashSet<Storage>();
+        private static readonly Dictionary<int, Storage> StoragesByPrefabInstanceId = new Dictionary<int, Storage>();
         private static readonly HashSet<Geyser> Geysers = new HashSet<Geyser>();
         private static readonly HashSet<StorageNetworkEnrollment> Enrollments = new HashSet<StorageNetworkEnrollment>();
         private static readonly HashSet<StorageNetworkCore> Cores = new HashSet<StorageNetworkCore>();
@@ -26,6 +27,7 @@ namespace StorageNetwork.Core
         {
             StorageNetworkParticleStorageService.Reset();
             Storages.Clear();
+            StoragesByPrefabInstanceId.Clear();
             Geysers.Clear();
             Enrollments.Clear();
             Cores.Clear();
@@ -50,6 +52,7 @@ namespace StorageNetwork.Core
             if (storage != null)
             {
                 changed |= Storages.Add(storage);
+                AddStorageLookup(storage);
             }
 
             Geyser geyser = gameObject.GetComponent<Geyser>();
@@ -100,6 +103,7 @@ namespace StorageNetwork.Core
             if (storage != null)
             {
                 changed |= Storages.Remove(storage);
+                RemoveStorageLookup(storage);
             }
 
             Geyser geyser = gameObject.GetComponent<Geyser>();
@@ -142,6 +146,59 @@ namespace StorageNetwork.Core
         {
             PruneDeadEntriesThrottled();
             return Storages;
+        }
+
+        internal static bool TryGetStorage(int prefabInstanceId, out Storage storage)
+        {
+            storage = null;
+            if (prefabInstanceId == KPrefabID.InvalidInstanceID)
+            {
+                return false;
+            }
+
+            PruneDeadEntriesThrottled();
+            if (StoragesByPrefabInstanceId.TryGetValue(prefabInstanceId, out storage) && IsLive(storage))
+            {
+                return true;
+            }
+
+            // Registration can occur before a KPrefabID receives its persisted
+            // instance ID. Recover once without making the steady-state lookup
+            // pay a scene-wide enumeration cost.
+            foreach (Storage candidate in Storages)
+            {
+                if (!IsLive(candidate))
+                {
+                    continue;
+                }
+
+                KPrefabID prefabId = candidate.GetComponent<KPrefabID>();
+                if (prefabId != null && prefabId.InstanceID == prefabInstanceId)
+                {
+                    StoragesByPrefabInstanceId[prefabInstanceId] = candidate;
+                    storage = candidate;
+                    return true;
+                }
+            }
+
+            storage = null;
+            return false;
+        }
+
+        internal static bool TryGetReachableStorage(int prefabInstanceId, int worldId, out Storage storage)
+        {
+            if (!TryGetStorage(prefabInstanceId, out storage))
+            {
+                return false;
+            }
+
+            if (worldId < 0 || storage.gameObject.GetMyWorldId() == worldId || IsCrossPlanetRelayOnline())
+            {
+                return true;
+            }
+
+            storage = null;
+            return false;
         }
 
         public static IReadOnlyCollection<Geyser> GetGeysers()
@@ -250,6 +307,7 @@ namespace StorageNetwork.Core
                 if (storage != null)
                 {
                     changed |= Storages.Add(storage);
+                    AddStorageLookup(storage);
                     StorageNetworkEnrollment enrollment = storage.GetComponent<StorageNetworkEnrollment>();
                     if (enrollment != null)
                     {
@@ -335,7 +393,37 @@ namespace StorageNetwork.Core
             changed |= PowerStorages.RemoveWhere(powerStorage => !IsLive(powerStorage)) > 0;
             if (changed)
             {
+                RebuildStorageLookup();
                 Invalidate();
+            }
+        }
+
+        private static void AddStorageLookup(Storage storage)
+        {
+            KPrefabID prefabId = storage != null ? storage.GetComponent<KPrefabID>() : null;
+            if (prefabId != null && prefabId.InstanceID != KPrefabID.InvalidInstanceID)
+            {
+                StoragesByPrefabInstanceId[prefabId.InstanceID] = storage;
+            }
+        }
+
+        private static void RemoveStorageLookup(Storage storage)
+        {
+            KPrefabID prefabId = storage != null ? storage.GetComponent<KPrefabID>() : null;
+            if (prefabId != null &&
+                StoragesByPrefabInstanceId.TryGetValue(prefabId.InstanceID, out Storage registered) &&
+                registered == storage)
+            {
+                StoragesByPrefabInstanceId.Remove(prefabId.InstanceID);
+            }
+        }
+
+        private static void RebuildStorageLookup()
+        {
+            StoragesByPrefabInstanceId.Clear();
+            foreach (Storage storage in Storages)
+            {
+                AddStorageLookup(storage);
             }
         }
 
