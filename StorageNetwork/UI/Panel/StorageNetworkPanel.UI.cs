@@ -30,7 +30,8 @@ namespace StorageNetwork.UI
             Sprite titleIcon = null,
             Color? titleIconColor = null,
             IEnumerable<StorageNetworkStorageRowButton> extraButtons = null,
-            Storage storageButtonContext = null)
+            Storage storageButtonContext = null,
+            bool extraButtonsBeforeAction = false)
         {
             GameObject header = CreateBox("Header", parent, backgroundColor);
             header.AddComponent<LayoutElement>().preferredHeight = 34f;
@@ -77,6 +78,11 @@ namespace StorageNetwork.UI
                 info.gameObject.AddComponent<LayoutElement>().preferredWidth = 150f;
             }
 
+            if (extraButtonsBeforeAction)
+            {
+                CreateStorageRowExtraButtons(header, extraButtons, storageButtonContext);
+            }
+
             if (!string.IsNullOrEmpty(actionText) && actionClick != null)
             {
                 GameObject actionButton = CreateGameButton("HeaderActionButton", header.transform, actionText, actionClick);
@@ -85,12 +91,9 @@ namespace StorageNetwork.UI
                 actionLayout.preferredHeight = 20f;
             }
 
-            if (extraButtons != null)
+            if (!extraButtonsBeforeAction)
             {
-                foreach (StorageNetworkStorageRowButton descriptor in extraButtons.OrderBy(button => button.Order).ThenBy(button => button.Id))
-                {
-                    CreateStorageRowExtraButton(header, descriptor, storageButtonContext);
-                }
+                CreateStorageRowExtraButtons(header, extraButtons, storageButtonContext);
             }
 
             TextMeshProUGUI amount = CreateText("Amount", header.transform, amountText, fontSize, TextAlignmentOptions.MidlineRight);
@@ -98,6 +101,22 @@ namespace StorageNetwork.UI
             amount.gameObject.AddComponent<LayoutElement>().preferredWidth = amountWidth;
 
             return header;
+        }
+
+        private void CreateStorageRowExtraButtons(
+            GameObject rowHeader,
+            IEnumerable<StorageNetworkStorageRowButton> extraButtons,
+            Storage storage)
+        {
+            if (extraButtons == null)
+            {
+                return;
+            }
+
+            foreach (StorageNetworkStorageRowButton descriptor in extraButtons.OrderBy(button => button.Order).ThenBy(button => button.Id))
+            {
+                CreateStorageRowExtraButton(rowHeader, descriptor, storage);
+            }
         }
 
         private void CreateStorageRowExtraButton(GameObject rowHeader, StorageNetworkStorageRowButton descriptor, Storage storage)

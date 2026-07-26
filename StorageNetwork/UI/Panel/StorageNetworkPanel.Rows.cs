@@ -199,6 +199,18 @@ namespace StorageNetwork.UI
 
             List<StorageNetwork.API.StorageNetworkStorageRowButton> extraButtons =
                 StorageNetworkInterfaceResolver.GetStorageRowButtons(storage).ToList();
+            if (StorageNetworkStorageRules.IsNetworkPortStorage(storage))
+            {
+                extraButtons.Add(new StorageNetwork.API.StorageNetworkStorageRowButton(
+                    "storage_network.locate_port",
+                    string.Empty,
+                    context => LocatePortInScene(context.Storage),
+                    Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LOCATE_TARGET_TOOLTIP),
+                    "action_follow_cam",
+                    Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TARGET_FALLBACK),
+                    width: 28f,
+                    order: -100));
+            }
 
             CreateFoldoutHeader(
                 row.transform,
@@ -222,7 +234,8 @@ namespace StorageNetwork.UI
                 null,
                 null,
                 extraButtons,
-                storage);
+                storage,
+                extraButtonsBeforeAction: true);
 
             RegisterStorageDropTarget(row, storage);
 
@@ -288,6 +301,17 @@ namespace StorageNetwork.UI
             ContentSizeFitter fitter = details.AddComponent<ContentSizeFitter>();
             fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
             row.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        }
+
+        private void LocatePortInScene(Storage storage)
+        {
+            if (storage == null)
+            {
+                return;
+            }
+
+            Close();
+            FocusStorage(storage);
         }
 
         private void CreateInfoRow(string title, string details)

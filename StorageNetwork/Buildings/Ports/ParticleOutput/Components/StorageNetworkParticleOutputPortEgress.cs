@@ -166,7 +166,10 @@ namespace StorageNetwork.Components
 
         public void Sim1000ms(float dt)
         {
-            if (!OutputRequestEnabled || IsOutputLimitReached() || operational != null && !operational.IsOperational)
+            if (building == null ||
+                !OutputRequestEnabled ||
+                IsOutputLimitReached() ||
+                operational != null && !operational.IsOperational)
             {
                 return;
             }
