@@ -17,6 +17,9 @@ namespace StorageNetwork.Core
         private static long currentFrameAllocatedBytes;
         private static int frameProfilerEnabled;
 
+        [ThreadStatic]
+        private static int workScopeDepth;
+
         public static void RecordWork(long elapsedTicks, long allocatedBytes)
         {
             if (Volatile.Read(ref frameProfilerEnabled) == 0)
@@ -33,6 +36,26 @@ namespace StorageNetwork.Core
             {
                 Interlocked.Add(ref currentFrameAllocatedBytes, allocatedBytes);
             }
+        }
+
+        /// <summary>
+        /// Measures a known hot path without patching every method in the assembly.
+        /// Nested scopes contribute only their outermost duration so callers can
+        /// safely instrument transfer, index, and scene work independently.
+        /// </summary>
+        public static WorkScope BeginWork()
+        {
+            if (Volatile.Read(ref frameProfilerEnabled) == 0)
+            {
+                return default;
+            }
+
+            bool isRoot = workScopeDepth++ == 0;
+            return new WorkScope(
+                true,
+                isRoot,
+                isRoot ? Stopwatch.GetTimestamp() : 0L,
+                isRoot ? GetAllocatedBytesForCurrentThread() : 0L);
         }
 
         public static void SetModPath(string path)
@@ -63,6 +86,7 @@ namespace StorageNetwork.Core
             Volatile.Write(ref frameProfilerEnabled, 0);
             Interlocked.Exchange(ref currentFrameWorkTicks, 0L);
             Interlocked.Exchange(ref currentFrameAllocatedBytes, 0L);
+            workScopeDepth = 0;
             FrameProfileBehaviour profiler = Game.Instance != null
                 ? Game.Instance.gameObject.GetComponent<FrameProfileBehaviour>()
                 : null;
@@ -88,6 +112,61 @@ namespace StorageNetwork.Core
             catch
             {
                 return string.Empty;
+            }
+        }
+
+        private static void EndWork(bool isRoot, long startedTicks, long startedAllocatedBytes)
+        {
+            workScopeDepth = Math.Max(0, workScopeDepth - 1);
+            if (!isRoot)
+            {
+                return;
+            }
+
+            long elapsedTicks = Stopwatch.GetTimestamp() - startedTicks;
+            long allocatedBytes = Math.Max(
+                0L,
+                GetAllocatedBytesForCurrentThread() - startedAllocatedBytes);
+            RecordWork(elapsedTicks, allocatedBytes);
+        }
+
+        private static long GetAllocatedBytesForCurrentThread()
+        {
+            try
+            {
+                return GC.GetAllocatedBytesForCurrentThread();
+            }
+            catch (MissingMethodException)
+            {
+                return 0L;
+            }
+            catch (NotSupportedException)
+            {
+                return 0L;
+            }
+        }
+
+        internal readonly struct WorkScope : IDisposable
+        {
+            private readonly bool active;
+            private readonly bool isRoot;
+            private readonly long startedTicks;
+            private readonly long startedAllocatedBytes;
+
+            public WorkScope(bool active, bool isRoot, long startedTicks, long startedAllocatedBytes)
+            {
+                this.active = active;
+                this.isRoot = isRoot;
+                this.startedTicks = startedTicks;
+                this.startedAllocatedBytes = startedAllocatedBytes;
+            }
+
+            public void Dispose()
+            {
+                if (active)
+                {
+                    EndWork(isRoot, startedTicks, startedAllocatedBytes);
+                }
             }
         }
 
@@ -239,7 +318,7 @@ namespace StorageNetwork.Core
 
                 StorageNetworkPerformanceSnapshot counters = StorageNetworkPerformanceCounters.ConsumeSnapshot();
                 Debug.Log(string.Format(
-                    "{0} counters inventoryRebuilds={1} worldSnapshotRebuilds={2} lightweightRebuilds={3} storageInfo={4} portRequests={5} activePorts={6} sourceScans={7} fetchBridges={8} navigationChecks={9} bufferReturns={10} reservationRebuilds={11}",
+                    "{0} counters inventoryRebuilds={1} worldSnapshotRebuilds={2} lightweightRebuilds={3} storageInfo={4} portRequests={5} activePorts={6} sourceScans={7} sourceFallbackScans={8} fetchBridges={9} navigationChecks={10} bufferReturns={11} reservationRebuilds={12}",
                     LogPrefix,
                     counters.InventoryIndexRebuilds,
                     counters.CollectForWorldRebuilds,
@@ -248,6 +327,7 @@ namespace StorageNetwork.Core
                     counters.PortRequestAttempts,
                     counters.ActivePortCount,
                     counters.NetworkSourceScans,
+                    counters.NetworkSourceFallbackScans,
                     counters.FetchBridgeAttempts,
                     counters.PortNavigationChecks,
                     counters.BufferReturnAttempts,

@@ -26,6 +26,8 @@ namespace StorageNetwork.Core
         /// </summary>
         public static StorageSceneSnapshot Collect(bool force = false)
         {
+            using (StorageNetworkFrameProfileTool.BeginWork())
+            {
             StorageSceneRegistry.EnsureSceneSeeded();
             int registryVersion = StorageSceneRegistry.Version;
             bool networkOnline = StorageSceneRegistry.HasOnlineCoreInActiveWorld(out bool crossPlanetRelayOnline);
@@ -59,10 +61,13 @@ namespace StorageNetwork.Core
             cachedRegistryVersion = registryVersion;
             cachedNetworkOnline = true;
             return cachedSnapshot;
+            }
         }
 
         public static StorageSceneSnapshot CollectForWorld(int worldId, bool includeReachableWorlds = true, bool force = false)
         {
+            using (StorageNetworkFrameProfileTool.BeginWork())
+            {
             StorageSceneRegistry.EnsureSceneSeeded();
             PruneWorldCaches();
             WorldSnapshotKey key = new WorldSnapshotKey(worldId, includeReachableWorlds);
@@ -88,10 +93,13 @@ namespace StorageNetwork.Core
             WorldSnapshots[key] = new WorldSnapshotCacheEntry(snapshot, Time.frameCount, Time.unscaledTime);
             StorageNetworkPerformanceCounters.RecordCollectForWorldRebuild();
             return snapshot;
+            }
         }
 
         public static StorageSceneLightweightSnapshot CollectLightweightForWorld(int worldId, bool includeReachableWorlds = true)
         {
+            using (StorageNetworkFrameProfileTool.BeginWork())
+            {
             StorageSceneRegistry.EnsureSceneSeeded();
             PruneWorldCaches();
             WorldSnapshotKey key = new WorldSnapshotKey(worldId, includeReachableWorlds);
@@ -132,6 +140,7 @@ namespace StorageNetwork.Core
             LightweightSnapshots[key] = new LightweightSnapshotCacheEntry(snapshot, Time.frameCount, Time.unscaledTime);
             StorageNetworkPerformanceCounters.RecordLightweightSceneRebuild();
             return snapshot;
+            }
         }
 
         private static void BuildSnapshotContents(List<StorageInfo> collected, int worldId, bool crossPlanetRelayOnline)

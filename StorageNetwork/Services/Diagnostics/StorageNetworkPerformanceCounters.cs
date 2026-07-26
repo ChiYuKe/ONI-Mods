@@ -11,6 +11,7 @@ namespace StorageNetwork.Services
         private static long storageInfoConstructions;
         private static long portRequestAttempts;
         private static long networkSourceScans;
+        private static long networkSourceFallbackScans;
         private static long fetchBridgeAttempts;
         private static long portNavigationChecks;
         private static long bufferReturnAttempts;
@@ -57,6 +58,11 @@ namespace StorageNetwork.Services
             Interlocked.Increment(ref networkSourceScans);
         }
 
+        public static void RecordNetworkSourceFallbackScan()
+        {
+            Interlocked.Increment(ref networkSourceFallbackScans);
+        }
+
         public static void RecordFetchBridgeAttempt()
         {
             Interlocked.Increment(ref fetchBridgeAttempts);
@@ -93,6 +99,7 @@ namespace StorageNetwork.Services
                 Interlocked.Exchange(ref storageInfoConstructions, 0L),
                 Interlocked.Exchange(ref portRequestAttempts, 0L),
                 Interlocked.Exchange(ref networkSourceScans, 0L),
+                Interlocked.Exchange(ref networkSourceFallbackScans, 0L),
                 Interlocked.Exchange(ref fetchBridgeAttempts, 0L),
                 Interlocked.Exchange(ref portNavigationChecks, 0L),
                 Interlocked.Exchange(ref bufferReturnAttempts, 0L),
@@ -115,6 +122,7 @@ namespace StorageNetwork.Services
             long storageInfoConstructions,
             long portRequestAttempts,
             long networkSourceScans,
+            long networkSourceFallbackScans,
             long fetchBridgeAttempts,
             long portNavigationChecks,
             long bufferReturnAttempts,
@@ -127,6 +135,7 @@ namespace StorageNetwork.Services
             StorageInfoConstructions = storageInfoConstructions;
             PortRequestAttempts = portRequestAttempts;
             NetworkSourceScans = networkSourceScans;
+            NetworkSourceFallbackScans = networkSourceFallbackScans;
             FetchBridgeAttempts = fetchBridgeAttempts;
             PortNavigationChecks = portNavigationChecks;
             BufferReturnAttempts = bufferReturnAttempts;
@@ -140,6 +149,7 @@ namespace StorageNetwork.Services
         public long StorageInfoConstructions { get; }
         public long PortRequestAttempts { get; }
         public long NetworkSourceScans { get; }
+        public long NetworkSourceFallbackScans { get; }
         public long FetchBridgeAttempts { get; }
         public long PortNavigationChecks { get; }
         public long BufferReturnAttempts { get; }

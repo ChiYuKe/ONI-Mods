@@ -31,7 +31,6 @@ namespace StorageNetwork.Core
 
         public static void DumpIfEnabled()
         {
-            bool frameProfileEnabled = IsMarkerEnabled("FrameProfileTool.enabled");
             bool harmonyProfileEnabled = IsMarkerEnabled(EnableFileName);
             if (installed)
             {
@@ -39,7 +38,10 @@ namespace StorageNetwork.Core
                 return;
             }
 
-            if (!frameProfileEnabled && !harmonyProfileEnabled)
+            // Frame profiling uses explicit hot-path scopes. Broad Harmony patching
+            // remains an opt-in diagnostic because it otherwise changes the timing
+            // of thousands of methods that the profiler is meant to measure.
+            if (!harmonyProfileEnabled)
             {
                 return;
             }
