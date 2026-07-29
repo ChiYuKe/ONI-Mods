@@ -1,0 +1,3 @@
+title: "本地画布"
+description: "让 Canvas、CanvasTall 和 CanvasWide 显示本地 PNG/JPG 图片。"
+staticID: "LocalCanvas"

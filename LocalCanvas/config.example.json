@@ -1,0 +1,8 @@
+{
+  "CanvasFolder": "images/Canvas",
+  "CanvasTallFolder": "images/CanvasTall",
+  "CanvasWideFolder": "images/CanvasWide",
+  "ImageBrightness": 0.8,
+  "VerticalOffset": 0.0,
+  "DepthOffset": -0.05
+}
