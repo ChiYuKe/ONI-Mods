@@ -58,38 +58,47 @@ namespace LocalCanvas
             {
                 foreach (string filePath in LocalCanvasConfig.EnumerateImageFiles(prefabId))
                 {
-                    string baseStageId = MakeStageId(prefabId, filePath);
-                    LocalCanvasImageInfo image = new LocalCanvasImageInfo(baseStageId, prefabId, filePath);
-
-                    foreach (string statusId in StatusIds)
-                    {
-                        string stageId = baseStageId + "_" + statusId;
-                        if (stages.TryGet(stageId) != null)
-                        {
-                            imagesByStage[stageId] = image;
-                            continue;
-                        }
-
-                        stages.Add(
-                            stageId,
-                            image.DisplayName,
-                            "本地图片：" + image.DisplayName,
-                            PermitRarity.Universal,
-                            GetAnimFile(prefabId),
-                            "off",
-                            10,
-                            false,
-                            statusId,
-                            prefabId,
-                            "",
-                            Array.Empty<string>(),
-                            Array.Empty<string>());
-                        imagesByStage[stageId] = image;
-                    }
+                    RegisterImage(prefabId, filePath);
                 }
             }
 
-            Debug.Log($"[LocalCanvas] registered {imagesByStage.Count} local canvas choices");
+        }
+
+        public static string RegisterImage(string prefabId, string filePath)
+        {
+            ArtableStages stages = Db.GetArtableStages();
+            if (stages == null)
+            {
+                return null;
+            }
+
+            string baseStageId = MakeStageId(prefabId, filePath);
+            LocalCanvasImageInfo image = new LocalCanvasImageInfo(baseStageId, prefabId, filePath);
+            foreach (string statusId in StatusIds)
+            {
+                string stageId = baseStageId + "_" + statusId;
+                if (stages.TryGet(stageId) == null)
+                {
+                    stages.Add(
+                        stageId,
+                        image.DisplayName,
+                        "本地图片：" + image.DisplayName,
+                        PermitRarity.Universal,
+                        GetAnimFile(prefabId),
+                        "off",
+                        10,
+                        false,
+                        statusId,
+                        prefabId,
+                        "",
+                        Array.Empty<string>(),
+                        Array.Empty<string>());
+                }
+
+                imagesByStage[stageId] = image;
+            }
+
+            return baseStageId + "_LookingUgly";
         }
 
         public static bool TryGetImage(string stageId, out LocalCanvasImageInfo image)

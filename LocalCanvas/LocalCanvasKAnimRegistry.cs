@@ -30,30 +30,92 @@ namespace LocalCanvas
                     continue;
                 }
 
-                foreach (string filePath in LocalCanvasConfig.EnumerateImageFiles(prefabId))
-                {
-                    Texture2D texture = LocalCanvasConfig.LoadTexture(filePath);
-                    if (texture == null)
-                    {
-                        continue;
-                    }
-
-                    string key = MakeKey(prefabId, filePath);
-                    string sourceSymbolName = SourceSymbolPrefix + MakeHash(key).ToString("X8");
-                    string kanimName = sourceSymbolName + "_kanim";
-                    KAnimFile.Mod mod = new KAnimFile.Mod
-                    {
-                        anim = CreateAnimBytes(sourceSymbolName, frame),
-                        build = CreateBuildBytes(sourceSymbolName, frame)
-                    };
-                    mod.textures.Add(texture);
-
-                    KAnimFile sourceFile = ModUtil.AddKAnimMod(kanimName, mod);
-                    sourceFiles[key] = sourceFile;
-                }
+                RegisterPrefabImages(prefabId, frame);
             }
 
-            Debug.Log("[LocalCanvas] registered " + sourceFiles.Count + " local KAnim image sources");
+        }
+
+        public static bool RegisterImage(string prefabId, string filePath)
+        {
+            string key = MakeKey(prefabId, filePath);
+            return sourceFiles.ContainsKey(key);
+        }
+
+        private static void RegisterPrefabImages(string prefabId, CanvasFrame frame)
+        {
+            List<CanvasSource> sources = new List<CanvasSource>();
+            foreach (string filePath in LocalCanvasConfig.EnumerateImageFiles(prefabId))
+            {
+                string key = MakeKey(prefabId, filePath);
+                Texture2D texture = LocalCanvasConfig.LoadTexture(filePath);
+                if (texture == null)
+                {
+                    continue;
+                }
+
+                sources.Add(new CanvasSource
+                {
+                    Key = key,
+                    SymbolName = SourceSymbolPrefix + MakeHash(key).ToString("X8"),
+                    Texture = texture
+                });
+            }
+
+            if (sources.Count == 0)
+            {
+                return;
+            }
+
+            Texture2D[] textures = new Texture2D[sources.Count];
+            for (int i = 0; i < sources.Count; i++)
+            {
+                textures[i] = sources[i].Texture;
+            }
+
+            Texture2D atlas = new Texture2D(2, 2, TextureFormat.RGBA32, false, false);
+            Rect[] atlasRects;
+            try
+            {
+                int maximumAtlasSize = Mathf.Min(8192, SystemInfo.maxTextureSize);
+                atlasRects = atlas.PackTextures(textures, 4, maximumAtlasSize, false);
+            }
+            catch (Exception ex)
+            {
+                UnityEngine.Object.Destroy(atlas);
+                Debug.LogError("[LocalCanvas] failed to pack " + prefabId + " image atlas: " + ex);
+                return;
+            }
+
+            if (atlasRects == null || atlasRects.Length != sources.Count)
+            {
+                UnityEngine.Object.Destroy(atlas);
+                Debug.LogError("[LocalCanvas] failed to pack every " + prefabId + " image into one atlas");
+                return;
+            }
+
+            for (int i = 0; i < sources.Count; i++)
+            {
+                sources[i].Uv = atlasRects[i];
+            }
+
+            atlas.name = "LocalCanvasAtlas_" + prefabId;
+            atlas.wrapMode = TextureWrapMode.Clamp;
+            atlas.filterMode = FilterMode.Bilinear;
+            atlas.Apply(false, true);
+
+            string kanimName = "local_canvas_" + prefabId.ToLowerInvariant() + "_atlas_kanim";
+            KAnimFile.Mod mod = new KAnimFile.Mod
+            {
+                anim = CreateAnimBytes(frame),
+                build = CreateBuildBytes(prefabId, sources, frame)
+            };
+            mod.textures.Add(atlas);
+            KAnimFile sourceFile = ModUtil.AddKAnimMod(kanimName, mod);
+            foreach (CanvasSource source in sources)
+            {
+                sourceFiles[source.Key] = sourceFile;
+            }
+
         }
 
         public static bool TryGetSourceSymbol(string prefabId, string filePath, out KAnim.Build.Symbol symbol)
@@ -154,43 +216,52 @@ namespace LocalCanvas
             return false;
         }
 
-        private static byte[] CreateBuildBytes(string sourceSymbolName, CanvasFrame frame)
+        private static byte[] CreateBuildBytes(string prefabId, IList<CanvasSource> sources, CanvasFrame frame)
         {
-            int symbolHash = Hash.SDBMLower(sourceSymbolName);
             using (MemoryStream stream = new MemoryStream())
             using (BinaryWriter writer = new BinaryWriter(stream, Encoding.UTF8))
             {
                 writer.Write(Encoding.ASCII.GetBytes("BILD"));
                 writer.Write(10);
-                writer.Write(1);
-                writer.Write(0);
-                WriteKleiString(writer, sourceSymbolName);
-                writer.Write(symbolHash);
-                writer.Write(0);
-                writer.Write(0);
-                writer.Write(0);
-                writer.Write(1);
-                writer.Write(0);
-                writer.Write(1);
-                writer.Write(0);
-                writer.Write(frame.Center.x);
-                writer.Write(frame.Center.y);
-                writer.Write(frame.Size.x);
-                writer.Write(frame.Size.y);
-                writer.Write(0f);
-                writer.Write(0f);
-                writer.Write(1f);
-                writer.Write(1f);
-                writer.Write(1);
-                writer.Write(symbolHash);
-                WriteKleiString(writer, sourceSymbolName);
+                writer.Write(sources.Count);
+                writer.Write(sources.Count);
+                WriteKleiString(writer, "local_canvas_" + prefabId.ToLowerInvariant() + "_atlas");
+
+                foreach (CanvasSource source in sources)
+                {
+                    int symbolHash = Hash.SDBMLower(source.SymbolName);
+                    Rect uv = source.Uv;
+                    writer.Write(symbolHash);
+                    writer.Write(0); // path hash
+                    writer.Write(0); // colour channel
+                    writer.Write(0); // flags
+                    writer.Write(1); // one source frame
+                    writer.Write(0); // source frame number
+                    writer.Write(1); // duration
+                    writer.Write(0); // every symbol uses the shared atlas texture
+                    writer.Write(frame.Center.x);
+                    writer.Write(frame.Center.y);
+                    writer.Write(frame.Size.x);
+                    writer.Write(frame.Size.y);
+                    writer.Write(uv.xMin);
+                    writer.Write(1f - uv.yMax);
+                    writer.Write(uv.xMax);
+                    writer.Write(1f - uv.yMin);
+                }
+
+                writer.Write(sources.Count);
+                foreach (CanvasSource source in sources)
+                {
+                    writer.Write(Hash.SDBMLower(source.SymbolName));
+                    WriteKleiString(writer, source.SymbolName);
+                }
+
                 return stream.ToArray();
             }
         }
 
-        private static byte[] CreateAnimBytes(string sourceSymbolName, CanvasFrame frame)
+        private static byte[] CreateAnimBytes(CanvasFrame frame)
         {
-            int symbolHash = Hash.SDBMLower(sourceSymbolName);
             using (MemoryStream stream = new MemoryStream())
             using (BinaryWriter writer = new BinaryWriter(stream, Encoding.UTF8))
             {
@@ -207,22 +278,7 @@ namespace LocalCanvas
                 writer.Write(frame.Center.y);
                 writer.Write(frame.Size.x);
                 writer.Write(frame.Size.y);
-                writer.Write(1);
-                writer.Write(symbolHash);
-                writer.Write(0);
-                writer.Write(0); // head_anim hash
-                writer.Write(0); // reserved element field
-                writer.Write(1f);
-                writer.Write(1f);
-                writer.Write(1f);
-                writer.Write(1f);
-                writer.Write(1f);
-                writer.Write(0f);
-                writer.Write(0f);
-                writer.Write(1f);
-                writer.Write(0f);
-                writer.Write(0f);
-                writer.Write(1f);
+                writer.Write(0); // source animation has no visible elements
                 writer.Write(0); // maxVisSymbolFrames
                 writer.Write(0); // animation hash table count
                 return stream.ToArray();
@@ -257,5 +313,14 @@ namespace LocalCanvas
             public Vector2 Center;
             public Vector2 Size;
         }
+
+        private sealed class CanvasSource
+        {
+            public string Key;
+            public string SymbolName;
+            public Texture2D Texture;
+            public Rect Uv;
+        }
+
     }
 }

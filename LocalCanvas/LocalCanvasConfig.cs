@@ -83,6 +83,18 @@ namespace LocalCanvas
             }
         }
 
+        public static string GetImageFolderPath(string prefabId)
+        {
+            string configuredPath = prefabId switch
+            {
+                "CanvasTall" => Data.CanvasTallFolder,
+                "CanvasWide" => Data.CanvasWideFolder,
+                _ => Data.CanvasFolder
+            };
+
+            return ResolvePath(configuredPath);
+        }
+
         public static Sprite LoadSprite(string path)
         {
             path = Path.GetFullPath(path);
@@ -127,7 +139,9 @@ namespace LocalCanvas
                     }
 
                     ApplyBrightness(texture, Mathf.Clamp(Data?.ImageBrightness ?? 0.8f, 0f, 1f));
-                    texture.Apply(false, true);
+                    // Keep source images readable until LocalCanvasKAnimRegistry
+                    // has packed them into the per-canvas shared KAnim atlas.
+                    texture.Apply(false, false);
                     texture.name = "LocalCanvas_" + Path.GetFileName(path);
                     texture.wrapMode = TextureWrapMode.Clamp;
                     texture.filterMode = FilterMode.Bilinear;

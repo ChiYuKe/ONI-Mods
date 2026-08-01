@@ -12,6 +12,7 @@ namespace LocalCanvas
         private SymbolOverrideController symbolOverrides;
         private BuildingComplete building;
         private string appliedStage;
+        private KAnim.Build.Symbol appliedSourceSymbol;
 
         public static void TryAttach(Painting painting)
         {
@@ -35,6 +36,10 @@ namespace LocalCanvas
 
             building = target;
             symbolOverrides = building.GetComponent<SymbolOverrideController>();
+            // Canvas instances can be rebuilt/rebatched when hovered or selected.
+            // Keep the official per-instance override table reapplied so a batch
+            // refresh cannot leave this instance displaying another canvas image.
+            symbolOverrides.applySymbolOverridesEveryFrame = true;
             Refresh();
         }
 
@@ -54,7 +59,10 @@ namespace LocalCanvas
 
             if (appliedStage == art.CurrentStage)
             {
-                return;
+                if (appliedSourceSymbol != null && HasExpectedOverride(appliedSourceSymbol))
+                {
+                    return;
+                }
             }
 
             if (!image.TryGetSourceSymbol(out KAnim.Build.Symbol sourceSymbol))
@@ -67,6 +75,50 @@ namespace LocalCanvas
             symbolOverrides.RemoveSymbolOverride(CanvasSymbol, OverridePriority);
             symbolOverrides.AddSymbolOverride(CanvasSymbol, sourceSymbol, OverridePriority);
             appliedStage = art.CurrentStage;
+            appliedSourceSymbol = sourceSymbol;
+        }
+
+        private void LateUpdate()
+        {
+            if (building == null || symbolOverrides == null)
+            {
+                return;
+            }
+
+            Artable art = building.GetComponent<Artable>();
+            if (art == null || !LocalCanvasRegistry.TryGetImage(art.CurrentStage, out LocalCanvasImageInfo image))
+            {
+                if (appliedStage != null)
+                {
+                    ClearOverride();
+                }
+                return;
+            }
+
+            if (!image.TryGetSourceSymbol(out KAnim.Build.Symbol sourceSymbol))
+            {
+                return;
+            }
+
+            bool sameStageAndSource = appliedStage == art.CurrentStage && appliedSourceSymbol == sourceSymbol;
+            bool hasExpectedOverride = HasExpectedOverride(sourceSymbol);
+            if (!sameStageAndSource || !hasExpectedOverride)
+            {
+                Refresh();
+            }
+        }
+
+        private bool HasExpectedOverride(KAnim.Build.Symbol sourceSymbol)
+        {
+            foreach (SymbolOverrideController.SymbolEntry entry in symbolOverrides.GetSymbolOverrides)
+            {
+                if (entry.targetSymbol == CanvasSymbol && entry.priority == OverridePriority && entry.sourceSymbol == sourceSymbol)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private void ClearOverride()
@@ -77,6 +129,7 @@ namespace LocalCanvas
             }
 
             appliedStage = null;
+            appliedSourceSymbol = null;
         }
 
         private void OnDestroy()

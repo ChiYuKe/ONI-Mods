@@ -1,6 +1,7 @@
 using HarmonyLib;
 using KMod;
 using Database;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -8,12 +9,13 @@ namespace LocalCanvas
 {
     public sealed class ModEntry : UserMod2
     {
+        private static readonly HashSet<int> userMenuCaptureButtonsAdded = new HashSet<int>();
+
         public override void OnLoad(Harmony harmony)
         {
             base.OnLoad(harmony);
             LocalCanvasConfig.Load();
             harmony.PatchAll();
-            Debug.Log("[LocalCanvas] loaded");
         }
 
         [HarmonyPatch(typeof(KAnimGroupFile), "Load")]
@@ -31,6 +33,72 @@ namespace LocalCanvas
             private static void Postfix()
             {
                 LocalCanvasRegistry.RegisterStages();
+            }
+        }
+
+        [HarmonyPatch(typeof(UserMenu), "AppendToScreen")]
+        private static class UserMenuAppendToScreenPatch
+        {
+            private static void Postfix(GameObject go, UserMenuScreen screen)
+            {
+                Painting painting = go?.GetComponent<Painting>();
+                Artable target = painting?.GetComponent<Artable>();
+                if (target == null || screen == null)
+                {
+                    return;
+                }
+
+                KPrefabID prefabComponent = target.GetComponent<KPrefabID>();
+                string prefabId = prefabComponent == null ? null : prefabComponent.PrefabID().ToString();
+                if (prefabId != "Canvas" && prefabId != "CanvasTall" && prefabId != "CanvasWide")
+                {
+                    return;
+                }
+
+                int buttonKey = (screen.GetInstanceID() * 397) ^ go.GetInstanceID();
+                if (!userMenuCaptureButtonsAdded.Add(buttonKey))
+                {
+                    return;
+                }
+
+                KIconButtonMenu.ButtonInfo button = new KIconButtonMenu.ButtonInfo(
+                    "action_capture",
+                    "截图",
+                    delegate { LocalCanvasCaptureController.Begin(target); },
+                    Action.NumActions,
+                    null,
+                    null,
+                    null,
+                    "截取当前画面并保存为本地画布图片",
+                    true);
+                screen.AddButtons(new[] { button });
+            }
+        }
+
+        [HarmonyPatch(typeof(UserMenuScreen), "Refresh")]
+        private static class UserMenuScreenRefreshPatch
+        {
+            private static void Prefix()
+            {
+                userMenuCaptureButtonsAdded.Clear();
+            }
+        }
+
+        [HarmonyPatch(typeof(PlayerController), "OnKeyDown")]
+        private static class PlayerControllerOnKeyDownPatch
+        {
+            private static bool Prefix(KButtonEvent e)
+            {
+                return !LocalCanvasCaptureController.TryHandleInput(e);
+            }
+        }
+
+        [HarmonyPatch(typeof(PlayerController), "OnKeyUp")]
+        private static class PlayerControllerOnKeyUpPatch
+        {
+            private static bool Prefix(KButtonEvent e)
+            {
+                return !LocalCanvasCaptureController.TryHandleInputUp(e);
             }
         }
 
