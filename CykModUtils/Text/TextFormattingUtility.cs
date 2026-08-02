@@ -33,7 +33,7 @@ namespace CykModUtils.Text
         /// <returns>移除链接标签后的文本。</returns>
         public static string StripKleiLinkFormatting(string text)
         {
-            return StripKleiTagFormatting(StripKleiTagFormatting(text, "link"), "LINK");
+            return StripKleiTagFormatting(text, "link");
         }
 
         /// <summary>
@@ -49,26 +49,53 @@ namespace CykModUtils.Text
                 return text;
             }
 
-            string openTag = "<" + tag + "=";
+            string openTag = "<" + tag;
             string closeTag = "</" + tag + ">";
-            while (text.Contains(openTag))
+            int searchStart = 0;
+            while (searchStart < text.Length)
             {
-                int closeIndex = text.IndexOf(closeTag);
-                if (closeIndex >= 0)
-                {
-                    text = text.Remove(closeIndex, closeTag.Length);
-                }
-
-                int openIndex = text.IndexOf(openTag);
+                int openIndex = text.IndexOf(
+                    openTag,
+                    searchStart,
+                    System.StringComparison.OrdinalIgnoreCase);
                 if (openIndex < 0)
                 {
                     break;
                 }
 
-                int openEndIndex = text.IndexOf("\">", openIndex);
-                text = openEndIndex >= 0
-                    ? text.Remove(openIndex, openEndIndex - openIndex + 2)
-                    : text.Remove(openIndex, openTag.Length);
+                int nameEnd = openIndex + openTag.Length;
+                if (nameEnd < text.Length)
+                {
+                    char next = text[nameEnd];
+                    if (next != '>' && next != '=' && !char.IsWhiteSpace(next))
+                    {
+                        searchStart = nameEnd;
+                        continue;
+                    }
+                }
+
+                int openEndIndex = text.IndexOf('>', nameEnd);
+                if (openEndIndex < 0)
+                {
+                    text = text.Remove(openIndex);
+                    break;
+                }
+
+                text = text.Remove(openIndex, openEndIndex - openIndex + 1);
+                searchStart = openIndex;
+            }
+
+            while (true)
+            {
+                int closeIndex = text.IndexOf(
+                    closeTag,
+                    System.StringComparison.OrdinalIgnoreCase);
+                if (closeIndex < 0)
+                {
+                    break;
+                }
+
+                text = text.Remove(closeIndex, closeTag.Length);
             }
 
             return text;

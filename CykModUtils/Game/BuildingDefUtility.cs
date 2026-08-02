@@ -53,12 +53,18 @@ namespace CykModUtils.Game
         /// <returns>所有占格都满足条件时返回 true。</returns>
         public static bool AreAllOccupiedCellsValid(BuildingDef def, int baseCell, Func<int, bool> predicate, Orientation orientation = Orientation.Neutral)
         {
-            if (def == null || predicate == null)
+            if (def == null || predicate == null || !Grid.IsValidCell(baseCell))
             {
                 return false;
             }
 
-            foreach (int cell in GetOccupiedCells(def, baseCell, orientation))
+            List<int> cells = GetOccupiedCells(def, baseCell, orientation);
+            if (cells.Count == 0)
+            {
+                return false;
+            }
+
+            foreach (int cell in cells)
             {
                 if (!predicate(cell))
                 {

@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 
 namespace CykModUtils.Core
 {
@@ -19,11 +20,21 @@ namespace CykModUtils.Core
         /// </summary>
         /// <param name="assembly">目标程序集；为 null 时使用调用方程序集。</param>
         /// <returns>程序集 DLL 所在目录；无法解析时返回空字符串。</returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static string GetDirectory(Assembly assembly)
         {
             assembly = assembly ?? Assembly.GetCallingAssembly();
-            string location = assembly.Location;
-            return string.IsNullOrEmpty(location) ? string.Empty : Path.GetDirectoryName(location);
+            try
+            {
+                string location = assembly.Location;
+                return string.IsNullOrEmpty(location)
+                    ? string.Empty
+                    : Path.GetDirectoryName(location) ?? string.Empty;
+            }
+            catch
+            {
+                return string.Empty;
+            }
         }
 
         /// <summary>
@@ -57,13 +68,44 @@ namespace CykModUtils.Core
         }
 
         /// <summary>
+        /// 获取锚点类型所属 Mod 的 translations 文件夹路径。
+        /// </summary>
+        public static string GetTranslationsDirectory(Type anchorType)
+        {
+            return Path.Combine(GetDirectory(anchorType), "translations");
+        }
+
+        /// <summary>
+        /// 组合锚点类型所属 Mod 目录下的路径片段。
+        /// </summary>
+        public static string GetPath(Type anchorType, params string[] segments)
+        {
+            string path = GetDirectory(anchorType);
+            if (segments == null)
+            {
+                return path;
+            }
+
+            foreach (string segment in segments)
+            {
+                if (!string.IsNullOrEmpty(segment))
+                {
+                    path = Path.Combine(path, segment);
+                }
+            }
+
+            return path;
+        }
+
+        /// <summary>
         /// 获取程序集名称。
         /// </summary>
         /// <param name="assembly">目标程序集；为 null 时使用调用方程序集。</param>
         /// <returns>程序集名称。</returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static string GetAssemblyName(Assembly assembly)
         {
-            return (assembly ?? Assembly.GetCallingAssembly()).GetName().Name;
+            return (assembly ?? Assembly.GetCallingAssembly()).GetName().Name ?? string.Empty;
         }
 
         /// <summary>
@@ -71,9 +113,11 @@ namespace CykModUtils.Core
         /// </summary>
         /// <param name="assembly">目标程序集；为 null 时使用调用方程序集。</param>
         /// <returns>程序集版本号。</returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static string GetAssemblyVersion(Assembly assembly)
         {
-            return (assembly ?? Assembly.GetCallingAssembly()).GetName().Version.ToString();
+            Version version = (assembly ?? Assembly.GetCallingAssembly()).GetName().Version;
+            return version?.ToString() ?? string.Empty;
         }
     }
 }

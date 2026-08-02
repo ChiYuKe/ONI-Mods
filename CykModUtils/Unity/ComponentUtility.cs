@@ -21,6 +21,44 @@ namespace CykModUtils.Unity
         }
 
         /// <summary>
+        /// 获取组件；不存在时添加。目标为空时返回 null。
+        /// </summary>
+        public static T GetOrAdd<T>(GameObject target) where T : Component
+        {
+            return target == null ? null : target.AddOrGet<T>();
+        }
+
+        /// <summary>
+        /// 在对象及其父级中查找组件。
+        /// </summary>
+        public static bool TryGetInParent<T>(
+            GameObject target,
+            out T component,
+            bool includeInactive = false)
+            where T : Component
+        {
+            component = target != null
+                ? target.GetComponentInParent<T>(includeInactive)
+                : null;
+            return component != null;
+        }
+
+        /// <summary>
+        /// 在对象及其子级中查找组件。
+        /// </summary>
+        public static bool TryGetInChildren<T>(
+            GameObject target,
+            out T component,
+            bool includeInactive = false)
+            where T : Component
+        {
+            component = target != null
+                ? target.GetComponentInChildren<T>(includeInactive)
+                : null;
+            return component != null;
+        }
+
+        /// <summary>
         /// 把常见的 ONI/Unity 对象引用转换为 GameObject。
         /// </summary>
         /// <param name="value">GameObject、Component、Pickupable 或 KPrefabID。</param>

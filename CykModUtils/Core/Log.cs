@@ -1,8 +1,5 @@
-using System.Diagnostics;
-using System.IO;
+using System;
 using System.Runtime.CompilerServices;
-using System.Threading;
-using UnityEngine;
 
 namespace CykModUtils.Core
 {
@@ -11,13 +8,26 @@ namespace CykModUtils.Core
     /// </summary>
     public static class Log
     {
-        private static bool loggingDisabled;
-        private static string prefix = "CykModUtils";
+        private static ModLogger defaultLogger = new ModLogger("CykModUtils");
 
         /// <summary>
         /// 当前日志是否处于启用状态。
         /// </summary>
-        public static bool IsEnabled => !loggingDisabled;
+        public static bool IsEnabled => defaultLogger.IsEnabled;
+
+        /// <summary>
+        /// 当前兼容层使用的默认日志器。
+        /// 新代码应优先为每个 Mod 创建独立的 <see cref="ModLogger"/>。
+        /// </summary>
+        public static ModLogger DefaultLogger => defaultLogger;
+
+        /// <summary>
+        /// 创建不会影响其他 Mod 的独立日志器。
+        /// </summary>
+        public static ModLogger Create(string logPrefix, bool enabled = true)
+        {
+            return new ModLogger(logPrefix, enabled);
+        }
 
         /// <summary>
         /// 配置日志前缀和初始启用状态。建议在 Mod 入口处调用一次。
@@ -26,8 +36,7 @@ namespace CykModUtils.Core
         /// <param name="enabled">是否启用日志。</param>
         public static void Configure(string logPrefix, bool enabled = true)
         {
-            prefix = string.IsNullOrWhiteSpace(logPrefix) ? "CykModUtils" : logPrefix;
-            loggingDisabled = !enabled;
+            defaultLogger = new ModLogger(logPrefix, enabled);
         }
 
         /// <summary>
@@ -35,7 +44,7 @@ namespace CykModUtils.Core
         /// </summary>
         public static void Enable()
         {
-            loggingDisabled = false;
+            defaultLogger.IsEnabled = true;
         }
 
         /// <summary>
@@ -43,7 +52,7 @@ namespace CykModUtils.Core
         /// </summary>
         public static void Disable()
         {
-            loggingDisabled = true;
+            defaultLogger.IsEnabled = false;
         }
 
         /// <summary>
@@ -55,7 +64,7 @@ namespace CykModUtils.Core
         /// <param name="line">调用源码行号，由编译器自动填充。</param>
         public static void Info(string message, [CallerMemberName] string member = "", [CallerFilePath] string file = "", [CallerLineNumber] int line = 0)
         {
-            Write("INFO", message, member, file, line);
+            defaultLogger.Info(message, member, file, line);
         }
 
         /// <summary>
@@ -67,7 +76,7 @@ namespace CykModUtils.Core
         /// <param name="line">调用源码行号，由编译器自动填充。</param>
         public static void Warning(string message, [CallerMemberName] string member = "", [CallerFilePath] string file = "", [CallerLineNumber] int line = 0)
         {
-            Write("WARNING", message, member, file, line);
+            defaultLogger.Warning(message, member, file, line);
         }
 
         /// <summary>
@@ -79,41 +88,31 @@ namespace CykModUtils.Core
         /// <param name="line">调用源码行号，由编译器自动填充。</param>
         public static void Error(string message, [CallerMemberName] string member = "", [CallerFilePath] string file = "", [CallerLineNumber] int line = 0)
         {
-            Write("ERROR", message, member, file, line);
+            defaultLogger.Error(message, member, file, line);
         }
 
-        private static void Write(string level, string message, string member, string file, int line)
+        /// <summary>输出异常及可选说明。</summary>
+        public static void Exception(Exception exception, string message = null, [CallerMemberName] string member = "", [CallerFilePath] string file = "", [CallerLineNumber] int line = 0)
         {
-            if (loggingDisabled)
-            {
-                return;
-            }
-
-            string log = TimeStamp() + "[" + level + "] [" + prefix + "] [" + BuildContext(member, file, line) + "] " + message;
-            switch (level)
-            {
-                case "WARNING":
-                    Debug.LogWarning(log);
-                    break;
-                case "ERROR":
-                    Debug.LogError(log);
-                    break;
-                default:
-                    Debug.Log(log);
-                    break;
-            }
+            defaultLogger.Exception(exception, message, member, file, line);
         }
 
-        private static string TimeStamp()
+        /// <summary>同一个 key 只输出一次普通信息。</summary>
+        public static bool InfoOnce(string key, string message, [CallerMemberName] string member = "", [CallerFilePath] string file = "", [CallerLineNumber] int line = 0)
         {
-            return System.DateTime.Now.ToString("[HH:mm:ss.fff] [") + Thread.CurrentThread.ManagedThreadId + "] ";
+            return defaultLogger.InfoOnce(key, message, member, file, line);
         }
 
-        private static string BuildContext(string member, string file, int line)
+        /// <summary>同一个 key 只输出一次警告。</summary>
+        public static bool WarningOnce(string key, string message, [CallerMemberName] string member = "", [CallerFilePath] string file = "", [CallerLineNumber] int line = 0)
         {
-            var frame = new StackTrace().GetFrame(3);
-            string typeName = frame?.GetMethod()?.DeclaringType?.FullName?.Replace('+', '.') ?? "UnknownType";
-            return typeName + "." + member + " @ " + Path.GetFileName(file) + ":" + line;
+            return defaultLogger.WarningOnce(key, message, member, file, line);
+        }
+
+        /// <summary>清除一次性日志记录。</summary>
+        public static void ResetOnce(string key = null)
+        {
+            defaultLogger.ResetOnce(key);
         }
     }
 }
