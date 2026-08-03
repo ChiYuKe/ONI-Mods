@@ -79,6 +79,22 @@ namespace StorageNetwork.UI
                 row.Icon.color = row.Icon.sprite != null ? Color.white : Color.clear;
             }
 
+            AddProductionSettingsLiveBinding(
+                () => CombineLiveFingerprint(
+                    GetPowerPortStoredJoules(storage),
+                    GetPowerPortCapacityJoules(storage)),
+                () => SetTextIfChanged(
+                    row.Mass,
+                    string.Format(
+                        "{0} / {1}",
+                        GameUtil.GetFormattedJoules(
+                            GetPowerPortStoredJoules(storage),
+                            "F1",
+                            GameUtil.TimeSlice.None),
+                        GameUtil.GetFormattedJoules(
+                            GetPowerPortCapacityJoules(storage),
+                            "F1",
+                            GameUtil.TimeSlice.None))));
             productionInventoryView = null;
         }
 
@@ -102,6 +118,29 @@ namespace StorageNetwork.UI
                 row.Icon.color = row.Icon.sprite != null ? Color.white : Color.clear;
             }
 
+            AddProductionSettingsLiveBinding(
+                () => CombineLiveFingerprint(
+                    StorageNetworkParticleStorageService.GetAvailable(
+                        storage != null ? storage.gameObject : null),
+                    StorageNetworkParticleStorageService.GetCapacity(
+                        storage != null ? storage.gameObject : null)),
+                () =>
+                {
+                    float current = StorageNetworkParticleStorageService.GetAvailable(
+                        storage != null ? storage.gameObject : null);
+                    float maximum = StorageNetworkParticleStorageService.GetCapacity(
+                        storage != null ? storage.gameObject : null);
+                    SetTextIfChanged(
+                        row.Mass,
+                        string.Format(
+                            "{0} / {1}",
+                            string.Format(
+                                Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PARTICLE_PORT_AMOUNT_VALUE),
+                                Mathf.FloorToInt(Mathf.Max(0f, current))),
+                            string.Format(
+                                Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PARTICLE_PORT_AMOUNT_VALUE),
+                                Mathf.FloorToInt(Mathf.Max(0f, maximum)))));
+                });
             productionInventoryView = null;
         }
 
@@ -123,6 +162,22 @@ namespace StorageNetwork.UI
                 row.Icon.color = row.Icon.sprite != null ? Color.white : Color.clear;
             }
 
+            AddProductionSettingsLiveBinding(
+                () => CombineLiveFingerprint(
+                    powerStorage.RawJoulesAvailable,
+                    powerStorage.CapacityJoules),
+                () => SetTextIfChanged(
+                    row.Mass,
+                    string.Format(
+                        "{0} / {1}",
+                        GameUtil.GetFormattedJoules(
+                            powerStorage.RawJoulesAvailable,
+                            "F2",
+                            GameUtil.TimeSlice.None),
+                        GameUtil.GetFormattedJoules(
+                            powerStorage.CapacityJoules,
+                            "F1",
+                            GameUtil.TimeSlice.None))));
             productionInventoryView = null;
         }
 

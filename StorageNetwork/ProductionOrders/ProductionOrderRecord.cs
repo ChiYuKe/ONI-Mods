@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 
 namespace StorageNetwork.ProductionOrders
@@ -239,16 +238,25 @@ namespace StorageNetwork.ProductionOrders
             return true;
         }
 
-        public void ObserveActivity(float currentCycle, float producedAmount, float queueLoad, bool forceActive = false)
+        internal void RebaseProductionThreshold(float stockThreshold)
         {
-            if (forceActive ||
+            StockAtSubmit = Mathf.Max(0f, stockThreshold);
+            AllocationOffsetAtSubmit = 0f;
+        }
+
+        public bool ObserveActivity(float currentCycle, float producedAmount, float queueLoad, bool forceActive = false)
+        {
+            bool valuesChanged =
                 Mathf.Abs(producedAmount - LastObservedProducedAmount) > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ||
-                Mathf.Abs(queueLoad - LastObservedQueueLoad) > 0.001f)
+                Mathf.Abs(queueLoad - LastObservedQueueLoad) > 0.001f;
+            if (forceActive || valuesChanged)
             {
                 LastActivityCycle = currentCycle;
                 LastObservedProducedAmount = producedAmount;
                 LastObservedQueueLoad = queueLoad;
             }
+
+            return valuesChanged;
         }
 
         private static bool AreReservedMaterialsEqual(Dictionary<Tag, float> left, Dictionary<Tag, float> right)
@@ -276,16 +284,28 @@ namespace StorageNetwork.ProductionOrders
                 return false;
             }
 
-            Dictionary<string, int> leftCounts = BuildQueueAssignmentCounts(left);
-            Dictionary<string, int> rightCounts = BuildQueueAssignmentCounts(right);
-            if (leftCounts.Count != rightCounts.Count)
+            for (int i = 0; i < left.Count; i++)
             {
-                return false;
+                ProductionOrderQueueAssignment assignment = left[i];
+                if (!IsValidQueueAssignment(assignment) ||
+                    HasEarlierMatchingQueue(left, i, assignment))
+                {
+                    continue;
+                }
+
+                if (SumMatchingQueue(left, assignment) !=
+                    SumMatchingQueue(right, assignment))
+                {
+                    return false;
+                }
             }
 
-            foreach (KeyValuePair<string, int> pair in leftCounts)
+            for (int i = 0; i < right.Count; i++)
             {
-                if (!rightCounts.TryGetValue(pair.Key, out int value) || value != pair.Value)
+                ProductionOrderQueueAssignment assignment = right[i];
+                if (IsValidQueueAssignment(assignment) &&
+                    SumMatchingQueue(left, assignment) !=
+                    SumMatchingQueue(right, assignment))
                 {
                     return false;
                 }
@@ -294,37 +314,199 @@ namespace StorageNetwork.ProductionOrders
             return true;
         }
 
-        private static Dictionary<string, int> BuildQueueAssignmentCounts(List<ProductionOrderQueueAssignment> assignments)
-        {
-            return (assignments ?? new List<ProductionOrderQueueAssignment>())
-                .Where(assignment => assignment?.Fabricator != null && assignment.Recipe != null)
-                .GroupBy(assignment => string.Format("{0}|{1}", assignment.Fabricator.GetInstanceID(), ProductionRecipeCatalog.GetRecipeKey(assignment.Recipe)))
-                .ToDictionary(group => group.Key, group => group.Sum(assignment => assignment.OrderCount));
-        }
-
         private static bool AreMaterialLeasesEqual(List<ProductionOrderMaterialLease> left, List<ProductionOrderMaterialLease> right)
         {
-            return AreLeaseKeysEqual(
-                (left ?? new List<ProductionOrderMaterialLease>())
-                    .Select(lease => string.Format("{0}|{1}|{2:0.###}", lease.Material.Name, lease.SourceStorageInstanceId, lease.Amount)),
-                (right ?? new List<ProductionOrderMaterialLease>())
-                    .Select(lease => string.Format("{0}|{1}|{2:0.###}", lease.Material.Name, lease.SourceStorageInstanceId, lease.Amount)));
+            if ((left?.Count ?? 0) != (right?.Count ?? 0))
+            {
+                return false;
+            }
+
+            if (left == null)
+            {
+                return true;
+            }
+
+            for (int i = 0; i < left.Count; i++)
+            {
+                ProductionOrderMaterialLease lease = left[i];
+                if (HasEarlierMatchingMaterialLease(left, i, lease))
+                {
+                    continue;
+                }
+
+                if (CountMatchingMaterialLeases(left, lease) !=
+                    CountMatchingMaterialLeases(right, lease))
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         private static bool AreOutputLeasesEqual(List<ProductionOrderOutputLease> left, List<ProductionOrderOutputLease> right)
         {
-            return AreLeaseKeysEqual(
-                (left ?? new List<ProductionOrderOutputLease>())
-                    .Select(lease => string.Format("{0}|{1}|{2:0.###}", lease.ProductTag.Name, lease.FabricatorInstanceId, lease.Amount)),
-                (right ?? new List<ProductionOrderOutputLease>())
-                    .Select(lease => string.Format("{0}|{1}|{2:0.###}", lease.ProductTag.Name, lease.FabricatorInstanceId, lease.Amount)));
+            if ((left?.Count ?? 0) != (right?.Count ?? 0))
+            {
+                return false;
+            }
+
+            if (left == null)
+            {
+                return true;
+            }
+
+            for (int i = 0; i < left.Count; i++)
+            {
+                ProductionOrderOutputLease lease = left[i];
+                if (HasEarlierMatchingOutputLease(left, i, lease))
+                {
+                    continue;
+                }
+
+                if (CountMatchingOutputLeases(left, lease) !=
+                    CountMatchingOutputLeases(right, lease))
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
-        private static bool AreLeaseKeysEqual(IEnumerable<string> left, IEnumerable<string> right)
+        private static bool IsValidQueueAssignment(ProductionOrderQueueAssignment assignment)
         {
-            List<string> leftList = left.OrderBy(value => value).ToList();
-            List<string> rightList = right.OrderBy(value => value).ToList();
-            return leftList.Count == rightList.Count && !leftList.Where((value, index) => value != rightList[index]).Any();
+            return assignment?.Fabricator != null && assignment.Recipe != null;
+        }
+
+        private static bool IsSameQueue(
+            ProductionOrderQueueAssignment left,
+            ProductionOrderQueueAssignment right)
+        {
+            return IsValidQueueAssignment(left) &&
+                   IsValidQueueAssignment(right) &&
+                   ProductionOrderCenterCatalog.GetInstanceId(left.Fabricator) ==
+                   ProductionOrderCenterCatalog.GetInstanceId(right.Fabricator) &&
+                   ProductionRecipeCatalog.GetRecipeKey(left.Recipe) ==
+                   ProductionRecipeCatalog.GetRecipeKey(right.Recipe);
+        }
+
+        private static bool HasEarlierMatchingQueue(
+            List<ProductionOrderQueueAssignment> assignments,
+            int index,
+            ProductionOrderQueueAssignment assignment)
+        {
+            for (int i = 0; i < index; i++)
+            {
+                if (IsSameQueue(assignments[i], assignment))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static int SumMatchingQueue(
+            List<ProductionOrderQueueAssignment> assignments,
+            ProductionOrderQueueAssignment assignment)
+        {
+            int count = 0;
+            for (int i = 0; i < assignments.Count; i++)
+            {
+                if (IsSameQueue(assignments[i], assignment))
+                {
+                    count += assignments[i].OrderCount;
+                }
+            }
+
+            return count;
+        }
+
+        private static bool HasEarlierMatchingMaterialLease(
+            List<ProductionOrderMaterialLease> leases,
+            int index,
+            ProductionOrderMaterialLease lease)
+        {
+            for (int i = 0; i < index; i++)
+            {
+                if (IsSameMaterialLease(leases[i], lease))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static int CountMatchingMaterialLeases(
+            List<ProductionOrderMaterialLease> leases,
+            ProductionOrderMaterialLease lease)
+        {
+            int count = 0;
+            for (int i = 0; i < leases.Count; i++)
+            {
+                if (IsSameMaterialLease(leases[i], lease))
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        private static bool IsSameMaterialLease(
+            ProductionOrderMaterialLease left,
+            ProductionOrderMaterialLease right)
+        {
+            return left != null && right != null &&
+                   left.Material == right.Material &&
+                   left.SourceStorageInstanceId == right.SourceStorageInstanceId &&
+                   Mathf.RoundToInt(left.Amount * 1000f) ==
+                   Mathf.RoundToInt(right.Amount * 1000f);
+        }
+
+        private static bool HasEarlierMatchingOutputLease(
+            List<ProductionOrderOutputLease> leases,
+            int index,
+            ProductionOrderOutputLease lease)
+        {
+            for (int i = 0; i < index; i++)
+            {
+                if (IsSameOutputLease(leases[i], lease))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static int CountMatchingOutputLeases(
+            List<ProductionOrderOutputLease> leases,
+            ProductionOrderOutputLease lease)
+        {
+            int count = 0;
+            for (int i = 0; i < leases.Count; i++)
+            {
+                if (IsSameOutputLease(leases[i], lease))
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        private static bool IsSameOutputLease(
+            ProductionOrderOutputLease left,
+            ProductionOrderOutputLease right)
+        {
+            return left != null && right != null &&
+                   left.ProductTag == right.ProductTag &&
+                   left.FabricatorInstanceId == right.FabricatorInstanceId &&
+                   Mathf.RoundToInt(left.Amount * 1000f) ==
+                   Mathf.RoundToInt(right.Amount * 1000f);
         }
     }
 }

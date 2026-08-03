@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using System.Linq;
+using System.Text;
 using StorageNetwork.Components;
 
 namespace StorageNetwork.UI
@@ -11,22 +11,34 @@ namespace StorageNetwork.UI
             int worldFilterId,
             string searchText)
         {
-            string worldSignature = worldFilterId.ToString();
-            string searchSignature = searchText ?? string.Empty;
-            return worldSignature + ":" + searchSignature + "|" + string.Join("|", (enrollments ?? Enumerable.Empty<StorageNetworkEnrollment>())
-                .OrderBy(enrollment => enrollment != null ? enrollment.GetInstanceID() : 0)
-                .Select(enrollment =>
+            List<StorageNetworkEnrollment> ordered =
+                new List<StorageNetworkEnrollment>();
+            if (enrollments != null)
+            {
+                foreach (StorageNetworkEnrollment enrollment in enrollments)
                 {
-                    Storage storage = enrollment != null ? enrollment.GetComponent<Storage>() : null;
-                    Studyable studyable = enrollment != null ? enrollment.GetComponent<Studyable>() : null;
-                    return string.Format("{0}:{1}:{2}:{3:0.###}:{4:0.###}:{5}",
-                        enrollment != null ? enrollment.GetInstanceID() : 0,
-                        enrollment != null ? enrollment.IncludedInSceneNetwork : false,
-                        enrollment != null ? enrollment.gameObject.GetProperName() : string.Empty,
-                        storage != null ? storage.MassStored() : 0f,
-                        storage != null ? storage.Capacity() : 0f,
-                        studyable != null && studyable.Studied);
-                }));
+                    if (enrollment != null)
+                    {
+                        ordered.Add(enrollment);
+                    }
+                }
+            }
+
+            ordered.Sort((left, right) =>
+                left.GetInstanceID().CompareTo(right.GetInstanceID()));
+            StringBuilder builder = new StringBuilder(64 + ordered.Count * 32);
+            builder.Append(worldFilterId)
+                .Append(':')
+                .Append(searchText ?? string.Empty);
+            foreach (StorageNetworkEnrollment enrollment in ordered)
+            {
+                builder.Append('|')
+                    .Append(enrollment.GetInstanceID())
+                    .Append(':')
+                    .Append(enrollment.gameObject.GetProperName());
+            }
+
+            return builder.ToString();
         }
     }
 }

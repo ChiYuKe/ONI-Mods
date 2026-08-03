@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
 using System;
 using KSerialization;
 using StorageNetwork.Core;
@@ -65,7 +64,16 @@ namespace StorageNetwork.Components
         private float outputStoreCooldown;
         private string lastStatus;
         private string lastOutputStatus;
-        private HashSet<Tag> lastRecipeResultTags;
+        private readonly HashSet<Tag> lastRecipeResultTags = new HashSet<Tag>();
+        private readonly HashSet<Tag> currentRecipeResultTagBuffer = new HashSet<Tag>();
+        private readonly HashSet<Tag> knownRecipeResultTags = new HashSet<Tag>();
+        private readonly HashSet<Storage> fabricatorStorageExclusions = new HashSet<Storage>();
+        private readonly List<Storage> sourceStorageBuffer = new List<Storage>();
+        private readonly List<ComplexRecipe> queuedRecipeBuffer = new List<ComplexRecipe>();
+        private readonly List<GameObject> producedOutputBuffer = new List<GameObject>();
+        private readonly Tag[] sourceWantedTagBuffer = new Tag[1];
+        private readonly QueuedRecipeComparer queuedRecipeComparer = new QueuedRecipeComparer();
+        private bool knownRecipeResultTagsBuilt;
 
         public string LastStatus => lastStatus;
         public string LastOutputStatus => lastOutputStatus;
@@ -184,17 +192,14 @@ namespace StorageNetwork.Components
                 return null;
             }
 
-            foreach (StorageInfo info in StorageSceneCollector.Collect().Storages)
-            {
-                Storage storage = info?.Storage;
-                if (StorageNetworkStorageRules.IsServerStorage(storage) &&
-                    GetStorageInstanceId(storage) == SourceStorageInstanceId)
-                {
-                    return storage;
-                }
-            }
-
-            return null;
+            int worldId = StorageNetworkWorldUtility.GetObjectWorldId(gameObject);
+            return StorageSceneRegistry.TryGetReachableStorage(
+                       SourceStorageInstanceId,
+                       worldId,
+                       out Storage storage) &&
+                   IsUsableSourceForWorld(storage, worldId)
+                ? storage
+                : null;
         }
 
         /// <summary>
@@ -207,22 +212,17 @@ namespace StorageNetwork.Components
                 return null;
             }
 
-            foreach (StorageInfo info in StorageSceneCollector.Collect().Storages)
-            {
-                if (info?.Minion != null)
-                {
-                    continue;
-                }
-
-                Storage storage = info?.Storage;
-                if (StorageNetworkStorageRules.IsServerStorage(storage) &&
-                    GetStorageInstanceId(storage) == OutputStorageInstanceId)
-                {
-                    return storage;
-                }
-            }
-
-            return null;
+            int worldId = StorageNetworkWorldUtility.GetObjectWorldId(gameObject);
+            return StorageSceneRegistry.TryGetReachableStorage(
+                       OutputStorageInstanceId,
+                       worldId,
+                       out Storage storage) &&
+                   StorageSceneRegistry.HasOnlineCoreInWorld(worldId) &&
+                   StorageSceneRegistry.IsLive(storage) &&
+                   StorageNetworkStorageRules.IsNetworkStorageTarget(storage) &&
+                   StorageTargetSelector.IsStorageReachableFromWorld(storage, worldId)
+                ? storage
+                : null;
         }
 
         /// <summary>
@@ -281,10 +281,12 @@ namespace StorageNetwork.Components
         {
             base.OnSpawn();
             EnsureFabricator();
+            StorageNetworkRuntimeCatalog.RegisterMaterialRequester(fabricator, this);
         }
 
         protected override void OnCleanUp()
         {
+            StorageNetworkRuntimeCatalog.UnregisterMaterialRequester(fabricator, this);
             RemoveMaterialRequestStatus();
             base.OnCleanUp();
         }
@@ -301,7 +303,8 @@ namespace StorageNetwork.Components
                 return fabricator.NextOrder;
             }
 
-            List<ComplexRecipe> queuedRecipes = new List<ComplexRecipe>();
+            List<ComplexRecipe> queuedRecipes = queuedRecipeBuffer;
+            queuedRecipes.Clear();
             foreach (ComplexRecipe recipe in fabricator.GetRecipes())
             {
                 if (recipe != null && fabricator.IsRecipeQueued(recipe))
@@ -310,18 +313,12 @@ namespace StorageNetwork.Components
                 }
             }
 
-            queuedRecipes.Sort((left, right) =>
-            {
-                bool leftInfinite = StorageNetworkFabricatorProgress.GetRecipeQueueCountSafe(fabricator, left) == ComplexFabricator.QUEUE_INFINITE;
-                bool rightInfinite = StorageNetworkFabricatorProgress.GetRecipeQueueCountSafe(fabricator, right) == ComplexFabricator.QUEUE_INFINITE;
-                int compare = rightInfinite.CompareTo(leftInfinite);
-                return compare != 0
-                    ? compare
-                    : string.Compare(left.GetUIName(false), right.GetUIName(false), StringComparison.CurrentCulture);
-            });
+            queuedRecipeComparer.Fabricator = fabricator;
+            queuedRecipes.Sort(queuedRecipeComparer);
 
-            foreach (ComplexRecipe recipe in queuedRecipes)
+            for (int i = 0; i < queuedRecipes.Count; i++)
             {
+                ComplexRecipe recipe = queuedRecipes[i];
                 if (NeedsAnyIngredient(recipe))
                 {
                     return recipe;
@@ -390,11 +387,21 @@ namespace StorageNetwork.Components
                 moved += ProductionOrderService.RequestLeasedMaterial(fabricator, recipe, tag, amount, fabricator.inStorage);
             }
 
-            foreach (Storage source in GetSourceStorages(tag))
+            FillSourceStorages(tag, sourceStorageBuffer);
+            for (int sourceIndex = 0;
+                 sourceIndex < sourceStorageBuffer.Count;
+                 sourceIndex++)
             {
+                Storage source = sourceStorageBuffer[sourceIndex];
                 if (amount - moved <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
                 {
                     break;
+                }
+
+                int destinationWorldId = StorageNetworkWorldUtility.GetObjectWorldId(gameObject);
+                if (!IsUsableSourceForWorld(source, destinationWorldId))
+                {
+                    continue;
                 }
 
                 float sourceAmount = GetMatchingMassAvailable(source, tag);
@@ -409,6 +416,13 @@ namespace StorageNetwork.Components
                     break;
                 }
 
+                // Source membership, power and relay state can change after the indexed
+                // enumeration. Revalidate immediately before the native storage mutation.
+                if (!IsUsableSourceForWorld(source, destinationWorldId))
+                {
+                    continue;
+                }
+
                 float requestedUnits = transferAmount / massPerUnit;
                 float transferredUnits = NetworkStorageTransferService.TransferMatchingItemUnitsFromStorage(source, fabricator.inStorage, tag, requestedUnits);
                 moved += transferredUnits * massPerUnit;
@@ -417,38 +431,64 @@ namespace StorageNetwork.Components
             return moved;
         }
 
-        private IEnumerable<Storage> GetSourceStorages(Tag tag)
+        private void FillSourceStorages(Tag tag, List<Storage> result)
         {
+            result.Clear();
             if (CurrentMode == RequestMode.SpecificStorage)
             {
                 Storage source = ResolveSourceStorage();
                 if (IsUsableSource(source, tag))
                 {
-                    yield return source;
+                    result.Add(source);
                 }
 
-                yield break;
+                return;
             }
 
             int worldId = StorageTargetSelector.GetObjectWorldId(gameObject);
-            foreach (Storage storage in StorageNetworkSourceIndexService.GetSourceStorages(worldId, true, new[] { tag }, BuildSourceExclusions()))
+            sourceWantedTagBuffer[0] = tag;
+            StorageNetworkSourceIndexService.FillSourceStorages(
+                worldId,
+                includeReachableWorlds: true,
+                sourceWantedTagBuffer,
+                BuildSourceExclusions(),
+                specificSource: null,
+                result);
+            for (int i = result.Count - 1; i >= 0; i--)
             {
-                if (IsUsableSource(storage, tag))
+                if (!IsUsableSource(result[i], tag))
                 {
-                    yield return storage;
+                    result.RemoveAt(i);
                 }
             }
         }
 
         private bool IsUsableSource(Storage storage, Tag tag)
         {
-            return storage != null &&
+            int worldId = StorageNetworkWorldUtility.GetObjectWorldId(gameObject);
+            return IsUsableSourceForWorld(storage, worldId) &&
                    storage != fabricator.inStorage &&
                    storage != fabricator.buildStorage &&
                    storage != fabricator.outStorage &&
-                   StorageNetworkStorageRules.IsServerStorage(storage) &&
-                   !StorageNetworkStorageRules.IsProductionStorage(storage) &&
                    GetMatchingAmountAvailable(storage, tag) > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT;
+        }
+
+        private static bool IsUsableSourceForWorld(Storage storage, int destinationWorldId)
+        {
+            if (destinationWorldId < 0 ||
+                !StorageSceneRegistry.HasOnlineCoreInWorld(destinationWorldId) ||
+                !StorageSceneRegistry.IsLive(storage) ||
+                !StorageTargetSelector.IsStorageReachableFromWorld(storage, destinationWorldId) ||
+                !StorageNetworkStorageRules.IsServerStorage(storage) ||
+                !StorageNetworkStorageRules.IsConnectedNetworkStorage(storage) ||
+                StorageNetworkStorageRules.IsMinionStorage(storage) ||
+                StorageNetworkStorageRules.IsProductionStorage(storage))
+            {
+                return false;
+            }
+
+            int sourceWorldId = StorageNetworkWorldUtility.GetObjectWorldId(storage.gameObject);
+            return sourceWorldId >= 0 && StorageSceneRegistry.HasOnlineCoreInWorld(sourceWorldId);
         }
 
         private float GetAmountAvailableInFabricator(Tag tag)
@@ -508,6 +548,30 @@ namespace StorageNetwork.Components
             if (fabricator == null)
             {
                 fabricator = GetComponent<ComplexFabricator>();
+            }
+        }
+
+        private sealed class QueuedRecipeComparer : IComparer<ComplexRecipe>
+        {
+            public ComplexFabricator Fabricator { get; set; }
+
+            public int Compare(ComplexRecipe left, ComplexRecipe right)
+            {
+                bool leftInfinite =
+                    StorageNetworkFabricatorProgress.GetRecipeQueueCountSafe(
+                        Fabricator,
+                        left) == ComplexFabricator.QUEUE_INFINITE;
+                bool rightInfinite =
+                    StorageNetworkFabricatorProgress.GetRecipeQueueCountSafe(
+                        Fabricator,
+                        right) == ComplexFabricator.QUEUE_INFINITE;
+                int compare = rightInfinite.CompareTo(leftInfinite);
+                return compare != 0
+                    ? compare
+                    : string.Compare(
+                        left?.GetUIName(false),
+                        right?.GetUIName(false),
+                        StringComparison.CurrentCulture);
             }
         }
 

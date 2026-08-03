@@ -121,7 +121,7 @@ namespace StorageNetwork.UI
             return valueText;
         }
 
-        private void CreateStatusStrip(Transform parent, string text, Color color)
+        private TextMeshProUGUI CreateStatusStrip(Transform parent, string text, Color color)
         {
             GameObject strip = CreatePlainImage("StatusStrip", parent, color);
             LayoutElement stripLayout = strip.AddComponent<LayoutElement>();
@@ -131,6 +131,7 @@ namespace StorageNetwork.UI
             label.color = StorageNetworkPanelPalette.StatusText;
             label.fontStyle = FontStyles.Bold;
             Stretch(label.rectTransform(), 4f, 0f);
+            return label;
         }
 
         private void CreateEnabledStatusStrip(Transform parent, bool enabled)
@@ -146,7 +147,7 @@ namespace StorageNetwork.UI
             CreateProductionActionRow(parent, label, value, onClick, currentlyEnabled ? KleiPinkStyle() : KleiBlueStyle());
         }
 
-        private void CreateProductionActionRow(Transform parent, string label, string value, System.Action onClick, ColorStyleSetting buttonStyle = null)
+        private TextMeshProUGUI CreateProductionActionRow(Transform parent, string label, string value, System.Action onClick, ColorStyleSetting buttonStyle = null)
         {
             GameObject row = CreatePlainImage("ActionRow", parent, StorageNetworkPanelPalette.RowBackground);
             LayoutElement rowLayout = row.AddComponent<LayoutElement>();
@@ -177,9 +178,10 @@ namespace StorageNetwork.UI
             buttonLayout.minHeight = 24f;
             buttonLayout.preferredHeight = 24f;
             buttonLayout.flexibleHeight = 0f;
+            return labelText;
         }
 
-        private void CreateProductionReadOnlyRow(Transform parent, string label, string value)
+        private TextMeshProUGUI CreateProductionReadOnlyRow(Transform parent, string label, string value)
         {
             GameObject row = CreatePlainImage("ReadOnlyRow", parent, StorageNetworkPanelPalette.RowBackground);
             row.AddComponent<LayoutElement>().preferredHeight = 30f;
@@ -206,6 +208,7 @@ namespace StorageNetwork.UI
             valueText.textWrappingMode = TextWrappingModes.NoWrap;
             valueText.overflowMode = TextOverflowModes.Ellipsis;
             valueText.gameObject.AddComponent<LayoutElement>().preferredWidth = 150f;
+            return valueText;
         }
 
         private TextMeshProUGUI CreateFinePrint(Transform parent, string text)

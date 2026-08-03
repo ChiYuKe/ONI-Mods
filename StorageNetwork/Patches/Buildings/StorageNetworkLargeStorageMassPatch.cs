@@ -1,5 +1,4 @@
 using HarmonyLib;
-using StorageNetwork.Core;
 using UnityEngine;
 
 namespace StorageNetwork.Patches
@@ -25,9 +24,10 @@ namespace StorageNetwork.Patches
 
         private static bool ShouldUseSafeMassStored(Storage storage)
         {
-            return storage != null &&
-                   (StorageNetworkStorageRules.IsServerStorage(storage) ||
-                    storage.capacityKg >= UnsafeVanillaRoundedMassKg);
+            // This prefix runs for every Storage in the colony. Capacity is the only
+            // condition that can make the vanilla integer rounding overflow, so keep
+            // the miss path to one null/capacity branch and never resolve network flags.
+            return storage != null && storage.capacityKg >= UnsafeVanillaRoundedMassKg;
         }
     }
 }

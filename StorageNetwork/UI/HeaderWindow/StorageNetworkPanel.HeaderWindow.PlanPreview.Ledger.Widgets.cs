@@ -60,7 +60,7 @@ namespace StorageNetwork.UI
             valueText.gameObject.AddComponent<LayoutElement>().preferredHeight = 17f;
         }
 
-        private void AddStatusBadge(Transform parent, string text, Color color, float width)
+        private TextMeshProUGUI AddStatusBadge(Transform parent, string text, Color color, float width)
         {
             GameObject badge = CreatePlainImage("StatusBadge", parent, new Color(0.69f, 0.70f, 0.64f, 1f));
             LayoutElement badgeLayout = badge.AddComponent<LayoutElement>();
@@ -72,6 +72,7 @@ namespace StorageNetwork.UI
             label.textWrappingMode = TextWrappingModes.NoWrap;
             label.overflowMode = TextOverflowModes.Ellipsis;
             Stretch(label.rectTransform(), 4f, 0f);
+            return label;
         }
     }
 }

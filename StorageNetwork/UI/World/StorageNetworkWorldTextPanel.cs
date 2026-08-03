@@ -163,6 +163,8 @@ namespace StorageNetwork.UI
                 return;
             }
 
+            using var performanceScope =
+                StorageNetworkFrameProfileTool.BeginWork(StorageNetworkPerformanceArea.WorldPanel);
             if (StorageNetworkWorldPanelRegistry.TryBuildContent(target, out StorageNetworkWorldPanelContent content))
             {
                 view.SetContent(content);

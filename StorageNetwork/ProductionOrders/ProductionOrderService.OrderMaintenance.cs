@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 
 namespace StorageNetwork.ProductionOrders
@@ -38,28 +37,59 @@ namespace StorageNetwork.ProductionOrders
                 order.ProductTag,
                 Mathf.Max(0f, order.RequestedAmount - order.ProducedAtSubmit),
                 order.Key);
+            return ApplyMaintainedProductionPlan(order, plan);
+        }
+
+        private bool ApplyMaintainedProductionPlan(
+            ProductionOrderRecord order,
+            ProductionPlanNode plan)
+        {
             if (plan == null || plan.Assignments.Count == 0)
             {
                 return false;
             }
 
             List<ProductionOrderQueueAssignment> queueAssignments = BuildQueueAssignments(plan);
-            List<ProductionOrderMaterialLease> materialLeases = BuildMaterialLeases(plan);
+            Dictionary<Tag, float> reservedMaterials = BuildReservedMaterials(plan);
+            List<ProductionOrderMaterialLease> materialLeases = BuildMaterialLeases(
+                plan,
+                reservedMaterials);
+            bool obsoleteQueuesCancelled =
+                CancelOrderQueuesOutsidePlan(order, queueAssignments);
             bool queued = EnsureProductionPlanQueued(plan, order, materialLeases);
             bool refreshed = order.RefreshPlan(
                 plan.OrderCount,
-                BuildReservedMaterials(plan),
+                reservedMaterials,
                 queueAssignments,
                 materialLeases,
                 BuildOutputLeases(queueAssignments, order.ProductTag, Mathf.Max(0f, order.RequestedAmount - order.ProducedAtSubmit)));
-            return queued || refreshed;
+            if (refreshed)
+            {
+                ProductionOrderRuntimeAllocation.NotifyOrderAssignmentsChanged(order);
+            }
+            bool changed = obsoleteQueuesCancelled || queued || refreshed;
+            if (changed)
+            {
+                MarkOrdersChanged();
+            }
+
+            return changed;
         }
 
         private RecipeDisplayInfo FindRouteForOrder(ProductionOrderRecord order)
         {
-            return craftableRecipes.FirstOrDefault(route =>
-                route.ProductTag == order.ProductTag &&
-                ProductionRecipeCatalog.GetRecipeKey(route.Recipe) == order.RecipeKey);
+            RecipeDisplayInfo[] routes = GetCraftableRoutesProducing(order.ProductTag);
+            for (int i = 0; i < routes.Length; i++)
+            {
+                RecipeDisplayInfo route = routes[i];
+                if (ProductionRecipeCatalog.GetRecipeKey(route.Recipe) == order.RecipeKey &&
+                    IsRouteReachableFromWorld(route, GetCurrentNetworkWorldId()))
+                {
+                    return route;
+                }
+            }
+
+            return default;
         }
 
         private ProductionPlanNode BuildProductionPlanIgnoringOrderReservations(ComplexRecipe recipe, List<ComplexFabricator> fabricators, Tag productTag, float requestedAmount, string orderKey)
@@ -68,7 +98,16 @@ namespace StorageNetwork.ProductionOrders
             ignoredReservationOrderKey = orderKey;
             try
             {
-                return BuildProductionPlan(recipe, fabricators, productTag, requestedAmount);
+                return TryBuildProductionPlanForMaintenance(
+                    recipe,
+                    fabricators,
+                    productTag,
+                    requestedAmount,
+                    GetCurrentNetworkWorldId(),
+                    orderKey,
+                    out ProductionPlanNode plan)
+                    ? plan
+                    : null;
             }
             finally
             {
@@ -91,7 +130,9 @@ namespace StorageNetwork.ProductionOrders
 
             foreach (ProductionPlanAssignment assignment in node.Assignments)
             {
-                if (!IsOrderProductionFabricator(assignment.Fabricator) || node.Recipe == null || assignment.OrderCount <= 0)
+                if (!IsFabricatorReachableFromWorld(assignment.Fabricator, node.WorldId) ||
+                    node.Recipe == null ||
+                    assignment.OrderCount <= 0)
                 {
                     continue;
                 }

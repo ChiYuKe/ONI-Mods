@@ -12,26 +12,16 @@ namespace StorageNetwork.UI
             IEnumerable<StorageInfo> storages,
             string searchText,
             Func<StorageInfo, string> getStorageTypeKey,
-            Func<GameObject, string> getStoredItemKey,
-            Func<StorageInfo, bool> isOfflineNetworkServer)
+            Func<GameObject, string> getStoredItemKey)
         {
             string searchSignature = searchText ?? string.Empty;
             return searchSignature + "|" + string.Join("|", storages
                 .OrderBy(getStorageTypeKey)
                 .ThenBy(storage => storage.GameObject != null ? storage.GameObject.GetInstanceID() : 0)
-                .Select(storage =>
-                {
-                    IEnumerable<GameObject> storedItems = storage.StoredItems ?? Enumerable.Empty<GameObject>();
-                    string items = string.Join(",", storedItems
-                        .GroupBy(getStoredItemKey)
-                        .OrderBy(group => group.Key)
-                        .Select(group => group.Key));
-
-                    return string.Format("{0}:{1}:{2}",
-                        getStorageTypeKey(storage),
-                        storage.GameObject != null ? storage.GameObject.GetInstanceID() : 0,
-                        items + ":" + (isOfflineNetworkServer(storage) ? "offline" : "online"));
-                }));
+                .Select(storage => string.Format(
+                    "{0}:{1}",
+                    getStorageTypeKey(storage),
+                    storage.GameObject != null ? storage.GameObject.GetInstanceID() : 0)));
         }
     }
 }

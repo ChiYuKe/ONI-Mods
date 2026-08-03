@@ -35,6 +35,9 @@ namespace StorageNetwork.Components
         [MyCmpGet]
         private Automatable automatable = null;
 
+        [MyCmpGet]
+        private Operational operational = null;
+
         private static StatusItem solidInputPortStatusItem;
         private static readonly EventSystem.IntraObjectHandler<StorageNetworkSolidInputPortIngress> OnCopySettingsDelegate =
             new EventSystem.IntraObjectHandler<StorageNetworkSolidInputPortIngress>((component, data) => component.OnCopySettings(data));
@@ -115,7 +118,6 @@ namespace StorageNetwork.Components
 
         public void Sim1000ms(float dt)
         {
-            Operational operational = GetComponent<Operational>();
             if (operational != null && !operational.IsOperational)
             {
                 return;
@@ -227,15 +229,26 @@ namespace StorageNetwork.Components
                 return;
             }
 
-            var excluded = StorageTargetSelector.BuildExclusionSet(new[] { storage });
-            var items = new System.Collections.Generic.List<GameObject>(storage.items);
-            int sourceWorldId = StorageTargetSelector.GetObjectWorldId(gameObject);
-            foreach (GameObject item in items)
+            var excluded = transferWorkspace.PrepareExcluded(null, storage);
+            var items = transferWorkspace.Items;
+            items.Clear();
+            for (int itemIndex = 0; itemIndex < storage.items.Count; itemIndex++)
             {
+                GameObject item = storage.items[itemIndex];
+                if (item != null)
+                {
+                    items.Add(item);
+                }
+            }
+
+            int sourceWorldId = StorageTargetSelector.GetObjectWorldId(gameObject);
+            for (int itemIndex = 0; itemIndex < items.Count; itemIndex++)
+            {
+                GameObject item = items[itemIndex];
                 if (item != null &&
                     (target == null || StorageTargetSelector.FindOutputTarget(
                         item,
-                        StorageItemUtility.GetStorageMatchTags(item),
+                        StorageItemUtility.GetStorageMatchTagsNonAlloc(item),
                         excluded,
                         target,
                         null,
@@ -245,12 +258,15 @@ namespace StorageNetwork.Components
                     storage.Drop(item, true);
                 }
             }
+
+            items.Clear();
         }
 
         public void SetInputStorage(Storage target)
         {
             InputStorageInstanceId = GetStorageInstanceId(target);
             CurrentInputStoreMode = StorageNetworkMaterialRequester.OutputStoreMode.SpecificStorage;
+            StorageNetworkInputTargetReservationService.Invalidate();
         }
 
         public void UseAutomaticInputStorage()
@@ -259,6 +275,7 @@ namespace StorageNetwork.Components
             InputStorageInstanceId = KPrefabID.InvalidInstanceID;
             lastStatus = string.Empty;
             cachedStatusText = null;
+            StorageNetworkInputTargetReservationService.Invalidate();
         }
 
         public Storage ResolveInputStorage()
@@ -300,6 +317,7 @@ namespace StorageNetwork.Components
             lastStatus = string.Empty;
             cachedStatusText = null;
             SyncManualOperation();
+            StorageNetworkInputTargetReservationService.Invalidate();
         }
 
         private void EnsureFilteredStorage()
@@ -335,10 +353,26 @@ namespace StorageNetwork.Components
                 return;
             }
 
-            AllowManualOperation = automatable == null || !automatable.GetAutomationOnly();
-            storage.allowItemRemoval = false;
-            storage.allowUIItemRemoval = false;
-            storage.fetchCategory = Storage.FetchCategory.Building;
+            bool allowManual = automatable == null || !automatable.GetAutomationOnly();
+            if (AllowManualOperation != allowManual)
+            {
+                AllowManualOperation = allowManual;
+            }
+
+            if (storage.allowItemRemoval)
+            {
+                storage.allowItemRemoval = false;
+            }
+
+            if (storage.allowUIItemRemoval)
+            {
+                storage.allowUIItemRemoval = false;
+            }
+
+            if (storage.fetchCategory != Storage.FetchCategory.Building)
+            {
+                storage.fetchCategory = Storage.FetchCategory.Building;
+            }
         }
 
         private void MigrateManualOperationToAutomatable()
@@ -421,7 +455,7 @@ namespace StorageNetwork.Components
         {
             if (cachedStatusText == null)
             {
-                UpdateCachedStatusText();
+                cachedStatusText = BuildStatusText();
             }
 
             return cachedStatusText;
@@ -429,7 +463,7 @@ namespace StorageNetwork.Components
 
         private void UpdateCachedStatusText()
         {
-            cachedStatusText = BuildStatusText();
+            cachedStatusText = null;
         }
 
         private string BuildStatusText()

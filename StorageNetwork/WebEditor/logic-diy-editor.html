@@ -780,9 +780,21 @@
         .node.pixel-screen-node { background: transparent; border: none; box-shadow: none; padding: 0; min-width: 0; min-height: 0; width: auto !important; height: auto !important; }
         .node.pixel-screen-node .node-title { display: none; }
         .music-sequencer { box-sizing: border-box; }
-        .music-rows-scroll { overflow-y: auto; scrollbar-width: thin; }
-        .music-sequencer::-webkit-scrollbar { width: 6px; }
-        .music-sequencer::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
+        .music-rows-scroll {
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: #667085 #111a2a;
+        }
+        .music-rows-scroll::-webkit-scrollbar { width: 8px; }
+        .music-rows-scroll::-webkit-scrollbar-track { background: #111a2a; border-left: 1px solid #2b3548; }
+        .music-rows-scroll::-webkit-scrollbar-thumb {
+            background: #667085;
+            border: 2px solid #111a2a;
+            border-radius: 5px;
+            min-height: 32px;
+        }
+        .music-rows-scroll::-webkit-scrollbar-thumb:hover { background: #8792a5; }
+        .music-rows-scroll::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
         .signal-state { border: 2px solid var(--node-border); background: var(--signal-red-bg); color: var(--text-light); font-size: 12px; font-weight: bold; padding: 8px 0; text-align: center; }
         .signal-state.active { background: var(--signal-green-bg); }
         .signal-value { border: 2px solid var(--node-border); background: var(--panel-dark); color: var(--text-light); font-size: 12px; font-weight: bold; padding: 8px 4px; text-align: center; overflow-wrap: anywhere; min-height: 18px; }
@@ -944,7 +956,20 @@
         .node-menu-list {
             overflow-y: auto;
             padding-right: 4px;
+            scrollbar-width: thin;
+            scrollbar-color: #7a8274 transparent;
         }
+        .node-menu-list::-webkit-scrollbar { width: 8px; }
+        .node-menu-list::-webkit-scrollbar-track { background: rgba(0,0,0,0.06); border-radius: 4px; }
+        .node-menu-list::-webkit-scrollbar-thumb {
+            background: #7a8274;
+            border: 2px solid transparent;
+            background-clip: padding-box;
+            border-radius: 5px;
+            min-height: 32px;
+        }
+        .node-menu-list::-webkit-scrollbar-thumb:hover { background: #5e665e; background-clip: padding-box; }
+        .node-menu-list::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
         .node-menu-section {
             margin-bottom: 10px;
         }
@@ -1030,6 +1055,65 @@
         .docs-content {
             padding: 18px 24px;
             overflow-y: auto;
+        }
+
+        /* All scrollable panels share the same compact scrollbar. */
+        .sidebar,
+        .music-rows-scroll,
+        .material-picker,
+        .node-menu-list,
+        .docs-nav,
+        .docs-content {
+            scrollbar-width: thin;
+            scrollbar-color: var(--wire-color) var(--scrollbar-track);
+        }
+        .sidebar::-webkit-scrollbar,
+        .music-rows-scroll::-webkit-scrollbar,
+        .material-picker::-webkit-scrollbar,
+        .node-menu-list::-webkit-scrollbar,
+        .docs-nav::-webkit-scrollbar,
+        .docs-content::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        .sidebar::-webkit-scrollbar-track,
+        .music-rows-scroll::-webkit-scrollbar-track,
+        .material-picker::-webkit-scrollbar-track,
+        .node-menu-list::-webkit-scrollbar-track,
+        .docs-nav::-webkit-scrollbar-track,
+        .docs-content::-webkit-scrollbar-track {
+            background: var(--scrollbar-track);
+        }
+        .sidebar::-webkit-scrollbar-thumb,
+        .music-rows-scroll::-webkit-scrollbar-thumb,
+        .material-picker::-webkit-scrollbar-thumb,
+        .node-menu-list::-webkit-scrollbar-thumb,
+        .docs-nav::-webkit-scrollbar-thumb,
+        .docs-content::-webkit-scrollbar-thumb {
+            background: var(--wire-color);
+            border: 2px solid transparent;
+            background-clip: padding-box;
+            border-radius: 5px;
+            min-height: 32px;
+        }
+        .sidebar::-webkit-scrollbar-thumb:hover,
+        .music-rows-scroll::-webkit-scrollbar-thumb:hover,
+        .material-picker::-webkit-scrollbar-thumb:hover,
+        .node-menu-list::-webkit-scrollbar-thumb:hover,
+        .docs-nav::-webkit-scrollbar-thumb:hover,
+        .docs-content::-webkit-scrollbar-thumb:hover {
+            background: var(--panel-accent);
+            background-clip: padding-box;
+        }
+        .sidebar::-webkit-scrollbar-button,
+        .music-rows-scroll::-webkit-scrollbar-button,
+        .material-picker::-webkit-scrollbar-button,
+        .node-menu-list::-webkit-scrollbar-button,
+        .docs-nav::-webkit-scrollbar-button,
+        .docs-content::-webkit-scrollbar-button {
+            display: none;
+            width: 0;
+            height: 0;
         }
         .docs-content h2 {
             font-size: 18px;
@@ -1569,7 +1653,7 @@ function cardTitle(meta, id) {
 }
 
 function cardMaterial(id, meta) {
-    const m = getSelectedMaterial();
+    const m = getSelectedMaterial(id);
     const name = stripGameRichText(m?.Name || m?.name || t('chooseMaterial'));
     const amount = formatTons(m?.MassKg ?? m?.massKg ?? serverState.selectedMaterialAmountKg ?? 0);
     return cardTitle(meta, id) + `<div class="material-content" title="${t('selectMaterial')}"><h3>${escapeHtml(name)}</h3><p>${t('current')} ${amount}</p></div>`;
@@ -1662,7 +1746,7 @@ function cardVariable(id, meta) {
     const value = c.decimals === 0 ? Math.max(c.min ?? 0, raw).toFixed(0) : Math.max(c.min ?? 0, raw).toFixed(c.decimals ?? 1);
     let html = cardTitle(meta, id) + '<div class="variable-container">';
     if (c.showMaterial) {
-        const m = getSelectedMaterial();
+        const m = getSelectedMaterial(id);
         const name = stripGameRichText(m?.Name || m?.name || t('chooseMaterial'));
         const amount = formatTons(m?.MassKg ?? m?.massKg ?? serverState.selectedMaterialAmountKg ?? 0);
         html += `<div class="material-content" title="${t('selectMaterial')}"><h3>${escapeHtml(name)}</h3><p>${t('current')} ${amount}</p></div>`;
@@ -1793,9 +1877,16 @@ function createNodeInnerHTML(id, type, meta) {
     return renderer ? renderer(id, meta) : cardCondition(id, meta);
 }
 
-function getSelectedMaterial() {
+function getSelectedMaterialKey(nodeId = null) {
+    return nodeId && nodesData[nodeId]?.materialKey
+        ? nodesData[nodeId].materialKey
+        : selectedMaterialKey;
+}
+
+function getSelectedMaterial(nodeId = null) {
     const materials = serverState.materials || serverState.Materials || [];
-    return materials.find(item => (item.Key || item.key) === selectedMaterialKey) ||
+    const key = getSelectedMaterialKey(nodeId);
+    return materials.find(item => (item.Key || item.key) === key) ||
         materials.find(item => item.Selected || item.selected) ||
         materials[0];
 }
@@ -1842,6 +1933,7 @@ function getSelectedBuilding(nodeId) {
 
 function showMaterialPicker(node) {
     const materials = serverState.materials || serverState.Materials || [];
+    const selectedKey = getSelectedMaterialKey(node?.id);
     const nodeRect = node.getBoundingClientRect();
     const canvasRect = canvas.getBoundingClientRect();
     materialPicker.style.left = `${Math.max(8, nodeRect.left - canvasRect.left)}px`;
@@ -1855,9 +1947,9 @@ function showMaterialPicker(node) {
             const name = stripGameRichText(item.Name || item.name || key);
             const mass = item.MassKg ?? item.massKg ?? 0;
             const option = document.createElement('button');
-            option.className = `material-option ${key === selectedMaterialKey ? 'active' : ''}`;
+            option.className = `material-option ${key === selectedKey ? 'active' : ''}`;
             option.innerHTML = `<span>${escapeHtml(name)}</span><span>${formatTons(mass)}</span>`;
-            option.addEventListener('click', () => selectMaterial(key));
+            option.addEventListener('click', () => selectMaterial(node?.id, key));
             materialPicker.appendChild(option);
         });
     }
@@ -1925,21 +2017,31 @@ function selectBuilding(nodeId, instanceId) {
     markCircuitDirty(nodeReachesOutput(nodeId));
 }
 
-function selectMaterial(key) {
-    selectedMaterialKey = key || '';
-    serverState.conditionItemKey = selectedMaterialKey;
-    serverState.ConditionItemKey = selectedMaterialKey;
-    document.querySelectorAll('.material-content').forEach(content => {
-        const material = getSelectedMaterial();
+function selectMaterial(nodeId, key) {
+    const nextKey = key || '';
+    if (nodeId && nodesData[nodeId]) {
+        nodesData[nodeId].materialKey = nextKey;
+        if (nodeId === 'node_mat') {
+            selectedMaterialKey = nextKey;
+            serverState.conditionItemKey = selectedMaterialKey;
+            serverState.ConditionItemKey = selectedMaterialKey;
+        }
+
+        const node = document.getElementById(nodeId);
+        const content = node?.querySelector('.material-content');
+        const material = getSelectedMaterial(nodeId);
         if (content && material) {
-            content.querySelector('h3').textContent = stripGameRichText(material.Name || material.name || selectedMaterialKey);
+            content.querySelector('h3').textContent = stripGameRichText(material.Name || material.name || nextKey);
             content.querySelector('p').textContent = `${t('current')} ${formatTons(material.MassKg ?? material.massKg ?? 0)}`;
         }
-    });
+    } else {
+        selectedMaterialKey = nextKey;
+        serverState.conditionItemKey = selectedMaterialKey;
+        serverState.ConditionItemKey = selectedMaterialKey;
+    }
     materialPicker.classList.remove('visible');
     updateSignalMonitors();
-    const materialNodes = Object.keys(nodesData).filter(id => nodesData[id]?.type === 'material');
-    markCircuitDirty(nodesAffectOutput(materialNodes));
+    markCircuitDirty(nodeId ? nodeReachesOutput(nodeId) : false);
 }
 
 function escapeHtml(value) {
@@ -2571,6 +2673,7 @@ let activeDrawingWaypoints = [];
 let activeRerouteHandles = [];
 let branchOriginWaypoint = null;
 let rerouteConnectionStart = null;
+let pendingNodeInsertion = null;
 let pendingPortRelink = null;
 let relinkPointer = null;
 let relinkDrawingLines = [];
@@ -2979,6 +3082,9 @@ function createNodeAt(type, x, y) {
     const pos = clampToWorkspace(Number(x || 0), Number(y || 0), size.width, size.height);
     nodesData[id] = { type, x: pos.x, y: pos.y };
     if (type === 'select') nodesData[id].portCount = (meta.defaultPortCount || 6);
+    if (type === 'material' || type === 'material-low' || type === 'material-high' || type === 'material-change') {
+        nodesData[id].materialKey = selectedMaterialKey || serverState.conditionItemKey || serverState.ConditionItemKey || '';
+    }
     if (type === 'sequence') nodesData[id].values = [0, 0, 0, 0];
     if (type === 'music-sequencer') Object.assign(nodesData[id], { values: [1,1,8,8,10,10,8,6,6,5,5,3,3,1,8,8,6,6,5,5,3,8,8,6,6,5,5,3,1,1,8,8,10,10,8,6,6,5,5,3,3,1], durations: [1,1,1,1,1,1,2,1,1,1,1,1,1,2,1,1,1,1,1,1,2,1,1,1,1,1,1,2,1,1,1,1,1,1,2,1,1,1,1,1,1,2], value: 120, gapSeconds: 0.2, loop: true, inputValues: [1, 0] });
     const el = createNodeDOM(id, type, pos.x, pos.y);
@@ -3031,9 +3137,10 @@ function buildNodeMenuDOM() {
     });
 }
 
-function showNodeMenu(screenPoint, canvasPoint) {
+function showNodeMenu(screenPoint, canvasPoint, wireContext = null) {
     if (docsPage.classList.contains('visible')) return;
     rightMouseCanvasPoint = canvasPoint;
+    pendingNodeInsertion = wireContext;
     materialPicker.classList.remove('visible');
     buildNodeMenuDOM();
     renderNodeMenuResults('');
@@ -3049,6 +3156,32 @@ function showNodeMenu(screenPoint, canvasPoint) {
 
 function hideNodeMenu() {
     nodeMenu.classList.remove('visible');
+    pendingNodeInsertion = null;
+}
+
+function connectInsertedNodeToWire(nodeId, wireContext) {
+    if (!nodeId || !wireContext) return;
+    const sourceNode = document.getElementById(wireContext.nodeId);
+    const insertedNode = document.getElementById(nodeId);
+    const sourcePort = sourceNode?.querySelector(`.port.${wireContext.direction}[data-port="${wireContext.port}"]`);
+    if (!sourcePort || !insertedNode) return;
+
+    const targetDirection = wireContext.direction === 'output' ? 'input' : 'output';
+    const sourcePin = GraphSchema.pin(
+        sourcePort.dataset.nodeId || sourcePort.parentElement?.id,
+        wireContext.direction,
+        wireContext.port
+    );
+    const targetPort = [...insertedNode.querySelectorAll(`.port.${targetDirection}`)]
+        .find(port => {
+            const targetPin = GraphSchema.pin(
+                port.dataset.nodeId || port.parentElement?.id,
+                targetDirection,
+                port.dataset.port || '0'
+            );
+            return !!GraphSchema.canConnect(sourcePin, targetPin);
+        });
+    if (targetPort) connectPorts(sourcePort, targetPort);
 }
 
 function renderNodeMenuResults(query) {
@@ -3083,7 +3216,9 @@ function renderNodeMenuResults(query) {
             option.innerHTML = `<h4>${escapeHtml(text[0] || type)}</h4><p>${escapeHtml(text[1] || '')}</p>`;
             option.addEventListener('click', () => {
                 const point = rightMouseCanvasPoint || { x: 120, y: 120 };
-                createNodeAt(type, type === 'reroute' ? point.x : point.x - 70, type === 'reroute' ? point.y : point.y - 18);
+                const wireContext = pendingNodeInsertion;
+                const nodeId = createNodeAt(type, type === 'reroute' ? point.x : point.x - 70, type === 'reroute' ? point.y : point.y - 18);
+                connectInsertedNodeToWire(nodeId, wireContext);
                 hideNodeMenu();
             });
             section.appendChild(option);
@@ -4066,6 +4201,75 @@ document.addEventListener('mousedown', e => {
     }
 });
 
+function finishActiveDrawing(e) {
+    if (!activeDrawingLine) return false;
+
+    const drawingLine = activeDrawingLine;
+    const drawingSource = sourcePortEl;
+    const point = getCanvasPoint(e);
+    const targetElement = e.target instanceof Element ? e.target : null;
+    const targetPortEl = snappedPortEl
+        || targetElement?.closest('.port, .reroute-input-port, .reroute-branch-port')
+        || findSnapPort(point.x, point.y);
+    const droppedOnEmptyCanvas = !targetPortEl;
+    const wireContext = droppedOnEmptyCanvas && drawingSource
+        ? {
+            nodeId: drawingSource.dataset.nodeId || drawingSource.parentElement?.id,
+            direction: drawingSource.classList.contains('output') ? 'output' : 'input',
+            port: drawingSource.dataset.port || '0'
+        }
+        : null;
+
+    try {
+        if (targetPortEl && targetPortEl !== drawingSource) {
+            if ((targetPortEl.classList.contains('reroute-input-port') || targetPortEl.classList.contains('reroute-branch-port')) && rerouteConnectionStart) {
+                reconnectRerouteSegment(rerouteConnectionStart, targetPortEl);
+            } else if (targetPortEl.classList.contains('port')) {
+                const restoredOriginalSegment = rerouteConnectionStart?.side === 'input'
+                    ? reconnectRerouteToOriginalSource(rerouteConnectionStart, targetPortEl, activeDrawingWaypoints)
+                    : reconnectRerouteToOriginalTarget(rerouteConnectionStart, targetPortEl, activeDrawingWaypoints);
+                if (!restoredOriginalSegment) {
+                    // Only the output side of a reroute node may create a new downstream branch.
+                    // Its input side is reserved for repairing the preceding segment.
+                    if (!rerouteConnectionStart || rerouteConnectionStart.side === 'output') {
+                        connectPorts(sourcePortEl, targetPortEl, activeDrawingWaypoints, branchOriginWaypoint);
+                    }
+                }
+            }
+        }
+    } finally {
+        drawingLine.remove();
+        activeDrawingLine = null;
+        activeDrawingAnchor = null;
+        activeDrawingWaypoints = [];
+        branchOriginWaypoint = null;
+        rerouteConnectionStart = null;
+        activeRerouteHandles.forEach(handle => handle.remove());
+        activeRerouteHandles = [];
+        setSnappedPort(null);
+        sourcePortEl = null;
+        renderConnections();
+    }
+
+    if (wireContext?.nodeId && wireContext.port) {
+        showNodeMenu(getCanvasScreenPoint(e), point, wireContext);
+    }
+    return true;
+}
+
+// Finish from the capture phase as well: SVG paths and embedded game windows can
+// otherwise swallow the bubbling mouseup and leave the temporary wire on screen.
+window.addEventListener('pointerup', e => {
+    if (e.button !== 0 || !activeDrawingLine) return;
+    finishActiveDrawing(e);
+}, true);
+window.addEventListener('mouseup', e => {
+    if (e.button !== 0 || !activeDrawingLine) return;
+    skipActiveDrawingMouseup = true;
+    finishActiveDrawing(e);
+    setTimeout(() => { skipActiveDrawingMouseup = false; }, 0);
+}, true);
+
 document.addEventListener('mouseup', e => {
     if (skipActiveDrawingMouseup) {
         skipActiveDrawingMouseup = false;
@@ -4117,37 +4321,7 @@ document.addEventListener('mouseup', e => {
     dragStartPositions = {};
     dragStartMouse = null;
     if (!activeDrawingLine) return;
-    const point = getCanvasPoint(e);
-    const mouseX = point.x;
-    const mouseY = point.y;
-    const targetPortEl = snappedPortEl || e.target.closest('.port, .reroute-input-port, .reroute-branch-port') || findSnapPort(mouseX, mouseY);
-    if (targetPortEl && targetPortEl !== sourcePortEl) {
-        if ((targetPortEl.classList.contains('reroute-input-port') || targetPortEl.classList.contains('reroute-branch-port')) && rerouteConnectionStart) {
-            reconnectRerouteSegment(rerouteConnectionStart, targetPortEl);
-        } else if (targetPortEl.classList.contains('port')) {
-            const restoredOriginalSegment = rerouteConnectionStart?.side === 'input'
-                ? reconnectRerouteToOriginalSource(rerouteConnectionStart, targetPortEl, activeDrawingWaypoints)
-                : reconnectRerouteToOriginalTarget(rerouteConnectionStart, targetPortEl, activeDrawingWaypoints);
-            if (!restoredOriginalSegment) {
-                // Only the output side of a reroute node may create a new downstream branch.
-                // Its input side is reserved for repairing the preceding segment.
-                if (!rerouteConnectionStart || rerouteConnectionStart.side === 'output') {
-                    connectPorts(sourcePortEl, targetPortEl, activeDrawingWaypoints, branchOriginWaypoint);
-                }
-            }
-        }
-    }
-    activeDrawingLine.remove();
-    activeDrawingLine = null;
-    activeDrawingAnchor = null;
-    activeDrawingWaypoints = [];
-    branchOriginWaypoint = null;
-    rerouteConnectionStart = null;
-    activeRerouteHandles.forEach(handle => handle.remove());
-    activeRerouteHandles = [];
-    setSnappedPort(null);
-    sourcePortEl = null;
-    renderConnections();
+    finishActiveDrawing(e);
 });
 
 // ===== Connection Drawing (SVG lines between ports) =====
@@ -4696,6 +4870,11 @@ function loadLayoutState(data, persistLocal) {
     }
     document.querySelectorAll('.node').forEach(node => node.remove());
     nodesData = data.nodesData || {};
+    const defaultMaterialKey = selectedMaterialKey || serverState.conditionItemKey || serverState.ConditionItemKey || '';
+    Object.values(nodesData).forEach(node => {
+        if (!node || !['material', 'material-low', 'material-high', 'material-change'].includes(node.type)) return;
+        if (!node.materialKey) node.materialKey = defaultMaterialKey;
+    });
     connections = data.connections || [];
     nodeIdCounter = data.nodeIdCounter || 0;
     connectionIdCounter = data.connectionIdCounter || 0;
@@ -5092,7 +5271,7 @@ function evaluatePreviewNodeUncached(nodeId, outputPortIndex, depth = 0) {
     if (type === 'counter') return evaluatePreviewCounterNode(nodeId, node, depth);
     const a = evaluatePreviewInput(nodeId, 0, depth + 1);
     const b = evaluatePreviewInput(nodeId, 1, depth + 1);
-    if (type === 'material') return getSelectedMaterialAmountForPreview();
+    if (type === 'material') return getSelectedMaterialAmountForPreview(nodeId);
     if (type === 'constant') return Number(node.value ?? currentNodeInputValue(nodeId, 'value', 100));
     if (type === 'number-changed') {
         if (node._numberChangeTick !== simTick) {
@@ -5109,8 +5288,8 @@ function evaluatePreviewNodeUncached(nodeId, outputPortIndex, depth = 0) {
         }
         return ((node._numberChangeFlags || 0) & (1 << outputPortIndex)) !== 0 ? 1 : 0;
     }
-    if (type === 'material-low') return getSelectedMaterialAmountForPreview() < Math.max(0, Number(node.value || 100)) ? 1 : 0;
-    if (type === 'material-high') return getSelectedMaterialAmountForPreview() >= Math.max(0, Number(node.value || 100)) ? 1 : 0;
+    if (type === 'material-low') return getSelectedMaterialAmountForPreview(nodeId) < Math.max(0, Number(node.value || 100)) ? 1 : 0;
+    if (type === 'material-high') return getSelectedMaterialAmountForPreview(nodeId) >= Math.max(0, Number(node.value || 100)) ? 1 : 0;
     if (type === 'logic-gt') return a > b ? 1 : 0;
     if (type === 'logic-lt') return a < b ? 1 : 0;
     if (type === 'logic-eq') return Math.abs(a - b) < 0.0001 ? 1 : 0;
@@ -5230,7 +5409,7 @@ function evaluatePreviewNodeUncached(nodeId, outputPortIndex, depth = 0) {
         return cur2 && !prev2 ? 1 : 0;
     }
     if (type === 'material-change') {
-        const amt = getSelectedMaterialAmountForPreview();
+        const amt = getSelectedMaterialAmountForPreview(nodeId);
         const prev3 = node._matChangePrev;
         node._matChangePrev = amt;
         return (prev3 !== undefined && Math.abs(prev3 - amt) > 0.0001) ? 1 : 0;
@@ -5291,8 +5470,8 @@ function currentNodeInputValue(nodeId, field, fallback) {
     return document.getElementById(nodeId)?.querySelector(`.num-input[data-field="${field}"]`)?.value ?? fallback;
 }
 
-function getSelectedMaterialAmountForPreview() {
-    const material = getSelectedMaterial();
+function getSelectedMaterialAmountForPreview(nodeId = null) {
+    const material = getSelectedMaterial(nodeId);
     return Number(material?.MassKg ?? material?.massKg ?? serverState.selectedMaterialAmountKg ?? serverState.SelectedMaterialAmountKg ?? 0);
 }
 
@@ -5366,6 +5545,9 @@ function buildRuntimeBlueprintJson() {
         if (node.type === 'building-status' || node.type === 'building-signal' || node.type === 'network-signal-output' || node.type === 'remote-pixel-screen') {
             runtimeNode.SelectedBuildingInstanceId = Number(node.buildingInstanceId || 0);
         }
+        if (node.type === 'material' || node.type === 'material-low' || node.type === 'material-high' || node.type === 'material-change') {
+            runtimeNode.SelectedMaterialKey = getSelectedMaterialKey(id) || '';
+        }
         if (node.type === 'sequence') {
             const values = Array.isArray(node.values) && node.values.length > 0 ? node.values : [0, 0, 0, 0];
             const rawValues = values.slice().map(v => Math.min(15, Math.max(0, Math.floor(Number(v || 0)))));
@@ -5428,7 +5610,7 @@ function ensureSystemNodes(nodes) {
 }
 
 function normalizeNodeId(id, type) {
-    if (id === 'node_mat' || type === 'material') return 'system:material';
+    if (id === 'node_mat') return 'system:material';
     if (id === 'node_out' || type === 'output') return 'system:output';
     return id;
 }
@@ -5796,9 +5978,11 @@ async function refreshGameState() {
         }
         if (previousMaterialKey !== selectedMaterialKey || nextState.Materials || nextState.materials || nextState.Buildings || nextState.buildings) {
             document.querySelectorAll('.material-content').forEach(content => {
-                const material = getSelectedMaterial();
+                const node = content.closest('.node');
+                const material = getSelectedMaterial(node?.id);
                 if (content && material) {
-                    content.querySelector('h3').textContent = stripGameRichText(material.Name || material.name || selectedMaterialKey);
+                    const key = getSelectedMaterialKey(node?.id);
+                    content.querySelector('h3').textContent = stripGameRichText(material.Name || material.name || key);
                     content.querySelector('p').textContent = `${t('current')} ${formatTons(material.MassKg ?? material.massKg ?? 0)}`;
                 }
             });

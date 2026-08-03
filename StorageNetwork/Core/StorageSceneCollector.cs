@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
 using StorageNetwork.Services;
 using UnityEngine;
 
@@ -17,8 +16,6 @@ namespace StorageNetwork.Core
         private static bool cachedNetworkOnline;
         private static readonly Dictionary<WorldSnapshotKey, WorldSnapshotCacheEntry> WorldSnapshots = new Dictionary<WorldSnapshotKey, WorldSnapshotCacheEntry>();
         private static readonly Dictionary<WorldSnapshotKey, LightweightSnapshotCacheEntry> LightweightSnapshots = new Dictionary<WorldSnapshotKey, LightweightSnapshotCacheEntry>();
-        private static readonly List<WorldSnapshotKey> ExpiredWorldSnapshotKeys = new List<WorldSnapshotKey>();
-        private static readonly List<WorldSnapshotKey> ExpiredLightweightSnapshotKeys = new List<WorldSnapshotKey>();
         private static int cachedWorldRegistryVersion = -1;
 
         /// <summary>
@@ -104,7 +101,7 @@ namespace StorageNetwork.Core
             PruneWorldCaches();
             WorldSnapshotKey key = new WorldSnapshotKey(worldId, includeReachableWorlds);
             if (LightweightSnapshots.TryGetValue(key, out LightweightSnapshotCacheEntry cached) &&
-                (cached.Frame == Time.frameCount || Time.unscaledTime - cached.CreatedAt <= GetWorldSnapshotCacheSeconds()))
+                cached.RegistryVersion == StorageSceneRegistry.Version)
             {
                 return cached.Snapshot;
             }
@@ -112,32 +109,20 @@ namespace StorageNetwork.Core
             bool networkOnline = StorageSceneRegistry.HasOnlineCoreInWorld(worldId);
             if (!networkOnline)
             {
-                LightweightSnapshots[key] = new LightweightSnapshotCacheEntry(StorageSceneLightweightSnapshot.Empty, Time.frameCount, Time.unscaledTime);
+                LightweightSnapshots[key] = new LightweightSnapshotCacheEntry(
+                    StorageSceneLightweightSnapshot.Empty,
+                    StorageSceneRegistry.Version);
                 return StorageSceneLightweightSnapshot.Empty;
             }
 
             bool crossPlanetRelayOnline = includeReachableWorlds && StorageSceneRegistry.IsCrossPlanetRelayOnline();
-            List<Storage> storages = new List<Storage>();
-            foreach (Storage storage in StorageSceneRegistry.GetStorages())
-            {
-                if (!StorageSceneRegistry.IsLive(storage))
-                {
-                    continue;
-                }
-
-                if (!crossPlanetRelayOnline && worldId >= 0 && storage.gameObject.GetMyWorldId() != worldId)
-                {
-                    continue;
-                }
-
-                if (StorageNetworkMembership.IsCollectableStorage(storage))
-                {
-                    storages.Add(storage);
-                }
-            }
+            IReadOnlyCollection<Storage> catalog =
+                StorageSceneRegistry.GetCollectableStoragesForWorld(worldId, crossPlanetRelayOnline);
+            List<Storage> storages = new List<Storage>(catalog.Count);
+            storages.AddRange(catalog);
 
             StorageSceneLightweightSnapshot snapshot = new StorageSceneLightweightSnapshot(storages, true);
-            LightweightSnapshots[key] = new LightweightSnapshotCacheEntry(snapshot, Time.frameCount, Time.unscaledTime);
+            LightweightSnapshots[key] = new LightweightSnapshotCacheEntry(snapshot, StorageSceneRegistry.Version);
             StorageNetworkPerformanceCounters.RecordLightweightSceneRebuild();
             return snapshot;
             }
@@ -145,32 +130,19 @@ namespace StorageNetwork.Core
 
         private static void BuildSnapshotContents(List<StorageInfo> collected, int worldId, bool crossPlanetRelayOnline)
         {
-            foreach (Storage storage in StorageSceneRegistry.GetStorages())
+            foreach (Storage storage in StorageSceneRegistry.GetCollectableStoragesForWorld(worldId, crossPlanetRelayOnline))
             {
                 if (!StorageSceneRegistry.IsLive(storage))
                 {
                     continue;
                 }
 
-                if (!crossPlanetRelayOnline && worldId >= 0 && storage.gameObject.GetMyWorldId() != worldId)
-                {
-                    continue;
-                }
-
-                if (StorageNetworkMembership.IsCollectableStorage(storage))
-                {
-                    collected.Add(new StorageInfo(storage));
-                }
+                collected.Add(new StorageInfo(storage));
             }
 
-            foreach (Geyser geyser in StorageSceneRegistry.GetGeysers())
+            foreach (Geyser geyser in StorageSceneRegistry.GetGeysersForWorld(worldId, crossPlanetRelayOnline))
             {
                 if (!StorageSceneRegistry.IsLive(geyser))
-                {
-                    continue;
-                }
-
-                if (!crossPlanetRelayOnline && worldId >= 0 && geyser.gameObject.GetMyWorldId() != worldId)
                 {
                     continue;
                 }
@@ -209,6 +181,13 @@ namespace StorageNetwork.Core
 
         public static void InvalidateCache()
         {
+            InvalidateSnapshotCache();
+            StorageNetworkInventoryIndexService.Invalidate();
+            StorageNetworkSourceIndexService.Invalidate();
+        }
+
+        internal static void InvalidateSnapshotCache()
+        {
             cachedSnapshot = null;
             cachedAtUnscaledTime = -1f;
             cachedFrame = -1;
@@ -216,8 +195,6 @@ namespace StorageNetwork.Core
             WorldSnapshots.Clear();
             LightweightSnapshots.Clear();
             cachedWorldRegistryVersion = -1;
-            StorageNetworkInventoryIndexService.Invalidate();
-            StorageNetworkSourceIndexService.Invalidate();
         }
 
         public static void ResetRuntimeState()
@@ -234,40 +211,7 @@ namespace StorageNetwork.Core
                 WorldSnapshots.Clear();
                 LightweightSnapshots.Clear();
                 cachedWorldRegistryVersion = registryVersion;
-                return;
             }
-
-            float cutoff = Time.unscaledTime - GetWorldSnapshotCacheSeconds();
-            ExpiredWorldSnapshotKeys.Clear();
-            foreach (KeyValuePair<WorldSnapshotKey, WorldSnapshotCacheEntry> pair in WorldSnapshots)
-            {
-                if (pair.Value.CreatedAt < cutoff)
-                {
-                    ExpiredWorldSnapshotKeys.Add(pair.Key);
-                }
-            }
-
-            foreach (WorldSnapshotKey key in ExpiredWorldSnapshotKeys)
-            {
-                WorldSnapshots.Remove(key);
-            }
-
-            ExpiredWorldSnapshotKeys.Clear();
-            ExpiredLightweightSnapshotKeys.Clear();
-            foreach (KeyValuePair<WorldSnapshotKey, LightweightSnapshotCacheEntry> pair in LightweightSnapshots)
-            {
-                if (pair.Value.CreatedAt < cutoff)
-                {
-                    ExpiredLightweightSnapshotKeys.Add(pair.Key);
-                }
-            }
-
-            foreach (WorldSnapshotKey key in ExpiredLightweightSnapshotKeys)
-            {
-                LightweightSnapshots.Remove(key);
-            }
-
-            ExpiredLightweightSnapshotKeys.Clear();
         }
 
         private readonly struct WorldSnapshotKey : System.IEquatable<WorldSnapshotKey>
@@ -323,18 +267,15 @@ namespace StorageNetwork.Core
 
         private readonly struct LightweightSnapshotCacheEntry
         {
-            public LightweightSnapshotCacheEntry(StorageSceneLightweightSnapshot snapshot, int frame, float createdAt)
+            public LightweightSnapshotCacheEntry(StorageSceneLightweightSnapshot snapshot, int registryVersion)
             {
                 Snapshot = snapshot;
-                Frame = frame;
-                CreatedAt = createdAt;
+                RegistryVersion = registryVersion;
             }
 
             public StorageSceneLightweightSnapshot Snapshot { get; }
 
-            public int Frame { get; }
-
-            public float CreatedAt { get; }
+            public int RegistryVersion { get; }
         }
     }
 }

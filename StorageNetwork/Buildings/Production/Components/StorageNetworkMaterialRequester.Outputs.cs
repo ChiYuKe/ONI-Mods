@@ -13,14 +13,14 @@ namespace StorageNetwork.Components
             if (!OutputStoreEnabled)
             {
                 lastOutputStatus = string.Empty;
-                lastRecipeResultTags = null;
+                lastRecipeResultTags.Clear();
                 return;
             }
 
             HashSet<Tag> resultTags = GetCurrentRecipeResultTags();
             if (resultTags.Count > 0)
             {
-                lastRecipeResultTags = resultTags;
+                CopyTags(resultTags, lastRecipeResultTags);
             }
             else
             {
@@ -31,7 +31,8 @@ namespace StorageNetwork.Components
             string lastBlockedItem = null;
             if (producedOutputs != null)
             {
-                List<GameObject> outputs = new List<GameObject>();
+                List<GameObject> outputs = producedOutputBuffer;
+                outputs.Clear();
                 foreach (GameObject output in producedOutputs)
                 {
                     if (output != null)
@@ -40,8 +41,9 @@ namespace StorageNetwork.Components
                     }
                 }
 
-                foreach (GameObject output in outputs)
+                for (int i = 0; i < outputs.Count; i++)
                 {
+                    GameObject output = outputs[i];
                     StorageTransferResult result = NetworkStorageTransferService.TransferLooseItemToNetwork(
                         output,
                         GetFabricatorStorages(),
@@ -53,6 +55,8 @@ namespace StorageNetwork.Components
                         lastBlockedItem = result.BlockedItem;
                     }
                 }
+
+                outputs.Clear();
             }
 
             StorageTransferResult outputStorageResult = StoreOutputsFromOutputStorage();
@@ -108,11 +112,11 @@ namespace StorageNetwork.Components
             HashSet<Tag> current = GetCurrentRecipeResultTags();
             if (current.Count > 0)
             {
-                lastRecipeResultTags = current;
+                CopyTags(current, lastRecipeResultTags);
                 return current;
             }
 
-            return lastRecipeResultTags != null && lastRecipeResultTags.Count > 0
+            return lastRecipeResultTags.Count > 0
                 ? lastRecipeResultTags
                 : GetKnownRecipeResultTags();
         }
@@ -120,7 +124,8 @@ namespace StorageNetwork.Components
         // 只把当前配方 results 里的真实产物入网，避免金属精炼器冷却液这类工艺介质被当作成品搬走。
         private HashSet<Tag> GetCurrentRecipeResultTags()
         {
-            HashSet<Tag> tags = new HashSet<Tag>();
+            HashSet<Tag> tags = currentRecipeResultTagBuffer;
+            tags.Clear();
             ComplexRecipe recipe = fabricator != null ? fabricator.CurrentWorkingOrder : null;
             if (recipe == null)
             {
@@ -145,11 +150,13 @@ namespace StorageNetwork.Components
 
         private HashSet<Tag> GetKnownRecipeResultTags()
         {
-            HashSet<Tag> tags = new HashSet<Tag>();
-            if (fabricator == null)
+            HashSet<Tag> tags = knownRecipeResultTags;
+            if (knownRecipeResultTagsBuilt || fabricator == null)
             {
                 return tags;
             }
+
+            tags.Clear();
 
             foreach (ComplexRecipe recipe in fabricator.GetRecipes())
             {
@@ -167,7 +174,17 @@ namespace StorageNetwork.Components
                 }
             }
 
+            knownRecipeResultTagsBuilt = true;
             return tags;
+        }
+
+        private static void CopyTags(HashSet<Tag> source, HashSet<Tag> destination)
+        {
+            destination.Clear();
+            foreach (Tag tag in source)
+            {
+                destination.Add(tag);
+            }
         }
 
         private Storage GetSpecificOutputTarget()

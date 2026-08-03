@@ -18,15 +18,20 @@ namespace StorageNetwork.Components
         [MyCmpGet]
         private StorageNetworkCore core;
 
+        [MyCmpGet]
+        private Building building;
+
+        private float selfHeatKilowatts;
+        private bool activeStateInitialized;
+        private bool activeState;
+
         protected override void OnSpawn()
         {
             base.OnSpawn();
             structureTemperature = GameComps.StructureTemperatures.GetHandle(gameObject);
-        }
-
-        protected override void OnCleanUp()
-        {
-            base.OnCleanUp();
+            selfHeatKilowatts = building?.Def != null
+                ? Mathf.Max(0f, building.Def.SelfHeatKilowattsWhenActive)
+                : 0f;
         }
 
         public void Sim200ms(float dt)
@@ -38,21 +43,27 @@ namespace StorageNetwork.Components
                 return;
             }
 
-            float heatKW = GetSelfHeatKilowatts();
-            if (heatKW <= 0f)
+            if (selfHeatKilowatts <= 0f)
             {
                 return;
             }
 
             GameComps.StructureTemperatures.ProduceEnergy(
                 structureTemperature,
-                heatKW * dt,
+                selfHeatKilowatts * dt,
                 BUILDING.STATUSITEMS.OPERATINGENERGY.FOOD_TRANSFER,
                 dt);
         }
 
         private void SetActive(bool active)
         {
+            if (activeStateInitialized && activeState == active)
+            {
+                return;
+            }
+
+            activeStateInitialized = true;
+            activeState = active;
             operational?.SetActive(active, false);
         }
 
@@ -69,12 +80,6 @@ namespace StorageNetwork.Components
             }
 
             return false;
-        }
-
-        private float GetSelfHeatKilowatts()
-        {
-            Building building = GetComponent<Building>();
-            return building?.Def != null ? Mathf.Max(0f, building.Def.SelfHeatKilowattsWhenActive) : 0f;
         }
     }
 #pragma warning restore CS0649

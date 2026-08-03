@@ -9,11 +9,47 @@ namespace StorageNetwork.Services
     internal static class StorageNetworkInputTargetReservationService
     {
         private static readonly Dictionary<int, List<InputTargetReservation>> inputReservationsByTarget = new Dictionary<int, List<InputTargetReservation>>();
-        private static int inputReservationIndexFrame = -1;
+        private static readonly Dictionary<int, List<InputTargetReservation>> outputReservationsByTarget = new Dictionary<int, List<InputTargetReservation>>();
+        private static readonly List<InputTargetReservation> emptyReservations = new List<InputTargetReservation>(0);
+        private static readonly List<Storage> storageWorkspace = new List<Storage>();
+        private static readonly Dictionary<int, Storage> targetWorkspace = new Dictionary<int, Storage>();
+        private static readonly List<InputTargetReservation> shadowReservations =
+            new List<InputTargetReservation>();
+        private static int reservationVersion;
+        private static int builtReservationVersion = -1;
+        private static int builtRegistryVersion = -1;
+        private static int builtCapabilityVersion = -1;
+
+        internal static int Version => reservationVersion;
+
+        internal static bool HasInputReservations
+        {
+            get
+            {
+                EnsureInputReservationIndex();
+                return inputReservationsByTarget.Count > 0;
+            }
+        }
 
         public static void Invalidate()
         {
-            inputReservationIndexFrame = -1;
+            unchecked
+            {
+                reservationVersion++;
+            }
+        }
+
+        public static void ResetRuntimeState()
+        {
+            inputReservationsByTarget.Clear();
+            outputReservationsByTarget.Clear();
+            storageWorkspace.Clear();
+            targetWorkspace.Clear();
+            shadowReservations.Clear();
+            reservationVersion = 0;
+            builtReservationVersion = -1;
+            builtRegistryVersion = -1;
+            builtCapabilityVersion = -1;
         }
 
         public static bool IsReservedForAutoInput(Storage target, Storage currentInputStorage)
@@ -59,42 +95,64 @@ namespace StorageNetwork.Services
         {
             if (!IsReservableTarget(target))
             {
-                return new List<InputTargetReservation>();
+                return emptyReservations;
             }
 
             int targetInstanceId = GetStorageInstanceId(target);
             if (targetInstanceId == KPrefabID.InvalidInstanceID)
             {
-                return new List<InputTargetReservation>();
+                return emptyReservations;
             }
 
             EnsureInputReservationIndex();
-            return inputReservationsByTarget.TryGetValue(targetInstanceId, out List<InputTargetReservation> reservations)
+            List<InputTargetReservation> indexed = inputReservationsByTarget.TryGetValue(
+                    targetInstanceId,
+                    out List<InputTargetReservation> reservations)
                 ? reservations
-                : new List<InputTargetReservation>();
+                : emptyReservations;
+            return ValidateReservations(
+                target,
+                targetInstanceId,
+                indexed,
+                outputReservations: false);
         }
 
         private static void EnsureInputReservationIndex()
         {
-            if (inputReservationIndexFrame == Time.frameCount)
+            int registryVersion = StorageSceneRegistry.MembershipVersion;
+            int capabilityVersion = StorageSceneRegistry.CapabilityVersion;
+            if (builtReservationVersion == reservationVersion &&
+                builtRegistryVersion == registryVersion &&
+                builtCapabilityVersion == capabilityVersion)
             {
                 return;
             }
 
-            inputReservationIndexFrame = Time.frameCount;
+            using StorageNetworkFrameProfileTool.WorkScope reservationScope =
+                StorageNetworkFrameProfileTool.BeginWork(
+                    StorageNetworkPerformanceArea.Reservation);
+            builtReservationVersion = reservationVersion;
+            builtRegistryVersion = registryVersion;
+            builtCapabilityVersion = capabilityVersion;
             StorageNetworkPerformanceCounters.RecordInputReservationIndexRebuild();
             inputReservationsByTarget.Clear();
-            List<Storage> storages = new List<Storage>(StorageSceneRegistry.GetStorages());
-            Dictionary<int, Storage> targets = new Dictionary<int, Storage>();
-            foreach (Storage storage in storages)
+            outputReservationsByTarget.Clear();
+            storageWorkspace.Clear();
+            targetWorkspace.Clear();
+            foreach (Storage storage in StorageSceneRegistry.GetStorages())
+            {
+                storageWorkspace.Add(storage);
+            }
+
+            foreach (Storage storage in storageWorkspace)
             {
                 if (IsReservableTarget(storage))
                 {
-                    targets[GetStorageInstanceId(storage)] = storage;
+                    targetWorkspace[GetStorageInstanceId(storage)] = storage;
                 }
             }
 
-            foreach (Storage inputStorage in storages)
+            foreach (Storage inputStorage in storageWorkspace)
             {
                 if (!StorageSceneRegistry.IsLive(inputStorage)) continue;
                 int targetId = KPrefabID.InvalidInstanceID;
@@ -104,7 +162,7 @@ namespace StorageNetwork.Services
                 if (solid != null && solid.CurrentInputStoreMode == StorageNetworkMaterialRequester.OutputStoreMode.SpecificStorage) targetId = solid.InputStorageInstanceId;
                 else if (liquid != null && liquid.CurrentInputStoreMode == StorageNetworkMaterialRequester.OutputStoreMode.SpecificStorage) targetId = liquid.InputStorageInstanceId;
                 else if (gas != null && gas.CurrentInputStoreMode == StorageNetworkMaterialRequester.OutputStoreMode.SpecificStorage) targetId = gas.InputStorageInstanceId;
-                if (!targets.TryGetValue(targetId, out Storage target)) continue;
+                if (!targetWorkspace.TryGetValue(targetId, out Storage target)) continue;
                 if (!inputReservationsByTarget.TryGetValue(targetId, out List<InputTargetReservation> reservations))
                 {
                     reservations = new List<InputTargetReservation>();
@@ -114,6 +172,33 @@ namespace StorageNetwork.Services
                 AddLiquidInputReservation(inputStorage, target, targetId, reservations);
                 AddGasInputReservation(inputStorage, target, targetId, reservations);
             }
+
+            foreach (Storage outputStorage in storageWorkspace)
+            {
+                if (!StorageSceneRegistry.IsLive(outputStorage))
+                {
+                    continue;
+                }
+
+                int targetId = GetSpecificOutputSourceId(outputStorage);
+                if (!targetWorkspace.TryGetValue(targetId, out Storage target))
+                {
+                    continue;
+                }
+
+                if (!outputReservationsByTarget.TryGetValue(targetId, out List<InputTargetReservation> reservations))
+                {
+                    reservations = new List<InputTargetReservation>();
+                    outputReservationsByTarget[targetId] = reservations;
+                }
+
+                AddSolidOutputReservation(outputStorage, target, targetId, reservations);
+                AddLiquidOutputReservation(outputStorage, target, targetId, reservations);
+                AddGasOutputReservation(outputStorage, target, targetId, reservations);
+            }
+
+            storageWorkspace.Clear();
+            targetWorkspace.Clear();
         }
 
         public static bool ClearReservation(InputTargetReservation reservation)
@@ -137,31 +222,28 @@ namespace StorageNetwork.Services
 
         public static List<InputTargetReservation> GetOutputSourceReservationsForTarget(Storage target)
         {
-            List<InputTargetReservation> reservations = new List<InputTargetReservation>();
             if (!IsReservableTarget(target))
             {
-                return reservations;
+                return emptyReservations;
             }
 
             int targetInstanceId = GetStorageInstanceId(target);
             if (targetInstanceId == KPrefabID.InvalidInstanceID)
             {
-                return reservations;
+                return emptyReservations;
             }
 
-            foreach (Storage outputStorage in StorageSceneRegistry.GetStorages())
-            {
-                if (!StorageSceneRegistry.IsLive(outputStorage) || outputStorage == target)
-                {
-                    continue;
-                }
-
-                AddSolidOutputReservation(outputStorage, target, targetInstanceId, reservations);
-                AddLiquidOutputReservation(outputStorage, target, targetInstanceId, reservations);
-                AddGasOutputReservation(outputStorage, target, targetInstanceId, reservations);
-            }
-
-            return reservations;
+            EnsureInputReservationIndex();
+            List<InputTargetReservation> indexed = outputReservationsByTarget.TryGetValue(
+                targetInstanceId,
+                out List<InputTargetReservation> reservations)
+                ? reservations
+                : emptyReservations;
+            return ValidateReservations(
+                target,
+                targetInstanceId,
+                indexed,
+                outputReservations: true);
         }
 
         public static int ClearOutputSourceReservationsForTarget(Storage target)
@@ -192,16 +274,7 @@ namespace StorageNetwork.Services
                 inputStorage,
                 target,
                 Loc.Get(Loc.UI.STORAGE_NETWORK.MATERIAL_PORT_INPUT_STATUS),
-                () =>
-                {
-                    if (!StorageSceneRegistry.IsLive(ingress))
-                    {
-                        return false;
-                    }
-
-                    ingress.UseAutomaticInputStorage();
-                    return true;
-                }));
+                StorageNetworkReservationKind.SolidInput));
         }
 
         private static void AddLiquidInputReservation(Storage inputStorage, Storage target, int targetInstanceId, List<InputTargetReservation> reservations)
@@ -218,16 +291,7 @@ namespace StorageNetwork.Services
                 inputStorage,
                 target,
                 Loc.Get(Loc.UI.STORAGE_NETWORK.LIQUID_PORT_INPUT_STATUS),
-                () =>
-                {
-                    if (!StorageSceneRegistry.IsLive(ingress))
-                    {
-                        return false;
-                    }
-
-                    ingress.UseAutomaticInputStorage();
-                    return true;
-                }));
+                StorageNetworkReservationKind.LiquidInput));
         }
 
         private static void AddGasInputReservation(Storage inputStorage, Storage target, int targetInstanceId, List<InputTargetReservation> reservations)
@@ -244,16 +308,7 @@ namespace StorageNetwork.Services
                 inputStorage,
                 target,
                 Loc.Get(Loc.UI.STORAGE_NETWORK.GAS_PORT_INPUT_STATUS),
-                () =>
-                {
-                    if (!StorageSceneRegistry.IsLive(ingress))
-                    {
-                        return false;
-                    }
-
-                    ingress.UseAutomaticInputStorage();
-                    return true;
-                }));
+                StorageNetworkReservationKind.GasInput));
         }
 
         private static void AddSolidOutputReservation(Storage outputStorage, Storage target, int targetInstanceId, List<InputTargetReservation> reservations)
@@ -270,16 +325,7 @@ namespace StorageNetwork.Services
                 outputStorage,
                 target,
                 Loc.Get(Loc.UI.STORAGE_NETWORK.MATERIAL_PORT_OUTPUT_STATUS),
-                () =>
-                {
-                    if (!StorageSceneRegistry.IsLive(egress))
-                    {
-                        return false;
-                    }
-
-                    egress.UseAutomaticSourceStorage();
-                    return true;
-                }));
+                StorageNetworkReservationKind.SolidOutput));
         }
 
         private static void AddLiquidOutputReservation(Storage outputStorage, Storage target, int targetInstanceId, List<InputTargetReservation> reservations)
@@ -296,16 +342,7 @@ namespace StorageNetwork.Services
                 outputStorage,
                 target,
                 Loc.Get(Loc.UI.STORAGE_NETWORK.LIQUID_PORT_OUTPUT_STATUS),
-                () =>
-                {
-                    if (!StorageSceneRegistry.IsLive(egress))
-                    {
-                        return false;
-                    }
-
-                    egress.UseAutomaticSourceStorage();
-                    return true;
-                }));
+                StorageNetworkReservationKind.LiquidOutput));
         }
 
         private static void AddGasOutputReservation(Storage outputStorage, Storage target, int targetInstanceId, List<InputTargetReservation> reservations)
@@ -322,32 +359,152 @@ namespace StorageNetwork.Services
                 outputStorage,
                 target,
                 Loc.Get(Loc.UI.STORAGE_NETWORK.GAS_PORT_OUTPUT_STATUS),
-                () =>
-                {
-                    if (!StorageSceneRegistry.IsLive(egress))
-                    {
-                        return false;
-                    }
-
-                    egress.UseAutomaticSourceStorage();
-                    return true;
-                }));
+                StorageNetworkReservationKind.GasOutput));
         }
 
-        private static InputTargetReservation CreateReservation(Storage inputStorage, Storage target, string inputTypeName, System.Func<bool> clear)
+        private static InputTargetReservation CreateReservation(
+            Storage inputStorage,
+            Storage target,
+            string inputTypeName,
+            StorageNetworkReservationKind kind)
         {
-            string properName = inputStorage != null ? inputStorage.GetProperName() : inputTypeName;
-            string displayName = string.IsNullOrEmpty(properName)
-                ? inputTypeName
-                : string.Format("{0} - {1}", inputTypeName, properName);
-
             return new InputTargetReservation(
                 inputStorage,
-                inputStorage != null ? inputStorage.gameObject : null,
                 target,
                 inputTypeName,
-                displayName,
-                clear);
+                kind);
+        }
+
+        private static List<InputTargetReservation> ValidateReservations(
+            Storage target,
+            int targetInstanceId,
+            List<InputTargetReservation> indexed,
+            bool outputReservations)
+        {
+            int version = unchecked(
+                (reservationVersion * 397) ^
+                StorageSceneRegistry.MembershipVersion ^
+                StorageSceneRegistry.CapabilityVersion);
+            int worldId = StorageTargetSelector.GetObjectWorldId(target.gameObject);
+            if (!StorageNetworkShadowValidationService.ShouldValidate(
+                    StorageNetworkShadowArea.Reservation,
+                    worldId,
+                    version))
+            {
+                return indexed;
+            }
+
+            shadowReservations.Clear();
+            foreach (Storage portStorage in StorageSceneRegistry.GetStorages())
+            {
+                if (!StorageSceneRegistry.IsLive(portStorage))
+                {
+                    continue;
+                }
+
+                if (outputReservations)
+                {
+                    AddSolidOutputReservation(
+                        portStorage,
+                        target,
+                        targetInstanceId,
+                        shadowReservations);
+                    AddLiquidOutputReservation(
+                        portStorage,
+                        target,
+                        targetInstanceId,
+                        shadowReservations);
+                    AddGasOutputReservation(
+                        portStorage,
+                        target,
+                        targetInstanceId,
+                        shadowReservations);
+                }
+                else
+                {
+                    AddSolidInputReservation(
+                        portStorage,
+                        target,
+                        targetInstanceId,
+                        shadowReservations);
+                    AddLiquidInputReservation(
+                        portStorage,
+                        target,
+                        targetInstanceId,
+                        shadowReservations);
+                    AddGasInputReservation(
+                        portStorage,
+                        target,
+                        targetInstanceId,
+                        shadowReservations);
+                }
+            }
+
+            if (ReservationsEquivalent(indexed, shadowReservations))
+            {
+                shadowReservations.Clear();
+                StorageNetworkShadowValidationService.ReportMatch(
+                    StorageNetworkShadowArea.Reservation,
+                    worldId,
+                    version);
+                return indexed;
+            }
+
+            List<InputTargetReservation> native =
+                new List<InputTargetReservation>(shadowReservations);
+            shadowReservations.Clear();
+            if (outputReservations)
+            {
+                outputReservationsByTarget[targetInstanceId] = native;
+            }
+            else
+            {
+                inputReservationsByTarget[targetInstanceId] = native;
+            }
+
+            StorageNetworkShadowValidationService.ReportMismatch(
+                StorageNetworkShadowArea.Reservation,
+                worldId,
+                version,
+                unchecked((targetInstanceId * 397) ^ (outputReservations ? 1 : 0)),
+                $"target={targetInstanceId}, indexedCount={indexed.Count}, " +
+                $"nativeCount={native.Count}");
+            Invalidate();
+            return native;
+        }
+
+        private static bool ReservationsEquivalent(
+            List<InputTargetReservation> left,
+            List<InputTargetReservation> right)
+        {
+            if (left == null || right == null || left.Count != right.Count)
+            {
+                return left == right;
+            }
+
+            foreach (InputTargetReservation expected in left)
+            {
+                bool found = false;
+                foreach (InputTargetReservation actual in right)
+                {
+                    if (expected == null
+                        ? actual == null
+                        : actual != null &&
+                          expected.InputStorage == actual.InputStorage &&
+                          expected.Kind == actual.Kind)
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+
+                if (!found)
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         private static bool IsReservableTarget(Storage target)
@@ -372,6 +529,32 @@ namespace StorageNetwork.Services
         {
             KPrefabID prefabId = target != null ? target.GetComponent<KPrefabID>() : null;
             return prefabId != null ? prefabId.InstanceID : KPrefabID.InvalidInstanceID;
+        }
+
+        private static int GetSpecificOutputSourceId(Storage outputStorage)
+        {
+            StorageNetworkSolidOutputPortEgress solid =
+                outputStorage.GetComponent<StorageNetworkSolidOutputPortEgress>();
+            if (solid != null &&
+                solid.CurrentSourceMode == StorageNetworkMaterialRequester.RequestMode.SpecificStorage)
+            {
+                return solid.SourceStorageInstanceId;
+            }
+
+            StorageNetworkLiquidOutputPortEgress liquid =
+                outputStorage.GetComponent<StorageNetworkLiquidOutputPortEgress>();
+            if (liquid != null &&
+                liquid.CurrentSourceMode == StorageNetworkMaterialRequester.RequestMode.SpecificStorage)
+            {
+                return liquid.SourceStorageInstanceId;
+            }
+
+            StorageNetworkGasOutputPortEgress gas =
+                outputStorage.GetComponent<StorageNetworkGasOutputPortEgress>();
+            return gas != null &&
+                   gas.CurrentSourceMode == StorageNetworkMaterialRequester.RequestMode.SpecificStorage
+                ? gas.SourceStorageInstanceId
+                : KPrefabID.InvalidInstanceID;
         }
     }
 }

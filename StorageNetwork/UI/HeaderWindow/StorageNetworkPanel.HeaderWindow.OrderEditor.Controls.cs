@@ -188,7 +188,7 @@ namespace StorageNetwork.UI
             metricsLayout.childForceExpandWidth = true;
             metricsLayout.childForceExpandHeight = true;
 
-            AddKeepRuleMetric(metrics.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_KEEP_CURRENT_STOCK), currentStock, PositiveColor());
+            orderKeepCurrentStockMetric = AddKeepRuleMetric(metrics.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_KEEP_CURRENT_STOCK), currentStock, PositiveColor());
             if (rule != null)
             {
                 AddKeepRuleMetric(metrics.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_KEEP_TARGET_STOCK), targetStock, NeutralTextColor());
@@ -197,10 +197,10 @@ namespace StorageNetwork.UI
             {
                 AddKeepRuleMetricText(metrics.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_KEEP_TARGET_STOCK), Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_KEEP_DISABLED), MutedTextColor());
             }
-            AddKeepRuleMetric(metrics.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_KEEP_PENDING), automaticPending, WarningColor());
+            orderKeepPendingMetric = AddKeepRuleMetric(metrics.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_KEEP_PENDING), automaticPending, WarningColor());
             if (rule != null)
             {
-                AddKeepRuleMetric(metrics.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_KEEP_SHORTAGE), shortage, shortage > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ? WarningColor() : PositiveColor());
+                orderKeepShortageMetric = AddKeepRuleMetric(metrics.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_KEEP_SHORTAGE), shortage, shortage > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ? WarningColor() : PositiveColor());
             }
             else
             {
@@ -208,12 +208,12 @@ namespace StorageNetwork.UI
             }
         }
 
-        private void AddKeepRuleMetric(Transform parent, string format, float amount, Color valueColor)
+        private TextMeshProUGUI AddKeepRuleMetric(Transform parent, string format, float amount, Color valueColor)
         {
-            AddKeepRuleMetricText(parent, format, GameUtil.GetFormattedMass(amount), valueColor);
+            return AddKeepRuleMetricText(parent, format, GameUtil.GetFormattedMass(amount), valueColor);
         }
 
-        private void AddKeepRuleMetricText(Transform parent, string format, string value, Color valueColor)
+        private TextMeshProUGUI AddKeepRuleMetricText(Transform parent, string format, string value, Color valueColor)
         {
             GameObject card = CreatePlainImage("KeepRuleMetric", parent, new Color(0.72f, 0.73f, 0.68f, 1f));
             LayoutElement cardLayout = card.AddComponent<LayoutElement>();
@@ -236,6 +236,7 @@ namespace StorageNetwork.UI
             textLayout.preferredHeight = 38f;
             textLayout.minHeight = 38f;
             textLayout.flexibleHeight = 0f;
+            return text;
         }
 
         private void AddRouteEditor(Transform parent, ProductDisplayGroup product)
@@ -329,11 +330,48 @@ namespace StorageNetwork.UI
                 return;
             }
 
-            foreach (RecipeDisplayInfo route in alternatives.Take(4))
+            int visibleCount = Mathf.Min(4, alternatives.Count);
+            const float visibleRowHeight = 60f;
+            float viewportHeight = visibleCount * visibleRowHeight + Mathf.Max(0, visibleCount - 1) * 6f;
+            GameObject viewport = CreatePlainImage("RecipeOptionsViewport", parent, new Color(0.89f, 0.88f, 0.81f, 1f));
+            LayoutElement viewportLayout = viewport.AddComponent<LayoutElement>();
+            viewportLayout.preferredHeight = viewportHeight;
+            viewportLayout.minHeight = viewportHeight;
+            viewportLayout.flexibleHeight = 0f;
+            viewport.AddComponent<RectMask2D>();
+            viewport.AddComponent<ScrollWheelBlocker>();
+
+            GameObject contentObject = new GameObject("RecipeOptionsContent");
+            contentObject.transform.SetParent(viewport.transform, false);
+            RectTransform content = contentObject.AddComponent<RectTransform>();
+            content.anchorMin = new Vector2(0f, 1f);
+            content.anchorMax = new Vector2(1f, 1f);
+            content.pivot = new Vector2(0.5f, 1f);
+            content.offsetMin = Vector2.zero;
+            content.offsetMax = Vector2.zero;
+
+            VerticalLayoutGroup contentLayout = contentObject.AddComponent<VerticalLayoutGroup>();
+            contentLayout.spacing = 6f;
+            contentLayout.childControlWidth = true;
+            contentLayout.childControlHeight = true;
+            contentLayout.childForceExpandWidth = true;
+            contentLayout.childForceExpandHeight = false;
+            contentObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+            Scrollbar scrollbar = CreateScrollbar(viewport.transform, 4f, 4f);
+            ScrollRect scrollRect = viewport.AddComponent<ScrollRect>();
+            scrollRect.viewport = viewport.GetComponent<RectTransform>();
+            scrollRect.content = content;
+            ConfigureSmoothVerticalScroll(scrollRect, 24f);
+            scrollRect.verticalScrollbar = scrollbar;
+            scrollRect.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHideAndExpandViewport;
+            scrollRect.verticalScrollbarSpacing = 2f;
+
+            foreach (RecipeDisplayInfo route in alternatives)
             {
                 int routeIndex = product.Routes.IndexOf(route);
                 string label = ProductionOrderFormatting.FormatRecipeElements(route.Recipe.ingredients);
-                AddChoiceButton(parent, routeIndex == selectedRouteIndex ? "> " + label : label, routeIndex, routeIndex == selectedRouteIndex, 15f);
+                AddChoiceButton(content.transform, routeIndex == selectedRouteIndex ? "> " + label : label, routeIndex, routeIndex == selectedRouteIndex, 15f);
             }
         }
     }

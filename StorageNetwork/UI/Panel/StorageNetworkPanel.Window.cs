@@ -123,7 +123,7 @@ namespace StorageNetwork.UI
             GameObject viewport = new GameObject("Viewport");
             viewport.transform.SetParent(rightList.transform, false);
             RectTransform viewportRect = viewport.AddComponent<RectTransform>();
-            SetStretch(viewportRect, 8f, 22f, 8f, 8f);
+            SetStretch(viewportRect, 8f, 12f, 8f, 8f);
             viewport.AddComponent<RectMask2D>();
 
             GameObject contentObject = new GameObject("Content");
@@ -145,13 +145,14 @@ namespace StorageNetwork.UI
             ContentSizeFitter fitter = contentObject.AddComponent<ContentSizeFitter>();
             fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
-            Scrollbar scrollbar = CreateScrollbar(rightList.transform);
+            Scrollbar scrollbar = CreateScrollbar(rightList.transform, 4f, 4f, 10f);
 
             ScrollRect scrollRect = rightList.AddComponent<ScrollRect>();
             listScrollRect = scrollRect;
             scrollRect.viewport = viewportRect;
             scrollRect.content = listContent;
             ConfigureSmoothVerticalScroll(scrollRect, 30f);
+            scrollRect.onValueChanged.AddListener(OnMainListScroll);
             scrollRect.verticalScrollbar = scrollbar;
             scrollRect.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHideAndExpandViewport;
             scrollRect.verticalScrollbarSpacing = 4f;

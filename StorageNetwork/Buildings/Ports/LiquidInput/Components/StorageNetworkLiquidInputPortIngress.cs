@@ -24,6 +24,9 @@ namespace StorageNetwork.Components
         [MyCmpGet]
         private Storage storage = null;
 
+        [MyCmpGet]
+        private Operational operational = null;
+
         private static StatusItem liquidInputPortStatusItem;
         private static readonly EventSystem.IntraObjectHandler<StorageNetworkLiquidInputPortIngress> OnCopySettingsDelegate =
             new EventSystem.IntraObjectHandler<StorageNetworkLiquidInputPortIngress>((component, data) => component.OnCopySettings(data));
@@ -71,7 +74,6 @@ namespace StorageNetwork.Components
 
         public void Sim1000ms(float dt)
         {
-            Operational operational = GetComponent<Operational>();
             if (operational != null && !operational.IsOperational)
             {
                 return;
@@ -131,6 +133,7 @@ namespace StorageNetwork.Components
         {
             InputStorageInstanceId = GetStorageInstanceId(target);
             CurrentInputStoreMode = StorageNetworkMaterialRequester.OutputStoreMode.SpecificStorage;
+            StorageNetworkInputTargetReservationService.Invalidate();
         }
 
         public void UseAutomaticInputStorage()
@@ -139,6 +142,7 @@ namespace StorageNetwork.Components
             InputStorageInstanceId = KPrefabID.InvalidInstanceID;
             lastStatus = string.Empty;
             cachedStatusText = null;
+            StorageNetworkInputTargetReservationService.Invalidate();
         }
 
         public Storage ResolveInputStorage()
@@ -173,6 +177,7 @@ namespace StorageNetwork.Components
             flushElapsed = 0f;
             lastStatus = string.Empty;
             cachedStatusText = null;
+            StorageNetworkInputTargetReservationService.Invalidate();
         }
 
         private void RefreshLiquidInputPortStatus()
@@ -242,7 +247,7 @@ namespace StorageNetwork.Components
         {
             if (cachedStatusText == null)
             {
-                UpdateCachedStatusText();
+                cachedStatusText = BuildStatusText();
             }
 
             return cachedStatusText;
@@ -250,7 +255,7 @@ namespace StorageNetwork.Components
 
         private void UpdateCachedStatusText()
         {
-            cachedStatusText = BuildStatusText();
+            cachedStatusText = null;
         }
 
         private string BuildStatusText()

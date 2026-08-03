@@ -39,11 +39,11 @@ namespace StorageNetwork.UI
             float currentCycle = StorageNetworkCycleTime.GetCurrent();
             float estimateSeconds = productionOrderService.EstimatePlanSeconds(draft.Plan, out bool infinite);
             string finish = infinite ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_UNKNOWN) : ProductionOrderFormatting.FormatCycleStamp(currentCycle + estimateSeconds / 600f);
-            AddMetricTile(row.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_METRIC_CURRENT_CYCLE), ProductionOrderFormatting.FormatCycleStamp(currentCycle), NeutralBlue(), 86f);
-            AddMetricTile(row.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_METRIC_FINISH), finish, infinite ? WarningColor() : PositiveColor(), 92f);
+            orderCurrentCycleMetric = AddMetricTile(row.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_METRIC_CURRENT_CYCLE), ProductionOrderFormatting.FormatCycleStamp(currentCycle), NeutralBlue(), 86f);
+            orderFinishCycleMetric = AddMetricTile(row.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_METRIC_FINISH), finish, infinite ? WarningColor() : PositiveColor(), 92f);
             AddMetricTile(row.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_METRIC_EQUIPMENT), draft.Plan?.Assignments.Count.ToString() ?? "0", NeutralBlue(), 72f);
-            AddMetricTile(row.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_METRIC_AUTO_PRODUCE), draft.ProducedRequirementCount.ToString(), draft.ProducedRequirementCount > 0 ? WarningColor() : PositiveColor(), 76f);
-            AddMetricTile(row.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_METRIC_BLOCKED), draft.BlockedRequirementCount.ToString(), draft.BlockedRequirementCount > 0 ? DangerColor() : PositiveColor(), 70f);
+            orderAutoProduceMetric = AddMetricTile(row.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_METRIC_AUTO_PRODUCE), draft.ProducedRequirementCount.ToString(), draft.ProducedRequirementCount > 0 ? WarningColor() : PositiveColor(), 76f);
+            orderBlockedMetric = AddMetricTile(row.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_METRIC_BLOCKED), draft.BlockedRequirementCount.ToString(), draft.BlockedRequirementCount > 0 ? DangerColor() : PositiveColor(), 70f);
         }
 
         private void AddMaterialTreeViewport(Transform parent, ProductionOrderDraft draft)
@@ -183,9 +183,9 @@ namespace StorageNetwork.UI
                 return;
             }
 
-            foreach (ProductionPlanRequirement requirement in requirements)
+            for (int i = 0; i < requirements.Count; i++)
             {
-                AddDispatchRequirementRow(rows.transform, requirement);
+                AddDispatchRequirementRow(rows.transform, requirements[i], "dispatch:" + i);
             }
         }
 
@@ -208,7 +208,7 @@ namespace StorageNetwork.UI
             AddStatusBadge(row.transform, StorageNetworkPlanPreviewText.BuildAssignmentSummary(node, 3), NeutralBlue(), 260f);
         }
 
-        private void AddDispatchRequirementRow(Transform parent, ProductionPlanRequirement requirement)
+        private void AddDispatchRequirementRow(Transform parent, ProductionPlanRequirement requirement, string path)
         {
             bool covered = StorageNetworkPlanPreviewText.IsCoveredByNetwork(requirement);
             bool produced = StorageNetworkPlanPreviewText.CanProduceRequirement(requirement);
@@ -224,10 +224,11 @@ namespace StorageNetwork.UI
             layout.childForceExpandWidth = false;
             layout.childForceExpandHeight = true;
 
-            AddStatusBadge(row.transform, covered ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_DISPATCH_DIRECT) : produced ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_NEEDS_PRODUCTION) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_STATUS_BLOCKED), color, 72f);
-            AddFlowMaterialPill(row.transform, requirement, 220f);
+            TextMeshProUGUI sourceStatus = AddStatusBadge(row.transform, covered ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_DISPATCH_DIRECT) : produced ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_NEEDS_PRODUCTION) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_STATUS_BLOCKED), color, 72f);
+            TextMeshProUGUI material = AddFlowMaterialPill(row.transform, requirement, 220f);
             AddFlowArrow(row.transform, color);
-            AddStatusBadge(row.transform, covered ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_SEND_FROM_NETWORK) : produced ? StorageNetworkPlanPreviewText.BuildAssignmentSummary(requirement.Child, 3) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_DISPATCH_NO_ROUTE), color, 260f);
+            TextMeshProUGUI destinationStatus = AddStatusBadge(row.transform, covered ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_SEND_FROM_NETWORK) : produced ? StorageNetworkPlanPreviewText.BuildAssignmentSummary(requirement.Child, 3) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_DISPATCH_NO_ROUTE), color, 260f);
+            orderDispatchRequirementViews[path] = new DispatchRequirementLiveView(material, sourceStatus, destinationStatus);
         }
 
     }

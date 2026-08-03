@@ -9,6 +9,9 @@ namespace StorageNetwork.Components
     [SerializationConfig(MemberSerialization.OptIn)]
     public sealed class StorageNetworkEngravingDisk : KMonoBehaviour
     {
+        private static readonly HashSet<StorageNetworkEngravingDisk> RuntimeDisks =
+            new HashSet<StorageNetworkEngravingDisk>();
+
         [Serialize]
         private List<string> engravedRecipeIds = new List<string>();
 
@@ -22,8 +25,25 @@ namespace StorageNetwork.Components
         protected override void OnSpawn()
         {
             base.OnSpawn();
+            RuntimeDisks.Add(this);
             gameObject.AddOrGet<UserNameable>();
             RefreshInfoDescription();
+        }
+
+        protected override void OnCleanUp()
+        {
+            RuntimeDisks.Remove(this);
+            base.OnCleanUp();
+        }
+
+        internal static IReadOnlyCollection<StorageNetworkEngravingDisk> GetRuntimeDisks()
+        {
+            return RuntimeDisks;
+        }
+
+        internal static void ResetRuntimeState()
+        {
+            RuntimeDisks.Clear();
         }
 
         public void SetRecipeIds(IEnumerable<string> recipeIds)

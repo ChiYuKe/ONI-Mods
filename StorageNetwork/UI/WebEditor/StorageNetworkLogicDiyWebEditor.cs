@@ -125,6 +125,16 @@ namespace StorageNetwork.UI.WebEditor
             }
 
             int id = logic.GetInstanceID();
+            lock (sync)
+            {
+                if (!IsPageActiveLocked(id) ||
+                    !cachedStates.TryGetValue(id, out WebEditorState activeState) ||
+                    activeState == null)
+                {
+                    return;
+                }
+            }
+
             int outputSignalValue = logic.OutputSignalValue;
             Dictionary<string, float> nodeOutputValues = logic.GetRuntimeEvalSnapshot();
             lock (sync)

@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Reflection;
 using HarmonyLib;
 using UnityEngine;
 
@@ -7,17 +9,26 @@ namespace StorageNetwork.Components
     {
         private const float MaxNativeBatteryUiCapacity = 60000f;
 
-        private static readonly System.Reflection.FieldInfo JoulesAvailableField =
+        private static readonly AccessTools.FieldRef<Battery, float> JoulesAvailableRef =
+            CreateFieldRef<float>("joulesAvailable");
+        private static readonly AccessTools.FieldRef<Battery, float> PreviousJoulesAvailableRef =
+            CreateFieldRef<float>("PreviousJoulesAvailable");
+        private static readonly AccessTools.FieldRef<Battery, int> PowerCellRef =
+            CreateFieldRef<int>("<PowerCell>k__BackingField");
+
+        private static readonly FieldInfo JoulesAvailableField =
             AccessTools.Field(typeof(Battery), "joulesAvailable");
-
-        private static readonly System.Reflection.FieldInfo PreviousJoulesAvailableField =
+        private static readonly FieldInfo PreviousJoulesAvailableField =
             AccessTools.Field(typeof(Battery), "PreviousJoulesAvailable");
-
-        private static readonly System.Reflection.FieldInfo PowerCellField =
+        private static readonly FieldInfo PowerCellField =
             AccessTools.Field(typeof(Battery), "<PowerCell>k__BackingField");
+        private static readonly HashSet<Battery> WhiteUiBatteries = new HashSet<Battery>();
 
         [MyCmpGet]
         private StorageNetworkPowerStorage powerStorage = null;
+
+        [MyCmpGet]
+        private Building building = null;
 
         private float lastUiJoules;
 
@@ -26,11 +37,13 @@ namespace StorageNetwork.Components
         protected override void OnSpawn()
         {
             global::Components.Batteries.Add(this);
+            RegisterWhiteUiBattery(this);
             SyncFromPowerStorage(true);
         }
 
         protected override void OnCleanUp()
         {
+            UnregisterWhiteUiBattery(this);
             global::Components.Batteries.Remove(this);
         }
 
@@ -55,10 +68,13 @@ namespace StorageNetwork.Components
             joulesLostPerSecond = 0f;
             chargeWattage = 0f;
             powerSortOrder = 1000;
-            Building building = GetComponent<Building>();
             if (building != null)
             {
-                PowerCellField.SetValue(this, Grid.PosToCell(building.transform.GetPosition()));
+                SetPrivateField(
+                    PowerCellRef,
+                    PowerCellField,
+                    this,
+                    Grid.PosToCell(building.transform.GetPosition()));
             }
 
             float previousJoules = resetPrevious
@@ -69,9 +85,70 @@ namespace StorageNetwork.Components
                 previousJoules = Mathf.Max(0f, joules - 1f);
             }
 
-            PreviousJoulesAvailableField.SetValue(this, previousJoules);
-            JoulesAvailableField.SetValue(this, joules);
+            SetPrivateField(
+                PreviousJoulesAvailableRef,
+                PreviousJoulesAvailableField,
+                this,
+                previousJoules);
+            SetPrivateField(
+                JoulesAvailableRef,
+                JoulesAvailableField,
+                this,
+                joules);
             lastUiJoules = joules;
+        }
+
+        internal static void RegisterWhiteUiBattery(Battery battery)
+        {
+            if (battery != null)
+            {
+                WhiteUiBatteries.Add(battery);
+            }
+        }
+
+        internal static void UnregisterWhiteUiBattery(Battery battery)
+        {
+            if (battery != null)
+            {
+                WhiteUiBatteries.Remove(battery);
+            }
+        }
+
+        internal static bool ShouldForceWhiteUi(Battery battery)
+        {
+            return battery != null && WhiteUiBatteries.Contains(battery);
+        }
+
+        internal static void ResetRuntimeState()
+        {
+            WhiteUiBatteries.Clear();
+        }
+
+        private static AccessTools.FieldRef<Battery, T> CreateFieldRef<T>(string fieldName)
+        {
+            try
+            {
+                return AccessTools.FieldRefAccess<Battery, T>(fieldName);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private static void SetPrivateField<T>(
+            AccessTools.FieldRef<Battery, T> fieldRef,
+            FieldInfo fallback,
+            Battery battery,
+            T value)
+        {
+            if (fieldRef != null)
+            {
+                fieldRef(battery) = value;
+                return;
+            }
+
+            fallback?.SetValue(battery, value);
         }
     }
 }

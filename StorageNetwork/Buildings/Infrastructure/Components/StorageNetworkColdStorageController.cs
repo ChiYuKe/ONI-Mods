@@ -128,8 +128,6 @@ namespace StorageNetwork.Components
                 {
                     ShowHeatStatus();
                     cooling.SetEnergySaving(false);
-                    cooling.ApplyEnergyProfile();
-                    cooling.ApplyToStoredItems();
                     RefreshTemperatureAdjuster();
                     return;
                 }
@@ -203,7 +201,6 @@ namespace StorageNetwork.Components
 
             public void ApplyCoolingExhaust(float dt)
             {
-                cooling.ApplyEnergyProfile();
                 GameComps.StructureTemperatures.ProduceEnergy(
                     structureTemperature,
                     cooling.GetCoolingHeatKW() * dt,
@@ -213,7 +210,6 @@ namespace StorageNetwork.Components
 
             public void ApplySteadyExhaust(float dt)
             {
-                cooling.ApplyEnergyProfile();
                 if (StorageNetworkColdStorageCooling.EnergySaverHeatKW <= 0f)
                 {
                     return;

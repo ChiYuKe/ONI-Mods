@@ -13,10 +13,19 @@ namespace StorageNetwork.UI
     {
         private const int AllEnrollableWorldsFilterId = -1;
         private const int UnsetEnrollableWorldFilterId = -2;
+        private const int EnrollableVirtualizationThreshold = 32;
+        private const int EnrollableVirtualizationOverscan = 3;
+        private const float EnrollableRowSpacing = 5f;
+        private const float EnrollableVerticalPadding = 20f;
+        private readonly List<EnrollableListEntry> enrollableListEntries =
+            new List<EnrollableListEntry>();
+        private ScrollRect enrollableScrollRect;
+        private bool enrollableViewportDirty;
 
         private void ShowEnrollableBuildingsDialog()
         {
             EnsureEnrollableWindow();
+            bool wasVisible = enrollableWindowRoot.activeInHierarchy;
 
             List<StorageNetworkEnrollment> enrollments = StorageSceneRegistry
                 .GetEnrollments()
@@ -25,29 +34,28 @@ namespace StorageNetwork.UI
             EnsureValidEnrollableWorldFilter(enrollments);
 
             string signature = StorageNetworkEnrollableWindowSignature.Build(enrollments, enrollableWorldFilterId, enrollableSearchText);
-            if (signature != enrollableWindowSignature)
+            bool structureChanged = signature != enrollableWindowSignature;
+            if (structureChanged)
             {
                 enrollableWindowSignature = signature;
-                ClearEnrollableWindowContent();
                 RebuildEnrollableWorldFilter(enrollments);
                 BuildEnrollableWindowContent(enrollments);
             }
 
+            enrollableObservedRegistryVersion = StorageSceneRegistry.Version;
+
             enrollableWindowRoot.SetActive(true);
-            Canvas.ForceUpdateCanvases();
-            LayoutRebuilder.ForceRebuildLayoutImmediate(enrollableWindowContent);
+            if (structureChanged || !wasVisible)
+            {
+                RequestMainLayout(enrollableWindowContent);
+            }
         }
 
         private void BuildEnrollableWindowContent(List<StorageNetworkEnrollment> enrollments)
         {
+            enrollableListEntries.Clear();
             List<StorageNetworkEnrollment> filteredEnrollments = FilterEnrollmentsByWorld(enrollments).ToList();
-            if (filteredEnrollments.Count == 0)
-            {
-                TextMeshProUGUI empty = CreateText("Empty", enrollableWindowContent, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENROLLABLE_EMPTY), 12, TextAlignmentOptions.TopLeft);
-                empty.color = new Color(0.18f, 0.19f, 0.19f, 1f);
-                empty.gameObject.AddComponent<LayoutElement>().preferredHeight = 36f;
-            }
-            else
+            if (filteredEnrollments.Count > 0)
             {
                 foreach (IGrouping<string, StorageNetworkEnrollment> categoryGroup in filteredEnrollments
                     .GroupBy(StorageNetworkPlanCategoryOrder.GetCategoryKey)
@@ -57,14 +65,182 @@ namespace StorageNetwork.UI
                     List<StorageNetworkEnrollment> categoryEnrollments = categoryGroup
                         .OrderBy(enrollment => enrollment.gameObject.GetProperName())
                         .ToList();
-                    CreateEnrollableCategoryHeader(enrollableWindowContent, categoryGroup.Key, categoryEnrollments.Count);
+                    enrollableListEntries.Add(EnrollableListEntry.Category(
+                        categoryGroup.Key,
+                        categoryEnrollments.Count));
 
                     foreach (StorageNetworkEnrollment enrollment in categoryEnrollments)
                     {
-                        CreateEnrollableBuildingRow(enrollableWindowContent, enrollment);
+                        enrollableListEntries.Add(
+                            EnrollableListEntry.Building(enrollment));
                     }
                 }
             }
+
+            ReconcileEnrollableRows();
+        }
+
+        private void ReconcileEnrollableRows()
+        {
+            enrollableRows ??= new StorageNetworkKeyedRowCache(enrollableWindowContent);
+            enrollableRows.Begin();
+            enrollableStorageLiveViews.Clear();
+            if (enrollableListEntries.Count == 0)
+            {
+                enrollableRows.Use("info:empty", () =>
+                {
+                    TextMeshProUGUI empty = CreateText("Empty", enrollableWindowContent, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENROLLABLE_EMPTY), 12, TextAlignmentOptions.TopLeft);
+                    empty.color = new Color(0.18f, 0.19f, 0.19f, 1f);
+                    empty.gameObject.AddComponent<LayoutElement>().preferredHeight = 36f;
+                    return empty.gameObject;
+                });
+                enrollableRows.Commit();
+                return;
+            }
+
+            GetEnrollableVisibleRange(
+                out int firstVisible,
+                out int lastVisibleExclusive);
+            if (firstVisible > 0)
+            {
+                UseEnrollableSpacer(
+                    "\0virtual-top",
+                    GetEnrollableHiddenHeight(0, firstVisible));
+            }
+
+            for (int index = firstVisible; index < lastVisibleExclusive; index++)
+            {
+                EnrollableListEntry entry = enrollableListEntries[index];
+                if (entry.IsCategory)
+                {
+                    string headerKey =
+                        "category:" + entry.CategoryKey + ":" + entry.CategoryCount;
+                    enrollableRows.Use(
+                        headerKey,
+                        () => CreateEnrollableCategoryHeader(
+                            enrollableWindowContent,
+                            entry.CategoryKey,
+                            entry.CategoryCount));
+                    continue;
+                }
+
+                StorageNetworkEnrollment enrollment = entry.Enrollment;
+                if (enrollment == null)
+                {
+                    continue;
+                }
+
+                string rowKey = "enrollment:" + enrollment.GetInstanceID();
+                GameObject row = enrollableRows.Use(
+                    rowKey,
+                    () => CreateEnrollableBuildingRow(
+                        enrollableWindowContent,
+                        enrollment));
+                EnrollableBuildingRowView view =
+                    row.GetComponent<EnrollableBuildingRowView>();
+                if (view != null)
+                {
+                    enrollableStorageLiveViews.Add(view);
+                    UpdateEnrollableBuildingRow(row, enrollment);
+                }
+            }
+
+            int hiddenAfter = enrollableListEntries.Count - lastVisibleExclusive;
+            if (hiddenAfter > 0)
+            {
+                UseEnrollableSpacer(
+                    "\0virtual-bottom",
+                    GetEnrollableHiddenHeight(lastVisibleExclusive, hiddenAfter));
+            }
+
+            enrollableRows.Commit();
+        }
+
+        private void GetEnrollableVisibleRange(
+            out int firstVisible,
+            out int lastVisibleExclusive)
+        {
+            firstVisible = 0;
+            lastVisibleExclusive = enrollableListEntries.Count;
+            if (enrollableListEntries.Count <= EnrollableVirtualizationThreshold ||
+                enrollableWindowContent == null ||
+                enrollableScrollRect?.viewport == null)
+            {
+                return;
+            }
+
+            float viewportHeight = enrollableScrollRect.viewport.rect.height;
+            if (viewportHeight <= 1f)
+            {
+                viewportHeight = 600f;
+            }
+
+            float startOffset = Mathf.Max(
+                0f,
+                enrollableWindowContent.anchoredPosition.y -
+                EnrollableVerticalPadding * 0.5f);
+            float endOffset = startOffset + viewportHeight;
+            float cursor = 0f;
+            int first = 0;
+            while (first < enrollableListEntries.Count &&
+                   cursor + enrollableListEntries[first].Height < startOffset)
+            {
+                cursor += enrollableListEntries[first].Height + EnrollableRowSpacing;
+                first++;
+            }
+
+            int last = first;
+            float visibleCursor = cursor;
+            while (last < enrollableListEntries.Count && visibleCursor < endOffset)
+            {
+                visibleCursor += enrollableListEntries[last].Height +
+                                 EnrollableRowSpacing;
+                last++;
+            }
+
+            firstVisible = Mathf.Max(0, first - EnrollableVirtualizationOverscan);
+            lastVisibleExclusive = Mathf.Min(
+                enrollableListEntries.Count,
+                last + EnrollableVirtualizationOverscan);
+        }
+
+        private float GetEnrollableHiddenHeight(int start, int count)
+        {
+            float height = 0f;
+            int end = Mathf.Min(enrollableListEntries.Count, start + count);
+            for (int index = start; index < end; index++)
+            {
+                height += enrollableListEntries[index].Height;
+            }
+
+            if (count > 1)
+            {
+                height += (count - 1) * EnrollableRowSpacing;
+            }
+
+            return height;
+        }
+
+        private void UseEnrollableSpacer(string key, float height)
+        {
+            GameObject spacer = enrollableRows.Use(key, () =>
+            {
+                GameObject created = new GameObject("VirtualSpacer");
+                created.transform.SetParent(enrollableWindowContent, false);
+                created.AddComponent<RectTransform>();
+                created.AddComponent<LayoutElement>();
+                return created;
+            });
+            LayoutElement layout = spacer.GetComponent<LayoutElement>();
+            if (layout != null)
+            {
+                layout.preferredHeight = Mathf.Max(0f, height);
+            }
+        }
+
+        private void OnEnrollableScroll(Vector2 _)
+        {
+            enrollableViewportDirty = true;
         }
 
         private RectTransform enrollableWindowContent;
@@ -124,6 +300,7 @@ namespace StorageNetwork.UI
             GameObject content = new GameObject("Content");
             content.transform.SetParent(viewport.transform, false);
             enrollableWindowContent = content.AddComponent<RectTransform>();
+            enrollableRows = new StorageNetworkKeyedRowCache(enrollableWindowContent);
             enrollableWindowContent.anchorMin = new Vector2(0f, 1f);
             enrollableWindowContent.anchorMax = new Vector2(1f, 1f);
             enrollableWindowContent.pivot = new Vector2(0.5f, 1f);
@@ -141,13 +318,14 @@ namespace StorageNetwork.UI
 
             Scrollbar scrollbar = CreateScrollbar(enrollableWindowRoot.transform, 92f, 10f);
 
-            ScrollRect scrollRect = viewport.AddComponent<ScrollRect>();
-            scrollRect.viewport = viewport.GetComponent<RectTransform>();
-            scrollRect.content = enrollableWindowContent;
-            ConfigureSmoothVerticalScroll(scrollRect, 26f);
-            scrollRect.verticalScrollbar = scrollbar;
-            scrollRect.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHideAndExpandViewport;
-            scrollRect.verticalScrollbarSpacing = 2f;
+            enrollableScrollRect = viewport.AddComponent<ScrollRect>();
+            enrollableScrollRect.viewport = viewport.GetComponent<RectTransform>();
+            enrollableScrollRect.content = enrollableWindowContent;
+            ConfigureSmoothVerticalScroll(enrollableScrollRect, 26f);
+            enrollableScrollRect.verticalScrollbar = scrollbar;
+            enrollableScrollRect.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHideAndExpandViewport;
+            enrollableScrollRect.verticalScrollbarSpacing = 2f;
+            enrollableScrollRect.onValueChanged.AddListener(OnEnrollableScroll);
             viewport.AddComponent<ScrollWheelBlocker>();
 
             enrollableWindowRoot.SetActive(false);
@@ -155,10 +333,12 @@ namespace StorageNetwork.UI
 
         private void ClearEnrollableWindowContent()
         {
-            for (int i = enrollableWindowContent.childCount - 1; i >= 0; i--)
-            {
-                Destroy(enrollableWindowContent.GetChild(i).gameObject);
-            }
+            enrollableStorageLiveViews.Clear();
+            enrollableListEntries.Clear();
+            enrollableRows?.ClearDestroy();
+            enrollableRows = enrollableWindowContent != null
+                ? new StorageNetworkKeyedRowCache(enrollableWindowContent)
+                : null;
         }
 
         private void CloseEnrollableWindow()
@@ -175,6 +355,48 @@ namespace StorageNetwork.UI
             if (enrollableSearchInput != null)
             {
                 enrollableSearchInput.SetTextWithoutNotify(string.Empty);
+            }
+        }
+
+        private readonly struct EnrollableListEntry
+        {
+            private EnrollableListEntry(
+                string categoryKey,
+                int categoryCount,
+                StorageNetworkEnrollment enrollment,
+                float height)
+            {
+                CategoryKey = categoryKey;
+                CategoryCount = categoryCount;
+                Enrollment = enrollment;
+                Height = height;
+            }
+
+            public string CategoryKey { get; }
+            public int CategoryCount { get; }
+            public StorageNetworkEnrollment Enrollment { get; }
+            public float Height { get; }
+            public bool IsCategory => Enrollment == null;
+
+            public static EnrollableListEntry Category(
+                string categoryKey,
+                int categoryCount)
+            {
+                return new EnrollableListEntry(
+                    categoryKey,
+                    categoryCount,
+                    null,
+                    30f);
+            }
+
+            public static EnrollableListEntry Building(
+                StorageNetworkEnrollment enrollment)
+            {
+                return new EnrollableListEntry(
+                    null,
+                    0,
+                    enrollment,
+                    38f);
             }
         }
 
@@ -235,8 +457,7 @@ namespace StorageNetwork.UI
             enrollableSearchInput.onValueChanged.AddListener(value =>
             {
                 enrollableSearchText = value ?? string.Empty;
-                enrollableWindowSignature = null;
-                ShowEnrollableBuildingsDialog();
+                enrollableSearchDebounce.Request();
             });
         }
 

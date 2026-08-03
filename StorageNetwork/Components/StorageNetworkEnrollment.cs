@@ -3,7 +3,6 @@ using StorageNetwork.API;
 using StorageNetwork.Core;
 using StorageNetwork.Services;
 using System;
-using System.Linq;
 using UnityEngine;
 using Loc = StorageNetwork.STRINGS;
 
@@ -29,6 +28,9 @@ namespace StorageNetwork.Components
         [MyCmpGet]
         private Storage storage = null;
 
+        [MyCmpGet]
+        private Operational operational = null;
+
         private Guid connectedStatusHandle = Guid.Empty;
 
         protected override void OnSpawn()
@@ -36,6 +38,11 @@ namespace StorageNetwork.Components
             base.OnSpawn();
             StorageSceneRegistry.Register(gameObject);
             Subscribe((int)GameHashes.RefreshUserMenu, OnRefreshUserMenuDelegate);
+            if (operational != null && GetComponent<StorageNetworkSceneMember>() == null)
+            {
+                Subscribe((int)GameHashes.OperationalChanged, OnOperationalChangedDelegate);
+            }
+
             if (storage != null)
             {
                 StorageNetworkFilterBypass.Apply(storage);
@@ -46,6 +53,11 @@ namespace StorageNetwork.Components
 
         protected override void OnCleanUp()
         {
+            if (operational != null && GetComponent<StorageNetworkSceneMember>() == null)
+            {
+                Unsubscribe((int)GameHashes.OperationalChanged, OnOperationalChangedDelegate);
+            }
+
             StorageSceneRegistry.Unregister(gameObject);
             RemoveConnectedStatus();
             base.OnCleanUp();
@@ -53,6 +65,20 @@ namespace StorageNetwork.Components
 
         private static readonly EventSystem.IntraObjectHandler<StorageNetworkEnrollment> OnRefreshUserMenuDelegate =
             new EventSystem.IntraObjectHandler<StorageNetworkEnrollment>((component, data) => component.OnRefreshUserMenu(data));
+
+        private static readonly EventSystem.IntraObjectHandler<StorageNetworkEnrollment> OnOperationalChangedDelegate =
+            new EventSystem.IntraObjectHandler<StorageNetworkEnrollment>((component, data) => component.OnOperationalChanged(data));
+
+        private void OnOperationalChanged(object data)
+        {
+            if (storage != null)
+            {
+                StorageNetworkContentIndexService.Invalidate(storage);
+                StorageNetworkParticleStorageService.Invalidate(storage);
+            }
+
+            StorageSceneRegistry.InvalidateCapabilities(storage);
+        }
 
         private void OnRefreshUserMenu(object data)
         {
@@ -98,7 +124,7 @@ namespace StorageNetwork.Components
             }
 
             IncludedInSceneNetwork = included;
-            StorageSceneRegistry.Invalidate();
+            StorageSceneRegistry.InvalidateMembership(storage);
             if (storage != null)
             {
                 StorageNetworkFilterBypass.Apply(storage);
@@ -125,7 +151,7 @@ namespace StorageNetwork.Components
             }
 
             DirectGeyserOutputToNetwork = enabled;
-            StorageSceneRegistry.Invalidate();
+            StorageSceneRegistry.InvalidateCapabilities(storage);
             RefreshGeyserEmitterRegistration();
             KMonoBehaviour.PlaySound(GlobalAssets.GetSound("HUD_Click", false));
 
@@ -248,11 +274,19 @@ namespace StorageNetwork.Components
                 return null;
             }
 
-            return StorageNetwork.Core.StorageSceneCollector.Collect().Storages
-                .Where(info => info?.Minion == null)
-                .Select(info => info.Storage)
-                .Where(StorageNetwork.Core.StorageNetworkStorageRules.IsServerStorage)
-                .FirstOrDefault(target => GetStorageInstanceId(target) == GeyserOutputStorageInstanceId);
+            int worldId = gameObject != null ? gameObject.GetMyWorldId() : -1;
+            if (!StorageSceneRegistry.TryGetReachableStorage(
+                    GeyserOutputStorageInstanceId,
+                    worldId,
+                    out Storage target))
+            {
+                return null;
+            }
+
+            return StorageNetworkStorageRules.IsServerStorage(target) &&
+                   !StorageNetworkStorageRules.IsMinionStorage(target)
+                ? target
+                : null;
         }
 
         public void SetGeyserOutputStorage(Storage target)

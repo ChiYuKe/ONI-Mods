@@ -15,6 +15,7 @@ namespace StorageNetwork.Core
         public static void ResetRuntimeState()
         {
             StorageNetworkPanel.ResetRuntimeState();
+            StorageNetworkLiquidOutputPortSideScreen.ResetRuntimeStyles();
             ModConfigDialog.ResetRuntimeState();
             StorageSceneRegistry.ResetRuntimeState();
             StorageSceneCollector.ResetRuntimeState();
@@ -23,9 +24,11 @@ namespace StorageNetwork.Core
             StorageNetworkWorldTextPanel.ResetRuntimeState();
             StorageNetworkModInfoResolver.ResetRuntimeState();
             StorageNetworkInterfaceResolver.ResetRuntimeState();
-            StorageNetworkInventoryIndexService.ResetRuntimeState();
-            StorageNetworkSourceIndexService.ResetRuntimeState();
-            StorageNetworkInputTargetReservationService.Invalidate();
+            StorageNetworkInputTargetReservationService.ResetRuntimeState();
+            StorageNetworkRocketRelayService.ResetRuntimeState();
+            StorageNetworkPowerService.InvalidateAggregate();
+            StorageNetworkPowerOverlayBattery.ResetRuntimeState();
+            StorageNetworkEngravingDisk.ResetRuntimeState();
             StorageNetworkFluidStorageCompactor.ResetRuntimeState();
             StorageTargetSelector.ResetRuntimeState();
             StorageNetworkPerformanceCounters.ResetRuntimeState();

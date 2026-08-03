@@ -67,7 +67,7 @@ namespace StorageNetwork.Components
         {
             get
             {
-                if (!StorageSceneRegistry.HasOnlineCoreInWorld(GetWorldId()) || GetOutputWatts() <= 0f)
+                if (!StorageNetworkPowerService.IsNetworkOnlineForWorld(GetWorldId()) || GetOutputWatts() <= 0f)
                 {
                     return 0f;
                 }
@@ -110,7 +110,7 @@ namespace StorageNetwork.Components
             outputBudgetJoules = GetOutputWatts() * SimTickSeconds;
             RefreshPowerOutputPortStatus();
             bool canOutput = GetOutputWatts() > 0f &&
-                StorageSceneRegistry.HasOnlineCoreInWorld(GetWorldId()) &&
+                StorageNetworkPowerService.IsNetworkOnlineForWorld(GetWorldId()) &&
                 !IsOutputLimitSatisfied();
             if (canOutput)
             {
@@ -128,7 +128,7 @@ namespace StorageNetwork.Components
             {
                 lastStatus = Loc.Get(Loc.UI.STORAGE_NETWORK.STATUS_DISABLED);
             }
-            else if (!StorageSceneRegistry.HasOnlineCoreInWorld(GetWorldId()))
+            else if (!StorageNetworkPowerService.IsNetworkOnlineForWorld(GetWorldId()))
             {
                 lastStatus = Loc.Get(Loc.UI.STORAGE_NETWORK.PORT_STATUS_SHORT_OFFLINE);
             }
@@ -164,7 +164,7 @@ namespace StorageNetwork.Components
 
         public override bool IsProducingPower()
         {
-            return StorageSceneRegistry.HasOnlineCoreInWorld(GetWorldId()) &&
+            return StorageNetworkPowerService.IsNetworkOnlineForWorld(GetWorldId()) &&
                 base.IsProducingPower() &&
                 JoulesAvailable > 0f &&
                 GetOutputWatts() > 0f;
@@ -310,7 +310,7 @@ namespace StorageNetwork.Components
         {
             return GetOutputWatts() > 0f &&
                 !IsOutputLimitSatisfied() &&
-                StorageSceneRegistry.HasOnlineCoreInWorld(GetWorldId()) &&
+                StorageNetworkPowerService.IsNetworkOnlineForWorld(GetWorldId()) &&
                 GetAvailableOutputJoules() > 0f;
         }
 
@@ -330,7 +330,7 @@ namespace StorageNetwork.Components
         {
             if (joules <= 0f ||
                 IsOutputLimitSatisfied() ||
-                !StorageSceneRegistry.HasOnlineCoreInWorld(GetWorldId()))
+                !StorageNetworkPowerService.IsNetworkOnlineForWorld(GetWorldId()))
             {
                 return 0f;
             }
@@ -376,7 +376,7 @@ namespace StorageNetwork.Components
             if (GetOutputWatts() <= 0f ||
                 PortAvailableCapacityJoules <= 0f ||
                 IsOutputLimitSatisfied() ||
-                !StorageSceneRegistry.HasOnlineCoreInWorld(GetWorldId()))
+                !StorageNetworkPowerService.IsNetworkOnlineForWorld(GetWorldId()))
             {
                 return;
             }
@@ -504,7 +504,7 @@ namespace StorageNetwork.Components
         {
             if (cachedStatusText == null)
             {
-                UpdateCachedStatusText();
+                cachedStatusText = BuildStatusText();
             }
 
             return cachedStatusText;
@@ -512,7 +512,7 @@ namespace StorageNetwork.Components
 
         private void UpdateCachedStatusText()
         {
-            cachedStatusText = BuildStatusText();
+            cachedStatusText = null;
         }
 
         private string BuildStatusText()
@@ -522,7 +522,7 @@ namespace StorageNetwork.Components
                 GetCurrentStatusText())) + "\n" + string.Format(
                 Loc.Get(Loc.UI.STORAGE_NETWORK.POWER_OUTPUT_PORT_STATUS_TOOLTIP),
                 ColorizeEnabled(GetOutputWattsSetting() > 0f),
-                ColorizeNetwork(StorageSceneRegistry.HasOnlineCoreInWorld(GetWorldId())),
+                ColorizeNetwork(StorageNetworkPowerService.IsNetworkOnlineForWorld(GetWorldId())),
                 ColorizeInfo(GetSourceModeStatusText()),
                 ColorizeLimit(GetOutputLimitStatusText()),
                 ColorizeAmount(FormatPowerRate(GetOutputWattsSetting())),
@@ -564,7 +564,7 @@ namespace StorageNetwork.Components
                 return Loc.Get(Loc.UI.STORAGE_NETWORK.STATUS_DISABLED);
             }
 
-            if (!StorageSceneRegistry.HasOnlineCoreInWorld(GetWorldId()))
+            if (!StorageNetworkPowerService.IsNetworkOnlineForWorld(GetWorldId()))
             {
                 return Loc.Get(Loc.UI.STORAGE_NETWORK.PORT_STATUS_SHORT_OFFLINE);
             }

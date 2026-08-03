@@ -1,14 +1,13 @@
 using System.Collections.Generic;
 using System.Linq;
 using StorageNetwork.Components;
-using StorageNetwork.Services;
 using UnityEngine;
 
 namespace StorageNetwork.ProductionOrders
 {
     internal sealed partial class ProductionOrderService
     {
-        public List<RecipeDisplayInfo> GetCraftableRecipes()
+        public IReadOnlyList<RecipeDisplayInfo> GetCraftableRecipes()
         {
             return craftableRecipes;
         }
@@ -38,82 +37,43 @@ namespace StorageNetwork.ProductionOrders
             return connectedFabricatorOutputAmounts.TryGetValue(productTag, out float amount) ? amount : 0f;
         }
 
-        private void RefreshConnectedFabricatorOutputAmounts()
-        {
-            connectedFabricatorOutputAmounts.Clear();
-            foreach (ComplexFabricator fabricator in ProductionOrderCenterCatalog.GetFabricators())
-            {
-                if (fabricator.outStorage == null || fabricator.outStorage.items == null)
-                {
-                    continue;
-                }
-
-                StorageNetworkEnrollment enrollment = fabricator.GetComponent<StorageNetworkEnrollment>();
-                if (enrollment == null || !enrollment.IncludedInSceneNetwork)
-                {
-                    continue;
-                }
-
-                foreach (GameObject item in fabricator.outStorage.items)
-                {
-                    if (item == null)
-                    {
-                        continue;
-                    }
-
-                    PrimaryElement primaryElement = item.GetComponent<PrimaryElement>();
-                    if (primaryElement == null)
-                    {
-                        continue;
-                    }
-
-                    Tag storageTag = StorageItemUtility.GetStorageTransferTag(item);
-                    AddConnectedFabricatorOutputAmount(storageTag, primaryElement.Mass);
-                    Tag elementTag = primaryElement.ElementID.CreateTag();
-                    if (elementTag != Tag.Invalid && elementTag != storageTag)
-                    {
-                        AddConnectedFabricatorOutputAmount(elementTag, primaryElement.Mass);
-                    }
-                }
-            }
-        }
-
-        private void AddConnectedFabricatorOutputAmount(Tag tag, float amount)
-        {
-            if (tag == Tag.Invalid || amount <= 0f)
-            {
-                return;
-            }
-
-            connectedFabricatorOutputAmounts[tag] = connectedFabricatorOutputAmounts.TryGetValue(tag, out float existing)
-                ? existing + amount
-                : amount;
-        }
-
         public ProductionOrderRecord FindDuplicateOrder(Tag productTag, ComplexRecipe recipe, float requestedAmount)
         {
             string recipeKey = ProductionRecipeCatalog.GetRecipeKey(recipe);
             int amountBucket = Mathf.RoundToInt(requestedAmount * 1000f);
-            return ActiveOrders.Values
-                .Where(IsOrderActive)
-                .Where(IsOrderInCurrentScope)
-                .FirstOrDefault(order =>
+            foreach (ProductionOrderRecord order in ActiveOrders.Values)
+            {
+                if (IsOrderActive(order) &&
+                    IsOrderInCurrentScope(order) &&
                     order.ProductTag == productTag &&
                     order.RecipeKey == recipeKey &&
-                    Mathf.RoundToInt(order.LastSubmittedAmount * 1000f) == amountBucket);
+                    Mathf.RoundToInt(order.LastSubmittedAmount * 1000f) == amountBucket)
+                {
+                    return order;
+                }
+            }
+
+            return null;
         }
 
         private ProductionOrderRecord FindAutomaticDuplicateOrder(Tag productTag, ComplexRecipe recipe)
         {
             string recipeKey = ProductionRecipeCatalog.GetRecipeKey(recipe);
-            return ActiveOrders.Values
-                .Where(IsOrderActive)
-                .Where(IsOrderInCurrentScope)
-                .Where(order => order.IsAutomatic)
-                .OrderBy(order => order.DisplayId)
-                .FirstOrDefault(order =>
+            ProductionOrderRecord result = null;
+            foreach (ProductionOrderRecord order in ActiveOrders.Values)
+            {
+                if (IsOrderActive(order) &&
+                    IsOrderInCurrentScope(order) &&
+                    order.IsAutomatic &&
                     order.ProductTag == productTag &&
-                    order.RecipeKey == recipeKey);
+                    order.RecipeKey == recipeKey &&
+                    (result == null || order.DisplayId < result.DisplayId))
+                {
+                    result = order;
+                }
+            }
+
+            return result;
         }
 
         public IReadOnlyList<ProductionOrderRecord> GetActiveOrdersForProduct(Tag productTag, int limit)
@@ -167,7 +127,7 @@ namespace StorageNetwork.ProductionOrders
         {
             if (orderCenterScope == null)
             {
-                return true;
+                return IsOrderReachableFromCurrentWorld(order);
             }
 
             ComplexFabricator scopedFabricator = orderCenterScope.GetComponent<ComplexFabricator>();

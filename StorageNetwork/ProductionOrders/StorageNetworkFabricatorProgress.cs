@@ -26,6 +26,12 @@ namespace StorageNetwork.ProductionOrders
             }
         }
 
+        public static void ResetRuntimeState()
+        {
+            QueueCountsByFabricator.Clear();
+            cacheEnabled = false;
+        }
+
         public static int GetRecipeQueueCountSafe(ComplexFabricator fabricator, ComplexRecipe recipe)
         {
             if (fabricator == null || recipe == null)

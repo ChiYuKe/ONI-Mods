@@ -16,6 +16,7 @@ namespace StorageNetwork.ProductionOrders
             CancelOrderQueues(order);
             ReleaseOrderAutomation(order.Key);
             StorageNetworkNotifications.ShowAbnormalOrder(order);
+            MarkOrdersChanged();
         }
 
         public string CancelOrder(string orderKey, float currentCycle)
@@ -35,6 +36,7 @@ namespace StorageNetwork.ProductionOrders
             order.State = ProductionOrderState.Cancelled;
             order.CompletedCycle = currentCycle;
             order.AbnormalReason = Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CANCEL_REASON_MANUAL);
+            MarkOrdersChanged();
             return string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CANCEL_SUCCESS), order.DisplayId);
         }
 
@@ -47,6 +49,10 @@ namespace StorageNetwork.ProductionOrders
             foreach (string key in keys)
             {
                 ActiveOrders.Remove(key);
+            }
+            if (keys.Count > 0)
+            {
+                MarkOrdersChanged();
             }
 
             if (state == ProductionOrderState.Abnormal)
@@ -80,6 +86,7 @@ namespace StorageNetwork.ProductionOrders
             if (result.Success)
             {
                 ActiveOrders.Remove(order.Key);
+                MarkOrdersChanged();
             }
 
             return result.Success
@@ -91,47 +98,105 @@ namespace StorageNetwork.ProductionOrders
         {
             foreach (QueueCancellationTarget target in BuildQueueCancellationTargets(order))
             {
-                if (!IsOrderProductionFabricator(target.Fabricator) || target.Recipe == null || target.OwnedCount <= 0)
+                CancelQueueTarget(order, target);
+            }
+        }
+
+        private static bool CancelOrderQueuesOutsidePlan(
+            ProductionOrderRecord order,
+            List<ProductionOrderQueueAssignment> plannedAssignments)
+        {
+            HashSet<string> plannedQueues = new HashSet<string>();
+            foreach (ProductionOrderQueueAssignment assignment in
+                     plannedAssignments ?? new List<ProductionOrderQueueAssignment>())
+            {
+                if (assignment?.Fabricator != null && assignment.Recipe != null)
+                {
+                    plannedQueues.Add(BuildQueueKey(
+                        assignment.Fabricator,
+                        assignment.Recipe));
+                }
+            }
+
+            bool changed = false;
+            foreach (QueueCancellationTarget target in BuildQueueCancellationTargets(order))
+            {
+                if (plannedQueues.Contains(BuildQueueKey(
+                        target.Fabricator,
+                        target.Recipe)))
                 {
                     continue;
                 }
 
-                int queued = StorageNetworkFabricatorProgress.GetRecipeQueueCountSafe(target.Fabricator, target.Recipe);
-                if (queued == ComplexFabricator.QUEUE_INFINITE)
-                {
-                    queued = ComplexFabricator.MAX_QUEUE_SIZE;
-                }
+                changed |= CancelQueueTarget(order, target);
+            }
 
-                bool cancelCurrentWorkingOrder = ShouldCancelCurrentWorkingOrder(order, target);
-                int protectedQueued = GetProtectedQueueCount(order, target);
-                int activeOwnedCount = Mathf.Max(0, target.OwnedCount) + (cancelCurrentWorkingOrder ? 1 : 0);
-                int removableQueued = Mathf.Max(0, queued - protectedQueued);
-                int cancelCount = Mathf.Min(removableQueued + (cancelCurrentWorkingOrder ? 1 : 0), activeOwnedCount);
-                if (cancelCount <= 0)
-                {
-                    continue;
-                }
+            return changed;
+        }
 
-                StorageNetwork.Components.StorageNetworkOrderProductionCenterFabricator orderCenterFabricator =
-                    target.Fabricator as StorageNetwork.Components.StorageNetworkOrderProductionCenterFabricator;
-                if (orderCenterFabricator != null)
-                {
-                    int finalQueuedForOrderCenter = Mathf.Max(protectedQueued, queued - Mathf.Max(0, cancelCount - (cancelCurrentWorkingOrder ? 1 : 0)));
-                    orderCenterFabricator.CancelOrderCenterRecipe(target.Recipe, finalQueuedForOrderCenter, cancelCurrentWorkingOrder);
-                    StorageNetworkFabricatorProgress.Invalidate(target.Fabricator);
-                    continue;
-                }
+        private static bool CancelQueueTarget(
+            ProductionOrderRecord order,
+            QueueCancellationTarget target)
+        {
+            if (!IsOrderProductionFabricator(target.Fabricator) ||
+                target.Recipe == null ||
+                target.OwnedCount <= 0)
+            {
+                return false;
+            }
 
-                if (cancelCurrentWorkingOrder)
-                {
-                    target.Fabricator.SetRecipeQueueCount(target.Recipe, 0);
-                    StorageNetworkFabricatorProgress.Invalidate(target.Fabricator);
-                }
+            int queued = StorageNetworkFabricatorProgress.GetRecipeQueueCountSafe(
+                target.Fabricator,
+                target.Recipe);
+            if (queued == ComplexFabricator.QUEUE_INFINITE)
+            {
+                queued = ComplexFabricator.MAX_QUEUE_SIZE;
+            }
 
-                int finalQueued = Mathf.Max(protectedQueued, queued - Mathf.Max(0, cancelCount - (cancelCurrentWorkingOrder ? 1 : 0)));
-                target.Fabricator.SetRecipeQueueCount(target.Recipe, finalQueued);
+            bool cancelCurrentWorkingOrder = ShouldCancelCurrentWorkingOrder(order, target);
+            int protectedQueued = GetProtectedQueueCount(order, target);
+            int activeOwnedCount = Mathf.Max(0, target.OwnedCount) +
+                                   (cancelCurrentWorkingOrder ? 1 : 0);
+            int removableQueued = Mathf.Max(0, queued - protectedQueued);
+            int cancelCount = Mathf.Min(
+                removableQueued + (cancelCurrentWorkingOrder ? 1 : 0),
+                activeOwnedCount);
+            if (cancelCount <= 0)
+            {
+                return false;
+            }
+
+            StorageNetwork.Components.StorageNetworkOrderProductionCenterFabricator orderCenterFabricator =
+                target.Fabricator as StorageNetwork.Components.StorageNetworkOrderProductionCenterFabricator;
+            if (orderCenterFabricator != null)
+            {
+                int finalQueuedForOrderCenter = Mathf.Max(
+                    protectedQueued,
+                    queued - Mathf.Max(
+                        0,
+                        cancelCount - (cancelCurrentWorkingOrder ? 1 : 0)));
+                orderCenterFabricator.CancelOrderCenterRecipe(
+                    target.Recipe,
+                    finalQueuedForOrderCenter,
+                    cancelCurrentWorkingOrder);
+                StorageNetworkFabricatorProgress.Invalidate(target.Fabricator);
+                return true;
+            }
+
+            if (cancelCurrentWorkingOrder)
+            {
+                target.Fabricator.SetRecipeQueueCount(target.Recipe, 0);
                 StorageNetworkFabricatorProgress.Invalidate(target.Fabricator);
             }
+
+            int finalQueued = Mathf.Max(
+                protectedQueued,
+                queued - Mathf.Max(
+                    0,
+                    cancelCount - (cancelCurrentWorkingOrder ? 1 : 0)));
+            target.Fabricator.SetRecipeQueueCount(target.Recipe, finalQueued);
+            StorageNetworkFabricatorProgress.Invalidate(target.Fabricator);
+            return true;
         }
 
         private static List<QueueCancellationTarget> BuildQueueCancellationTargets(ProductionOrderRecord order)

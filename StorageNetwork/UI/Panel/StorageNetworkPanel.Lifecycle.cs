@@ -143,7 +143,7 @@ namespace StorageNetwork.UI
 
             instance = null;
             CloseStandaloneOutputFilterPicker();
-            spriteCache?.Clear();
+            ClearColorStyleCache();
         }
 
         public static bool IsTextInputFocused()

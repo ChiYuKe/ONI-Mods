@@ -11,7 +11,7 @@ namespace StorageNetwork.UI
 {
     public sealed partial class StorageNetworkPanel : KScreen, IInputHandler
     {
-        private void CreateStoredItemRow(Storage storage, Transform parent, string itemKey, string itemName, string formattedMass, string formattedTemperature, GameObject representative)
+        private GameObject CreateStoredItemRow(Storage storage, Transform parent, string itemKey, string itemName, string formattedMass, string formattedTemperature, GameObject representative)
         {
             GameObject row = new GameObject("ItemRow");
             row.transform.SetParent(parent, false);
@@ -79,6 +79,7 @@ namespace StorageNetwork.UI
             temperatureText.color = new Color(0.36f, 0.38f, 0.38f, 1f);
             temperatureText.textWrappingMode = TextWrappingModes.NoWrap;
             temperatureText.gameObject.AddComponent<LayoutElement>().preferredWidth = 262f;
+            RegisterStoredItemLiveView(storage, itemKey, row, massText, temperatureText);
 
             if (selected)
             {
@@ -96,6 +97,8 @@ namespace StorageNetwork.UI
                 ToolTip tooltip = dropButton.AddComponent<ToolTip>();
                 tooltip.toolTip = Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.DROP_TOOLTIP);
             }
+
+            return row;
         }
 
         private void CreateVirtualPowerItemRow(Transform parent, StorageNetworkPowerStorage powerStorage)
@@ -166,6 +169,7 @@ namespace StorageNetwork.UI
 
             ToolTip tooltip = row.AddComponent<ToolTip>();
             tooltip.toolTip = Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.VIRTUAL_POWER_ITEM_TOOLTIP);
+            RegisterPowerStorageLiveView(powerStorage, massText, detailText);
         }
 
         private void CreatePowerPortBatteryRow(Transform parent, Storage storage)
@@ -234,6 +238,7 @@ namespace StorageNetwork.UI
             detailText.textWrappingMode = TextWrappingModes.NoWrap;
             detailText.overflowMode = TextOverflowModes.Ellipsis;
             detailText.gameObject.AddComponent<LayoutElement>().preferredWidth = 262f;
+            RegisterPowerPortLiveView(storage, joulesText, detailText);
         }
 
         private void CreateParticlePortStorageRow(Transform parent, Storage storage)
@@ -303,6 +308,7 @@ namespace StorageNetwork.UI
 
             ToolTip tooltip = row.AddComponent<ToolTip>();
             tooltip.toolTip = Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PARTICLE_PORT_ITEM_TOOLTIP);
+            RegisterParticleLiveView(storage, particlesText, detailText);
         }
 
         private static string FormatStoredItemTemperature(IEnumerable<GameObject> items)

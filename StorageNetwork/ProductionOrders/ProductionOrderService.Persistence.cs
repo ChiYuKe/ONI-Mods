@@ -15,6 +15,8 @@ namespace StorageNetwork.ProductionOrders
             ActiveOrders.Clear();
             AutomationLeases.Clear();
             KeepRules.Clear();
+            Runtime.Reset();
+            observedOrderAccountingConnectivityVersion = -1;
             loadedStorePath = storePath;
             foreach (ProductionOrderRecord order in ProductionOrderPersistence.Load())
             {
@@ -25,6 +27,8 @@ namespace StorageNetwork.ProductionOrders
             {
                 KeepRules[rule.ProductTag] = rule;
             }
+
+            MarkOrdersChanged();
         }
 
         public static void SaveOrders()
@@ -37,6 +41,14 @@ namespace StorageNetwork.ProductionOrders
             ActiveOrders.Clear();
             AutomationLeases.Clear();
             KeepRules.Clear();
+            Runtime.Reset();
+            ProductionOrderCenterCatalog.ResetRuntimeState();
+            ProductionOrderRuntimeAllocation.ResetRuntimeState();
+            StorageNetworkFabricatorProgress.ResetRuntimeState();
+            LeasedMaterialOrderBuffer.Clear();
+            EmptyAutomationLeaseBuffer.Clear();
+            observedOrderAccountingConnectivityVersion = -1;
+            orderVersion = 0;
             loadedStorePath = null;
         }
     }

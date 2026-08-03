@@ -63,12 +63,14 @@ namespace StorageNetwork.Components
         protected override void OnSpawn()
         {
             base.OnSpawn();
+            StorageNetworkPowerOverlayBattery.RegisterWhiteUiBattery(battery);
             RefreshPowerInputPortStatus();
             Subscribe((int)GameHashes.CopySettings, OnCopySettingsDelegate);
         }
 
         protected override void OnCleanUp()
         {
+            StorageNetworkPowerOverlayBattery.UnregisterWhiteUiBattery(battery);
             RemovePowerInputPortStatus();
             base.OnCleanUp();
         }
@@ -452,7 +454,7 @@ namespace StorageNetwork.Components
         {
             Storage target = ResolveInputStorage();
             StorageNetworkPowerStorage powerStorage = target != null ? target.GetComponent<StorageNetworkPowerStorage>() : null;
-            return powerStorage != null ? powerStorage.AddEnergy(joules) : 0f;
+            return StorageNetworkPowerService.AddEnergy(powerStorage, joules);
         }
 
         private void RefreshPowerInputPortStatus()
@@ -522,7 +524,7 @@ namespace StorageNetwork.Components
         {
             if (cachedStatusText == null)
             {
-                UpdateCachedStatusText();
+                cachedStatusText = BuildStatusText();
             }
 
             return cachedStatusText;
@@ -530,7 +532,7 @@ namespace StorageNetwork.Components
 
         private void UpdateCachedStatusText()
         {
-            cachedStatusText = BuildStatusText();
+            cachedStatusText = null;
         }
 
         private string BuildStatusText()
@@ -540,7 +542,7 @@ namespace StorageNetwork.Components
                 GetCurrentStatusText())) + "\n" + string.Format(
                 Loc.Get(Loc.UI.STORAGE_NETWORK.POWER_INPUT_PORT_STATUS_TOOLTIP),
                 ColorizeEnabled(GetInputWattsSetting() > 0f),
-                ColorizeNetwork(StorageSceneRegistry.HasOnlineCoreInWorld(GetWorldId())),
+                ColorizeNetwork(StorageNetworkPowerService.IsNetworkOnlineForWorld(GetWorldId())),
                 ColorizeInfo(GetInputStoreModeStatusText()),
                 ColorizeAmount(FormatPowerRate(GetInputWattsSetting())),
                 ColorizeAmount(GameUtil.GetFormattedJoules(PortJoulesAvailable, "F1", GameUtil.TimeSlice.None)),
@@ -568,7 +570,7 @@ namespace StorageNetwork.Components
                 return Loc.Get(Loc.UI.STORAGE_NETWORK.STATUS_DISABLED);
             }
 
-            if (!StorageSceneRegistry.HasOnlineCoreInWorld(GetWorldId()))
+            if (!StorageNetworkPowerService.IsNetworkOnlineForWorld(GetWorldId()))
             {
                 return Loc.Get(Loc.UI.STORAGE_NETWORK.PORT_STATUS_SHORT_OFFLINE);
             }

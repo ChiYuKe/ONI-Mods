@@ -114,11 +114,10 @@ namespace StorageNetwork.UI
 
         private void SetAddonSettingsPanelTitle(string titleText)
         {
-            TextMeshProUGUI title = productionSettingsRoot.GetComponentsInChildren<TextMeshProUGUI>(true)
-                .FirstOrDefault(text => text.name == "ProductionSettingsTitle");
+            TextMeshProUGUI title = productionSettingsTitle;
             if (title != null)
             {
-                title.text = titleText ?? string.Empty;
+                SetTextIfChanged(title, titleText);
             }
         }
     }

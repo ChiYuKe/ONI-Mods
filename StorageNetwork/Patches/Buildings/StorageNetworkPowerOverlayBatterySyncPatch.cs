@@ -7,36 +7,17 @@ namespace StorageNetwork.Patches
 {
     public static class StorageNetworkPowerOverlayBatterySyncPatch
     {
-        [HarmonyPatch(typeof(OverlayModes.Power), nameof(OverlayModes.Power.Update))]
-        public static class PowerOverlayUpdatePatch
-        {
-            public static void Prefix()
-            {
-                foreach (Battery battery in global::Components.Batteries.Items)
-                {
-                    StorageNetworkPowerOverlayBattery overlayBattery = battery as StorageNetworkPowerOverlayBattery;
-                    if (overlayBattery != null)
-                    {
-                        overlayBattery.SyncFromPowerStorage(false);
-                    }
-                }
-            }
-        }
-
         [HarmonyPatch(typeof(BatteryUI), nameof(BatteryUI.SetContent))]
         public static class BatteryUISetContentPatch
         {
-            private static readonly System.Reflection.FieldInfo CurrentKJLabelField =
-                AccessTools.Field(typeof(BatteryUI), "currentKJLabel");
-
-            private static readonly System.Reflection.FieldInfo UnitLabelField =
-                AccessTools.Field(typeof(BatteryUI), "unitLabel");
-
-            private static readonly System.Reflection.FieldInfo BatteryBGField =
-                AccessTools.Field(typeof(BatteryUI), "batteryBG");
-
-            private static readonly System.Reflection.FieldInfo BatteryMeterField =
-                AccessTools.Field(typeof(BatteryUI), "batteryMeter");
+            private static readonly AccessTools.FieldRef<BatteryUI, LocText> CurrentKJLabelRef =
+                CreateFieldRef<LocText>("currentKJLabel");
+            private static readonly AccessTools.FieldRef<BatteryUI, LocText> UnitLabelRef =
+                CreateFieldRef<LocText>("unitLabel");
+            private static readonly AccessTools.FieldRef<BatteryUI, Image> BatteryBGRef =
+                CreateFieldRef<Image>("batteryBG");
+            private static readonly AccessTools.FieldRef<BatteryUI, Image> BatteryMeterRef =
+                CreateFieldRef<Image>("batteryMeter");
 
             public static void Postfix(BatteryUI __instance, Battery bat)
             {
@@ -47,25 +28,25 @@ namespace StorageNetwork.Patches
 
                 Color color = Color.white;
 
-                Image batteryBG = BatteryBGField.GetValue(__instance) as Image;
+                Image batteryBG = BatteryBGRef != null ? BatteryBGRef(__instance) : null;
                 if (batteryBG != null)
                 {
                     batteryBG.color = color;
                 }
 
-                Image batteryMeter = BatteryMeterField.GetValue(__instance) as Image;
+                Image batteryMeter = BatteryMeterRef != null ? BatteryMeterRef(__instance) : null;
                 if (batteryMeter != null)
                 {
                     batteryMeter.color = color;
                 }
 
-                LocText currentKJLabel = CurrentKJLabelField.GetValue(__instance) as LocText;
+                LocText currentKJLabel = CurrentKJLabelRef != null ? CurrentKJLabelRef(__instance) : null;
                 if (currentKJLabel != null)
                 {
                     currentKJLabel.color = color;
                 }
 
-                LocText unitLabel = UnitLabelField.GetValue(__instance) as LocText;
+                LocText unitLabel = UnitLabelRef != null ? UnitLabelRef(__instance) : null;
                 if (unitLabel != null)
                 {
                     unitLabel.color = color;
@@ -74,12 +55,20 @@ namespace StorageNetwork.Patches
 
             private static bool ShouldForceWhite(Battery bat)
             {
-                if (bat is StorageNetworkPowerOverlayBattery)
-                {
-                    return true;
-                }
+                return StorageNetworkPowerOverlayBattery.ShouldForceWhiteUi(bat);
+            }
 
-                return bat.GetComponent<StorageNetworkPowerInputPortConsumer>() != null;
+            private static AccessTools.FieldRef<BatteryUI, T> CreateFieldRef<T>(string fieldName)
+                where T : class
+            {
+                try
+                {
+                    return AccessTools.FieldRefAccess<BatteryUI, T>(fieldName);
+                }
+                catch
+                {
+                    return null;
+                }
             }
         }
     }

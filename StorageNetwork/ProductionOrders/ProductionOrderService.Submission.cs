@@ -76,6 +76,15 @@ namespace StorageNetwork.ProductionOrders
 
         public ProductionOrderSubmitResult SubmitOrder(ProductDisplayGroup product, RecipeDisplayInfo route, float requestedAmount, float currentCycle, bool isAutomatic = false)
         {
+            // Submission is a strict boundary: UI snapshots may be coalesced, but
+            // reservations and queue mutations must be based on native contents.
+            int submissionWorldId = SetNetworkWorldForPlan(route.Fabricators);
+            Runtime.RefreshInventorySnapshot(submissionWorldId);
+            if (observedOrderAccountingConnectivityVersion < 0)
+            {
+                observedOrderAccountingConnectivityVersion =
+                    StorageNetwork.Core.StorageSceneRegistry.ConnectivityVersion;
+            }
             ProductionOrderDraft draft = BuildDraft(product, route, requestedAmount);
             ProductionPlanNode plan = draft.Plan;
             if (plan == null || !draft.CanSubmit)
@@ -93,13 +102,16 @@ namespace StorageNetwork.ProductionOrders
                 : FindDuplicateOrder(product.ProductTag, route.Recipe, requestedAmount);
             Dictionary<Tag, float> reservedMaterials = BuildReservedMaterials(plan);
             List<ProductionOrderQueueAssignment> queueAssignments = BuildQueueAssignments(plan);
-            List<ProductionOrderMaterialLease> materialLeases = BuildMaterialLeases(plan);
+            List<ProductionOrderMaterialLease> materialLeases = BuildMaterialLeases(
+                plan,
+                reservedMaterials);
             List<ProductionOrderOutputLease> outputLeases = BuildOutputLeases(queueAssignments, product.ProductTag, requestedAmount);
             if (duplicate != null)
             {
                 ApplyProductionPlan(plan, duplicate.Key, materialLeases);
                 duplicate.Merge(requestedAmount, plan.OrderCount, reservedMaterials, queueAssignments, materialLeases, outputLeases, currentCycle, isAutomatic);
                 duplicate.ObserveActivity(currentCycle, duplicate.ProducedAtSubmit, CalculateOrderQueueLoad(duplicate));
+                MarkOrdersChanged();
                 return ProductionOrderSubmitResult.MergeSuccess(duplicate, plan, string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_SUBMIT_MERGED), duplicate.DisplayId, plan.OrderCount));
             }
 
@@ -125,6 +137,7 @@ namespace StorageNetwork.ProductionOrders
                 isAutomatic);
             ActiveOrders[orderKey] = record;
             record.ObserveActivity(currentCycle, record.ProducedAtSubmit, CalculateOrderQueueLoad(record));
+            MarkOrdersChanged();
             return ProductionOrderSubmitResult.Created(record, plan, string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_SUBMIT_CREATED), record.DisplayId, plan.OrderCount));
         }
 

@@ -19,7 +19,7 @@ namespace StorageNetwork.UI
         private const bool ShowDeprecatedStorageSettingsButton = false;
 
 
-        private void CreateStorageTypeRow(List<StorageInfo> storages)
+        private void CreateStorageTypeRow(List<StorageInfo> storages, Transform parent = null)
         {
             if (storages == null || storages.Count == 0)
             {
@@ -66,9 +66,9 @@ namespace StorageNetwork.UI
                 : capacityKg > 0f ? storedKg / capacityKg : 0f;
             string groupInfo = offlineServerCount > 0
                 ? string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SERVER_OFFLINE_COUNT), offlineServerCount)
-                : null;
+                : string.Empty;
 
-            GameObject row = CreateBox("StorageTypeRow", listContent, new Color(0.86f, 0.85f, 0.80f, 1f));
+            GameObject row = CreateBox("StorageTypeRow", parent ?? listContent, new Color(0.86f, 0.85f, 0.80f, 1f));
             AddVerticalContainer(row, 0f, 0, 0, 0, 0);
 
             GameObject header = CreateFoldoutHeader(
@@ -107,6 +107,20 @@ namespace StorageNetwork.UI
                 typeIconTint);
 
             header.GetComponent<HorizontalLayoutGroup>().padding = new RectOffset(10, 10, 0, 0);
+            RegisterStorageTypeLiveView(
+                typeKey,
+                storages,
+                header.transform.Find("Amount")?.GetComponent<TextMeshProUGUI>(),
+                header.transform.Find("Info")?.GetComponent<TextMeshProUGUI>(),
+                isGeyserGroup
+                    ? StorageTypeDisplayKind.Geyser
+                    : isPowerPortGroup || isPowerStorageGroup
+                        ? StorageTypeDisplayKind.Power
+                        : isParticlePortGroup
+                            ? StorageTypeDisplayKind.ParticlePort
+                            : isParticleServerGroup
+                                ? StorageTypeDisplayKind.ParticleServer
+                                : StorageTypeDisplayKind.Mass);
 
             if (!expanded)
             {
@@ -212,7 +226,7 @@ namespace StorageNetwork.UI
                     order: -100));
             }
 
-            CreateFoldoutHeader(
+            GameObject storageHeader = CreateFoldoutHeader(
                 row.transform,
                 expanded,
                 StorageNetworkStorageDisplay.GetRowName(storageInfo),
@@ -236,6 +250,13 @@ namespace StorageNetwork.UI
                 extraButtons,
                 storage,
                 extraButtonsBeforeAction: true);
+            RegisterStorageLiveView(
+                storage,
+                storageHeader.transform.Find("Amount")?.GetComponent<TextMeshProUGUI>(),
+                storageHeader.transform.Find("Info")?.GetComponent<TextMeshProUGUI>(),
+                string.IsNullOrEmpty(sourceModName)
+                    ? string.Empty
+                    : string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SOURCE_MOD_NAME), sourceModName));
 
             RegisterStorageDropTarget(row, storage);
 
@@ -261,42 +282,31 @@ namespace StorageNetwork.UI
                                        StorageNetworkStorageRules.IsParticleOutputPort(storage);
             bool particleServerDetails = StorageNetworkStorageRules.IsParticleStorageServer(storage);
             List<GameObject> items = storageInfo.StoredItems.ToList();
-            if (items.Count == 0 && powerStorage == null && !powerPortDetails && !particlePortDetails && !particleServerDetails)
+            bool showEmptyWhenNoItems =
+                powerStorage == null &&
+                !powerPortDetails &&
+                !particlePortDetails &&
+                !particleServerDetails;
+            if (powerPortDetails)
             {
-                TextMeshProUGUI empty = CreateText("Empty", details.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.NO_STORAGE_CONTENT), 12, TextAlignmentOptions.MidlineLeft);
-                empty.color = new Color(0.34f, 0.35f, 0.35f, 1f);
-                empty.gameObject.AddComponent<LayoutElement>().preferredHeight = 22f;
+                CreatePowerPortBatteryRow(details.transform, storage);
             }
-            else
+
+            if (particlePortDetails || particleServerDetails)
             {
-                if (powerPortDetails)
-                {
-                    CreatePowerPortBatteryRow(details.transform, storage);
-                }
-
-                if (particlePortDetails || particleServerDetails)
-                {
-                    CreateParticlePortStorageRow(details.transform, storage);
-                }
-
-                if (powerStorage != null)
-                {
-                    CreateVirtualPowerItemRow(details.transform, powerStorage);
-                }
-
-                foreach (IGrouping<string, GameObject> group in items.GroupBy(StorageItemUtility.GetStoredItemKey).OrderBy(group => StorageNetworkStorageDisplay.GetStoredItemName(group.FirstOrDefault())))
-                {
-                    float mass = group.Sum(GetStoredItemMass);
-                    CreateStoredItemRow(
-                        storage,
-                        details.transform,
-                        group.Key,
-                        StorageNetworkStorageDisplay.GetStoredItemName(group.FirstOrDefault()),
-                        GameUtil.GetFormattedMass(mass),
-                        FormatStoredItemTemperature(group),
-                        group.FirstOrDefault());
-                }
+                CreateParticlePortStorageRow(details.transform, storage);
             }
+
+            if (powerStorage != null)
+            {
+                CreateVirtualPowerItemRow(details.transform, powerStorage);
+            }
+
+            CreateStoredItemRowsSection(
+                storage,
+                details.transform,
+                items,
+                showEmptyWhenNoItems);
 
             ContentSizeFitter fitter = details.AddComponent<ContentSizeFitter>();
             fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
@@ -314,14 +324,13 @@ namespace StorageNetwork.UI
             FocusStorage(storage);
         }
 
-        private void CreateInfoRow(string title, string details)
+        private void CreateInfoRow(string title, string details, Transform parent = null)
         {
-            GameObject row = CreateBox("InfoRow", listContent, new Color(0.88f, 0.87f, 0.82f, 1f));
+            GameObject row = CreateBox("InfoRow", parent ?? listContent, new Color(0.88f, 0.87f, 0.82f, 1f));
             row.AddComponent<LayoutElement>().preferredHeight = 42f;
             TextMeshProUGUI text = CreateText("Text", row.transform, string.IsNullOrEmpty(details) ? title : title + "\n" + details, 13, TextAlignmentOptions.MidlineLeft);
             text.color = new Color(0.18f, 0.19f, 0.19f, 1f);
             Stretch(text.rectTransform(), 12f, 6f);
-            RebuildLayout();
         }
 
         private static float GetDisplayedParticleStored(Storage storage)
@@ -352,11 +361,11 @@ namespace StorageNetwork.UI
             return powerStorage != null ? powerStorage.CapacityJoules : GetPowerPortCapacityJoules(storage);
         }
 
-        private void CreateCategoryButton(StorageNetworkCategoryGroup group)
+        private GameObject CreateCategoryButton(StorageNetworkCategoryGroup group)
         {
             if (categoryContent == null || group == null)
             {
-                return;
+                return null;
             }
 
             bool selected = group.Key == selectedCategoryKey;
@@ -388,6 +397,7 @@ namespace StorageNetwork.UI
             label.overflowMode = TextOverflowModes.Ellipsis;
             label.lineSpacing = -4f;
             Stretch(label.rectTransform(), 8f, 5f);
+            return button;
         }
 
     }

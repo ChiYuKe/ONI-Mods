@@ -529,11 +529,6 @@ namespace StorageNetwork.Components
 
             float watts = CurrentPowerWatts;
             energyConsumer.BaseWattageRating = watts;
-            Building building = GetComponent<Building>();
-            if (building?.Def != null)
-            {
-                building.Def.EnergyConsumptionWhenActive = watts;
-            }
         }
 
         private static float GetPowerWattsForCoreCount(int coreCount)
@@ -588,59 +583,83 @@ namespace StorageNetwork.Components
 
         public static List<StorageNetworkEngravingDisk> FindLooseDisks()
         {
-            return Object.FindObjectsByType<StorageNetworkEngravingDisk>(FindObjectsInactive.Exclude, FindObjectsSortMode.None)
-                .Where(disk =>
+            List<StorageNetworkEngravingDisk> disks =
+                new List<StorageNetworkEngravingDisk>();
+            foreach (StorageNetworkEngravingDisk disk in
+                     StorageNetworkEngravingDisk.GetRuntimeDisks())
+            {
+                if (disk == null)
                 {
-                    if (disk == null)
-                    {
-                        return false;
-                    }
+                    continue;
+                }
 
-                    Pickupable pickupable = disk.GetComponent<Pickupable>();
-                    KPrefabID prefabID = disk.GetComponent<KPrefabID>();
-                    return pickupable != null &&
-                        pickupable.storage == null &&
-                        prefabID?.HasTag(StorageNetworkTags.SelectedEngravingDisk) != true;
-                })
-                .OrderBy(disk => disk.GetProperName())
-                .ToList();
+                Pickupable pickupable = disk.GetComponent<Pickupable>();
+                KPrefabID prefabID = disk.GetComponent<KPrefabID>();
+                if (pickupable != null &&
+                    pickupable.storage == null &&
+                    prefabID?.HasTag(StorageNetworkTags.SelectedEngravingDisk) != true)
+                {
+                    disks.Add(disk);
+                }
+            }
+
+            disks.Sort((left, right) => string.Compare(
+                left != null ? left.GetProperName() : string.Empty,
+                right != null ? right.GetProperName() : string.Empty,
+                System.StringComparison.CurrentCulture));
+            return disks;
         }
 
         public static List<StorageNetworkEngravingDisk> FindAvailableDisks()
         {
-            Dictionary<int, StorageNetworkEngravingDisk> disks = new Dictionary<int, StorageNetworkEngravingDisk>();
-            foreach (StorageNetworkEngravingDisk disk in FindLooseDisks())
+            List<StorageNetworkEngravingDisk> disks =
+                new List<StorageNetworkEngravingDisk>();
+            foreach (StorageNetworkEngravingDisk disk in
+                     StorageNetworkEngravingDisk.GetRuntimeDisks())
             {
-                AddAvailableDisk(disks, disk);
-            }
-
-            foreach (StorageInfo info in StorageSceneCollector.Collect().Storages)
-            {
-                foreach (GameObject item in info.StoredItems ?? Enumerable.Empty<GameObject>())
+                if (IsAvailableDisk(disk))
                 {
-                    StorageNetworkEngravingDisk disk = item != null ? item.GetComponent<StorageNetworkEngravingDisk>() : null;
-                    AddAvailableDisk(disks, disk);
+                    disks.Add(disk);
                 }
             }
 
-            return disks.Values.OrderBy(disk => disk.GetProperName()).ToList();
+            disks.Sort((left, right) => string.Compare(
+                left != null ? left.GetProperName() : string.Empty,
+                right != null ? right.GetProperName() : string.Empty,
+                System.StringComparison.CurrentCulture));
+            return disks;
         }
 
-        private static void AddAvailableDisk(Dictionary<int, StorageNetworkEngravingDisk> disks, StorageNetworkEngravingDisk disk)
+        private static bool IsAvailableDisk(StorageNetworkEngravingDisk disk)
         {
             if (disk == null)
             {
-                return;
+                return false;
             }
 
             Pickupable pickupable = disk.GetComponent<Pickupable>();
             KPrefabID prefabID = disk.GetComponent<KPrefabID>();
-            if (pickupable == null || prefabID?.HasTag(StorageNetworkTags.SelectedEngravingDisk) == true)
+            if (pickupable == null ||
+                prefabID?.HasTag(StorageNetworkTags.SelectedEngravingDisk) == true)
             {
-                return;
+                return false;
             }
 
-            disks[disk.GetInstanceID()] = disk;
+            Storage storage = pickupable.storage;
+            if (storage == null)
+            {
+                return true;
+            }
+
+            int activeWorldId = ClusterManager.Instance != null
+                ? ClusterManager.Instance.activeWorldId
+                : -1;
+            return activeWorldId >= 0 &&
+                   StorageSceneRegistry.HasOnlineCoreInWorld(activeWorldId) &&
+                   StorageNetworkMembership.IsCollectableStorage(storage) &&
+                   StorageTargetSelector.IsStorageReachableFromWorld(
+                       storage,
+                       activeWorldId);
         }
 
         private void RemoveDynamicRecipeUnsafeStatusManager()

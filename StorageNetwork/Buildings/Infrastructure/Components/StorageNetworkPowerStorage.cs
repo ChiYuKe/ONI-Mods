@@ -12,7 +12,6 @@ namespace StorageNetwork.Components
     public sealed class StorageNetworkPowerStorage : KMonoBehaviour, ISim1000ms, IGameObjectEffectDescriptor
     {
         private const float SecondsPerCycle = 600f;
-        private const float FullSnapJoules = 0.5f;
 
         [SerializeField]
         public float capacityJoules;
@@ -79,7 +78,11 @@ namespace StorageNetwork.Components
 
         public void Sim1000ms(float dt)
         {
+            float before = RawJoulesAvailable;
             joulesAvailable = Mathf.Clamp(joulesAvailable - JoulesLostPerSecond * dt, 0f, CapacityJoules);
+            StorageNetworkPowerService.RecordStorageEnergyDelta(
+                this,
+                RawJoulesAvailable - before);
         }
 
         public float AddEnergy(float joules)
@@ -91,11 +94,6 @@ namespace StorageNetwork.Components
 
             float before = RawJoulesAvailable;
             joulesAvailable += Mathf.Min(joules, AvailableCapacityJoules);
-            if (CapacityJoules - joulesAvailable <= FullSnapJoules)
-            {
-                joulesAvailable = CapacityJoules;
-            }
-
             return RawJoulesAvailable - before;
         }
 

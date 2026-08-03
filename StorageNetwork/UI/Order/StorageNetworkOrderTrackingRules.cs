@@ -10,18 +10,8 @@ namespace StorageNetwork.UI
     {
         public static string BuildListSignature(ProductDisplayGroup product, IEnumerable<ProductionOrderRecord> records, string searchText, StorageNetworkPanel.TrackingFilterMode filterMode)
         {
-            string recordsSignature = string.Join("|", records.Select(record => string.Format(
-                "{0}:{1}:{2}:{3:0.###}:{4:0.###}:{5}:{6}:{7:0.###}:{8:0.###}:{9}",
-                record.Key,
-                record.DisplayId,
-                record.State,
-                record.ProducedAtSubmit,
-                record.RequestedAmount,
-                record.OrderCount,
-                record.MergeCount,
-                record.LastActivityCycle,
-                record.CompletedCycle,
-                record.AbnormalReason ?? string.Empty)));
+            string recordsSignature = string.Join("|", records.Select(record =>
+                (record.Key ?? string.Empty) + ":" + BuildCardSignature(record)));
 
             return string.Format("{0}|{1}|{2}|{3}", product?.ProductKey ?? string.Empty, searchText ?? string.Empty, filterMode, recordsSignature);
         }
@@ -29,23 +19,10 @@ namespace StorageNetwork.UI
         public static string BuildCardSignature(ProductionOrderRecord record)
         {
             return string.Format(
-                "{0}:{1}:{2:0.###}:{3:0.###}:{4}:{5}:{6:0.###}:{7:0.###}:{8}:{9}",
+                "{0}:{1}:{2}",
                 record.DisplayId,
                 record.State,
-                record.ProducedAtSubmit,
-                record.RequestedAmount,
-                record.OrderCount,
-                record.MergeCount,
-                record.LastActivityCycle,
-                record.CompletedCycle,
-                record.AbnormalReason ?? string.Empty,
-                string.Join(",", (record.QueueAssignments ?? new List<ProductionOrderQueueAssignment>())
-                    .Where(assignment => assignment != null)
-                    .Select(assignment => string.Format("{0}:{1}:{2}:{3:0.###}",
-                        assignment.Fabricator != null ? assignment.Fabricator.GetInstanceID() : 0,
-                        assignment.Primary,
-                        StorageNetworkFabricatorProgress.GetRecipeQueueCountSafe(assignment.Fabricator, assignment.Recipe),
-                        assignment.Fabricator != null && assignment.Recipe != null ? StorageNetworkFabricatorProgress.GetRecipeProgress(assignment.Fabricator, assignment.Recipe) : 0f))));
+                record.MergeCount > 0);
         }
 
         public static bool MatchesFilter(ProductionOrderRecord record, StorageNetworkPanel.TrackingFilterMode filterMode, string searchText)

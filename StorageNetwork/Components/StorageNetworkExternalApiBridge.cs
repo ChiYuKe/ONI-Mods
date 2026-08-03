@@ -1,6 +1,7 @@
 using System;
 using StorageNetwork.API;
 using StorageNetwork.Core;
+using StorageNetwork.Services;
 using StorageNetwork.UI;
 using UnityEngine;
 using Loc = StorageNetwork.STRINGS;
@@ -12,21 +13,50 @@ namespace StorageNetwork.Components
     /// </summary>
     public sealed class StorageNetworkExternalApiBridge : KMonoBehaviour
     {
+        [MyCmpGet]
+        private Storage storage = null;
+
+        [MyCmpGet]
+        private Operational operational = null;
+
         protected override void OnSpawn()
         {
             base.OnSpawn();
             StorageSceneRegistry.Register(gameObject);
             Subscribe((int)GameHashes.RefreshUserMenu, OnRefreshUserMenuDelegate);
+            if (operational != null)
+            {
+                Subscribe((int)GameHashes.OperationalChanged, OnOperationalChangedDelegate);
+            }
         }
 
         protected override void OnCleanUp()
         {
+            if (operational != null)
+            {
+                Unsubscribe((int)GameHashes.OperationalChanged, OnOperationalChangedDelegate);
+            }
+
             StorageSceneRegistry.Unregister(gameObject);
             base.OnCleanUp();
         }
 
         private static readonly EventSystem.IntraObjectHandler<StorageNetworkExternalApiBridge> OnRefreshUserMenuDelegate =
             new EventSystem.IntraObjectHandler<StorageNetworkExternalApiBridge>((component, data) => component.OnRefreshUserMenu(data));
+
+        private static readonly EventSystem.IntraObjectHandler<StorageNetworkExternalApiBridge> OnOperationalChangedDelegate =
+            new EventSystem.IntraObjectHandler<StorageNetworkExternalApiBridge>((component, data) => component.OnOperationalChanged(data));
+
+        private void OnOperationalChanged(object data)
+        {
+            if (storage != null)
+            {
+                StorageNetworkContentIndexService.Invalidate(storage);
+                StorageNetworkParticleStorageService.Invalidate(storage);
+            }
+
+            StorageSceneRegistry.InvalidateCapabilities(storage);
+        }
 
         private void OnRefreshUserMenu(object data)
         {
@@ -68,7 +98,7 @@ namespace StorageNetwork.Components
 
             GameObject target = enrollable.GetStorageNetworkEnrollmentTarget() ?? gameObject;
             enrollable.SetStorageNetworkIncluded(!enrollable.IsStorageNetworkIncluded());
-            StorageSceneRegistry.Invalidate();
+            StorageSceneRegistry.InvalidateMembership(this.storage);
             StorageNetworkApi.RefreshObjectUi(target);
             KMonoBehaviour.PlaySound(GlobalAssets.GetSound("HUD_Click", false));
 

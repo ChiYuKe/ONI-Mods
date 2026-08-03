@@ -16,9 +16,9 @@ namespace StorageNetwork.Components
 
         private static readonly List<StorageNetworkFluidStorageCompactor> Instances =
             new List<StorageNetworkFluidStorageCompactor>();
+        private static readonly Stopwatch BudgetStopwatch = new Stopwatch();
 
         private static int nextInstanceIndex;
-        private static int lastProcessedFrame = -1;
 
         [MyCmpGet]
         private Storage storage = null;
@@ -35,10 +35,7 @@ namespace StorageNetwork.Components
         {
             base.OnSpawn();
             ResetPass();
-            if (!Instances.Contains(this))
-            {
-                Instances.Add(this);
-            }
+            Instances.Add(this);
         }
 
         protected override void OnCleanUp()
@@ -59,6 +56,13 @@ namespace StorageNetwork.Components
 
         public void Sim1000ms(float dt)
         {
+            // ISim1000ms invokes every component. Designate exactly one live instance as
+            // coordinator so the global budget is applied once per simulation tick.
+            if (Instances.Count == 0 || Instances[0] != this)
+            {
+                return;
+            }
+
             RunGlobalCompactionPass();
         }
 
@@ -66,18 +70,18 @@ namespace StorageNetwork.Components
         {
             Instances.Clear();
             nextInstanceIndex = 0;
-            lastProcessedFrame = -1;
+            BudgetStopwatch.Reset();
         }
 
         private static void RunGlobalCompactionPass()
         {
-            if (lastProcessedFrame == Time.frameCount || Instances.Count == 0)
+            if (Instances.Count == 0)
             {
                 return;
             }
 
-            lastProcessedFrame = Time.frameCount;
-            Stopwatch stopwatch = Stopwatch.StartNew();
+            BudgetStopwatch.Reset();
+            BudgetStopwatch.Start();
             int remainingItems = MaxItemsPerGlobalTick;
             int instancesVisited = 0;
             int instancesAtStart = Instances.Count;
@@ -85,7 +89,7 @@ namespace StorageNetwork.Components
             while (Instances.Count > 0 &&
                    instancesVisited < instancesAtStart &&
                    remainingItems > 0 &&
-                   stopwatch.Elapsed.TotalMilliseconds < MaxMillisecondsPerGlobalTick)
+                   BudgetStopwatch.Elapsed.TotalMilliseconds < MaxMillisecondsPerGlobalTick)
             {
                 NormalizeNextInstanceIndex();
                 StorageNetworkFluidStorageCompactor compactor = Instances[nextInstanceIndex];
@@ -98,9 +102,10 @@ namespace StorageNetwork.Components
 
                 nextInstanceIndex++;
                 instancesVisited++;
-                remainingItems -= compactor.ProcessSlice(remainingItems, stopwatch);
+                remainingItems -= compactor.ProcessSlice(remainingItems, BudgetStopwatch);
             }
 
+            BudgetStopwatch.Stop();
             NormalizeNextInstanceIndex();
         }
 

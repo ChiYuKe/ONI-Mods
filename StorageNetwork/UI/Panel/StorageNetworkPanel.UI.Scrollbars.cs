@@ -13,14 +13,19 @@ namespace StorageNetwork.UI
 
         private static Scrollbar CreateScrollbar(Transform parent, float topInset, float bottomInset)
         {
+            return CreateScrollbar(parent, topInset, bottomInset, 0f);
+        }
+
+        private static Scrollbar CreateScrollbar(Transform parent, float topInset, float bottomInset, float horizontalOffset)
+        {
             GameObject scrollbarObject = new GameObject("Scrollbar");
             scrollbarObject.transform.SetParent(parent, false);
             RectTransform scrollbarRect = scrollbarObject.AddComponent<RectTransform>();
             scrollbarRect.anchorMin = new Vector2(1f, 0f);
             scrollbarRect.anchorMax = Vector2.one;
             scrollbarRect.pivot = new Vector2(1f, 0.5f);
-            scrollbarRect.offsetMin = new Vector2(-13f, bottomInset);
-            scrollbarRect.offsetMax = new Vector2(-4f, -topInset);
+            scrollbarRect.offsetMin = new Vector2(-13f + horizontalOffset, bottomInset);
+            scrollbarRect.offsetMax = new Vector2(-4f + horizontalOffset, -topInset);
 
             Image background = scrollbarObject.AddComponent<Image>();
             ApplyVerticalScrollbarFrame(background);

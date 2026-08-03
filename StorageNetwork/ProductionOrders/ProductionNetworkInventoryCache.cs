@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
 using StorageNetwork.Core;
 using StorageNetwork.Services;
 using UnityEngine;
@@ -12,135 +11,105 @@ namespace StorageNetwork.ProductionOrders
         private readonly Dictionary<int, Storage> sourceStorageByInstanceId = new Dictionary<int, Storage>();
         private readonly List<Storage> sourceStorages = new List<Storage>();
         private readonly HashSet<Storage> sourceStorageSet = new HashSet<Storage>();
-        private static readonly Dictionary<int, Storage> sceneStorageByInstanceId = new Dictionary<int, Storage>();
-        private static int sceneStorageIndexVersion = -1;
+        private int worldId = -1;
 
         public List<Storage> SourceStorages => sourceStorages;
 
-        public void Refresh()
+        public void Clear()
         {
+            amounts.Clear();
             sourceStorages.Clear();
             sourceStorageSet.Clear();
             sourceStorageByInstanceId.Clear();
-            foreach (StorageInfo info in StorageSceneCollector.Collect().Storages)
-            {
-                if (info?.ContentStorages == null || !StorageNetworkStorageRules.IsServerStorage(info.Storage))
-                {
-                    continue;
-                }
+            worldId = -1;
+        }
 
-                foreach (Storage storage in info.ContentStorages)
-                {
-                    if (storage != null &&
-                        StorageNetworkStorageRules.IsServerStorage(storage) &&
-                        sourceStorageSet.Add(storage))
-                    {
-                        sourceStorages.Add(storage);
-                        AddStorageIndex(sourceStorageByInstanceId, storage);
-                    }
-                }
+        public int WorldId => worldId;
+
+        public void Refresh(int destinationWorldId)
+        {
+            Clear();
+            worldId = destinationWorldId;
+            if (destinationWorldId < 0 || !StorageSceneRegistry.HasOnlineCoreInWorld(destinationWorldId))
+            {
+                return;
             }
 
-            amounts.Clear();
-            foreach (Storage storage in sourceStorages)
+            StorageNetworkContentIndexService.FillProductionSourceInventory(
+                destinationWorldId,
+                includeRelatedWorlds: true,
+                amounts,
+                sourceStorages,
+                allowStaleContent: false);
+            for (int index = sourceStorages.Count - 1; index >= 0; index--)
             {
-                if (storage == null || StorageNetworkStorageRules.IsProductionStorage(storage) || storage.items == null)
+                Storage storage = sourceStorages[index];
+                if (!IsUsableSource(storage, destinationWorldId) || !sourceStorageSet.Add(storage))
                 {
+                    sourceStorages.RemoveAt(index);
                     continue;
                 }
 
-                foreach (GameObject item in storage.items)
-                {
-                    AddItemAmount(item);
-                }
+                AddStorageIndex(sourceStorageByInstanceId, storage);
             }
         }
 
         public float GetRawAmount(Tag tag)
         {
-            return amounts.TryGetValue(tag, out float amount) ? amount : 0f;
+            return tag != Tag.Invalid && amounts.TryGetValue(tag, out float amount)
+                ? amount
+                : 0f;
         }
 
         public Storage FindStorageByInstanceId(int instanceId)
         {
-            return instanceId == KPrefabID.InvalidInstanceID
-                ? null
-                : sourceStorageByInstanceId.TryGetValue(instanceId, out Storage storage)
-                    ? storage
-                    : null;
-        }
-
-        public static Storage FindStorageByInstanceIdFromScene(int instanceId)
-        {
-            if (instanceId == KPrefabID.InvalidInstanceID)
+            if (instanceId == KPrefabID.InvalidInstanceID ||
+                !sourceStorageByInstanceId.TryGetValue(instanceId, out Storage storage) ||
+                !IsUsableSource(storage, worldId))
             {
                 return null;
             }
 
-            EnsureSceneStorageIndex();
-            return sceneStorageByInstanceId.TryGetValue(instanceId, out Storage storage) ? storage : null;
+            return storage;
+        }
+
+        public static Storage FindStorageByInstanceIdFromScene(int instanceId)
+        {
+            int activeWorldId = ClusterManager.Instance != null
+                ? ClusterManager.Instance.activeWorldId
+                : -1;
+            return FindStorageByInstanceIdFromScene(instanceId, activeWorldId);
+        }
+
+        public static Storage FindStorageByInstanceIdFromScene(int instanceId, int destinationWorldId)
+        {
+            if (instanceId == KPrefabID.InvalidInstanceID || destinationWorldId < 0)
+            {
+                return null;
+            }
+
+            if (!StorageSceneRegistry.TryGetReachableStorage(
+                    instanceId,
+                    destinationWorldId,
+                    out Storage storage) ||
+                !IsUsableSource(storage, destinationWorldId))
+            {
+                return null;
+            }
+
+            return storage;
         }
 
         public static void InvalidateSceneStorageIndex()
         {
-            sceneStorageIndexVersion = -1;
-            sceneStorageByInstanceId.Clear();
-        }
-
-        private static void EnsureSceneStorageIndex()
-        {
-            int version = StorageSceneRegistry.Version;
-            if (sceneStorageIndexVersion == version)
-            {
-                return;
-            }
-
-            sceneStorageByInstanceId.Clear();
-            HashSet<Storage> visited = new HashSet<Storage>();
-            int activeWorldId = ClusterManager.Instance != null ? ClusterManager.Instance.activeWorldId : -1;
-            foreach (Storage storage in StorageSceneCollector.CollectLightweightForWorld(activeWorldId).Storages)
-            {
-                if (storage == null ||
-                    !StorageNetworkStorageRules.IsServerStorage(storage) ||
-                    !visited.Add(storage))
-                {
-                    continue;
-                }
-
-                foreach (Storage contentStorage in StorageNetworkProductionStorageCollector.GetProductionStorages(storage, storage.GetComponent<ComplexFabricator>()))
-                {
-                    if (contentStorage != null &&
-                        StorageNetworkStorageRules.IsServerStorage(contentStorage))
-                    {
-                        AddStorageIndex(sceneStorageByInstanceId, contentStorage);
-                    }
-                }
-            }
-
-            sceneStorageIndexVersion = version;
+            // Instance resolution is owned by StorageSceneRegistry. Kept as a
+            // compatibility hook for callers that reset all production runtime state.
         }
 
         public static int GetComponentInstanceId(Component component)
         {
             KPrefabID prefabId = component != null ? component.GetComponent<KPrefabID>() : null;
             return prefabId != null ? prefabId.InstanceID : KPrefabID.InvalidInstanceID;
-        }
-
-        private void AddItemAmount(GameObject item)
-        {
-            PrimaryElement primaryElement = item != null ? item.GetComponent<PrimaryElement>() : null;
-            if (primaryElement == null)
-            {
-                return;
-            }
-
-            Tag storageTag = StorageItemUtility.GetStorageTransferTag(item);
-            AddAmount(storageTag, primaryElement.Mass);
-            Tag elementTag = primaryElement.ElementID.CreateTag();
-            if (elementTag != Tag.Invalid && elementTag != storageTag)
-            {
-                AddAmount(elementTag, primaryElement.Mass);
-            }
         }
 
         private static void AddStorageIndex(Dictionary<int, Storage> index, Storage storage)
@@ -152,14 +121,23 @@ namespace StorageNetwork.ProductionOrders
             }
         }
 
-        private void AddAmount(Tag tag, float amount)
+        internal static bool IsUsableSource(Storage storage, int destinationWorldId)
         {
-            if (tag == Tag.Invalid || amount <= 0f)
+            if (destinationWorldId < 0 ||
+                !StorageSceneRegistry.HasOnlineCoreInWorld(destinationWorldId) ||
+                !StorageSceneRegistry.IsLive(storage) ||
+                !StorageTargetSelector.IsStorageReachableFromWorld(storage, destinationWorldId) ||
+                !StorageNetworkStorageRules.IsServerStorage(storage) ||
+                !StorageNetworkStorageRules.IsConnectedNetworkStorage(storage) ||
+                StorageNetworkStorageRules.IsMinionStorage(storage) ||
+                StorageNetworkStorageRules.IsProductionStorage(storage))
             {
-                return;
+                return false;
             }
 
-            amounts[tag] = amounts.TryGetValue(tag, out float existing) ? existing + amount : amount;
+            int sourceWorldId = StorageTargetSelector.GetObjectWorldId(storage.gameObject);
+            return sourceWorldId >= 0 && StorageSceneRegistry.HasOnlineCoreInWorld(sourceWorldId);
         }
+
     }
 }

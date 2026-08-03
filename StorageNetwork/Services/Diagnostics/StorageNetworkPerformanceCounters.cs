@@ -5,6 +5,7 @@ namespace StorageNetwork.Services
 {
     internal static class StorageNetworkPerformanceCounters
     {
+        private static int enabled;
         private static long inventoryIndexRebuilds;
         private static long collectForWorldRebuilds;
         private static long lightweightSceneRebuilds;
@@ -21,26 +22,31 @@ namespace StorageNetwork.Services
 
         public static void RecordInventoryIndexRebuild()
         {
+            if (Volatile.Read(ref enabled) == 0) return;
             Interlocked.Increment(ref inventoryIndexRebuilds);
         }
 
         public static void RecordCollectForWorldRebuild()
         {
+            if (Volatile.Read(ref enabled) == 0) return;
             Interlocked.Increment(ref collectForWorldRebuilds);
         }
 
         public static void RecordLightweightSceneRebuild()
         {
+            if (Volatile.Read(ref enabled) == 0) return;
             Interlocked.Increment(ref lightweightSceneRebuilds);
         }
 
         public static void RecordStorageInfoConstruction()
         {
+            if (Volatile.Read(ref enabled) == 0) return;
             Interlocked.Increment(ref storageInfoConstructions);
         }
 
         public static void RecordPortRequestAttempt(int portInstanceId = 0)
         {
+            if (Volatile.Read(ref enabled) == 0) return;
             Interlocked.Increment(ref portRequestAttempts);
             if (portInstanceId == 0)
             {
@@ -55,32 +61,47 @@ namespace StorageNetwork.Services
 
         public static void RecordNetworkSourceScan()
         {
+            if (Volatile.Read(ref enabled) == 0) return;
             Interlocked.Increment(ref networkSourceScans);
         }
 
         public static void RecordNetworkSourceFallbackScan()
         {
+            if (Volatile.Read(ref enabled) == 0) return;
             Interlocked.Increment(ref networkSourceFallbackScans);
         }
 
         public static void RecordFetchBridgeAttempt()
         {
+            if (Volatile.Read(ref enabled) == 0) return;
             Interlocked.Increment(ref fetchBridgeAttempts);
         }
 
         public static void RecordPortNavigationCheck()
         {
+            if (Volatile.Read(ref enabled) == 0) return;
             Interlocked.Increment(ref portNavigationChecks);
         }
 
         public static void RecordBufferReturnAttempt()
         {
+            if (Volatile.Read(ref enabled) == 0) return;
             Interlocked.Increment(ref bufferReturnAttempts);
         }
 
         public static void RecordInputReservationIndexRebuild()
         {
+            if (Volatile.Read(ref enabled) == 0) return;
             Interlocked.Increment(ref inputReservationIndexRebuilds);
+        }
+
+        public static void SetEnabled(bool value)
+        {
+            Volatile.Write(ref enabled, value ? 1 : 0);
+            if (!value)
+            {
+                ConsumeSnapshot();
+            }
         }
 
         public static StorageNetworkPerformanceSnapshot ConsumeSnapshot()
@@ -109,6 +130,7 @@ namespace StorageNetwork.Services
 
         public static void ResetRuntimeState()
         {
+            Volatile.Write(ref enabled, 0);
             ConsumeSnapshot();
         }
     }

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using StorageNetwork.Services;
 using UnityEngine;
@@ -7,7 +8,7 @@ namespace StorageNetwork.Core
     public sealed class StorageSceneSnapshot
     {
         public static readonly StorageSceneSnapshot Empty =
-            new StorageSceneSnapshot(new List<StorageInfo>(), 0f, 0f, true);
+            new StorageSceneSnapshot(Array.Empty<StorageInfo>(), 0f, 0f, true);
 
         public StorageSceneSnapshot(
             IReadOnlyList<StorageInfo> storages,
@@ -41,24 +42,27 @@ namespace StorageNetwork.Core
             ContentStorages = GetContentStorages(storage);
             List<GameObject> storedItems = new List<GameObject>();
             float storedKg = 0f;
-            foreach (Storage contentStorage in connected ? ContentStorages : new List<Storage>())
+            if (connected)
             {
-                if (contentStorage == null)
+                foreach (Storage contentStorage in ContentStorages)
                 {
-                    continue;
-                }
-
-                storedKg += contentStorage.MassStored();
-                if (contentStorage.items == null)
-                {
-                    continue;
-                }
-
-                foreach (GameObject item in contentStorage.items)
-                {
-                    if (item != null)
+                    if (contentStorage == null)
                     {
-                        storedItems.Add(item);
+                        continue;
+                    }
+
+                    storedKg += contentStorage.MassStored();
+                    if (contentStorage.items == null)
+                    {
+                        continue;
+                    }
+
+                    foreach (GameObject item in contentStorage.items)
+                    {
+                        if (item != null)
+                        {
+                            storedItems.Add(item);
+                        }
                     }
                 }
             }
@@ -76,8 +80,8 @@ namespace StorageNetwork.Core
             Geyser = geyser;
             GameObject = geyser.gameObject;
             Name = GameObject.GetProperName();
-            ContentStorages = new List<Storage>();
-            StoredItems = new List<GameObject>();
+            ContentStorages = Array.Empty<Storage>();
+            StoredItems = Array.Empty<GameObject>();
             StoredKg = 0f;
             CapacityKg = 0f;
             ConnectedToNetwork = false;
@@ -114,6 +118,11 @@ namespace StorageNetwork.Core
         private static IReadOnlyList<Storage> GetContentStorages(Storage storage)
         {
             ComplexFabricator fabricator = storage != null ? storage.GetComponent<ComplexFabricator>() : null;
+            if (fabricator == null)
+            {
+                return storage != null ? new[] { storage } : Array.Empty<Storage>();
+            }
+
             return new List<Storage>(StorageNetworkProductionStorageCollector.GetProductionStorages(storage, fabricator));
         }
     }
@@ -121,7 +130,7 @@ namespace StorageNetwork.Core
     public sealed class StorageSceneLightweightSnapshot
     {
         public static readonly StorageSceneLightweightSnapshot Empty =
-            new StorageSceneLightweightSnapshot(new List<Storage>(), false);
+            new StorageSceneLightweightSnapshot(Array.Empty<Storage>(), false);
 
         public StorageSceneLightweightSnapshot(IReadOnlyList<Storage> storages, bool networkOnline)
         {

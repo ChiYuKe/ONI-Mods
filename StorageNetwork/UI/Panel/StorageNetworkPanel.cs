@@ -28,6 +28,7 @@ namespace StorageNetwork.UI
         private RectTransform categoryContent;
         private RectTransform listContent;
         private ScrollRect listScrollRect;
+        private bool mainListViewportDirty;
         private RectTransform windowRect;
         private GameObject modalRoot;
         private GameObject categorySummaryRoot;
@@ -36,6 +37,8 @@ namespace StorageNetwork.UI
         private TextMeshProUGUI categorySummaryTitle;
         private GameObject enrollableWindowRoot;
         private string enrollableWindowSignature;
+        private int enrollableObservedRegistryVersion = -1;
+        private StorageNetworkKeyedRowCache enrollableRows;
         private int enrollableWorldFilterId = UnsetEnrollableWorldFilterId;
         private RectTransform enrollableWorldFilterContent;
         private GameObject enrollableWorldDropdownRoot;
@@ -48,6 +51,7 @@ namespace StorageNetwork.UI
         private GameObject orderWorldDropdownRoot;
         private GameObject productionSettingsRoot;
         private RectTransform productionSettingsContent;
+        private TextMeshProUGUI productionSettingsTitle;
         private Storage productionSettingsStorage;
         private bool productionSettingsPositionInitialized;
         private GameObject geyserSettingsRoot;
@@ -63,7 +67,12 @@ namespace StorageNetwork.UI
         private ProductionOverviewCardView productionOverviewView;
         private ProductionInventoryCardView productionInventoryView;
         private ProductionAutomationCardsView productionAutomationView;
-        private string categorySummarySignature;
+        private int categorySummaryObservedContentVersion = -1;
+        private int categorySummaryObservedStorageVersion = int.MinValue;
+        private int categorySummaryObservedMembershipVersion = -1;
+        private string categorySummaryObservedCategoryKey;
+        private float categorySummaryNextTrendRefreshTime;
+        private readonly List<string> categorySummaryStructureKeys = new List<string>();
         private bool rightClickCloseCandidate;
         private Vector3 rightClickStartPosition;
         private const float RightClickDragThresholdPixels = 8f;
@@ -74,12 +83,22 @@ namespace StorageNetwork.UI
         private readonly Dictionary<Storage, bool> expandedStorages = new Dictionary<Storage, bool>();
         private readonly Dictionary<Geyser, bool> expandedGeysers = new Dictionary<Geyser, bool>();
         private float refreshElapsed;
-        private float structureRefreshElapsed;
+        private RectTransform deferredMainLayoutRoot;
+        private int deferredMainLayoutFrame = -1;
+        private bool restoreMainScrollAfterLayout;
+        private float deferredMainScrollOffset;
         private int deferredStructureRefreshFrame = -1;
         private int lastObservedRegistryVersion = -1;
+        private int lastObservedContentChangeVersion = -1;
+        private int mainWorldFilterValidatedMembershipVersion = -1;
+        private int mainWorldFilterValidatedActiveWorld = int.MinValue;
+        private float liveTotalStoredKg;
+        private float liveTotalCapacityKg;
         private string lastListSignature;
-        private const float LiveRefreshSeconds = 1f;
-        private const float StructureRefreshSeconds = 5f;
+        private readonly StorageNetworkDebounceGate mainSearchDebounce = new StorageNetworkDebounceGate(0.15f);
+        private readonly StorageNetworkDebounceGate enrollableSearchDebounce = new StorageNetworkDebounceGate(0.15f);
+        private readonly StorageNetworkDebounceGate orderTrackingSearchDebounce = new StorageNetworkDebounceGate(0.15f);
+        private const float LiveRefreshSeconds = 0.5f;
         private const string EmptyListSignature = "empty";
         private const string CoreOfflineListSignature = "core_offline";
         private const string CrossWorldRelayOfflineListSignature = "cross_world_relay_offline";
@@ -112,8 +131,8 @@ namespace StorageNetwork.UI
             currentSnapshot = null;
             lastListSignature = null;
             lastObservedRegistryVersion = StorageSceneRegistry.Version;
+            lastObservedContentChangeVersion = StorageNetworkContentIndexService.ChangeVersion;
             refreshElapsed = 0f;
-            structureRefreshElapsed = 0f;
             FocusStorageRow(focusStorage);
             RefreshStoragePanel(StoragePanelRefreshMode.Structure);
         }
@@ -126,25 +145,90 @@ namespace StorageNetwork.UI
             }
 
             UpdatePanelDrag();
-            RunDeferredStoragePanelRefresh();
+            RunDeferredMainLayout();
+            float deltaTime = Time.unscaledDeltaTime;
+            ProcessSearchDebounces(deltaTime);
+            UpdateOrderPanelAutoRefresh(deltaTime);
 
-            refreshElapsed += Time.unscaledDeltaTime;
-            structureRefreshElapsed += Time.unscaledDeltaTime;
+            if (windowRect == null || !windowRect.gameObject.activeInHierarchy)
+            {
+                return;
+            }
+
+            if (categorySummaryViewportDirty &&
+                categorySummaryRoot != null &&
+                categorySummaryRoot.activeInHierarchy)
+            {
+                UpdateCategorySummaryPanel();
+            }
+
+            if (enrollableViewportDirty &&
+                enrollableWindowRoot != null &&
+                enrollableWindowRoot.activeInHierarchy)
+            {
+                enrollableViewportDirty = false;
+                ReconcileEnrollableRows();
+            }
+
+            if (mainListViewportDirty)
+            {
+                mainListViewportDirty = false;
+                ReconcileVisibleStoredItemSections();
+            }
+
+            RunDeferredStoragePanelRefresh();
+            refreshElapsed += deltaTime;
             if (refreshElapsed >= LiveRefreshSeconds)
             {
                 refreshElapsed = 0f;
                 int registryVersion = StorageSceneRegistry.Version;
-                bool refreshStructure = structureRefreshElapsed >= StructureRefreshSeconds || registryVersion != lastObservedRegistryVersion;
+                bool refreshStructure = registryVersion != lastObservedRegistryVersion;
                 if (refreshStructure)
                 {
-                    structureRefreshElapsed = 0f;
                     lastObservedRegistryVersion = registryVersion;
+                }
+
+                int contentChangeVersion = StorageNetworkContentIndexService.ChangeVersion;
+                bool contentChanged = contentChangeVersion != lastObservedContentChangeVersion;
+                lastObservedContentChangeVersion = contentChangeVersion;
+                if (contentChanged && !string.IsNullOrEmpty(mainSearchText))
+                {
+                    RequestDeferredStoragePanelStructureRefresh();
                 }
 
                 RefreshStoragePanel(refreshStructure ? StoragePanelRefreshMode.StructureCheck : StoragePanelRefreshMode.Live);
                 UpdateProductionSettingsPanel();
                 UpdateGeyserSettingsPanel();
-                UpdateOrderPanelAutoRefresh(LiveRefreshSeconds);
+                UpdateEnrollableWindowLive();
+            }
+        }
+
+        private void ProcessSearchDebounces(float deltaTime)
+        {
+            if (mainSearchDebounce.Advance(deltaTime) &&
+                windowRect != null &&
+                windowRect.gameObject.activeInHierarchy)
+            {
+                selectedItemStorage = null;
+                selectedItemKey = null;
+                lastListSignature = null;
+                RefreshStoragePanel(StoragePanelRefreshMode.Structure);
+            }
+
+            if (enrollableSearchDebounce.Advance(deltaTime) &&
+                enrollableWindowRoot != null &&
+                enrollableWindowRoot.activeInHierarchy)
+            {
+                enrollableWindowSignature = null;
+                ShowEnrollableBuildingsDialog();
+            }
+
+            if (orderTrackingSearchDebounce.Advance(deltaTime) &&
+                headerWindowRoot != null &&
+                headerWindowRoot.activeInHierarchy)
+            {
+                orderTrackingSignature = null;
+                RebuildOrderDetails();
             }
         }
 
@@ -169,10 +253,26 @@ namespace StorageNetwork.UI
                 return;
             }
 
+            using (StorageNetworkFrameProfileTool.BeginWork(
+                       StorageNetworkPerformanceArea.MainPanel))
+            {
+                RefreshStoragePanelMain(mode);
+            }
+
+            UpdateCategorySummaryPanel();
+        }
+
+        private void RefreshStoragePanelMain(StoragePanelRefreshMode mode)
+        {
             bool forceRebuild = mode == StoragePanelRefreshMode.Structure;
             bool checkStructure = forceRebuild || mode == StoragePanelRefreshMode.StructureCheck;
             EnsureValidMainWorldFilter();
-            currentSnapshot = CollectMainSnapshot(false);
+            if (currentSnapshot == null || mode != StoragePanelRefreshMode.Live)
+            {
+                currentSnapshot = CollectMainSnapshot(forceRebuild);
+            }
+
+            RefreshMainPanelLiveMetrics();
             UpdateStorageSummaryText();
 
             if (IsMainWorldFilterBlockedByRelay())
@@ -214,14 +314,13 @@ namespace StorageNetwork.UI
             }
 
             deferredStructureRefreshFrame = -1;
-            lastListSignature = null;
             StorageSceneCollector.InvalidateCache();
-            RefreshStoragePanel(StoragePanelRefreshMode.Structure);
+            RefreshStoragePanel(StoragePanelRefreshMode.StructureCheck);
         }
 
         private void RefreshEmptyStorageList(bool forceRebuild)
         {
-            if (forceRebuild || string.IsNullOrEmpty(lastListSignature))
+            if (forceRebuild || lastListSignature != EmptyListSignature)
             {
                 lastListSignature = EmptyListSignature;
                 ClearCategories();
@@ -229,6 +328,7 @@ namespace StorageNetwork.UI
                 CreateInfoRow(
                     Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.EMPTY_TITLE),
                     Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.EMPTY_DETAILS));
+                RebuildLayout();
                 LiveUpdateStoragePanels();
             }
         }
@@ -243,6 +343,7 @@ namespace StorageNetwork.UI
                 CreateInfoRow(
                     Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CORE_OFFLINE_TITLE),
                     Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CORE_OFFLINE_DETAILS));
+                RebuildLayout();
                 LiveUpdateStoragePanels();
             }
         }
@@ -257,6 +358,7 @@ namespace StorageNetwork.UI
                 CreateInfoRow(
                     Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CROSS_WORLD_RELAY_OFFLINE),
                     string.Empty);
+                RebuildLayout();
                 LiveUpdateStoragePanels();
             }
         }
@@ -274,6 +376,7 @@ namespace StorageNetwork.UI
             if (forceRebuild ||
                 string.IsNullOrEmpty(lastListSignature) ||
                 lastListSignature == EmptyListSignature ||
+                lastListSignature == CoreOfflineListSignature ||
                 lastListSignature == CrossWorldRelayOfflineListSignature)
             {
                 return true;
@@ -289,7 +392,7 @@ namespace StorageNetwork.UI
 
         private void LiveUpdateStoragePanels()
         {
-            UpdateCategorySummaryPanel();
+            UpdateMainStorageRowsLive();
         }
 
     }

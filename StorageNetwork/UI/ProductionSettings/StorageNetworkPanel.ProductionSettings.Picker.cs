@@ -191,7 +191,16 @@ namespace StorageNetwork.UI
 
             if (searchInput != null)
             {
-                searchInput.onValueChanged.AddListener(_ => RefreshStandalonePickerOptions(content.transform, options, searchInput.text, footerTitle, footerHint));
+                DebouncedPickerRefresh debounce =
+                    searchInput.gameObject.AddComponent<DebouncedPickerRefresh>();
+                debounce.Configure(() =>
+                    RefreshStandalonePickerOptions(
+                        content.transform,
+                        options,
+                        searchInput.text,
+                        footerTitle,
+                        footerHint));
+                searchInput.onValueChanged.AddListener(_ => debounce.Request());
             }
 
             RefreshStandalonePickerOptions(content.transform, options, string.Empty, footerTitle, footerHint);
@@ -437,6 +446,30 @@ namespace StorageNetwork.UI
                 if (shouldClose)
                 {
                     CloseStandaloneOutputFilterPicker();
+                }
+            }
+        }
+
+        private sealed class DebouncedPickerRefresh : MonoBehaviour
+        {
+            private readonly StorageNetworkDebounceGate gate = new StorageNetworkDebounceGate(0.15f);
+            private System.Action refresh;
+
+            public void Configure(System.Action refreshAction)
+            {
+                refresh = refreshAction;
+            }
+
+            public void Request()
+            {
+                gate.Request();
+            }
+
+            private void Update()
+            {
+                if (gate.Advance(Time.unscaledDeltaTime))
+                {
+                    refresh?.Invoke();
                 }
             }
         }

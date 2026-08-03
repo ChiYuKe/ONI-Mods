@@ -19,6 +19,7 @@ namespace StorageNetwork.Patches
 
             public static void Postfix(Game __instance)
             {
+                StorageNetworkConstructionSupplyService.CleanupLegacyTagsFromNativeStorages();
                 StorageNetworkFrameProfileTool.InstallIfEnabled(__instance);
                 __instance.gameObject.AddOrGet<ProductionOrderBackgroundMaintenance>();
             }

@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 using StorageNetwork.Components;
+using StorageNetwork.Core;
+using StorageNetwork.ProductionOrders;
 using UnityEngine;
 
 namespace StorageNetwork.Gameplay
@@ -8,10 +10,15 @@ namespace StorageNetwork.Gameplay
     {
         public static void ForceStoreProducedOutputs(ComplexFabricator fabricator, List<GameObject> products)
         {
-            StorageNetworkMaterialRequester requester = fabricator != null
-                ? fabricator.GetComponent<StorageNetworkMaterialRequester>()
-                : null;
-            requester?.ForceStoreProducedOutputs(products);
+            if (!StorageNetworkRuntimeCatalog.TryGetMaterialRequester(
+                    fabricator,
+                    out StorageNetworkMaterialRequester requester))
+            {
+                return;
+            }
+
+            requester.ForceStoreProducedOutputs(products);
+            ProductionOrderService.NotifyFabricatorOutputChanged(fabricator);
         }
     }
 }

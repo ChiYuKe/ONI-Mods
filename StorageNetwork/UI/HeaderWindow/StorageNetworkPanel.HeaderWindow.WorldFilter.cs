@@ -12,6 +12,9 @@ namespace StorageNetwork.UI
 {
     public sealed partial class StorageNetworkPanel : KScreen, IInputHandler
     {
+        private GameObject orderWorldFilterButton;
+        private TextMeshProUGUI orderWorldFilterLabel;
+
         private void CreateOrderWorldFilter(Transform pane)
         {
             GameObject filter = new GameObject("OrderWorldFilter");
@@ -31,29 +34,42 @@ namespace StorageNetwork.UI
                 return;
             }
 
-            for (int i = orderWorldFilterContent.childCount - 1; i >= 0; i--)
-            {
-                Destroy(orderWorldFilterContent.GetChild(i).gameObject);
-            }
-
             if (boundOrderProductionCenter != null)
             {
+                if (orderWorldFilterButton != null)
+                {
+                    orderWorldFilterButton.SetActive(false);
+                }
                 return;
             }
 
-            GameObject dropdownButton = CreateStyledButton(
-                "OrderWorldFilterDropdown",
-                orderWorldFilterContent,
-                GetSelectedOrderWorldFilterText(),
-                ToggleOrderWorldDropdown,
-                CreateColorStyle(
-                    new Color(0.17f, 0.19f, 0.25f, 1f),
-                    new Color(0.25f, 0.28f, 0.35f, 1f),
-                    new Color(0.11f, 0.12f, 0.16f, 1f)));
-            RectTransform rect = dropdownButton.GetComponent<RectTransform>();
-            Stretch(rect, 0f, 0f);
-            SetButtonLabelColor(dropdownButton, new Color(0.92f, 0.93f, 0.90f, 1f), FontStyles.Normal);
-            AddDropdownArrowIcon(dropdownButton.transform);
+            if (orderWorldFilterButton == null)
+            {
+                orderWorldFilterButton = CreateStyledButton(
+                    "OrderWorldFilterDropdown",
+                    orderWorldFilterContent,
+                    GetSelectedOrderWorldFilterText(),
+                    ToggleOrderWorldDropdown,
+                    CreateColorStyle(
+                        new Color(0.17f, 0.19f, 0.25f, 1f),
+                        new Color(0.25f, 0.28f, 0.35f, 1f),
+                        new Color(0.11f, 0.12f, 0.16f, 1f)));
+                RectTransform rect = orderWorldFilterButton.GetComponent<RectTransform>();
+                Stretch(rect, 0f, 0f);
+                SetButtonLabelColor(orderWorldFilterButton, new Color(0.92f, 0.93f, 0.90f, 1f), FontStyles.Normal);
+                AddDropdownArrowIcon(orderWorldFilterButton.transform);
+                orderWorldFilterLabel = orderWorldFilterButton.GetComponentInChildren<TextMeshProUGUI>(true);
+            }
+            else if (!orderWorldFilterButton.activeSelf)
+            {
+                orderWorldFilterButton.SetActive(true);
+            }
+
+            string text = GetSelectedOrderWorldFilterText();
+            if (orderWorldFilterLabel != null && orderWorldFilterLabel.text != text)
+            {
+                orderWorldFilterLabel.text = text;
+            }
         }
 
         private void ToggleOrderWorldDropdown()

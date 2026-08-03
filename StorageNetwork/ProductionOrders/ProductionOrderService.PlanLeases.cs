@@ -1,12 +1,20 @@
+using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.Runtime.CompilerServices;
 using StorageNetwork.Core;
+using StorageNetwork.Services;
 using UnityEngine;
 
 namespace StorageNetwork.ProductionOrders
 {
     internal sealed partial class ProductionOrderService
     {
+        private readonly List<StorageSourceSortKey> materialLeaseSourceBuffer =
+            new List<StorageSourceSortKey>();
+        private readonly Dictionary<QueueAssignmentKey, QueueAssignmentAccumulator>
+            queueAssignmentBuffer =
+                new Dictionary<QueueAssignmentKey, QueueAssignmentAccumulator>();
+
         private static Dictionary<Tag, float> BuildReservedMaterials(ProductionPlanNode node)
         {
             Dictionary<Tag, float> reservations = new Dictionary<Tag, float>();
@@ -33,31 +41,64 @@ namespace StorageNetwork.ProductionOrders
             }
         }
 
-        private List<ProductionOrderMaterialLease> BuildMaterialLeases(ProductionPlanNode node)
+        private List<ProductionOrderMaterialLease> BuildMaterialLeases(
+            ProductionPlanNode node,
+            Dictionary<Tag, float> reservations)
         {
             List<ProductionOrderMaterialLease> leases = new List<ProductionOrderMaterialLease>();
-            Dictionary<Tag, float> reservations = BuildReservedMaterials(node);
-            List<Storage> sources = new List<Storage>();
-            foreach (Storage storage in networkInventory.SourceStorages)
-            {
-                if (storage != null && !StorageNetworkStorageRules.IsProductionStorage(storage))
-                {
-                    sources.Add(storage);
-                }
-            }
-
+            reservations = reservations ?? new Dictionary<Tag, float>();
+            int leaseWorldId = node != null && node.WorldId >= 0
+                ? node.WorldId
+                : GetCurrentNetworkWorldId();
+            ProductionNetworkInventoryCache scopedInventory =
+                Runtime.GetNetworkInventory(leaseWorldId);
             foreach (KeyValuePair<Tag, float> pair in reservations)
             {
                 float remaining = pair.Value;
-                sources.Sort((left, right) => right.GetAmountAvailable(pair.Key).CompareTo(left.GetAmountAvailable(pair.Key)));
-                foreach (Storage storage in sources)
+                List<StorageSourceSortKey> sources = materialLeaseSourceBuffer;
+                sources.Clear();
+                foreach (Storage storage in scopedInventory.SourceStorages)
+                {
+                    if (!ProductionNetworkInventoryCache.IsUsableSource(
+                            storage,
+                            leaseWorldId))
+                    {
+                        continue;
+                    }
+
+                    float available = Mathf.Max(
+                        0f,
+                        StorageNetworkContentIndexService.GetStorageAmount(
+                            storage,
+                            pair.Key,
+                            allowStaleContent: false));
+                    if (available > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+                    {
+                        sources.Add(new StorageSourceSortKey(
+                            storage,
+                            available,
+                            ProductionNetworkInventoryCache.GetComponentInstanceId(storage)));
+                    }
+                }
+
+                sources.Sort(StorageSourceSortKeyComparer.Instance);
+                foreach (StorageSourceSortKey source in sources)
                 {
                     if (remaining <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
                     {
                         break;
                     }
 
-                    float amount = Mathf.Min(remaining, Mathf.Max(0f, storage.GetAmountAvailable(pair.Key)));
+                    Storage storage = source.Storage;
+                    if (!ProductionNetworkInventoryCache.IsUsableSource(storage, leaseWorldId))
+                    {
+                        continue;
+                    }
+
+                    // Native Storage remains authoritative at the lease boundary.
+                    float amount = Mathf.Min(
+                        remaining,
+                        Mathf.Max(0f, storage.GetAmountAvailable(pair.Key)));
                     if (amount <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
                     {
                         continue;
@@ -74,22 +115,50 @@ namespace StorageNetwork.ProductionOrders
         private static List<ProductionOrderOutputLease> BuildOutputLeases(List<ProductionOrderQueueAssignment> assignments, Tag productTag, float requestedAmount)
         {
             List<ProductionOrderOutputLease> leases = new List<ProductionOrderOutputLease>();
-            List<ProductionOrderQueueAssignment> primaryAssignments = (assignments ?? new List<ProductionOrderQueueAssignment>())
-                .Where(assignment => assignment != null && assignment.Primary && IsOrderProductionFabricator(assignment.Fabricator))
-                .ToList();
-            int totalCount = primaryAssignments.Sum(assignment => Mathf.Max(0, assignment.OrderCount));
-            foreach (ProductionOrderQueueAssignment assignment in primaryAssignments)
+            int totalCount = 0;
+            if (assignments != null)
             {
-                float amount = totalCount > 0 ? requestedAmount * assignment.OrderCount / totalCount : requestedAmount;
-                leases.Add(new ProductionOrderOutputLease(productTag, amount, ProductionNetworkInventoryCache.GetComponentInstanceId(assignment.Fabricator), assignment.Fabricator.GetProperName()));
+                for (int i = 0; i < assignments.Count; i++)
+                {
+                    ProductionOrderQueueAssignment assignment = assignments[i];
+                    if (assignment != null &&
+                        assignment.Primary &&
+                        IsOrderProductionFabricator(assignment.Fabricator))
+                    {
+                        totalCount += Mathf.Max(0, assignment.OrderCount);
+                    }
+                }
+
+                for (int i = 0; i < assignments.Count; i++)
+                {
+                    ProductionOrderQueueAssignment assignment = assignments[i];
+                    if (assignment == null ||
+                        !assignment.Primary ||
+                        !IsOrderProductionFabricator(assignment.Fabricator))
+                    {
+                        continue;
+                    }
+
+                    float amount = totalCount > 0
+                        ? requestedAmount * assignment.OrderCount / totalCount
+                        : requestedAmount;
+                    leases.Add(new ProductionOrderOutputLease(
+                        productTag,
+                        amount,
+                        ProductionNetworkInventoryCache.GetComponentInstanceId(
+                            assignment.Fabricator),
+                        assignment.Fabricator.GetProperName()));
+                }
             }
 
             return leases;
         }
 
-        private static List<ProductionOrderQueueAssignment> BuildQueueAssignments(ProductionPlanNode node)
+        private List<ProductionOrderQueueAssignment> BuildQueueAssignments(ProductionPlanNode node)
         {
-            Dictionary<string, QueueAssignmentAccumulator> assignments = new Dictionary<string, QueueAssignmentAccumulator>();
+            Dictionary<QueueAssignmentKey, QueueAssignmentAccumulator> assignments =
+                queueAssignmentBuffer;
+            assignments.Clear();
             AddQueueAssignments(node, assignments, null, true);
             List<ProductionOrderQueueAssignment> result = new List<ProductionOrderQueueAssignment>(assignments.Count);
             foreach (QueueAssignmentAccumulator accumulator in assignments.Values)
@@ -100,7 +169,11 @@ namespace StorageNetwork.ProductionOrders
             return result;
         }
 
-        private static void AddQueueAssignments(ProductionPlanNode node, Dictionary<string, QueueAssignmentAccumulator> assignments, string consumerName, bool primary)
+        private static void AddQueueAssignments(
+            ProductionPlanNode node,
+            Dictionary<QueueAssignmentKey, QueueAssignmentAccumulator> assignments,
+            string consumerName,
+            bool primary)
         {
             if (node == null)
             {
@@ -118,28 +191,30 @@ namespace StorageNetwork.ProductionOrders
             {
                 if (IsOrderProductionFabricator(assignment.Fabricator) && node.Recipe != null && assignment.OrderCount > 0)
                 {
-                    ProductionOrderQueueAssignment queueAssignment = new ProductionOrderQueueAssignment(
+                    string assignmentConsumerName = primary
+                        ? assignment.Fabricator.GetProperName()
+                        : consumerName;
+                    QueueAssignmentKey key = new QueueAssignmentKey(
                         assignment.Fabricator,
                         node.Recipe,
-                        assignment.OrderCount,
                         outputTag,
-                        outputName,
-                        primary ? assignment.Fabricator.GetProperName() : consumerName,
+                        assignmentConsumerName,
                         primary);
-                    string key = string.Format(
-                        "{0}|{1}|{2}|{3}|{4}",
-                        queueAssignment.Fabricator.GetInstanceID(),
-                        queueAssignment.Recipe.id,
-                        queueAssignment.OutputTag.Name,
-                        queueAssignment.ConsumerName,
-                        queueAssignment.Primary);
                     if (assignments.TryGetValue(key, out QueueAssignmentAccumulator existing))
                     {
-                        existing.OrderCount += queueAssignment.OrderCount;
+                        existing.OrderCount += assignment.OrderCount;
+                        assignments[key] = existing;
                     }
                     else
                     {
-                        assignments[key] = new QueueAssignmentAccumulator(queueAssignment);
+                        assignments[key] = new QueueAssignmentAccumulator(
+                            assignment.Fabricator,
+                            node.Recipe,
+                            assignment.OrderCount,
+                            outputTag,
+                            outputName,
+                            assignmentConsumerName,
+                            primary);
                     }
                 }
             }
@@ -152,7 +227,7 @@ namespace StorageNetwork.ProductionOrders
             return result != null && result.material != Tag.Invalid ? result.material : Tag.Invalid;
         }
 
-        private sealed class QueueAssignmentAccumulator
+        private struct QueueAssignmentAccumulator
         {
             public readonly ComplexFabricator Fabricator;
             public readonly ComplexRecipe Recipe;
@@ -162,15 +237,22 @@ namespace StorageNetwork.ProductionOrders
             public readonly bool Primary;
             public int OrderCount;
 
-            public QueueAssignmentAccumulator(ProductionOrderQueueAssignment assignment)
+            public QueueAssignmentAccumulator(
+                ComplexFabricator fabricator,
+                ComplexRecipe recipe,
+                int orderCount,
+                Tag outputTag,
+                string outputName,
+                string consumerName,
+                bool primary)
             {
-                Fabricator = assignment.Fabricator;
-                Recipe = assignment.Recipe;
-                OrderCount = assignment.OrderCount;
-                OutputTag = assignment.OutputTag;
-                OutputName = assignment.OutputName;
-                ConsumerName = assignment.ConsumerName;
-                Primary = assignment.Primary;
+                Fabricator = fabricator;
+                Recipe = recipe;
+                OrderCount = orderCount;
+                OutputTag = outputTag;
+                OutputName = outputName;
+                ConsumerName = consumerName;
+                Primary = primary;
             }
 
             public ProductionOrderQueueAssignment ToAssignment()
@@ -178,5 +260,62 @@ namespace StorageNetwork.ProductionOrders
                 return new ProductionOrderQueueAssignment(Fabricator, Recipe, OrderCount, OutputTag, OutputName, ConsumerName, Primary);
             }
         }
+
+        private readonly struct QueueAssignmentKey : IEquatable<QueueAssignmentKey>
+        {
+            private readonly ComplexFabricator fabricator;
+            private readonly ComplexRecipe recipe;
+            private readonly Tag outputTag;
+            private readonly string consumerName;
+            private readonly bool primary;
+
+            public QueueAssignmentKey(
+                ComplexFabricator fabricator,
+                ComplexRecipe recipe,
+                Tag outputTag,
+                string consumerName,
+                bool primary)
+            {
+                this.fabricator = fabricator;
+                this.recipe = recipe;
+                this.outputTag = outputTag;
+                this.consumerName = consumerName ?? string.Empty;
+                this.primary = primary;
+            }
+
+            public bool Equals(QueueAssignmentKey other)
+            {
+                return ReferenceEquals(fabricator, other.fabricator) &&
+                       ReferenceEquals(recipe, other.recipe) &&
+                       outputTag == other.outputTag &&
+                       primary == other.primary &&
+                       string.Equals(
+                           consumerName,
+                           other.consumerName,
+                           StringComparison.Ordinal);
+            }
+
+            public override bool Equals(object obj)
+            {
+                return obj is QueueAssignmentKey other && Equals(other);
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    int hashCode = fabricator != null
+                        ? RuntimeHelpers.GetHashCode(fabricator)
+                        : 0;
+                    hashCode = (hashCode * 397) ^
+                               (recipe != null ? RuntimeHelpers.GetHashCode(recipe) : 0);
+                    hashCode = (hashCode * 397) ^ outputTag.GetHashCode();
+                    hashCode = (hashCode * 397) ^
+                               StringComparer.Ordinal.GetHashCode(consumerName);
+                    return (hashCode * 397) ^ primary.GetHashCode();
+                }
+            }
+        }
+
     }
 }

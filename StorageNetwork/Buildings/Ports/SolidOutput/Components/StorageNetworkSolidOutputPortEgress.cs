@@ -48,6 +48,9 @@ namespace StorageNetwork.Components
         [MyCmpGet]
         private SolidConduitDispenser dispenser = null;
 
+        [MyCmpGet]
+        private Operational operational = null;
+
         private static StatusItem solidOutputPortStatusItem;
         private static readonly EventSystem.IntraObjectHandler<StorageNetworkSolidOutputPortEgress> OnCopySettingsDelegate =
             new EventSystem.IntraObjectHandler<StorageNetworkSolidOutputPortEgress>((component, data) => component.OnCopySettings(data));
@@ -106,7 +109,6 @@ namespace StorageNetwork.Components
 
         public void Sim1000ms(float dt)
         {
-            Operational operational = GetComponent<Operational>();
             if (operational != null && !operational.IsOperational)
             {
                 return;
@@ -130,7 +132,7 @@ namespace StorageNetwork.Components
             UpdateCachedStatusText();
         }
 
-        private void ConfigureRailOutputStorage()
+        private void ConfigureRailOutputStorage(bool markBufferedItems = false)
         {
             if (storage == null)
             {
@@ -148,6 +150,15 @@ namespace StorageNetwork.Components
 
             foreach (GameObject item in storage.items)
             {
+                if (markBufferedItems &&
+                    item != null &&
+                    !StorageNetworkConstructionSupplyService.IsConstructionReserved(item))
+                {
+                    item.GetComponent<KPrefabID>()?.AddTag(
+                        StorageNetworkTags.SolidOutputPortBufferedItem,
+                        true);
+                }
+
                 Pickupable pickupable = item != null ? item.GetComponent<Pickupable>() : null;
                 pickupable?.OnStore(storage);
             }
@@ -200,8 +211,10 @@ namespace StorageNetwork.Components
             }
 
             SyncDispenserState();
-            MarkBufferedOutputItems();
-            RefreshRailOutputItems();
+            if (result.MovedKg > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+            {
+                ConfigureRailOutputStorage(markBufferedItems: true);
+            }
             retryTimer = result.MovedKg > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ? 0f : RetrySeconds;
         }
 
@@ -214,6 +227,7 @@ namespace StorageNetwork.Components
         {
             SourceStorageInstanceId = GetStorageInstanceId(source);
             CurrentSourceMode = StorageNetworkMaterialRequester.RequestMode.SpecificStorage;
+            StorageNetworkInputTargetReservationService.Invalidate();
         }
 
         public void UseAutomaticSourceStorage()
@@ -223,6 +237,7 @@ namespace StorageNetwork.Components
             lastStatus = string.Empty;
             cachedStatusText = null;
             cachedStatusSignature = null;
+            StorageNetworkInputTargetReservationService.Invalidate();
         }
 
         public Storage ResolveSourceStorage()
@@ -351,6 +366,7 @@ namespace StorageNetwork.Components
             cachedStatusText = null;
             ConfigureRailOutputStorage();
             SyncDispenserState();
+            StorageNetworkInputTargetReservationService.Invalidate();
         }
 
         private void SyncDispenserState()
@@ -360,42 +376,11 @@ namespace StorageNetwork.Components
                 return;
             }
 
-            dispenser.alwaysDispense = OutputRequestEnabled && StorageSceneRegistry.HasOnlineCoreInWorld(GetWorldId());
-        }
-
-        private void RefreshRailOutputItems()
-        {
-            if (storage == null || storage.items == null)
+            bool shouldDispense =
+                OutputRequestEnabled && StorageSceneRegistry.HasOnlineCoreInWorld(GetWorldId());
+            if (dispenser.alwaysDispense != shouldDispense)
             {
-                return;
-            }
-
-            ConfigureRailOutputStorage();
-            foreach (GameObject item in storage.items)
-            {
-                Pickupable pickupable = item != null ? item.GetComponent<Pickupable>() : null;
-                if (pickupable != null)
-                {
-                    pickupable.OnStore(storage);
-                }
-            }
-        }
-
-        private void MarkBufferedOutputItems()
-        {
-            if (storage?.items == null)
-            {
-                return;
-            }
-
-            foreach (GameObject item in storage.items)
-            {
-                if (item == null || StorageNetworkConstructionSupplyService.IsConstructionReserved(item))
-                {
-                    continue;
-                }
-
-                item.GetComponent<KPrefabID>()?.AddTag(StorageNetworkTags.SolidOutputPortBufferedItem, true);
+                dispenser.alwaysDispense = shouldDispense;
             }
         }
 
@@ -567,9 +552,11 @@ namespace StorageNetwork.Components
 
         private string GetStatusText()
         {
-            if (cachedStatusText == null)
+            string signature = BuildStatusSignature();
+            if (cachedStatusText == null || cachedStatusSignature != signature)
             {
-                UpdateCachedStatusText();
+                cachedStatusText = BuildStatusText();
+                cachedStatusSignature = signature;
             }
 
             return cachedStatusText;
@@ -577,14 +564,8 @@ namespace StorageNetwork.Components
 
         private void UpdateCachedStatusText()
         {
-            string signature = BuildStatusSignature();
-            if (cachedStatusText != null && cachedStatusSignature == signature)
-            {
-                return;
-            }
-
-            cachedStatusText = BuildStatusText();
-            cachedStatusSignature = signature;
+            cachedStatusText = null;
+            cachedStatusSignature = null;
         }
 
         private string BuildStatusSignature()

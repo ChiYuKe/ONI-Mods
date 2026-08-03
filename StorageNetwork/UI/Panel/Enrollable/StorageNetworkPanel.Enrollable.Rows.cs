@@ -9,10 +9,15 @@ namespace StorageNetwork.UI
 {
     public sealed partial class StorageNetworkPanel : KScreen, IInputHandler
     {
-        private void CreateEnrollableBuildingRow(Transform parent, StorageNetworkEnrollment enrollment)
+        private readonly System.Collections.Generic.List<EnrollableBuildingRowView>
+            enrollableStorageLiveViews =
+                new System.Collections.Generic.List<EnrollableBuildingRowView>();
+
+        private GameObject CreateEnrollableBuildingRow(Transform parent, StorageNetworkEnrollment enrollment)
         {
             bool included = enrollment.IncludedInSceneNetwork;
             GameObject row = CreatePlainImage("EnrollableBuildingRow", parent, included ? new Color(0.71f, 0.78f, 0.70f, 1f) : new Color(0.83f, 0.82f, 0.76f, 1f));
+            Image rowBackground = row.GetComponent<Image>();
             row.AddComponent<LayoutElement>().preferredHeight = 38f;
 
             HorizontalLayoutGroup layout = row.AddComponent<HorizontalLayoutGroup>();
@@ -58,7 +63,6 @@ namespace StorageNetwork.UI
             capacity.color = new Color(0.28f, 0.29f, 0.29f, 1f);
             capacity.textWrappingMode = TextWrappingModes.NoWrap;
             capacity.gameObject.AddComponent<LayoutElement>().preferredWidth = storage != null ? 120f : 150f;
-
             GameObject locateButton = CreateGameButton("LocateButton", row.transform, string.Empty, () => FocusObject(enrollment.gameObject, 500f));
             LayoutElement locateLayout = locateButton.AddComponent<LayoutElement>();
             locateLayout.preferredWidth = 28f;
@@ -77,7 +81,6 @@ namespace StorageNetwork.UI
                 () =>
                 {
                     enrollment.SetIncludedInSceneNetwork(!enrollment.IncludedInSceneNetwork);
-                    enrollableWindowSignature = null;
                     RefreshStoragePanel(StoragePanelRefreshMode.Structure);
                     UpdateEnrollableBuildingRow(row, enrollment);
                 },
@@ -85,24 +88,38 @@ namespace StorageNetwork.UI
             LayoutElement actionLayout = actionButton.AddComponent<LayoutElement>();
             actionLayout.preferredWidth = 92f;
             actionLayout.preferredHeight = 22f;
+            EnrollableBuildingRowView view = row.AddComponent<EnrollableBuildingRowView>();
+            view.Configure(
+                enrollment,
+                storage,
+                rowBackground,
+                state,
+                capacity,
+                actionButton.GetComponent<KButton>(),
+                actionButton.GetComponent<KImage>(),
+                actionButton.transform.Find("Label")?.GetComponent<TextMeshProUGUI>(),
+                enrollment.GetComponent<Studyable>(),
+                enrollment.GetComponent<Geyser>() != null);
+            return row;
         }
 
         private void UpdateEnrollableBuildingRow(GameObject row, StorageNetworkEnrollment enrollment)
         {
             if (row == null || enrollment == null)
             {
-                ShowEnrollableBuildingsDialog();
                 return;
             }
 
-            Transform parent = row.transform.parent;
-            int siblingIndex = row.transform.GetSiblingIndex();
-            Destroy(row);
-            CreateEnrollableBuildingRow(parent, enrollment);
-            parent.GetChild(parent.childCount - 1).SetSiblingIndex(siblingIndex);
+            EnrollableBuildingRowView view = row.GetComponent<EnrollableBuildingRowView>();
+            if (view == null)
+            {
+                return;
+            }
+
+            UpdateEnrollableBuildingRowLive(view, true);
         }
 
-        private static void CreateEnrollableCategoryHeader(Transform parent, string categoryKey, int count)
+        private static GameObject CreateEnrollableCategoryHeader(Transform parent, string categoryKey, int count)
         {
             GameObject header = CreatePlainImage("EnrollableCategoryHeader", parent, new Color(0.43f, 0.48f, 0.47f, 1f));
             header.AddComponent<LayoutElement>().preferredHeight = 30f;
@@ -127,6 +144,7 @@ namespace StorageNetwork.UI
             countText.color = new Color(0.82f, 0.86f, 0.86f, 1f);
             countText.textWrappingMode = TextWrappingModes.NoWrap;
             countText.gameObject.AddComponent<LayoutElement>().preferredWidth = 90f;
+            return header;
         }
 
         private static void CreateWorldCell(Transform parent, GameObject gameObject)
@@ -179,6 +197,153 @@ namespace StorageNetwork.UI
         {
             worldId = StorageNetworkWorldUtility.GetObjectWorldId(gameObject);
             return worldId != byte.MaxValue && worldId >= 0;
+        }
+
+        private void UpdateEnrollableWindowLive()
+        {
+            if (enrollableWindowRoot == null ||
+                !enrollableWindowRoot.activeInHierarchy)
+            {
+                return;
+            }
+
+            if (enrollableObservedRegistryVersion != StorageSceneRegistry.Version)
+            {
+                ShowEnrollableBuildingsDialog();
+                return;
+            }
+
+            for (int index = 0; index < enrollableStorageLiveViews.Count; index++)
+            {
+                UpdateEnrollableBuildingRowLive(
+                    enrollableStorageLiveViews[index],
+                    false);
+            }
+        }
+
+        private static void UpdateEnrollableBuildingRowLive(
+            EnrollableBuildingRowView view,
+            bool force)
+        {
+            if (view == null || view.Enrollment == null)
+            {
+                return;
+            }
+
+            bool included = view.Enrollment.IncludedInSceneNetwork;
+            bool studied = view.Studyable == null || view.Studyable.Studied;
+            float stored = view.Storage != null ? view.Storage.MassStored() : 0f;
+            float capacity = view.Storage != null ? view.Storage.Capacity() : 0f;
+            int fingerprint = CombineLiveFingerprint(stored, capacity);
+            unchecked
+            {
+                fingerprint = (fingerprint * 397) ^ (included ? 1 : 0);
+                fingerprint = (fingerprint * 397) ^ (studied ? 1 : 0);
+            }
+
+            if (!force && fingerprint == view.LastFingerprint)
+            {
+                return;
+            }
+
+            view.LastFingerprint = fingerprint;
+            if (view.Background != null)
+            {
+                view.Background.color = included
+                    ? new Color(0.71f, 0.78f, 0.70f, 1f)
+                    : new Color(0.83f, 0.82f, 0.76f, 1f);
+            }
+
+            SetTextIfChanged(
+                view.State,
+                included
+                    ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENROLLABLE_CONNECTED)
+                    : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENROLLABLE_NOT_CONNECTED));
+            if (view.State != null)
+            {
+                view.State.color = included
+                    ? new Color(0.12f, 0.42f, 0.20f, 1f)
+                    : new Color(0.58f, 0.38f, 0.20f, 1f);
+            }
+
+            if (view.Capacity != null)
+            {
+                SetTextIfChanged(
+                    view.Capacity,
+                    view.Storage != null
+                        ? string.Format(
+                            "{0} / {1}",
+                            GameUtil.GetFormattedMass(stored),
+                            GameUtil.GetFormattedMass(capacity))
+                        : StorageNetworkGeyserText.GetEnrollmentDetails(view.Enrollment));
+            }
+
+            SetTextIfChanged(
+                view.ActionLabel,
+                included
+                    ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENROLL_REMOVE)
+                    : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ENROLL_ADD));
+            if (view.ActionBackground != null)
+            {
+                view.ActionBackground.colorStyleSetting = included
+                    ? KleiPinkStyle()
+                    : KleiBlueStyle();
+                view.ActionBackground.ColorState = KImage.ColorSelector.Inactive;
+            }
+
+            if (view.ActionButton != null)
+            {
+                view.ActionButton.isInteractable = !view.IsGeyser || studied;
+            }
+        }
+
+        private sealed class EnrollableBuildingRowView : MonoBehaviour
+        {
+            public StorageNetworkEnrollment Enrollment { get; private set; }
+
+            public Storage Storage { get; private set; }
+
+            public Image Background { get; private set; }
+
+            public TextMeshProUGUI State { get; private set; }
+
+            public TextMeshProUGUI Capacity { get; private set; }
+
+            public KButton ActionButton { get; private set; }
+
+            public KImage ActionBackground { get; private set; }
+
+            public TextMeshProUGUI ActionLabel { get; private set; }
+
+            public Studyable Studyable { get; private set; }
+
+            public bool IsGeyser { get; private set; }
+
+            public int LastFingerprint { get; set; } = int.MinValue;
+
+            public void Configure(
+                StorageNetworkEnrollment enrollment,
+                Storage storage,
+                Image background,
+                TextMeshProUGUI state,
+                TextMeshProUGUI capacity,
+                KButton actionButton,
+                KImage actionBackground,
+                TextMeshProUGUI actionLabel,
+                Studyable studyable,
+                bool isGeyser)
+            {
+                Enrollment = enrollment;
+                Storage = storage;
+                Background = background;
+                State = state;
+                Capacity = capacity;
+                ActionButton = actionButton;
+                ActionBackground = actionBackground;
+                ActionLabel = actionLabel;
+                Studyable = studyable;
+                IsGeyser = isGeyser;
+            }
         }
     }
 }

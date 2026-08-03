@@ -19,7 +19,7 @@ namespace StorageNetwork.Services
             bool preferColdStorageForFood = false,
             StorageNetworkTransferWorkspace workspace = null)
         {
-            using (StorageNetworkFrameProfileTool.BeginWork())
+            using (StorageNetworkFrameProfileTool.BeginWork(StorageNetworkPerformanceArea.Transfer))
             {
             if (source == null || source.items == null)
             {
@@ -33,6 +33,8 @@ namespace StorageNetwork.Services
             }
 
             workspace = GetWorkspace(workspace);
+            using (workspace.BeginContentIndexTransaction())
+            {
             HashSet<Storage> excluded = workspace.PrepareExcluded(excludedStorages, source);
             float totalMoved = 0f;
             string blockedItem = null;
@@ -70,12 +72,8 @@ namespace StorageNetwork.Services
                 }
             }
 
-            if (totalMoved > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
-            {
-                InvalidateContentIndexes();
-            }
-
             return new StorageTransferResult(totalMoved, blockedItem);
+            }
             }
         }
 
@@ -86,7 +84,7 @@ namespace StorageNetwork.Services
             Storage specificTarget = null,
             StorageNetworkTransferWorkspace workspace = null)
         {
-            using (StorageNetworkFrameProfileTool.BeginWork())
+            using (StorageNetworkFrameProfileTool.BeginWork(StorageNetworkPerformanceArea.Transfer))
             {
             if (source == null || source.items == null)
             {
@@ -100,6 +98,8 @@ namespace StorageNetwork.Services
             }
 
             workspace = GetWorkspace(workspace);
+            using (workspace.BeginContentIndexTransaction())
+            {
             HashSet<Storage> excluded = workspace.PrepareExcluded(excludedStorages, source);
             float totalMoved = 0f;
             string blockedItem = null;
@@ -133,12 +133,8 @@ namespace StorageNetwork.Services
                 }
             }
 
-            if (totalMoved > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
-            {
-                InvalidateContentIndexes();
-            }
-
             return new StorageTransferResult(totalMoved, blockedItem);
+            }
             }
         }
 
@@ -167,7 +163,10 @@ namespace StorageNetwork.Services
             }
 
             workspace = GetWorkspace(workspace);
-            HashSet<Tag> matchTags = StorageItemUtility.GetStorageMatchTags(item);
+            using (workspace.BeginContentIndexTransaction())
+            {
+            StorageItemUtility.StorageMatchTags matchTags =
+                StorageItemUtility.GetStorageMatchTagsNonAlloc(item);
             HashSet<Storage> excluded = workspace.PrepareExcluded(excludedStorages, null);
             Pickupable pickupable = item.GetComponent<Pickupable>();
             Storage target = StorageTargetSelector.FindOutputTarget(item, matchTags, excluded, specificTarget, null, sourceWorldId, null);
@@ -197,7 +196,9 @@ namespace StorageNetwork.Services
                     break;
                 }
 
+                TransferItemSnapshot transferred = CaptureTransferItem(taken.gameObject);
                 target.Store(taken.gameObject, hide_popups: true, block_events: false, do_disease_transfer: true, is_deserializing: false);
+                RecordLooseTransfer(target, transferred);
                 moved += takenMass;
                 if (taken.gameObject == item)
                 {
@@ -205,14 +206,10 @@ namespace StorageNetwork.Services
                 }
             }
 
-            if (moved > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
-            {
-                InvalidateContentIndexes();
-            }
-
             return moved > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT
                 ? new StorageTransferResult(moved, null)
                 : StorageTransferResult.Blocked(StorageItemUtility.GetItemDisplayName(item, tag));
+            }
         }
 
         public static StorageTransferResult TransferStoredItemToNetwork(
@@ -223,7 +220,7 @@ namespace StorageNetwork.Services
             bool preferColdStorageForFood = false,
             StorageNetworkTransferWorkspace workspace = null)
         {
-            if (source == null || item == null || source.items == null || !source.items.Contains(item))
+            if (!IsItemStoredIn(source, item))
             {
                 return StorageTransferResult.Idle;
             }
@@ -236,7 +233,10 @@ namespace StorageNetwork.Services
 
             workspace = GetWorkspace(workspace);
             HashSet<Storage> excluded = workspace.PrepareExcluded(excludedStorages, source);
-            return TransferStoredItem(source, item, excluded, specificTarget, null, sourceWorldId, preferColdStorageForFood);
+            using (workspace.BeginContentIndexTransaction())
+            {
+                return TransferStoredItem(source, item, excluded, specificTarget, null, sourceWorldId, preferColdStorageForFood);
+            }
         }
 
         public static float TransferFromNetworkToStorage(
@@ -247,7 +247,7 @@ namespace StorageNetwork.Services
             Storage specificSource = null,
             StorageNetworkTransferWorkspace workspace = null)
         {
-            using (StorageNetworkFrameProfileTool.BeginWork())
+            using (StorageNetworkFrameProfileTool.BeginWork(StorageNetworkPerformanceArea.Transfer))
             {
             if (tags == null ||
                 destination == null ||
@@ -282,6 +282,8 @@ namespace StorageNetwork.Services
             }
 
             workspace = GetWorkspace(workspace);
+            using (workspace.BeginContentIndexTransaction())
+            {
             HashSet<Storage> excluded = workspace.PrepareExcluded(excludedStorages, destination);
             StorageNetworkSourceIndexService.FillSourceStorages(
                 destinationWorldId,
@@ -321,16 +323,25 @@ namespace StorageNetwork.Services
                         continue;
                     }
 
-                    moved += source.Transfer(destination, tag, transferAmount, block_events: false, hide_popups: true);
+                    GameObject transferItem = source.FindFirst(tag);
+                    TransferItemSnapshot before = CaptureTransferItem(transferItem);
+                    float transferred = source.Transfer(
+                        destination,
+                        tag,
+                        transferAmount,
+                        block_events: false,
+                        hide_popups: true);
+                    if (transferred > 0f)
+                    {
+                        RecordObservedTransfer(source, destination, transferItem, before);
+                    }
+
+                    moved += transferred;
                 }
             }
 
-            if (moved > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
-            {
-                InvalidateContentIndexes();
-            }
-
             return moved;
+            }
             }
         }
 
@@ -350,8 +361,12 @@ namespace StorageNetwork.Services
                 return 0f;
             }
 
+            StorageNetworkTransferWorkspace workspace = GetWorkspace(null);
+            using (workspace.BeginContentIndexTransaction())
+            {
             float moved = 0f;
-            List<GameObject> items = new List<GameObject>();
+            List<GameObject> items = workspace.Items;
+            items.Clear();
             foreach (GameObject item in source.items)
             {
                 if (item != null && StorageItemUtility.MatchesStorageTag(item, tag))
@@ -381,6 +396,7 @@ namespace StorageNetwork.Services
             }
 
             return moved;
+            }
         }
 
         public static float TransferMatchingItemUnitsFromStorage(
@@ -394,8 +410,18 @@ namespace StorageNetwork.Services
                 return 0f;
             }
 
+            StorageNetworkTransferWorkspace workspace = GetWorkspace(null);
+            using (workspace.BeginContentIndexTransaction())
+            {
             float movedUnits = 0f;
-            List<GameObject> items = new List<GameObject>(source.items);
+            List<GameObject> items = workspace.Items;
+            items.Clear();
+            if (items.Capacity < source.items.Count)
+            {
+                items.Capacity = source.items.Count;
+            }
+
+            items.AddRange(source.items);
             foreach (GameObject item in items)
             {
                 if (item == null || !StorageItemUtility.MatchesStorageTag(item, tag) || movedUnits >= units)
@@ -419,11 +445,13 @@ namespace StorageNetwork.Services
                     break;
                 }
 
+                TransferItemSnapshot before = CaptureTransferItem(item);
                 if (transferableUnits + PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT >= element.Units)
                 {
                     float itemUnits = element.Units;
                     if (source.Transfer(item, destination, block_events: false, hide_popups: true))
                     {
+                        RecordObservedTransfer(source, destination, item, before);
                         movedUnits += itemUnits;
                     }
                 }
@@ -436,16 +464,13 @@ namespace StorageNetwork.Services
                         movedUnits += taken.GetComponent<PrimaryElement>()?.Units ?? 0f;
                         source.Trigger(-1697596308, item);
                         source.OnStorageChange?.Invoke(item);
+                        RecordObservedTransfer(source, destination, item, before);
                     }
                 }
             }
 
-            if (movedUnits > 0f)
-            {
-                InvalidateContentIndexes();
-            }
-
             return movedUnits;
+            }
         }
 
         public static StorageTransferResult TransferAnyLiquidFromNetworkToStorage(
@@ -496,7 +521,7 @@ namespace StorageNetwork.Services
             IEnumerable<Tag> allowedTags = null,
             StorageNetworkTransferWorkspace workspace = null)
         {
-            using (StorageNetworkFrameProfileTool.BeginWork())
+            using (StorageNetworkFrameProfileTool.BeginWork(StorageNetworkPerformanceArea.Transfer))
             {
             if (destination == null ||
                 amount <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ||
@@ -512,6 +537,8 @@ namespace StorageNetwork.Services
             }
 
             workspace = GetWorkspace(workspace);
+            using (workspace.BeginContentIndexTransaction())
+            {
             HashSet<Tag> allowed = workspace.PrepareAllowedTags(allowedTags);
             HashSet<Storage> excluded = workspace.PrepareExcluded(excludedStorages, destination);
             IEnumerable<Tag> sourceTags = allowed != null && allowed.Count > 0
@@ -602,6 +629,7 @@ namespace StorageNetwork.Services
                 ? new StorageTransferResult(moved, null)
                 : StorageTransferResult.Blocked(blockedItem ?? GameTags.Solid.ProperName());
             }
+            }
         }
 
         private static bool IsPortReservedItem(GameObject item)
@@ -625,7 +653,7 @@ namespace StorageNetwork.Services
             string fallbackBlockedItem,
             StorageNetworkTransferWorkspace workspace)
         {
-            using (StorageNetworkFrameProfileTool.BeginWork())
+            using (StorageNetworkFrameProfileTool.BeginWork(StorageNetworkPerformanceArea.Transfer))
             {
             if (destination == null ||
                 amount <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ||
@@ -641,6 +669,8 @@ namespace StorageNetwork.Services
             }
 
             workspace = GetWorkspace(workspace);
+            using (workspace.BeginContentIndexTransaction())
+            {
             HashSet<Storage> excluded = workspace.PrepareExcluded(excludedStorages, destination);
             Tag sourceTag = elementFilter.HasValue
                 ? elementFilter.Value.CreateTag()
@@ -726,6 +756,7 @@ namespace StorageNetwork.Services
             return moved > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT
                 ? new StorageTransferResult(moved, null)
                 : StorageTransferResult.Blocked(blockedItem ?? fallbackBlockedItem);
+            }
             }
         }
 
@@ -959,7 +990,7 @@ namespace StorageNetwork.Services
 
                 moved += transferred;
                 remaining -= transferred;
-                if (item == null || !source.items.Contains(item))
+                if (!IsItemStoredIn(source, item))
                 {
                     break;
                 }
@@ -986,6 +1017,7 @@ namespace StorageNetwork.Services
                 return StorageTransferResult.Idle;
             }
 
+            TransferItemSnapshot before = CaptureTransferItem(item);
             StorageItemUtility.StorageMatchTags matchTags = StorageItemUtility.GetStorageMatchTagsNonAlloc(item);
             Tag tag = matchTags.TransferTag;
             Storage target = StorageTargetSelector.FindOutputTarget(
@@ -1010,9 +1042,23 @@ namespace StorageNetwork.Services
             if (transferAmount + PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT >= mass)
             {
                 float stored = StoreFluidChunkAndGetStoredMass(target, primaryElement, mass, conduitType);
+                if (stored > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+                {
+                    RecordStorageGain(
+                        target,
+                        before,
+                        before.GetAmountForMass(stored),
+                        stored);
+                }
+
                 if (stored + PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT >= mass)
                 {
                     source.ConsumeIgnoringDisease(item);
+                    RecordKnownStorageLoss(
+                        source,
+                        before,
+                        before.Amount,
+                        before.MassKg);
                     return new StorageTransferResult(stored, null);
                 }
 
@@ -1021,7 +1067,14 @@ namespace StorageNetwork.Services
                     Pickupable storedPortion = pickupable.Take(stored);
                     if (storedPortion != null)
                     {
+                        TransferItemSnapshot removed =
+                            CaptureTransferItem(storedPortion.gameObject);
                         Util.KDestroyGameObject(storedPortion.gameObject);
+                        RecordKnownStorageLoss(
+                            source,
+                            removed,
+                            removed.Amount,
+                            removed.MassKg);
                     }
 
                     source.Trigger(-1697596308, item);
@@ -1033,7 +1086,7 @@ namespace StorageNetwork.Services
                 return totalMoved > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT
                     ? new StorageTransferResult(
                         totalMoved,
-                        source.items.Contains(item) && GetTransferableAmount(item) > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT
+                        IsItemStoredIn(source, item) && GetTransferableAmount(item) > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT
                             ? StorageItemUtility.GetItemDisplayName(item, tag)
                             : null)
                     : StorageTransferResult.Blocked(StorageItemUtility.GetItemDisplayName(item, tag));
@@ -1047,12 +1100,23 @@ namespace StorageNetwork.Services
                 return StorageTransferResult.Blocked(StorageItemUtility.GetItemDisplayName(item, tag));
             }
 
+            // Capture the object returned by Take before AddLiquid/AddGas mutates or
+            // destroys it.  Looking at the original source object afterwards is not
+            // reliable when Take returned that same object and destruction is delayed.
+            TransferItemSnapshot takenSnapshot = CaptureTransferItem(taken.gameObject);
+
             float storedFromTaken = StoreFluidChunkAndGetStoredMass(target, takenElement, moved, conduitType);
             if (storedFromTaken <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
             {
                 target.Store(taken.gameObject, hide_popups: true, block_events: false, do_disease_transfer: true, is_deserializing: false);
                 source.Trigger(-1697596308, item);
                 source.OnStorageChange?.Invoke(item);
+                RecordKnownTransfer(
+                    source,
+                    target,
+                    takenSnapshot,
+                    takenSnapshot.Amount,
+                    takenSnapshot.MassKg);
                 return new StorageTransferResult(moved, StorageItemUtility.GetItemDisplayName(item, tag));
             }
 
@@ -1074,9 +1138,15 @@ namespace StorageNetwork.Services
 
             source.Trigger(-1697596308, item);
             source.OnStorageChange?.Invoke(item);
+            RecordKnownTransfer(
+                source,
+                target,
+                takenSnapshot,
+                takenSnapshot.Amount,
+                takenSnapshot.MassKg);
             return new StorageTransferResult(
                 moved,
-                source.items.Contains(item) && GetTransferableAmount(item) > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT
+                IsItemStoredIn(source, item) && GetTransferableAmount(item) > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT
                     ? StorageItemUtility.GetItemDisplayName(item, tag)
                     : null);
         }
@@ -1156,7 +1226,7 @@ namespace StorageNetwork.Services
 
         private static float TransferStoredObject(Storage source, Storage target, GameObject item, float amount)
         {
-            if (source == null || target == null || item == null || !source.items.Contains(item))
+            if (target == null || !IsItemStoredIn(source, item))
             {
                 return 0f;
             }
@@ -1167,6 +1237,7 @@ namespace StorageNetwork.Services
                 return 0f;
             }
 
+            TransferItemSnapshot before = CaptureTransferItem(item);
             float transferAmount = Mathf.Min(amount, mass);
             if (transferAmount + PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT >= mass)
             {
@@ -1175,7 +1246,7 @@ namespace StorageNetwork.Services
                     return 0f;
                 }
 
-                InvalidateContentIndexes();
+                RecordObservedTransfer(source, target, item, before);
                 return mass;
             }
 
@@ -1192,17 +1263,18 @@ namespace StorageNetwork.Services
                 return 0f;
             }
 
+            TransferItemSnapshot transferred = CaptureTransferItem(taken.gameObject);
+
             target.Store(taken.gameObject, hide_popups: true, block_events: false, do_disease_transfer: true, is_deserializing: false);
             source.Trigger(-1697596308, item);
             source.OnStorageChange?.Invoke(item);
-            InvalidateContentIndexes();
+            RecordKnownTransfer(
+                source,
+                target,
+                transferred,
+                transferred.Amount,
+                transferred.MassKg);
             return moved;
-        }
-
-        private static void InvalidateContentIndexes()
-        {
-            StorageNetworkInventoryIndexService.Invalidate();
-            StorageNetworkSourceIndexService.Invalidate();
         }
 
         private static bool IsLiquidItem(PrimaryElement primaryElement, SimHashes? liquidFilter)
@@ -1273,6 +1345,239 @@ namespace StorageNetwork.Services
             return StorageItemUtility.GetMass(item);
         }
 
+        private static TransferItemSnapshot CaptureTransferItem(GameObject item)
+        {
+            return new TransferItemSnapshot(item);
+        }
+
+        private static void RecordObservedTransfer(
+            Storage source,
+            Storage target,
+            GameObject originalItem,
+            TransferItemSnapshot before)
+        {
+            if (!before.IsValid)
+            {
+                StorageNetworkContentIndexService.TouchTransferStorage(source);
+                StorageNetworkContentIndexService.TouchTransferStorage(target);
+                return;
+            }
+
+            GetObservedStorageLoss(
+                source,
+                originalItem,
+                before,
+                out float movedAmount,
+                out float movedMassKg);
+
+            StorageNetworkContentIndexService.RecordTransferMutation(
+                source,
+                target,
+                before.MatchTags,
+                before.StateTag,
+                movedAmount,
+                movedMassKg);
+        }
+
+        private static void RecordObservedStorageLoss(
+            Storage source,
+            GameObject originalItem,
+            TransferItemSnapshot before)
+        {
+            if (!before.IsValid)
+            {
+                StorageNetworkContentIndexService.TouchTransferStorage(source);
+                return;
+            }
+
+            GetObservedStorageLoss(
+                source,
+                originalItem,
+                before,
+                out float movedAmount,
+                out float movedMassKg);
+            StorageNetworkContentIndexService.RecordTransferMutation(
+                source,
+                null,
+                before.MatchTags,
+                before.StateTag,
+                movedAmount,
+                movedMassKg);
+        }
+
+        private static void RecordKnownStorageLoss(
+            Storage source,
+            TransferItemSnapshot removed,
+            float amount,
+            float massKg)
+        {
+            if (!removed.IsValid)
+            {
+                StorageNetworkContentIndexService.TouchTransferStorage(source);
+                return;
+            }
+
+            StorageNetworkContentIndexService.RecordTransferMutation(
+                source,
+                null,
+                removed.MatchTags,
+                removed.StateTag,
+                amount,
+                massKg);
+        }
+
+        private static void RecordKnownTransfer(
+            Storage source,
+            Storage target,
+            TransferItemSnapshot transferred,
+            float amount,
+            float massKg)
+        {
+            if (!transferred.IsValid)
+            {
+                StorageNetworkContentIndexService.TouchTransferStorage(source);
+                StorageNetworkContentIndexService.TouchTransferStorage(target);
+                return;
+            }
+
+            StorageNetworkContentIndexService.RecordTransferMutation(
+                source,
+                target,
+                transferred.MatchTags,
+                transferred.StateTag,
+                amount,
+                massKg);
+        }
+
+        private static void RecordStorageGain(
+            Storage target,
+            TransferItemSnapshot item,
+            float amount,
+            float massKg)
+        {
+            if (!item.IsValid)
+            {
+                StorageNetworkContentIndexService.TouchTransferStorage(target);
+                return;
+            }
+
+            StorageNetworkContentIndexService.RecordTransferMutation(
+                null,
+                target,
+                item.MatchTags,
+                item.StateTag,
+                amount,
+                massKg);
+        }
+
+        private static void GetObservedStorageLoss(
+            Storage source,
+            GameObject originalItem,
+            TransferItemSnapshot before,
+            out float movedAmount,
+            out float movedMassKg)
+        {
+            movedAmount = before.Amount;
+            movedMassKg = before.MassKg;
+            if (!IsItemStoredIn(source, originalItem))
+            {
+                return;
+            }
+
+            TransferItemSnapshot after = CaptureTransferItem(originalItem);
+            movedAmount = Mathf.Max(0f, before.Amount - after.Amount);
+            movedMassKg = Mathf.Max(0f, before.MassKg - after.MassKg);
+        }
+
+        private static bool IsItemStoredIn(Storage storage, GameObject item)
+        {
+            // Storage.Store always reparents directly to the Storage transform.
+            // This is the same ownership fact that the native items list encodes,
+            // but it avoids a linear Contains scan for every item in a batch.
+            return storage != null &&
+                   storage.items != null &&
+                   item != null &&
+                   item.transform.parent == storage.transform;
+        }
+
+        private static void RecordLooseTransfer(
+            Storage target,
+            TransferItemSnapshot transferred)
+        {
+            if (!transferred.IsValid)
+            {
+                StorageNetworkContentIndexService.TouchTransferStorage(target);
+                return;
+            }
+
+            StorageNetworkContentIndexService.RecordTransferMutation(
+                null,
+                target,
+                transferred.MatchTags,
+                transferred.StateTag,
+                transferred.Amount,
+                transferred.MassKg);
+        }
+
+        private readonly struct TransferItemSnapshot
+        {
+            public TransferItemSnapshot(GameObject item)
+            {
+                MatchTags = StorageItemUtility.GetStorageMatchTagsNonAlloc(item);
+                PrimaryElement primaryElement = item != null
+                    ? item.GetComponent<PrimaryElement>()
+                    : null;
+                Pickupable pickupable = item != null
+                    ? item.GetComponent<Pickupable>()
+                    : null;
+                Amount = pickupable != null
+                    ? Mathf.Max(0f, pickupable.TotalAmount)
+                    : primaryElement != null
+                        // The content index uses mass for non-Pickupable items.
+                        // Keep the transfer delta in the same unit so objects with
+                        // MassPerUnit != 1 cannot drift away from the native source.
+                        ? Mathf.Max(0f, primaryElement.Mass)
+                        : 0f;
+                MassKg = primaryElement != null
+                    ? Mathf.Max(0f, primaryElement.Mass)
+                    : 0f;
+                StateTag = GetElementStateTag(primaryElement);
+                IsValid = item != null &&
+                          (Amount > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ||
+                           MassKg > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT);
+            }
+
+            public StorageItemUtility.StorageMatchTags MatchTags { get; }
+            public Tag StateTag { get; }
+            public float Amount { get; }
+            public float MassKg { get; }
+            public bool IsValid { get; }
+
+            public float GetAmountForMass(float massKg)
+            {
+                return MassKg > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT
+                    ? Mathf.Max(0f, massKg) * Amount / MassKg
+                    : Mathf.Max(0f, massKg);
+            }
+
+            private static Tag GetElementStateTag(PrimaryElement primaryElement)
+            {
+                Element element = primaryElement != null
+                    ? ElementLoader.FindElementByHash(primaryElement.ElementID)
+                    : null;
+                if (element == null)
+                {
+                    return Tag.Invalid;
+                }
+
+                return element.IsLiquid
+                    ? GameTags.Liquid
+                    : element.IsGas
+                        ? GameTags.Gas
+                        : GameTags.Solid;
+            }
+        }
+
         private static string GetElementName(SimHashes elementHash)
         {
             Element element = ElementLoader.FindElementByHash(elementHash);
@@ -1302,6 +1607,11 @@ namespace StorageNetwork.Services
         public List<GameObject> Items { get; } = new List<GameObject>();
 
         public HashSet<Storage> YieldedSources { get; } = new HashSet<Storage>();
+
+        public StorageNetworkTransferTransactionScope BeginContentIndexTransaction()
+        {
+            return new StorageNetworkTransferTransactionScope(begin: true);
+        }
 
         public HashSet<Storage> PrepareExcluded(IEnumerable<Storage> storages, Storage required)
         {
@@ -1353,6 +1663,28 @@ namespace StorageNetwork.Services
             }
 
             return sourceTags;
+        }
+    }
+
+    internal readonly struct StorageNetworkTransferTransactionScope : System.IDisposable
+    {
+        private readonly bool active;
+
+        public StorageNetworkTransferTransactionScope(bool begin)
+        {
+            active = begin;
+            if (begin)
+            {
+                StorageNetworkContentIndexService.BeginTransferTransaction();
+            }
+        }
+
+        public void Dispose()
+        {
+            if (active)
+            {
+                StorageNetworkContentIndexService.EndTransferTransaction();
+            }
         }
     }
 

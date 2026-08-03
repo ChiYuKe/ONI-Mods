@@ -1,5 +1,6 @@
 using HarmonyLib;
 using StorageNetwork.Components;
+using StorageNetwork.Core;
 using StorageNetwork.Services;
 
 namespace StorageNetwork.Patches
@@ -9,11 +10,18 @@ namespace StorageNetwork.Patches
         [HarmonyPatch(typeof(TreeFilterable), nameof(TreeFilterable.UpdateFilters))]
         public static class TreeFilterableUpdateFiltersPatch
         {
-            public static void Prefix(TreeFilterable __instance, ref System.Collections.Generic.HashSet<Tag> filters)
+            public static void Prefix(
+                TreeFilterable __instance,
+                ref System.Collections.Generic.HashSet<Tag> filters,
+                out Storage __state)
             {
-                Storage storage = __instance != null ? __instance.GetFilterStorage() : null;
-                StorageNetworkFilterBypass.Apply(storage);
-                if (StorageNetworkFilterBypass.ShouldBypassUserFilter(storage))
+                if (!StorageNetworkRuntimeCatalog.TryGetStorage(__instance, out __state))
+                {
+                    return;
+                }
+
+                StorageNetworkFilterBypass.Apply(__state);
+                if (StorageNetworkFilterBypass.ShouldBypassUserFilter(__state))
                 {
                     StorageNetworkFilterConfigurator.Configure(__instance);
                 }
@@ -24,10 +32,16 @@ namespace StorageNetwork.Patches
                 }
             }
 
-            public static void Postfix(TreeFilterable __instance)
+            public static void Postfix(TreeFilterable __instance, Storage __state)
             {
+                if (__state == null)
+                {
+                    return;
+                }
+
                 StorageNetworkFilterState.MarkUserConfigured(__instance);
                 StorageNetworkFilterChangeTransferService.MoveRejectedItemsToNetwork(__instance);
+                StorageSceneRegistry.InvalidateCapabilities(__state);
             }
         }
     }

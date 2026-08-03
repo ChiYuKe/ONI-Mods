@@ -13,7 +13,10 @@ namespace StorageNetwork.UI
 {
     public sealed partial class StorageNetworkPanel : KScreen, IInputHandler
     {
-
+        private static readonly Dictionary<ColorStyleKey, ColorStyleSetting> colorStyleCache =
+            new Dictionary<ColorStyleKey, ColorStyleSetting>();
+        private static ColorStyleSetting kleiBlueStyle;
+        private static ColorStyleSetting kleiPinkStyle;
 
         private static void ApplyThinButtonSprite(KImage image)
         {
@@ -94,14 +97,18 @@ namespace StorageNetwork.UI
 
         private static ColorStyleSetting KleiBlueStyle()
         {
-            ColorStyleSetting style = ScriptableObject.CreateInstance<ColorStyleSetting>();
-            style.activeColor = StorageNetworkPanelPalette.BlueButtonPressed;
-            style.inactiveColor = StorageNetworkPanelPalette.BlueButtonNormal;
-            style.hoverColor = StorageNetworkPanelPalette.BlueButtonHover;
-            style.disabledColor = new Color(0.4156863f, 0.4117647f, 0.4f);
-            style.disabledActiveColor = new Color(0.625f, 0.6158088f, 0.5882353f);
-            style.disabledhoverColor = new Color(0.5f, 0.4898898f, 0.4595588f);
-            return style;
+            if (kleiBlueStyle == null)
+            {
+                kleiBlueStyle = ScriptableObject.CreateInstance<ColorStyleSetting>();
+                kleiBlueStyle.activeColor = StorageNetworkPanelPalette.BlueButtonPressed;
+                kleiBlueStyle.inactiveColor = StorageNetworkPanelPalette.BlueButtonNormal;
+                kleiBlueStyle.hoverColor = StorageNetworkPanelPalette.BlueButtonHover;
+                kleiBlueStyle.disabledColor = new Color(0.4156863f, 0.4117647f, 0.4f);
+                kleiBlueStyle.disabledActiveColor = new Color(0.625f, 0.6158088f, 0.5882353f);
+                kleiBlueStyle.disabledhoverColor = new Color(0.5f, 0.4898898f, 0.4595588f);
+            }
+
+            return kleiBlueStyle;
         }
 
         private static Color OniPinkInactive()
@@ -121,18 +128,28 @@ namespace StorageNetwork.UI
 
         private static ColorStyleSetting KleiPinkStyle()
         {
-            ColorStyleSetting style = ScriptableObject.CreateInstance<ColorStyleSetting>();
-            style.activeColor = OniPinkActive();
-            style.inactiveColor = OniPinkInactive();
-            style.hoverColor = OniPinkHover();
-            style.disabledColor = new Color(0.4156863f, 0.4117647f, 0.4f);
-            style.disabledActiveColor = Color.clear;
-            style.disabledhoverColor = new Color(0.5f, 0.5f, 0.5f);
-            return style;
+            if (kleiPinkStyle == null)
+            {
+                kleiPinkStyle = ScriptableObject.CreateInstance<ColorStyleSetting>();
+                kleiPinkStyle.activeColor = OniPinkActive();
+                kleiPinkStyle.inactiveColor = OniPinkInactive();
+                kleiPinkStyle.hoverColor = OniPinkHover();
+                kleiPinkStyle.disabledColor = new Color(0.4156863f, 0.4117647f, 0.4f);
+                kleiPinkStyle.disabledActiveColor = Color.clear;
+                kleiPinkStyle.disabledhoverColor = new Color(0.5f, 0.5f, 0.5f);
+            }
+
+            return kleiPinkStyle;
         }
 
         private static ColorStyleSetting CreateColorStyle(Color normal, Color hover, Color pressed)
         {
+            ColorStyleKey key = new ColorStyleKey(normal, hover, pressed);
+            if (colorStyleCache.TryGetValue(key, out ColorStyleSetting cached) && cached != null)
+            {
+                return cached;
+            }
+
             ColorStyleSetting style = ScriptableObject.CreateInstance<ColorStyleSetting>();
             style.inactiveColor = normal;
             style.hoverColor = hover;
@@ -140,7 +157,72 @@ namespace StorageNetwork.UI
             style.disabledColor = Darken(normal, 0.08f);
             style.disabledActiveColor = style.disabledColor;
             style.disabledhoverColor = style.disabledColor;
+            colorStyleCache[key] = style;
             return style;
+        }
+
+        private static void ClearColorStyleCache()
+        {
+            spriteCache?.Clear();
+            spriteCache = null;
+            foreach (ColorStyleSetting style in colorStyleCache.Values)
+            {
+                if (style != null)
+                {
+                    Destroy(style);
+                }
+            }
+
+            colorStyleCache.Clear();
+            productNormalStyle = null;
+            productSelectedStyle = null;
+            if (kleiBlueStyle != null)
+            {
+                Destroy(kleiBlueStyle);
+                kleiBlueStyle = null;
+            }
+            if (kleiPinkStyle != null)
+            {
+                Destroy(kleiPinkStyle);
+                kleiPinkStyle = null;
+            }
+        }
+
+        private readonly struct ColorStyleKey : System.IEquatable<ColorStyleKey>
+        {
+            private readonly Color32 normal;
+            private readonly Color32 hover;
+            private readonly Color32 pressed;
+
+            public ColorStyleKey(Color normal, Color hover, Color pressed)
+            {
+                this.normal = normal;
+                this.hover = hover;
+                this.pressed = pressed;
+            }
+
+            public bool Equals(ColorStyleKey other)
+            {
+                return normal.Equals(other.normal) &&
+                       hover.Equals(other.hover) &&
+                       pressed.Equals(other.pressed);
+            }
+
+            public override bool Equals(object obj)
+            {
+                return obj is ColorStyleKey other && Equals(other);
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    int hashCode = normal.GetHashCode();
+                    hashCode = (hashCode * 397) ^ hover.GetHashCode();
+                    hashCode = (hashCode * 397) ^ pressed.GetHashCode();
+                    return hashCode;
+                }
+            }
         }
 
         private static Color Lighten(Color color, float amount)

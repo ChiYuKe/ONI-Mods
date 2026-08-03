@@ -8,6 +8,13 @@ namespace StorageNetwork.ProductionOrders
 {
     internal sealed partial class ProductionOrderService
     {
+        private static readonly List<ProductionOrderRecord> LeasedMaterialOrderBuffer =
+            new List<ProductionOrderRecord>();
+        private static readonly List<int> EmptyAutomationLeaseBuffer = new List<int>();
+        private readonly List<StorageSourceSortKey> transferSourceBuffer =
+            new List<StorageSourceSortKey>();
+        private readonly HashSet<Storage> transferSourceSeenBuffer = new HashSet<Storage>();
+
         public static float RequestLeasedMaterial(ComplexFabricator fabricator, ComplexRecipe recipe, Tag tag, float amount, Storage target)
         {
             if (fabricator == null ||
@@ -20,19 +27,27 @@ namespace StorageNetwork.ProductionOrders
                 return 0f;
             }
 
+            int destinationWorldId = StorageNetworkWorldUtility.GetObjectWorldId(target.gameObject);
+            if (destinationWorldId < 0 ||
+                !StorageSceneRegistry.HasOnlineCoreInWorld(destinationWorldId) ||
+                !StorageSceneRegistry.IsLive(target))
+            {
+                return 0f;
+            }
+
             EnsureOrdersLoaded();
             float moved = 0f;
-            List<ProductionOrderRecord> orders = new List<ProductionOrderRecord>();
+            LeasedMaterialOrderBuffer.Clear();
             foreach (ProductionOrderRecord order in ActiveOrders.Values)
             {
                 if (IsOrderActive(order))
                 {
-                    orders.Add(order);
+                    LeasedMaterialOrderBuffer.Add(order);
                 }
             }
 
-            orders.Sort((left, right) => left.DisplayId.CompareTo(right.DisplayId));
-            foreach (ProductionOrderRecord order in orders)
+            LeasedMaterialOrderBuffer.Sort(ProductionOrderDisplayIdComparer.Instance);
+            foreach (ProductionOrderRecord order in LeasedMaterialOrderBuffer)
             {
                 if (amount - moved <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
                 {
@@ -68,8 +83,10 @@ namespace StorageNetwork.ProductionOrders
                         break;
                     }
 
-                    Storage source = ProductionNetworkInventoryCache.FindStorageByInstanceIdFromScene(lease.SourceStorageInstanceId);
-                    if (source == null || source == target || StorageNetworkStorageRules.IsProductionStorage(source))
+                    Storage source = ProductionNetworkInventoryCache.FindStorageByInstanceIdFromScene(
+                        lease.SourceStorageInstanceId,
+                        destinationWorldId);
+                    if (!IsSourceUsableForDestination(source, target, tag))
                     {
                         continue;
                     }
@@ -81,7 +98,24 @@ namespace StorageNetwork.ProductionOrders
                         continue;
                     }
 
-                    moved += source.Transfer(target, tag, transferAmount, block_events: false, hide_popups: true);
+                    // Connectivity can change between lease resolution and mutation. Revalidate
+                    // at the exact transfer boundary so a stale relay/storage snapshot cannot
+                    // move material across a disconnected world.
+                    if (!IsSourceUsableForDestination(source, target, tag))
+                    {
+                        continue;
+                    }
+
+                    float transferred =
+                        NetworkStorageTransferService.TransferMatchingItemsFromStorage(
+                            source,
+                            target,
+                            tag,
+                            transferAmount);
+                    if (transferred > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+                    {
+                        moved += transferred;
+                    }
                 }
             }
 
@@ -100,7 +134,8 @@ namespace StorageNetwork.ProductionOrders
 
             foreach (ProductionPlanAssignment assignment in node.Assignments)
             {
-                if (!IsOrderProductionFabricator(assignment.Fabricator) || node.Recipe == null)
+                if (!IsFabricatorReachableFromWorld(assignment.Fabricator, node.WorldId) ||
+                    node.Recipe == null)
                 {
                     continue;
                 }
@@ -115,7 +150,10 @@ namespace StorageNetwork.ProductionOrders
 
         private static void EnsureOrderAutomationEnabled(ComplexFabricator fabricator, string orderKey)
         {
-            if (!IsOrderProductionFabricator(fabricator))
+            int worldId = fabricator != null
+                ? StorageNetworkWorldUtility.GetObjectWorldId(fabricator.gameObject)
+                : -1;
+            if (!IsFabricatorReachableFromWorld(fabricator, worldId))
             {
                 return;
             }
@@ -151,7 +189,11 @@ namespace StorageNetwork.ProductionOrders
 
                 foreach (ProductionOrderQueueAssignment assignment in order.QueueAssignments)
                 {
-                    if (IsOrderProductionFabricator(assignment.Fabricator))
+                    int worldId = assignment?.Fabricator != null
+                        ? StorageNetworkWorldUtility.GetObjectWorldId(
+                            assignment.Fabricator.gameObject)
+                        : -1;
+                    if (IsFabricatorReachableFromWorld(assignment?.Fabricator, worldId))
                     {
                         EnsureOrderAutomationEnabled(assignment.Fabricator, order.Key);
                     }
@@ -161,7 +203,7 @@ namespace StorageNetwork.ProductionOrders
 
         private static void ReleaseOrderAutomation(string orderKey)
         {
-            List<int> emptyLeases = new List<int>();
+            EmptyAutomationLeaseBuffer.Clear();
             foreach (KeyValuePair<int, OrderAutomationLease> pair in AutomationLeases)
             {
                 if (!pair.Value.OrderKeys.Remove(orderKey) || pair.Value.OrderKeys.Count > 0)
@@ -170,10 +212,10 @@ namespace StorageNetwork.ProductionOrders
                 }
 
                 pair.Value.Restore();
-                emptyLeases.Add(pair.Key);
+                EmptyAutomationLeaseBuffer.Add(pair.Key);
             }
 
-            foreach (int instanceId in emptyLeases)
+            foreach (int instanceId in EmptyAutomationLeaseBuffer)
             {
                 AutomationLeases.Remove(instanceId);
             }
@@ -203,8 +245,19 @@ namespace StorageNetwork.ProductionOrders
                 return moved;
             }
 
-            List<Storage> sources = new List<Storage>();
-            HashSet<Storage> seen = new HashSet<Storage>();
+            int destinationWorldId = StorageNetworkWorldUtility.GetObjectWorldId(target.gameObject);
+            if (destinationWorldId < 0 ||
+                !StorageSceneRegistry.HasOnlineCoreInWorld(destinationWorldId) ||
+                !StorageSceneRegistry.IsLive(target))
+            {
+                return moved;
+            }
+
+            ProductionNetworkInventoryCache scopedInventory =
+                Runtime.GetNetworkInventory(destinationWorldId);
+
+            transferSourceBuffer.Clear();
+            transferSourceSeenBuffer.Clear();
             if (materialLeases != null)
             {
                 foreach (ProductionOrderMaterialLease lease in materialLeases)
@@ -214,25 +267,59 @@ namespace StorageNetwork.ProductionOrders
                         continue;
                     }
 
-                    AddTransferSource(sources, seen, networkInventory.FindStorageByInstanceId(lease.SourceStorageInstanceId), target, tag);
+                    AddTransferSource(
+                        transferSourceBuffer,
+                        transferSourceSeenBuffer,
+                        ProductionNetworkInventoryCache.FindStorageByInstanceIdFromScene(
+                            lease.SourceStorageInstanceId,
+                            destinationWorldId),
+                        target,
+                        tag);
                 }
             }
 
-            foreach (Storage storage in networkInventory.SourceStorages)
+            foreach (Storage storage in scopedInventory.SourceStorages)
             {
-                AddTransferSource(sources, seen, storage, target, tag);
+                AddTransferSource(
+                    transferSourceBuffer,
+                    transferSourceSeenBuffer,
+                    storage,
+                    target,
+                    tag);
             }
 
-            sources.Sort((left, right) => right.GetAmountAvailable(tag).CompareTo(left.GetAmountAvailable(tag)));
-            foreach (Storage source in sources)
+            transferSourceBuffer.Sort(StorageSourceSortKeyComparer.Instance);
+            for (int sourceIndex = 0;
+                 sourceIndex < transferSourceBuffer.Count;
+                 sourceIndex++)
             {
+                Storage source = transferSourceBuffer[sourceIndex].Storage;
+                if (!IsSourceUsableForDestination(source, target, tag))
+                {
+                    continue;
+                }
+
                 float transferAmount = Mathf.Min(amount - moved, source.GetAmountAvailable(tag), Mathf.Max(0f, target.RemainingCapacity()));
                 if (transferAmount <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
                 {
                     break;
                 }
 
-                moved += source.Transfer(target, tag, transferAmount, block_events: false, hide_popups: true);
+                if (!IsSourceUsableForDestination(source, target, tag))
+                {
+                    continue;
+                }
+
+                float transferred =
+                    NetworkStorageTransferService.TransferMatchingItemsFromStorage(
+                        source,
+                        target,
+                        tag,
+                        transferAmount);
+                if (transferred > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+                {
+                    moved += transferred;
+                }
                 if (amount - moved <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
                 {
                     break;
@@ -242,27 +329,64 @@ namespace StorageNetwork.ProductionOrders
             return moved;
         }
 
-        private static void AddTransferSource(List<Storage> sources, HashSet<Storage> seen, Storage storage, Storage target, Tag tag)
+        private static void AddTransferSource(
+            List<StorageSourceSortKey> sources,
+            HashSet<Storage> seen,
+            Storage storage,
+            Storage target,
+            Tag tag)
         {
-            if (storage == null ||
-                storage == target ||
-                seen.Contains(storage) ||
-                StorageNetworkStorageRules.IsProductionStorage(storage) ||
-                storage.GetAmountAvailable(tag) <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+            if (!IsSourceUsableForDestination(storage, target, tag) || seen.Contains(storage))
             {
                 return;
             }
 
             seen.Add(storage);
-            sources.Add(storage);
+            sources.Add(new StorageSourceSortKey(
+                storage,
+                storage.GetAmountAvailable(tag),
+                StorageItemUtility.GetStorageInstanceId(storage)));
         }
 
-        private static float GetReservedAmount(Tag tag, string ignoredOrderKey = null)
+        private readonly struct StorageSourceSortKey
+        {
+            public StorageSourceSortKey(Storage storage, float amount, int instanceId)
+            {
+                Storage = storage;
+                Amount = amount;
+                InstanceId = instanceId;
+            }
+
+            public Storage Storage { get; }
+
+            public float Amount { get; }
+
+            public int InstanceId { get; }
+        }
+
+        private sealed class StorageSourceSortKeyComparer : IComparer<StorageSourceSortKey>
+        {
+            public static readonly StorageSourceSortKeyComparer Instance =
+                new StorageSourceSortKeyComparer();
+
+            public int Compare(StorageSourceSortKey left, StorageSourceSortKey right)
+            {
+                int compare = right.Amount.CompareTo(left.Amount);
+                return compare != 0
+                    ? compare
+                    : left.InstanceId.CompareTo(right.InstanceId);
+            }
+        }
+
+        private float GetReservedAmount(Tag tag, string ignoredOrderKey = null)
         {
             float reserved = 0f;
+            int worldId = GetCurrentNetworkWorldId();
             foreach (ProductionOrderRecord order in ActiveOrders.Values)
             {
-                if (!IsOrderActive(order) || order.Key == ignoredOrderKey)
+                if (!IsOrderActive(order) ||
+                    order.Key == ignoredOrderKey ||
+                    !IsOrderReachableFromCurrentWorld(order))
                 {
                     continue;
                 }
@@ -271,7 +395,10 @@ namespace StorageNetwork.ProductionOrders
                 {
                     foreach (ProductionOrderMaterialLease lease in order.MaterialLeases)
                     {
-                        if (lease.Material == tag)
+                        if (lease.Material == tag &&
+                            ProductionNetworkInventoryCache.FindStorageByInstanceIdFromScene(
+                                lease.SourceStorageInstanceId,
+                                worldId) != null)
                         {
                             reserved += lease.Amount;
                         }
@@ -286,12 +413,15 @@ namespace StorageNetwork.ProductionOrders
             return reserved;
         }
 
-        private static float GetPendingProducedAmountAhead(Tag productTag)
+        private float GetPendingProducedAmountAhead(Tag productTag)
         {
             float pending = 0f;
+            int worldId = GetCurrentNetworkWorldId();
             foreach (ProductionOrderRecord order in ActiveOrders.Values)
             {
-                if (!IsOrderActive(order) || order.ProductTag != productTag)
+                if (!IsOrderActive(order) ||
+                    order.ProductTag != productTag ||
+                    !IsOrderReachableFromCurrentWorld(order))
                 {
                     continue;
                 }
@@ -301,7 +431,11 @@ namespace StorageNetwork.ProductionOrders
                 {
                     foreach (ProductionOrderOutputLease lease in order.OutputLeases)
                     {
-                        if (lease.ProductTag == productTag)
+                        ComplexFabricator producer =
+                            ProductionOrderCenterCatalog.FindFabricatorByInstanceId(
+                                lease.FabricatorInstanceId);
+                        if (lease.ProductTag == productTag &&
+                            IsFabricatorReachableFromWorld(producer, worldId))
                         {
                             leased += lease.Amount;
                         }

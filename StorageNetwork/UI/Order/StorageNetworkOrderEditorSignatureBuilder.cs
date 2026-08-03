@@ -52,11 +52,9 @@ namespace StorageNetwork.UI
             }
 
             string requirements = string.Join(",", node.Requirements
-                .OrderBy(requirement => requirement.Material.ToString())
-                .Select(requirement => string.Format("{0}:{1:0.###}:{2:0.###}:{3}",
+                .Select(requirement => string.Format("{0}:{1:0.###}:{2}",
                     requirement.Material,
                     requirement.RequiredAmount,
-                    requirement.AvailableAmount,
                     BuildRequirementSignature(requirement.Child, depth + 1))));
 
             return string.Format("{0}:{1}:{2:0.###}[{3}]",

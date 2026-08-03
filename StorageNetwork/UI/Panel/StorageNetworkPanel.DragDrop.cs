@@ -207,6 +207,34 @@ namespace StorageNetwork.UI
             categoryDropAreas.Clear();
         }
 
+        private void RebuildStorageDropAreasFromActiveRows()
+        {
+            ClearStorageDropAreas();
+            if (listContent != null)
+            {
+                foreach (StorageDropTarget target in listContent.GetComponentsInChildren<StorageDropTarget>(false))
+                {
+                    RectTransform rect = target.GetComponent<RectTransform>();
+                    if (rect != null && target.Storage != null)
+                    {
+                        storageDropAreas.Add(new StorageDropArea(rect, target.Storage));
+                    }
+                }
+            }
+
+            if (categoryContent != null)
+            {
+                foreach (StorageCategoryDropTarget target in categoryContent.GetComponentsInChildren<StorageCategoryDropTarget>(false))
+                {
+                    RectTransform rect = target.GetComponent<RectTransform>();
+                    if (rect != null && !string.IsNullOrEmpty(target.CategoryKey))
+                    {
+                        categoryDropAreas.Add(new CategoryDropArea(rect, target.CategoryKey));
+                    }
+                }
+            }
+        }
+
         private Storage FindStorageDropTargetAt(Vector2 screenPosition)
         {
             for (int i = storageDropAreas.Count - 1; i >= 0; i--)
@@ -321,6 +349,8 @@ namespace StorageNetwork.UI
             private Image background;
             private Color originalColor;
 
+            public Storage Storage => storage;
+
             public void Bind(StorageNetworkPanel owner, Storage targetStorage)
             {
                 panel = owner;
@@ -353,6 +383,8 @@ namespace StorageNetwork.UI
         {
             private StorageNetworkPanel panel;
             private string categoryKey;
+
+            public string CategoryKey => categoryKey;
 
             public void Bind(StorageNetworkPanel owner, string key)
             {

@@ -11,7 +11,7 @@ namespace StorageNetwork.UI
         {
             bool outputStoreEnabled = connector.IsOutputStoreEnabled();
             GameObject card = CreateProductionCard("StorageOutputCard", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STORAGE_OUTPUT_STORE_TITLE), 0f);
-            MakeProductionCardAutoHeight(card, string.IsNullOrEmpty(connector.LastOutputStatus) ? 170f : 194f);
+            MakeProductionCardAutoHeight(card, 194f);
             CreateStatusStrip(card.transform, outputStoreEnabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_AUTO_STATUS) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_MANUAL_STATUS), StorageNetworkProductionSettingsStyle.GetOutputStoreColor(outputStoreEnabled));
             CreateToggleActionRow(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STORAGE_OUTPUT_STORE_ENABLED), outputStoreEnabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ACTION_CLOSE) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ON), () =>
             {
@@ -25,18 +25,25 @@ namespace StorageNetwork.UI
                 () => ShowStorageConnectorOutputStorePicker(ownerStorage, connector));
             productionAutomationView ??= new ProductionAutomationCardsView();
             productionAutomationView.OutputDescription = CreateFinePrint(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STORAGE_OUTPUT_STORE_DESC));
-            if (outputStoreEnabled && !string.IsNullOrEmpty(connector.LastOutputStatus))
-            {
-                productionAutomationView.OutputStatus = CreateFinePrint(card.transform, string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_STATUS), connector.LastOutputStatus));
-                SetFinePrintPreferredHeight(productionAutomationView.OutputStatus, 22f);
-            }
+            productionAutomationView.OutputStatus = CreateFinePrint(
+                card.transform,
+                string.IsNullOrEmpty(connector.LastOutputStatus)
+                    ? string.Empty
+                    : string.Format(
+                        Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_STATUS),
+                        connector.LastOutputStatus));
+            SetFinePrintPreferredHeight(productionAutomationView.OutputStatus, 22f);
+            AddPortStatusLiveBinding(
+                productionAutomationView.OutputStatus,
+                () => connector.LastOutputStatus,
+                StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_STORE_STATUS);
         }
 
         private void AddEnergyGeneratorMaterialCard(Storage ownerStorage, StorageNetworkEnergyGeneratorRequester requester)
         {
             bool enabled = requester != null && requester.RequestEnabled;
             GameObject card = CreateProductionCard("EnergyGeneratorMaterialCard", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_TITLE), 0f);
-            MakeProductionCardAutoHeight(card, string.IsNullOrEmpty(requester.LastStatus) ? 126f : 154f);
+            MakeProductionCardAutoHeight(card, 154f);
 
             CreateEnabledStatusStrip(card.transform, enabled);
             CreateToggleActionRow(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_ENABLED), enabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ACTION_CLOSE) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ON), () =>
@@ -57,7 +64,7 @@ namespace StorageNetwork.UI
             }, requester.LimitEnabled);
             if (requester.LimitEnabled)
             {
-                CreateProductionActionRow(
+                TMPro.TextMeshProUGUI limitLabel = CreateProductionActionRow(
                     card.transform,
                     string.Format(
                         Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_LIMIT),
@@ -65,13 +72,25 @@ namespace StorageNetwork.UI
                         GameUtil.GetFormattedMass(Mathf.Max(0f, requester.LimitKg))),
                     Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_SET_LIMIT),
                     () => ShowEnergyGeneratorMaterialRequestLimitDialog(requester));
+                AddMassLimitLiveBinding(
+                    limitLabel,
+                    requester.GetRequestedAmountForDisplay,
+                    () => requester.LimitKg,
+                    StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_LIMIT);
             }
             productionAutomationView ??= new ProductionAutomationCardsView();
-            if (!string.IsNullOrEmpty(requester.LastStatus))
-            {
-                productionAutomationView.MaterialStatus = CreateFinePrint(card.transform, string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_STATUS), requester.LastStatus));
-                SetFinePrintPreferredHeight(productionAutomationView.MaterialStatus, 22f);
-            }
+            productionAutomationView.MaterialStatus = CreateFinePrint(
+                card.transform,
+                string.IsNullOrEmpty(requester.LastStatus)
+                    ? string.Empty
+                    : string.Format(
+                        Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_STATUS),
+                        requester.LastStatus));
+            SetFinePrintPreferredHeight(productionAutomationView.MaterialStatus, 22f);
+            AddPortStatusLiveBinding(
+                productionAutomationView.MaterialStatus,
+                () => requester.LastStatus,
+                StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_REQUEST_STATUS);
         }
     }
 }

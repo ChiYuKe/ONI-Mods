@@ -10,14 +10,104 @@ namespace StorageNetwork.Services
     internal static partial class StorageTargetSelector
     {
         private const float OutputTargetCacheSeconds = 1f;
+        private const int MaxOutputTargetCacheEntries = 512;
         private static readonly Dictionary<OutputTargetCacheKey, CachedOutputTarget> OutputTargetCache =
             new Dictionary<OutputTargetCacheKey, CachedOutputTarget>();
+        private static readonly List<OutputTargetCacheKey> OutputTargetCacheRemovalWorkspace =
+            new List<OutputTargetCacheKey>();
+        private static readonly List<Storage> ShadowTargetWorkspace = new List<Storage>();
+        private static readonly HashSet<Storage> EmptyStorageExclusions = new HashSet<Storage>();
+        private static readonly ElementTargetComparer ElementTargetsComparer =
+            new ElementTargetComparer();
         private static int outputTargetCacheRegistryVersion = -1;
+        private static int outputTargetCacheMembershipVersion = -1;
+        private static int outputTargetCacheConnectivityVersion = -1;
+        private static int outputTargetCacheReservationVersion = -1;
+        private static int targetValidationContentVersion = -1;
+        private static int targetValidationMembershipVersion = -1;
+        private static int targetValidationCapabilityVersion = -1;
+        private static int targetValidationConnectivityVersion = -1;
+        private static int targetValidationReservationVersion = -1;
+        private static int targetValidationVersion;
+        private static float outputTargetCacheLastPruneTime = float.MinValue;
 
         public static void ResetRuntimeState()
         {
             OutputTargetCache.Clear();
             outputTargetCacheRegistryVersion = -1;
+            outputTargetCacheMembershipVersion = -1;
+            outputTargetCacheConnectivityVersion = -1;
+            outputTargetCacheReservationVersion = -1;
+            targetValidationContentVersion = -1;
+            targetValidationMembershipVersion = -1;
+            targetValidationCapabilityVersion = -1;
+            targetValidationConnectivityVersion = -1;
+            targetValidationReservationVersion = -1;
+            targetValidationVersion = 0;
+            outputTargetCacheLastPruneTime = float.MinValue;
+            OutputTargetCacheRemovalWorkspace.Clear();
+            ShadowTargetWorkspace.Clear();
+        }
+
+        internal static void InvalidateOutputTargetCache()
+        {
+            OutputTargetCache.Clear();
+            OutputTargetCacheRemovalWorkspace.Clear();
+        }
+
+        /// <summary>
+        /// Keeps a cached winner only when a known transfer makes that same winner
+        /// strictly stronger for the cached item. Every mutation which could improve
+        /// a competing target invalidates the affected decision before it is reused.
+        /// </summary>
+        internal static void NotifyTransferMutation(
+            Storage storage,
+            StorageItemUtility.StorageMatchTags matchTags,
+            float amountDelta,
+            float massDelta)
+        {
+            if (storage == null ||
+                OutputTargetCache.Count == 0 ||
+                !StorageNetworkStorageRules.IsNetworkStorageTarget(storage))
+            {
+                return;
+            }
+
+            int storageId = storage.GetInstanceID();
+            bool gainsAmount = amountDelta > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT;
+            bool losesAmount = amountDelta < -PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT;
+            bool gainsCapacity = massDelta < -PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT;
+            OutputTargetCacheRemovalWorkspace.Clear();
+            foreach (KeyValuePair<OutputTargetCacheKey, CachedOutputTarget> pair in OutputTargetCache)
+            {
+                OutputTargetCacheKey key = pair.Key;
+                if (key.SourceStorageId == storageId && key.SourceIsExcluded)
+                {
+                    // The source encoded in this key is excluded from its candidate set.
+                    continue;
+                }
+
+                bool sameTarget = object.ReferenceEquals(pair.Value.Target, storage);
+                bool matchingAmount = key.Matches(matchTags);
+                bool winnerStrengthened =
+                    sameTarget && gainsAmount && key.MatchesExactly(matchTags);
+                bool competitorMayImprove =
+                    !sameTarget && ((gainsAmount && matchingAmount) || gainsCapacity);
+                bool winnerMayWeaken =
+                    sameTarget && !winnerStrengthened &&
+                    (losesAmount || gainsCapacity || massDelta > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT);
+                if (competitorMayImprove || winnerMayWeaken)
+                {
+                    OutputTargetCacheRemovalWorkspace.Add(key);
+                }
+            }
+
+            foreach (OutputTargetCacheKey key in OutputTargetCacheRemovalWorkspace)
+            {
+                OutputTargetCache.Remove(key);
+            }
+
+            OutputTargetCacheRemovalWorkspace.Clear();
         }
 
         public static bool MatchesAllowedTags(GameObject item, HashSet<Tag> allowedTags)
@@ -35,15 +125,8 @@ namespace StorageNetwork.Services
                 }
             }
 
-            foreach (Tag tag in StorageItemUtility.GetStorageMatchTags(item))
-            {
-                if (allowedTags.Contains(tag))
-                {
-                    return true;
-                }
-            }
-
-            return false;
+            return StorageItemUtility.GetStorageMatchTagsNonAlloc(item)
+                .AnyAcceptedBy(allowedTags);
         }
 
         public static bool MatchesAllowedTags(GameObject item, HashSet<Tag> allowedTags, StorageItemUtility.StorageMatchTags matchTags)
@@ -79,7 +162,9 @@ namespace StorageNetwork.Services
                 return IsUsableOutputTarget(specificTarget, item, matchTags, excludedStorages, sourceWorldId) ? specificTarget : null;
             }
 
-            if (TryGetCachedOutputTarget(item, cacheMatchTags, excludedStorages, sourceWorldId, sourceStorage, false, out Storage cachedTarget))
+            if (snapshot == null &&
+                CanCacheMatchTagSet(matchTags, cacheMatchTags) &&
+                TryGetCachedOutputTarget(item, cacheMatchTags, excludedStorages, sourceWorldId, sourceStorage, false, out Storage cachedTarget))
             {
                 return cachedTarget;
             }
@@ -87,14 +172,34 @@ namespace StorageNetwork.Services
             Storage target;
             if (snapshot == null && sourceWorldId >= 0)
             {
+                IReadOnlyList<Storage> candidateStorages =
+                    StorageSceneCollector.CollectLightweightForWorld(sourceWorldId).Storages;
                 target = FindOutputTargetInStorages(
                     item,
                     matchTags,
                     excludedStorages,
-                    StorageSceneCollector.CollectLightweightForWorld(sourceWorldId).Storages,
+                    candidateStorages,
                     sourceWorldId,
                     sourceStorage);
-                CacheOutputTarget(cacheMatchTags, sourceWorldId, false, target);
+                target = ValidateSelectedOutputTarget(
+                    target,
+                    item,
+                    matchTags,
+                    excludedStorages,
+                    candidateStorages,
+                    sourceWorldId,
+                    sourceStorage,
+                    false);
+                if (CanCacheMatchTagSet(matchTags, cacheMatchTags))
+                {
+                    CacheOutputTarget(
+                        cacheMatchTags,
+                        excludedStorages,
+                        sourceWorldId,
+                        sourceStorage,
+                        false,
+                        target);
+                }
                 return target;
             }
 
@@ -109,8 +214,15 @@ namespace StorageNetwork.Services
             }
 
             target = FindOutputTargetInStorages(item, matchTags, excludedStorages, storages, sourceWorldId, sourceStorage);
-            CacheOutputTarget(cacheMatchTags, sourceWorldId, false, target);
-            return target;
+            return ValidateSelectedOutputTarget(
+                target,
+                item,
+                matchTags,
+                excludedStorages,
+                storages,
+                sourceWorldId,
+                sourceStorage,
+                false);
         }
 
         public static Storage FindOutputTarget(
@@ -127,7 +239,8 @@ namespace StorageNetwork.Services
                 return IsUsableOutputTarget(specificTarget, item, matchTags, excludedStorages, sourceWorldId) ? specificTarget : null;
             }
 
-            if (TryGetCachedOutputTarget(item, matchTags, excludedStorages, sourceWorldId, sourceStorage, false, out Storage cachedTarget))
+            if (snapshot == null &&
+                TryGetCachedOutputTarget(item, matchTags, excludedStorages, sourceWorldId, sourceStorage, false, out Storage cachedTarget))
             {
                 return cachedTarget;
             }
@@ -135,14 +248,31 @@ namespace StorageNetwork.Services
             Storage target;
             if (snapshot == null && sourceWorldId >= 0)
             {
+                IReadOnlyList<Storage> candidateStorages =
+                    StorageSceneCollector.CollectLightweightForWorld(sourceWorldId).Storages;
                 target = FindOutputTargetInStorages(
                     item,
                     matchTags,
                     excludedStorages,
-                    StorageSceneCollector.CollectLightweightForWorld(sourceWorldId).Storages,
+                    candidateStorages,
                     sourceWorldId,
                     sourceStorage);
-                CacheOutputTarget(matchTags, sourceWorldId, false, target);
+                target = ValidateSelectedOutputTarget(
+                    target,
+                    item,
+                    matchTags,
+                    excludedStorages,
+                    candidateStorages,
+                    sourceWorldId,
+                    sourceStorage,
+                    false);
+                CacheOutputTarget(
+                    matchTags,
+                    excludedStorages,
+                    sourceWorldId,
+                    sourceStorage,
+                    false,
+                    target);
                 return target;
             }
 
@@ -157,8 +287,15 @@ namespace StorageNetwork.Services
             }
 
             target = FindOutputTargetInStorages(item, matchTags, excludedStorages, storages, sourceWorldId, sourceStorage);
-            CacheOutputTarget(matchTags, sourceWorldId, false, target);
-            return target;
+            return ValidateSelectedOutputTarget(
+                target,
+                item,
+                matchTags,
+                excludedStorages,
+                storages,
+                sourceWorldId,
+                sourceStorage,
+                false);
         }
 
         public static Storage FindFoodOutputTarget(
@@ -176,7 +313,9 @@ namespace StorageNetwork.Services
                 return FindOutputTarget(item, matchTags, excludedStorages, specificTarget, snapshot, sourceWorldId, sourceStorage);
             }
 
-            if (TryGetCachedOutputTarget(item, cacheMatchTags, excludedStorages, sourceWorldId, sourceStorage, true, out Storage cachedTarget))
+            if (snapshot == null &&
+                CanCacheMatchTagSet(matchTags, cacheMatchTags) &&
+                TryGetCachedOutputTarget(item, cacheMatchTags, excludedStorages, sourceWorldId, sourceStorage, true, out Storage cachedTarget))
             {
                 return cachedTarget;
             }
@@ -184,20 +323,41 @@ namespace StorageNetwork.Services
             Storage coldTarget;
             if (snapshot == null && sourceWorldId >= 0)
             {
+                IReadOnlyList<Storage> candidateStorages =
+                    StorageSceneCollector.CollectLightweightForWorld(sourceWorldId).Storages;
                 coldTarget = FindColdStorageOutputTargetInStorages(
                     item,
                     matchTags,
                     excludedStorages,
-                    StorageSceneCollector.CollectLightweightForWorld(sourceWorldId).Storages,
+                    candidateStorages,
                     sourceWorldId,
                     sourceStorage);
-                if (coldTarget != null)
+                Storage selectedTarget = coldTarget ?? FindOutputTargetInStorages(
+                    item,
+                    matchTags,
+                    excludedStorages,
+                    candidateStorages,
+                    sourceWorldId,
+                    sourceStorage);
+                selectedTarget = ValidateSelectedFoodOutputTarget(
+                    selectedTarget,
+                    item,
+                    matchTags,
+                    excludedStorages,
+                    candidateStorages,
+                    sourceWorldId,
+                    sourceStorage);
+                if (selectedTarget != null && CanCacheMatchTagSet(matchTags, cacheMatchTags))
                 {
-                    CacheOutputTarget(cacheMatchTags, sourceWorldId, true, coldTarget);
-                    return coldTarget;
+                    CacheOutputTarget(
+                        cacheMatchTags,
+                        excludedStorages,
+                        sourceWorldId,
+                        sourceStorage,
+                        true,
+                        selectedTarget);
                 }
-
-                return FindOutputTarget(item, matchTags, excludedStorages, null, null, sourceWorldId, sourceStorage);
+                return selectedTarget;
             }
 
             snapshot = snapshot ?? StorageSceneCollector.Collect();
@@ -211,13 +371,21 @@ namespace StorageNetwork.Services
             }
 
             coldTarget = FindColdStorageOutputTargetInStorages(item, matchTags, excludedStorages, storages, sourceWorldId, sourceStorage);
-            if (coldTarget != null)
-            {
-                CacheOutputTarget(cacheMatchTags, sourceWorldId, true, coldTarget);
-                return coldTarget;
-            }
-
-            return FindOutputTargetInStorages(item, matchTags, excludedStorages, storages, sourceWorldId, sourceStorage);
+            Storage target = coldTarget ?? FindOutputTargetInStorages(
+                item,
+                matchTags,
+                excludedStorages,
+                storages,
+                sourceWorldId,
+                sourceStorage);
+            return ValidateSelectedFoodOutputTarget(
+                target,
+                item,
+                matchTags,
+                excludedStorages,
+                storages,
+                sourceWorldId,
+                sourceStorage);
         }
 
         private static bool TryGetCachedOutputTarget(
@@ -230,16 +398,35 @@ namespace StorageNetwork.Services
             out Storage target)
         {
             RefreshOutputTargetCacheVersion();
-            OutputTargetCacheKey key = new OutputTargetCacheKey(sourceWorldId, matchTags.TransferTag, coldStorage);
+            if (!CanCacheOutputTarget(excludedStorages, sourceStorage))
+            {
+                target = null;
+                return false;
+            }
+
+            OutputTargetCacheKey key = new OutputTargetCacheKey(
+                sourceWorldId,
+                matchTags,
+                GetCacheSourceId(sourceStorage),
+                coldStorage,
+                IsSourceExcluded(excludedStorages, sourceStorage));
             if (OutputTargetCache.TryGetValue(key, out CachedOutputTarget cached) &&
                 Time.unscaledTime - cached.CreatedAt <= OutputTargetCacheSeconds &&
                 cached.Target != null &&
-                (!coldStorage || StorageNetworkStorageRules.IsColdStorageServer(cached.Target)) &&
                 IsUsableOutputTarget(cached.Target, item, matchTags, excludedStorages, sourceWorldId) &&
                 !StorageNetworkInputTargetReservationService.IsReservedForAutoInput(cached.Target, sourceStorage) &&
                 IsAutoOutputMatch(cached.Target, matchTags))
             {
-                target = cached.Target;
+                target = StorageNetworkPerformanceMode.ShadowValidationEnabled
+                    ? ValidateCachedOutputTarget(
+                        cached.Target,
+                        item,
+                        matchTags,
+                        excludedStorages,
+                        sourceWorldId,
+                        sourceStorage,
+                        coldStorage)
+                    : cached.Target;
                 return true;
             }
 
@@ -248,50 +435,667 @@ namespace StorageNetwork.Services
             return false;
         }
 
+        private static Storage ValidateCachedOutputTarget(
+            Storage cachedTarget,
+            GameObject item,
+            StorageItemUtility.StorageMatchTags matchTags,
+            HashSet<Storage> excludedStorages,
+            int sourceWorldId,
+            Storage sourceStorage,
+            bool coldStorage)
+        {
+            IEnumerable<Storage> storages;
+            if (sourceWorldId >= 0)
+            {
+                storages = StorageSceneCollector.CollectLightweightForWorld(sourceWorldId).Storages;
+            }
+            else
+            {
+                ShadowTargetWorkspace.Clear();
+                foreach (StorageInfo info in StorageSceneCollector.Collect().Storages)
+                {
+                    if (info?.Minion == null && info.Storage != null)
+                    {
+                        ShadowTargetWorkspace.Add(info.Storage);
+                    }
+                }
+
+                storages = ShadowTargetWorkspace;
+            }
+
+            Storage validated = coldStorage
+                ? ValidateSelectedFoodOutputTarget(
+                    cachedTarget,
+                    item,
+                    matchTags,
+                    excludedStorages,
+                    storages,
+                    sourceWorldId,
+                    sourceStorage)
+                : ValidateSelectedOutputTarget(
+                    cachedTarget,
+                    item,
+                    matchTags,
+                    excludedStorages,
+                    storages,
+                    sourceWorldId,
+                    sourceStorage,
+                    false);
+            ShadowTargetWorkspace.Clear();
+            return validated;
+        }
+
+        private static Storage ValidateSelectedOutputTarget(
+            Storage indexedTarget,
+            GameObject item,
+            HashSet<Tag> matchTags,
+            HashSet<Storage> excludedStorages,
+            IEnumerable<Storage> storages,
+            int sourceWorldId,
+            Storage sourceStorage,
+            bool coldStorage)
+        {
+            if (!StorageNetworkPerformanceMode.ShadowValidationEnabled)
+            {
+                return indexedTarget;
+            }
+
+            int version = GetTargetSelectionValidationVersion();
+            if (!ShouldValidateTargetSelection(sourceWorldId, version))
+            {
+                return indexedTarget;
+            }
+
+            Storage nativeTarget = FindNativeOutputTargetInStorages(
+                item,
+                matchTags,
+                excludedStorages,
+                storages,
+                sourceWorldId,
+                sourceStorage,
+                coldStorage);
+            return FinishTargetSelectionValidation(
+                indexedTarget,
+                nativeTarget,
+                sourceWorldId,
+                version,
+                coldStorage);
+        }
+
+        private static Storage ValidateSelectedOutputTarget(
+            Storage indexedTarget,
+            GameObject item,
+            StorageItemUtility.StorageMatchTags matchTags,
+            HashSet<Storage> excludedStorages,
+            IEnumerable<Storage> storages,
+            int sourceWorldId,
+            Storage sourceStorage,
+            bool coldStorage)
+        {
+            if (!StorageNetworkPerformanceMode.ShadowValidationEnabled)
+            {
+                return indexedTarget;
+            }
+
+            int version = GetTargetSelectionValidationVersion();
+            if (!ShouldValidateTargetSelection(sourceWorldId, version))
+            {
+                return indexedTarget;
+            }
+
+            Storage nativeTarget = FindNativeOutputTargetInStorages(
+                item,
+                matchTags,
+                excludedStorages,
+                storages,
+                sourceWorldId,
+                sourceStorage,
+                coldStorage);
+            return FinishTargetSelectionValidation(
+                indexedTarget,
+                nativeTarget,
+                sourceWorldId,
+                version,
+                coldStorage);
+        }
+
+        private static Storage ValidateSelectedFoodOutputTarget(
+            Storage indexedTarget,
+            GameObject item,
+            HashSet<Tag> matchTags,
+            HashSet<Storage> excludedStorages,
+            IEnumerable<Storage> storages,
+            int sourceWorldId,
+            Storage sourceStorage)
+        {
+            if (!StorageNetworkPerformanceMode.ShadowValidationEnabled)
+            {
+                return indexedTarget;
+            }
+
+            int version = GetTargetSelectionValidationVersion();
+            if (!ShouldValidateTargetSelection(sourceWorldId, version))
+            {
+                return indexedTarget;
+            }
+
+            Storage nativeTarget = FindNativeOutputTargetInStorages(
+                item,
+                matchTags,
+                excludedStorages,
+                storages,
+                sourceWorldId,
+                sourceStorage,
+                true);
+            if (nativeTarget == null)
+            {
+                nativeTarget = FindNativeOutputTargetInStorages(
+                    item,
+                    matchTags,
+                    excludedStorages,
+                    storages,
+                    sourceWorldId,
+                    sourceStorage,
+                    false);
+            }
+
+            return FinishTargetSelectionValidation(
+                indexedTarget,
+                nativeTarget,
+                sourceWorldId,
+                version,
+                true);
+        }
+
+        private static Storage ValidateSelectedFoodOutputTarget(
+            Storage indexedTarget,
+            GameObject item,
+            StorageItemUtility.StorageMatchTags matchTags,
+            HashSet<Storage> excludedStorages,
+            IEnumerable<Storage> storages,
+            int sourceWorldId,
+            Storage sourceStorage)
+        {
+            if (!StorageNetworkPerformanceMode.ShadowValidationEnabled)
+            {
+                return indexedTarget;
+            }
+
+            int version = GetTargetSelectionValidationVersion();
+            if (!ShouldValidateTargetSelection(sourceWorldId, version))
+            {
+                return indexedTarget;
+            }
+
+            Storage nativeTarget = FindNativeOutputTargetInStorages(
+                item,
+                matchTags,
+                excludedStorages,
+                storages,
+                sourceWorldId,
+                sourceStorage,
+                true);
+            if (nativeTarget == null)
+            {
+                nativeTarget = FindNativeOutputTargetInStorages(
+                    item,
+                    matchTags,
+                    excludedStorages,
+                    storages,
+                    sourceWorldId,
+                    sourceStorage,
+                    false);
+            }
+
+            return FinishTargetSelectionValidation(
+                indexedTarget,
+                nativeTarget,
+                sourceWorldId,
+                version,
+                true);
+        }
+
+        private static bool ShouldValidateTargetSelection(int worldId, int version)
+        {
+            return StorageNetworkShadowValidationService.ShouldUseFallback(
+                       StorageNetworkShadowArea.TargetSelection,
+                       worldId,
+                       version) ||
+                   StorageNetworkShadowValidationService.ShouldValidate(
+                       StorageNetworkShadowArea.TargetSelection,
+                       worldId,
+                       version);
+        }
+
+        private static int GetTargetSelectionValidationVersion()
+        {
+            int contentVersion = StorageNetworkContentIndexService.Version;
+            int membershipVersion = StorageSceneRegistry.MembershipVersion;
+            int capabilityVersion = StorageSceneRegistry.CapabilityVersion;
+            int connectivityVersion = StorageSceneRegistry.ConnectivityVersion;
+            int reservationVersion = StorageNetworkInputTargetReservationService.Version;
+            if (targetValidationContentVersion == contentVersion &&
+                targetValidationMembershipVersion == membershipVersion &&
+                targetValidationCapabilityVersion == capabilityVersion &&
+                targetValidationConnectivityVersion == connectivityVersion &&
+                targetValidationReservationVersion == reservationVersion)
+            {
+                return targetValidationVersion;
+            }
+
+            targetValidationContentVersion = contentVersion;
+            targetValidationMembershipVersion = membershipVersion;
+            targetValidationCapabilityVersion = capabilityVersion;
+            targetValidationConnectivityVersion = connectivityVersion;
+            targetValidationReservationVersion = reservationVersion;
+            unchecked
+            {
+                targetValidationVersion++;
+                if (targetValidationVersion == 0)
+                {
+                    targetValidationVersion = 1;
+                }
+            }
+
+            return targetValidationVersion;
+        }
+
+        private static Storage FinishTargetSelectionValidation(
+            Storage indexedTarget,
+            Storage nativeTarget,
+            int sourceWorldId,
+            int version,
+            bool coldStorage)
+        {
+            if (object.ReferenceEquals(indexedTarget, nativeTarget))
+            {
+                StorageNetworkShadowValidationService.ReportMatch(
+                    StorageNetworkShadowArea.TargetSelection,
+                    sourceWorldId,
+                    version);
+                return indexedTarget;
+            }
+
+            int indexedId = StorageItemUtility.GetStorageInstanceId(indexedTarget);
+            int nativeId = StorageItemUtility.GetStorageInstanceId(nativeTarget);
+            StorageNetworkShadowValidationService.ReportMismatch(
+                StorageNetworkShadowArea.TargetSelection,
+                sourceWorldId,
+                version,
+                unchecked(((indexedId * 397) ^ nativeId) * 397 ^
+                          (coldStorage ? 1 : 0)),
+                $"indexed={indexedId}, native={nativeId}, cold={coldStorage}");
+            InvalidateOutputTargetCache();
+            if (sourceWorldId < 0 || StorageSceneRegistry.IsCrossPlanetRelayOnline())
+            {
+                StorageNetworkContentIndexService.InvalidateAll();
+            }
+            else
+            {
+                StorageNetworkContentIndexService.InvalidateWorld(sourceWorldId);
+            }
+            return nativeTarget;
+        }
+
+        private static Storage FindNativeOutputTargetInStorages(
+            GameObject item,
+            HashSet<Tag> matchTags,
+            HashSet<Storage> excludedStorages,
+            IEnumerable<Storage> storages,
+            int sourceWorldId,
+            Storage sourceStorage,
+            bool coldStorage)
+        {
+            Storage best = null;
+            float bestAvailable = 0f;
+            bool bestFilterAccepting = false;
+            float bestRemaining = 0f;
+            foreach (Storage target in storages)
+            {
+                float remaining =
+                    StorageNetworkContentShadowReader.GetRemainingCapacity(target);
+                if (coldStorage && !StorageNetworkStorageRules.IsColdStorageServer(target) ||
+                    !IsUsableOutputTargetNative(
+                        target,
+                        item,
+                        matchTags,
+                        excludedStorages,
+                        sourceWorldId,
+                        remaining) ||
+                    StorageNetworkInputTargetReservationService.IsReservedForAutoInput(
+                        target,
+                        sourceStorage))
+                {
+                    continue;
+                }
+
+                float available = GetNativeAmountAvailableByAnyMatchTag(target, matchTags);
+                if (!IsAutoOutputMatchNative(target, matchTags, available))
+                {
+                    continue;
+                }
+
+                bool filterAccepting = IsFilterAccepting(target, matchTags);
+                if (best == null ||
+                    available > bestAvailable ||
+                    (Mathf.Approximately(available, bestAvailable) &&
+                     filterAccepting && !bestFilterAccepting) ||
+                    (Mathf.Approximately(available, bestAvailable) &&
+                     filterAccepting == bestFilterAccepting &&
+                     remaining > bestRemaining) ||
+                    (Mathf.Approximately(available, bestAvailable) &&
+                     filterAccepting == bestFilterAccepting &&
+                     Mathf.Approximately(remaining, bestRemaining) &&
+                     IsStableTargetBefore(target, best)))
+                {
+                    best = target;
+                    bestAvailable = available;
+                    bestFilterAccepting = filterAccepting;
+                    bestRemaining = remaining;
+                }
+            }
+
+            return best;
+        }
+
+        private static Storage FindNativeOutputTargetInStorages(
+            GameObject item,
+            StorageItemUtility.StorageMatchTags matchTags,
+            HashSet<Storage> excludedStorages,
+            IEnumerable<Storage> storages,
+            int sourceWorldId,
+            Storage sourceStorage,
+            bool coldStorage)
+        {
+            Storage best = null;
+            float bestAvailable = 0f;
+            bool bestFilterAccepting = false;
+            float bestRemaining = 0f;
+            foreach (Storage target in storages)
+            {
+                float remaining =
+                    StorageNetworkContentShadowReader.GetRemainingCapacity(target);
+                if (coldStorage && !StorageNetworkStorageRules.IsColdStorageServer(target) ||
+                    !IsUsableOutputTargetNative(
+                        target,
+                        item,
+                        matchTags,
+                        excludedStorages,
+                        sourceWorldId,
+                        remaining) ||
+                    StorageNetworkInputTargetReservationService.IsReservedForAutoInput(
+                        target,
+                        sourceStorage))
+                {
+                    continue;
+                }
+
+                float available = GetNativeAmountAvailableByAnyMatchTag(target, matchTags);
+                if (!IsAutoOutputMatchNative(target, matchTags, available))
+                {
+                    continue;
+                }
+
+                bool filterAccepting = IsFilterAccepting(target, matchTags);
+                if (best == null ||
+                    available > bestAvailable ||
+                    (Mathf.Approximately(available, bestAvailable) &&
+                     filterAccepting && !bestFilterAccepting) ||
+                    (Mathf.Approximately(available, bestAvailable) &&
+                     filterAccepting == bestFilterAccepting &&
+                     remaining > bestRemaining) ||
+                    (Mathf.Approximately(available, bestAvailable) &&
+                     filterAccepting == bestFilterAccepting &&
+                     Mathf.Approximately(remaining, bestRemaining) &&
+                     IsStableTargetBefore(target, best)))
+                {
+                    best = target;
+                    bestAvailable = available;
+                    bestFilterAccepting = filterAccepting;
+                    bestRemaining = remaining;
+                }
+            }
+
+            return best;
+        }
+
         private static void CacheOutputTarget(
             StorageItemUtility.StorageMatchTags matchTags,
+            HashSet<Storage> excludedStorages,
             int sourceWorldId,
+            Storage sourceStorage,
             bool coldStorage,
             Storage target)
         {
-            if (target == null || matchTags.TransferTag == Tag.Invalid)
+            if (target == null ||
+                matchTags.TransferTag == Tag.Invalid ||
+                !CanCacheOutputTarget(excludedStorages, sourceStorage))
             {
                 return;
             }
 
             RefreshOutputTargetCacheVersion();
-            OutputTargetCache[new OutputTargetCacheKey(sourceWorldId, matchTags.TransferTag, coldStorage)] =
+            PruneExpiredOutputTargets();
+            OutputTargetCache[new OutputTargetCacheKey(
+                    sourceWorldId,
+                    matchTags,
+                    GetCacheSourceId(sourceStorage),
+                    coldStorage,
+                    IsSourceExcluded(excludedStorages, sourceStorage))] =
                 new CachedOutputTarget(target, Time.unscaledTime);
         }
 
         private static void RefreshOutputTargetCacheVersion()
         {
-            int registryVersion = StorageSceneRegistry.Version;
-            if (outputTargetCacheRegistryVersion == registryVersion)
+            int registryVersion = StorageSceneRegistry.CapabilityVersion;
+            int membershipVersion = StorageSceneRegistry.MembershipVersion;
+            int connectivityVersion = StorageSceneRegistry.ConnectivityVersion;
+            int reservationVersion = StorageNetworkInputTargetReservationService.Version;
+            if (outputTargetCacheRegistryVersion == registryVersion &&
+                outputTargetCacheMembershipVersion == membershipVersion &&
+                outputTargetCacheConnectivityVersion == connectivityVersion &&
+                outputTargetCacheReservationVersion == reservationVersion)
             {
                 return;
             }
 
             OutputTargetCache.Clear();
             outputTargetCacheRegistryVersion = registryVersion;
+            outputTargetCacheMembershipVersion = membershipVersion;
+            outputTargetCacheConnectivityVersion = connectivityVersion;
+            outputTargetCacheReservationVersion = reservationVersion;
+            outputTargetCacheLastPruneTime = Time.unscaledTime;
+        }
+
+        private static void PruneExpiredOutputTargets()
+        {
+            float now = Time.unscaledTime;
+            if (OutputTargetCache.Count < MaxOutputTargetCacheEntries &&
+                now - outputTargetCacheLastPruneTime < OutputTargetCacheSeconds)
+            {
+                return;
+            }
+
+            OutputTargetCacheRemovalWorkspace.Clear();
+            foreach (KeyValuePair<OutputTargetCacheKey, CachedOutputTarget> pair in OutputTargetCache)
+            {
+                if (now - pair.Value.CreatedAt > OutputTargetCacheSeconds)
+                {
+                    OutputTargetCacheRemovalWorkspace.Add(pair.Key);
+                }
+            }
+
+            foreach (OutputTargetCacheKey key in OutputTargetCacheRemovalWorkspace)
+            {
+                OutputTargetCache.Remove(key);
+            }
+
+            OutputTargetCacheRemovalWorkspace.Clear();
+            outputTargetCacheLastPruneTime = now;
+            if (OutputTargetCache.Count > MaxOutputTargetCacheEntries)
+            {
+                // An unusually diverse burst is cheaper and safer to rebuild than to
+                // retain an unbounded per-source/per-tag decision table.
+                OutputTargetCache.Clear();
+            }
+        }
+
+        private static int GetCacheSourceId(Storage sourceStorage)
+        {
+            // Without explicit input reservations, a source that cannot itself be a
+            // target does not change the candidate domain. This lets network ports in
+            // the same sim frame reuse one ordered decision per tag.
+            return sourceStorage != null &&
+                   (StorageNetworkInputTargetReservationService.HasInputReservations ||
+                    StorageNetworkStorageRules.IsNetworkStorageTarget(sourceStorage))
+                ? sourceStorage.GetInstanceID()
+                : 0;
+        }
+
+        private static bool CanCacheOutputTarget(
+            HashSet<Storage> excludedStorages,
+            Storage sourceStorage)
+        {
+            if (excludedStorages == null || excludedStorages.Count == 0)
+            {
+                return true;
+            }
+
+            // An arbitrary exclusion set changes the ordering domain. Cache only the
+            // common case where the sole exclusion is represented by the source key.
+            return sourceStorage != null &&
+                   excludedStorages.Count == 1 &&
+                   excludedStorages.Contains(sourceStorage);
+        }
+
+        private static bool CanCacheMatchTagSet(
+            HashSet<Tag> tags,
+            StorageItemUtility.StorageMatchTags matchTags)
+        {
+            if (tags == null)
+            {
+                return false;
+            }
+
+            int expectedCount = 0;
+            if (matchTags.PrefabIdTag != Tag.Invalid)
+            {
+                expectedCount++;
+            }
+
+            if (matchTags.PrefabTag != Tag.Invalid &&
+                matchTags.PrefabTag != matchTags.PrefabIdTag)
+            {
+                expectedCount++;
+            }
+
+            if (matchTags.ElementTag != Tag.Invalid &&
+                matchTags.ElementTag != matchTags.PrefabIdTag &&
+                matchTags.ElementTag != matchTags.PrefabTag)
+            {
+                expectedCount++;
+            }
+
+            if (matchTags.TransferTag != Tag.Invalid &&
+                matchTags.TransferTag != matchTags.PrefabIdTag &&
+                matchTags.TransferTag != matchTags.PrefabTag &&
+                matchTags.TransferTag != matchTags.ElementTag)
+            {
+                expectedCount++;
+            }
+
+            if (tags.Count != expectedCount)
+            {
+                return false;
+            }
+
+            foreach (Tag tag in tags)
+            {
+                if (!matchTags.Contains(tag))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private static bool IsSourceExcluded(
+            HashSet<Storage> excludedStorages,
+            Storage sourceStorage)
+        {
+            return sourceStorage != null &&
+                   excludedStorages != null &&
+                   excludedStorages.Contains(sourceStorage);
         }
 
         private readonly struct OutputTargetCacheKey : System.IEquatable<OutputTargetCacheKey>
         {
             private readonly int worldId;
+            private readonly Tag prefabIdTag;
+            private readonly Tag prefabTag;
+            private readonly Tag elementTag;
             private readonly Tag transferTag;
+            private readonly int sourceStorageId;
             private readonly bool coldStorage;
+            private readonly bool sourceIsExcluded;
 
-            public OutputTargetCacheKey(int worldId, Tag transferTag, bool coldStorage)
+            public OutputTargetCacheKey(
+                int worldId,
+                StorageItemUtility.StorageMatchTags matchTags,
+                int sourceStorageId,
+                bool coldStorage,
+                bool sourceIsExcluded)
             {
                 this.worldId = worldId;
-                this.transferTag = transferTag;
+                prefabIdTag = matchTags.PrefabIdTag;
+                prefabTag = matchTags.PrefabTag;
+                elementTag = matchTags.ElementTag;
+                transferTag = matchTags.TransferTag;
+                this.sourceStorageId = sourceStorageId;
                 this.coldStorage = coldStorage;
+                this.sourceIsExcluded = sourceIsExcluded;
+            }
+
+            public int SourceStorageId => sourceStorageId;
+
+            public bool SourceIsExcluded => sourceIsExcluded;
+
+            public bool Matches(StorageItemUtility.StorageMatchTags matchTags)
+            {
+                return Contains(matchTags.PrefabIdTag) ||
+                       Contains(matchTags.PrefabTag) ||
+                       Contains(matchTags.ElementTag) ||
+                       Contains(matchTags.TransferTag);
+            }
+
+            public bool MatchesExactly(StorageItemUtility.StorageMatchTags matchTags)
+            {
+                return prefabIdTag == matchTags.PrefabIdTag &&
+                       prefabTag == matchTags.PrefabTag &&
+                       elementTag == matchTags.ElementTag &&
+                       transferTag == matchTags.TransferTag;
+            }
+
+            private bool Contains(Tag tag)
+            {
+                return tag != Tag.Invalid &&
+                       (tag == prefabIdTag ||
+                        tag == prefabTag ||
+                        tag == elementTag ||
+                        tag == transferTag);
             }
 
             public bool Equals(OutputTargetCacheKey other)
             {
-                return worldId == other.worldId && transferTag == other.transferTag && coldStorage == other.coldStorage;
+                return worldId == other.worldId &&
+                       prefabIdTag == other.prefabIdTag &&
+                       prefabTag == other.prefabTag &&
+                       elementTag == other.elementTag &&
+                       transferTag == other.transferTag &&
+                       sourceStorageId == other.sourceStorageId &&
+                       coldStorage == other.coldStorage &&
+                       sourceIsExcluded == other.sourceIsExcluded;
             }
 
             public override bool Equals(object obj)
@@ -304,8 +1108,13 @@ namespace StorageNetwork.Services
                 unchecked
                 {
                     int hashCode = worldId;
+                    hashCode = (hashCode * 397) ^ prefabIdTag.GetHashCode();
+                    hashCode = (hashCode * 397) ^ prefabTag.GetHashCode();
+                    hashCode = (hashCode * 397) ^ elementTag.GetHashCode();
                     hashCode = (hashCode * 397) ^ transferTag.GetHashCode();
-                    return (hashCode * 397) ^ coldStorage.GetHashCode();
+                    hashCode = (hashCode * 397) ^ sourceStorageId;
+                    hashCode = (hashCode * 397) ^ coldStorage.GetHashCode();
+                    return (hashCode * 397) ^ sourceIsExcluded.GetHashCode();
                 }
             }
         }
@@ -337,7 +1146,8 @@ namespace StorageNetwork.Services
                 return FindOutputTarget(item, matchTags, excludedStorages, specificTarget, snapshot, sourceWorldId, sourceStorage);
             }
 
-            if (TryGetCachedOutputTarget(item, matchTags, excludedStorages, sourceWorldId, sourceStorage, true, out Storage cachedTarget))
+            if (snapshot == null &&
+                TryGetCachedOutputTarget(item, matchTags, excludedStorages, sourceWorldId, sourceStorage, true, out Storage cachedTarget))
             {
                 return cachedTarget;
             }
@@ -345,20 +1155,41 @@ namespace StorageNetwork.Services
             Storage coldTarget;
             if (snapshot == null && sourceWorldId >= 0)
             {
+                IReadOnlyList<Storage> candidateStorages =
+                    StorageSceneCollector.CollectLightweightForWorld(sourceWorldId).Storages;
                 coldTarget = FindColdStorageOutputTargetInStorages(
                     item,
                     matchTags,
                     excludedStorages,
-                    StorageSceneCollector.CollectLightweightForWorld(sourceWorldId).Storages,
+                    candidateStorages,
                     sourceWorldId,
                     sourceStorage);
-                if (coldTarget != null)
+                Storage selectedTarget = coldTarget ?? FindOutputTargetInStorages(
+                    item,
+                    matchTags,
+                    excludedStorages,
+                    candidateStorages,
+                    sourceWorldId,
+                    sourceStorage);
+                selectedTarget = ValidateSelectedFoodOutputTarget(
+                    selectedTarget,
+                    item,
+                    matchTags,
+                    excludedStorages,
+                    candidateStorages,
+                    sourceWorldId,
+                    sourceStorage);
+                if (selectedTarget != null)
                 {
-                    CacheOutputTarget(matchTags, sourceWorldId, true, coldTarget);
-                    return coldTarget;
+                    CacheOutputTarget(
+                        matchTags,
+                        excludedStorages,
+                        sourceWorldId,
+                        sourceStorage,
+                        true,
+                        selectedTarget);
                 }
-
-                return FindOutputTarget(item, matchTags, excludedStorages, null, null, sourceWorldId, sourceStorage);
+                return selectedTarget;
             }
 
             snapshot = snapshot ?? StorageSceneCollector.Collect();
@@ -372,13 +1203,21 @@ namespace StorageNetwork.Services
             }
 
             coldTarget = FindColdStorageOutputTargetInStorages(item, matchTags, excludedStorages, storages, sourceWorldId, sourceStorage);
-            if (coldTarget != null)
-            {
-                CacheOutputTarget(matchTags, sourceWorldId, true, coldTarget);
-                return coldTarget;
-            }
-
-            return FindOutputTargetInStorages(item, matchTags, excludedStorages, storages, sourceWorldId, sourceStorage);
+            Storage target = coldTarget ?? FindOutputTargetInStorages(
+                item,
+                matchTags,
+                excludedStorages,
+                storages,
+                sourceWorldId,
+                sourceStorage);
+            return ValidateSelectedFoodOutputTarget(
+                target,
+                item,
+                matchTags,
+                excludedStorages,
+                storages,
+                sourceWorldId,
+                sourceStorage);
         }
 
         private static Storage FindOutputTargetInStorages(
@@ -389,6 +1228,9 @@ namespace StorageNetwork.Services
             int sourceWorldId,
             Storage sourceStorage)
         {
+            using StorageNetworkFrameProfileTool.WorkScope targetSelectionScope =
+                StorageNetworkFrameProfileTool.BeginWork(
+                    StorageNetworkPerformanceArea.TargetSelection);
             Storage best = null;
             float bestAvailable = 0f;
             bool bestFilterAccepting = false;
@@ -404,11 +1246,15 @@ namespace StorageNetwork.Services
 
                 float available = GetAmountAvailableByAnyMatchTag(target, matchTags);
                 bool filterAccepting = IsFilterAccepting(target, matchTags);
-                float remaining = target.RemainingCapacity();
+                float remaining = StorageNetworkContentIndexService.GetRemainingCapacity(target);
                 if (best == null ||
                     available > bestAvailable ||
                     (Mathf.Approximately(available, bestAvailable) && filterAccepting && !bestFilterAccepting) ||
-                    (Mathf.Approximately(available, bestAvailable) && filterAccepting == bestFilterAccepting && remaining > bestRemaining))
+                    (Mathf.Approximately(available, bestAvailable) && filterAccepting == bestFilterAccepting && remaining > bestRemaining) ||
+                    (Mathf.Approximately(available, bestAvailable) &&
+                     filterAccepting == bestFilterAccepting &&
+                     Mathf.Approximately(remaining, bestRemaining) &&
+                     IsStableTargetBefore(target, best)))
                 {
                     best = target;
                     bestAvailable = available;
@@ -428,6 +1274,9 @@ namespace StorageNetwork.Services
             int sourceWorldId,
             Storage sourceStorage)
         {
+            using StorageNetworkFrameProfileTool.WorkScope targetSelectionScope =
+                StorageNetworkFrameProfileTool.BeginWork(
+                    StorageNetworkPerformanceArea.TargetSelection);
             Storage best = null;
             float bestAvailable = 0f;
             bool bestFilterAccepting = false;
@@ -443,11 +1292,15 @@ namespace StorageNetwork.Services
 
                 float available = GetAmountAvailableByAnyMatchTag(target, matchTags);
                 bool filterAccepting = IsFilterAccepting(target, matchTags);
-                float remaining = target.RemainingCapacity();
+                float remaining = StorageNetworkContentIndexService.GetRemainingCapacity(target);
                 if (best == null ||
                     available > bestAvailable ||
                     (Mathf.Approximately(available, bestAvailable) && filterAccepting && !bestFilterAccepting) ||
-                    (Mathf.Approximately(available, bestAvailable) && filterAccepting == bestFilterAccepting && remaining > bestRemaining))
+                    (Mathf.Approximately(available, bestAvailable) && filterAccepting == bestFilterAccepting && remaining > bestRemaining) ||
+                    (Mathf.Approximately(available, bestAvailable) &&
+                     filterAccepting == bestFilterAccepting &&
+                     Mathf.Approximately(remaining, bestRemaining) &&
+                     IsStableTargetBefore(target, best)))
                 {
                     best = target;
                     bestAvailable = available;
@@ -467,6 +1320,9 @@ namespace StorageNetwork.Services
             int sourceWorldId,
             Storage sourceStorage)
         {
+            using StorageNetworkFrameProfileTool.WorkScope targetSelectionScope =
+                StorageNetworkFrameProfileTool.BeginWork(
+                    StorageNetworkPerformanceArea.TargetSelection);
             Storage best = null;
             float bestAvailable = 0f;
             bool bestFilterAccepting = false;
@@ -483,11 +1339,15 @@ namespace StorageNetwork.Services
 
                 float available = GetAmountAvailableByAnyMatchTag(target, matchTags);
                 bool filterAccepting = IsFilterAccepting(target, matchTags);
-                float remaining = target.RemainingCapacity();
+                float remaining = StorageNetworkContentIndexService.GetRemainingCapacity(target);
                 if (best == null ||
                     available > bestAvailable ||
                     (Mathf.Approximately(available, bestAvailable) && filterAccepting && !bestFilterAccepting) ||
-                    (Mathf.Approximately(available, bestAvailable) && filterAccepting == bestFilterAccepting && remaining > bestRemaining))
+                    (Mathf.Approximately(available, bestAvailable) && filterAccepting == bestFilterAccepting && remaining > bestRemaining) ||
+                    (Mathf.Approximately(available, bestAvailable) &&
+                     filterAccepting == bestFilterAccepting &&
+                     Mathf.Approximately(remaining, bestRemaining) &&
+                     IsStableTargetBefore(target, best)))
                 {
                     best = target;
                     bestAvailable = available;
@@ -507,6 +1367,9 @@ namespace StorageNetwork.Services
             int sourceWorldId,
             Storage sourceStorage)
         {
+            using StorageNetworkFrameProfileTool.WorkScope targetSelectionScope =
+                StorageNetworkFrameProfileTool.BeginWork(
+                    StorageNetworkPerformanceArea.TargetSelection);
             Storage best = null;
             float bestAvailable = 0f;
             bool bestFilterAccepting = false;
@@ -523,11 +1386,15 @@ namespace StorageNetwork.Services
 
                 float available = GetAmountAvailableByAnyMatchTag(target, matchTags);
                 bool filterAccepting = IsFilterAccepting(target, matchTags);
-                float remaining = target.RemainingCapacity();
+                float remaining = StorageNetworkContentIndexService.GetRemainingCapacity(target);
                 if (best == null ||
                     available > bestAvailable ||
                     (Mathf.Approximately(available, bestAvailable) && filterAccepting && !bestFilterAccepting) ||
-                    (Mathf.Approximately(available, bestAvailable) && filterAccepting == bestFilterAccepting && remaining > bestRemaining))
+                    (Mathf.Approximately(available, bestAvailable) && filterAccepting == bestFilterAccepting && remaining > bestRemaining) ||
+                    (Mathf.Approximately(available, bestAvailable) &&
+                     filterAccepting == bestFilterAccepting &&
+                     Mathf.Approximately(remaining, bestRemaining) &&
+                     IsStableTargetBefore(target, best)))
                 {
                     best = target;
                     bestAvailable = available;
@@ -583,7 +1450,7 @@ namespace StorageNetwork.Services
                     }
                 }
 
-                lightweightTargets.Sort((left, right) => CompareElementTargets(right, left, tag));
+                SortElementTargets(lightweightTargets, tag);
                 return lightweightTargets;
             }
 
@@ -598,7 +1465,7 @@ namespace StorageNetwork.Services
                 }
             }
 
-            targets.Sort((left, right) => CompareElementTargets(right, left, tag));
+            SortElementTargets(targets, tag);
             return targets;
         }
 
@@ -765,26 +1632,65 @@ namespace StorageNetwork.Services
             int sourceWorldId = -1)
         {
             ElementOutputTargetQuery result = new ElementOutputTargetQuery();
+            FillElementOutputTargetsWithCapacityState(
+                elementHash,
+                excludedStorages,
+                specificTarget,
+                snapshot,
+                sourceWorldId,
+                result);
+            return result;
+        }
+
+        internal static void FillElementOutputTargetsWithCapacityState(
+            SimHashes elementHash,
+            HashSet<Storage> excludedStorages,
+            Storage specificTarget,
+            StorageSceneSnapshot snapshot,
+            int sourceWorldId,
+            ElementOutputTargetQuery result)
+        {
+            result.Reset();
             Element element = ElementLoader.FindElementByHash(elementHash);
             if (element == null)
             {
-                return result;
+                return;
             }
 
             Tag tag = elementHash.CreateTag();
-            HashSet<Storage> excluded = excludedStorages ?? new HashSet<Storage>();
+            HashSet<Storage> excluded = excludedStorages ?? EmptyStorageExclusions;
             if (specificTarget != null)
             {
-                if (IsElementOutputTargetCandidate(specificTarget, element, tag, excluded, sourceWorldId, false))
+                if (IsElementOutputTargetStructuralCandidate(
+                        specificTarget,
+                        element,
+                        tag,
+                        excluded,
+                        sourceWorldId))
                 {
-                    result.HasCandidateIgnoringCapacity = true;
-                    if (IsUsableElementOutputTarget(specificTarget, element, tag, excluded, sourceWorldId))
+                    result.Candidates.Add(specificTarget);
+                    if (IsElementOutputTargetCandidate(
+                            specificTarget,
+                            element,
+                            tag,
+                            excluded,
+                            sourceWorldId,
+                            false))
                     {
-                        result.Targets.Add(specificTarget);
+                        result.HasCandidateIgnoringCapacity = true;
+                        if (IsUsableElementOutputTarget(
+                                specificTarget,
+                                element,
+                                tag,
+                                excluded,
+                                sourceWorldId))
+                        {
+                            result.Targets.Add(specificTarget);
+                        }
                     }
                 }
 
-                return result;
+                return;
             }
 
             if (snapshot == null && sourceWorldId >= 0)
@@ -806,8 +1712,48 @@ namespace StorageNetwork.Services
                 }
             }
 
-            result.Targets.Sort((left, right) => CompareElementTargets(right, left, tag));
-            return result;
+            SortElementTargets(result.Targets, tag);
+            SortElementTargets(result.Candidates, tag);
+        }
+
+        internal static void RefreshElementOutputTargetCapacities(
+            SimHashes elementHash,
+            ElementOutputTargetQuery result,
+            HashSet<Storage> excludedStorages,
+            int sourceWorldId)
+        {
+            if (result == null)
+            {
+                return;
+            }
+
+            Element element = ElementLoader.FindElementByHash(elementHash);
+            Tag tag = elementHash.CreateTag();
+            HashSet<Storage> excluded = excludedStorages ?? EmptyStorageExclusions;
+            result.Targets.Clear();
+            result.HasCandidateIgnoringCapacity = false;
+            foreach (Storage target in result.Candidates)
+            {
+                if (!IsElementOutputTargetCandidate(
+                        target,
+                        element,
+                        tag,
+                        excluded,
+                        sourceWorldId,
+                        false))
+                {
+                    continue;
+                }
+
+                result.HasCandidateIgnoringCapacity = true;
+                if (StorageNetworkContentIndexService.GetRemainingCapacity(target) >
+                    PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+                {
+                    result.Targets.Add(target);
+                }
+            }
+
+            SortElementTargets(result.Targets, tag);
         }
 
         private static void AddElementTargetQueryResult(
@@ -818,15 +1764,58 @@ namespace StorageNetwork.Services
             int sourceWorldId,
             ElementOutputTargetQuery result)
         {
-            if (!IsElementOutputTargetCandidate(target, element, tag, excluded, sourceWorldId, false))
+            if (!IsElementOutputTargetStructuralCandidate(
+                    target,
+                    element,
+                    tag,
+                    excluded,
+                    sourceWorldId))
             {
                 return;
             }
 
-            result.HasCandidateIgnoringCapacity = true;
-            if (target.RemainingCapacity() > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+            result.Candidates.Add(target);
+            if (IsElementOutputTargetCandidate(
+                    target,
+                    element,
+                    tag,
+                    excluded,
+                    sourceWorldId,
+                    false))
             {
-                result.Targets.Add(target);
+                result.HasCandidateIgnoringCapacity = true;
+                if (StorageNetworkContentIndexService.GetRemainingCapacity(target) >
+                    PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+                {
+                    result.Targets.Add(target);
+                }
+            }
+        }
+
+        private static bool IsStableTargetBefore(Storage candidate, Storage current)
+        {
+            return StorageItemUtility.GetStorageInstanceId(candidate) <
+                   StorageItemUtility.GetStorageInstanceId(current);
+        }
+
+        private static void SortElementTargets(List<Storage> targets, Tag tag)
+        {
+            if (targets == null || targets.Count <= 1)
+            {
+                return;
+            }
+
+            ElementTargetsComparer.Tag = tag;
+            targets.Sort(ElementTargetsComparer);
+        }
+
+        private sealed class ElementTargetComparer : IComparer<Storage>
+        {
+            public Tag Tag { get; set; }
+
+            public int Compare(Storage left, Storage right)
+            {
+                return CompareElementTargets(left, right, Tag);
             }
         }
 
@@ -835,6 +1824,14 @@ namespace StorageNetwork.Services
     internal sealed class ElementOutputTargetQuery
     {
         public readonly List<Storage> Targets = new List<Storage>();
+        public readonly List<Storage> Candidates = new List<Storage>();
         public bool HasCandidateIgnoringCapacity;
+
+        public void Reset()
+        {
+            Targets.Clear();
+            Candidates.Clear();
+            HasCandidateIgnoringCapacity = false;
+        }
     }
 }

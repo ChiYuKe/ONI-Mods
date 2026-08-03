@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using StorageNetwork.Core;
 using UnityEngine;
 
 namespace StorageNetwork.Services
@@ -210,6 +211,13 @@ namespace StorageNetwork.Services
         /// </summary>
         public static int GetStorageInstanceId(Storage storage)
         {
+            if (StorageNetworkRuntimeCatalog.TryGet(
+                    storage,
+                    out StorageRuntimeDescriptor descriptor))
+            {
+                return descriptor.PrefabInstanceId;
+            }
+
             KPrefabID prefabId = storage != null ? storage.GetComponent<KPrefabID>() : null;
             return prefabId != null ? prefabId.InstanceID : KPrefabID.InvalidInstanceID;
         }

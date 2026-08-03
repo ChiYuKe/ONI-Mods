@@ -18,7 +18,12 @@ namespace StorageNetwork.Services
                 return;
             }
 
-            TreeFilterable filterable = storage.GetComponent<TreeFilterable>();
+            TreeFilterable filterable =
+                StorageNetworkRuntimeCatalog.TryGet(
+                    storage,
+                    out StorageRuntimeDescriptor descriptor)
+                    ? descriptor.TreeFilterable
+                    : storage.GetComponent<TreeFilterable>();
             if (filterable != null)
             {
                 filterable.dropIncorrectOnFilterChange = false;

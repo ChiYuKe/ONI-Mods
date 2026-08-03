@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using StorageNetwork.Core;
 using StorageNetwork.ProductionOrders;
 using TMPro;
 using UnityEngine;
@@ -61,7 +62,7 @@ namespace StorageNetwork.UI
             layout.childForceExpandHeight = false;
         }
 
-        private void AddMetricTile(Transform parent, string label, string value, Color valueColor, float width)
+        private TextMeshProUGUI AddMetricTile(Transform parent, string label, string value, Color valueColor, float width)
         {
             GameObject tile = CreatePlainImage("MetricTile", parent, new Color(0.78f, 0.78f, 0.72f, 1f));
             LayoutElement layout = tile.AddComponent<LayoutElement>();
@@ -82,6 +83,7 @@ namespace StorageNetwork.UI
             amount.textWrappingMode = TextWrappingModes.NoWrap;
             amount.overflowMode = TextOverflowModes.Ellipsis;
             amount.gameObject.AddComponent<LayoutElement>().preferredHeight = 21f;
+            return amount;
         }
 
         private void AddSmallTitle(Transform parent, string text)
@@ -94,7 +96,7 @@ namespace StorageNetwork.UI
             title.gameObject.AddComponent<LayoutElement>().preferredHeight = 19f;
         }
 
-        private void AddPlanLine(Transform parent, string text, int size, FontStyles style, Color color, float height)
+        private TextMeshProUGUI AddPlanLine(Transform parent, string text, int size, FontStyles style, Color color, float height)
         {
             TextMeshProUGUI line = CreateOrderText("PlanLine", parent, text, size, TextAlignmentOptions.MidlineLeft);
             line.color = color;
@@ -103,9 +105,10 @@ namespace StorageNetwork.UI
             line.textWrappingMode = TextWrappingModes.Normal;
             line.overflowMode = TextOverflowModes.Ellipsis;
             line.gameObject.AddComponent<LayoutElement>().preferredHeight = Mathf.Max(height, size + 7f);
+            return line;
         }
 
-        private void AddWrappedPlanLine(Transform parent, string text, int size, FontStyles style, Color color, float lineHeight, int maxLines, int charsPerLine)
+        private TextMeshProUGUI AddWrappedPlanLine(Transform parent, string text, int size, FontStyles style, Color color, float lineHeight, int maxLines, int charsPerLine)
         {
             TextMeshProUGUI line = CreateOrderText("PlanLine", parent, text, size, TextAlignmentOptions.TopLeft);
             line.color = color;
@@ -116,6 +119,7 @@ namespace StorageNetwork.UI
             line.maxVisibleLines = maxLines;
             float height = Mathf.Max(lineHeight, size + 7f) * EstimateTextLineCount(text, maxLines, charsPerLine);
             line.gameObject.AddComponent<LayoutElement>().preferredHeight = height;
+            return line;
         }
 
         private void AddInfoText(Transform parent, string text, float height)

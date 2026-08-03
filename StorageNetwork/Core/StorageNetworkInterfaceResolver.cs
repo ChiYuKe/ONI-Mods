@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
 using StorageNetwork.API;
 using StorageNetwork.Components;
 using UnityEngine;
@@ -15,8 +14,17 @@ namespace StorageNetwork.Core
         private static readonly Dictionary<int, StorageNetworkStorageFlags> TagFlagCache =
             new Dictionary<int, StorageNetworkStorageFlags>();
         private static readonly List<int> DeadComponentCacheKeys = new List<int>();
+        private static readonly System.Diagnostics.Stopwatch ComponentCachePruneStopwatch =
+            new System.Diagnostics.Stopwatch();
         private static int lastComponentCachePruneFrame = -1;
         private static float lastComponentCachePruneAt = -1f;
+        private static int dynamicFlagsVersion;
+        private static int componentCacheMutationVersion;
+        private static int componentCacheAuditMutationVersion = -1;
+        private static bool componentCacheAuditInProgress;
+        private static Dictionary<int, ComponentInterfaceCache>.Enumerator componentCacheAuditEnumerator;
+        private const float ComponentCachePruneSeconds = 30f;
+        private const double ComponentCachePruneBudgetMilliseconds = 0.25d;
 
         public static void ResetRuntimeState()
         {
@@ -24,8 +32,14 @@ namespace StorageNetwork.Core
             ComponentCaches.Clear();
             TagFlagCache.Clear();
             DeadComponentCacheKeys.Clear();
+            ComponentCachePruneStopwatch.Reset();
             lastComponentCachePruneFrame = -1;
             lastComponentCachePruneAt = -1f;
+            dynamicFlagsVersion = 0;
+            componentCacheMutationVersion = 0;
+            componentCacheAuditMutationVersion = -1;
+            componentCacheAuditInProgress = false;
+            componentCacheAuditEnumerator = default;
         }
 
         public static StorageNetworkStorageFlags GetStorageFlags(Storage storage)
@@ -35,13 +49,8 @@ namespace StorageNetwork.Core
                 return StorageNetworkStorageFlags.None;
             }
 
-            StorageNetworkStorageFlags flags = GetTagFlags(storage);
-            foreach (IStorageNetworkStorageFlagsProvider provider in GetComponents<IStorageNetworkStorageFlagsProvider>(storage.gameObject))
-            {
-                flags |= provider.GetStorageNetworkStorageFlags(storage);
-            }
-
-            return flags;
+            StorageNetworkStorageFlags tagFlags = GetTagFlags(storage);
+            return GetOrCreateComponentCache(storage.gameObject).GetStorageFlags(storage, tagFlags);
         }
 
         public static bool HasStorageFlag(Storage storage, StorageNetworkStorageFlags flag)
@@ -51,18 +60,37 @@ namespace StorageNetwork.Core
 
         public static IStorageNetworkEnrollable GetEnrollable(GameObject gameObject)
         {
-            return GetComponents<IStorageNetworkEnrollable>(gameObject)
-                .FirstOrDefault(enrollable => enrollable.CanShowStorageNetworkEnrollmentButton());
+            foreach (IStorageNetworkEnrollable enrollable in GetComponents<IStorageNetworkEnrollable>(gameObject))
+            {
+                if (enrollable.CanShowStorageNetworkEnrollmentButton())
+                {
+                    return enrollable;
+                }
+            }
+
+            return null;
         }
 
         public static bool HasExternalStorageNetworkInterface(GameObject gameObject)
         {
-            return GetComponents<IStorageNetworkStorageFlagsProvider>(gameObject).Any() ||
-                   GetComponents<IStorageNetworkCategoryProvider>(gameObject).Any() ||
-                   GetComponents<IStorageNetworkDisplayProvider>(gameObject).Any() ||
-                   GetComponents<IStorageNetworkStorageRowButtonProvider>(gameObject).Any() ||
-                   GetComponents<IStorageNetworkSettingsButtonProvider>(gameObject).Any() ||
-                   GetComponents<IStorageNetworkEnrollable>(gameObject).Any(enrollable => !(enrollable is StorageNetworkEnrollment));
+            if (GetComponents<IStorageNetworkStorageFlagsProvider>(gameObject).Length > 0 ||
+                GetComponents<IStorageNetworkCategoryProvider>(gameObject).Length > 0 ||
+                GetComponents<IStorageNetworkDisplayProvider>(gameObject).Length > 0 ||
+                GetComponents<IStorageNetworkStorageRowButtonProvider>(gameObject).Length > 0 ||
+                GetComponents<IStorageNetworkSettingsButtonProvider>(gameObject).Length > 0)
+            {
+                return true;
+            }
+
+            foreach (IStorageNetworkEnrollable enrollable in GetComponents<IStorageNetworkEnrollable>(gameObject))
+            {
+                if (!(enrollable is StorageNetworkEnrollment))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         public static StorageNetworkSettingsButtonState GetSettingsButtonState(Storage storage)
@@ -82,8 +110,33 @@ namespace StorageNetwork.Core
 
         public static IStorageNetworkSettingsPanelProvider GetSettingsPanelProvider(Storage storage)
         {
-            return GetComponents<IStorageNetworkSettingsPanelProvider>(storage?.gameObject)
-                .FirstOrDefault();
+            IStorageNetworkSettingsPanelProvider[] providers =
+                GetComponents<IStorageNetworkSettingsPanelProvider>(storage?.gameObject);
+            return providers.Length > 0 ? providers[0] : null;
+        }
+
+        internal static void Invalidate(GameObject gameObject)
+        {
+            if (gameObject == null)
+            {
+                return;
+            }
+
+            int instanceId = gameObject.GetInstanceID();
+            if (ComponentCaches.Remove(instanceId))
+            {
+                componentCacheMutationVersion++;
+            }
+            KPrefabID prefabId = gameObject.GetComponent<KPrefabID>();
+            if (prefabId != null)
+            {
+                TagFlagCache.Remove(prefabId.GetInstanceID());
+            }
+        }
+
+        internal static void InvalidateDynamicStorageFlags()
+        {
+            dynamicFlagsVersion++;
         }
 
         public static StorageNetworkCategoryDescriptor GetCategory(Storage storage)
@@ -212,7 +265,7 @@ namespace StorageNetwork.Core
         {
             if (gameObject == null)
             {
-                return new T[0];
+                return EmptyArray<T>.Value;
             }
 
             PruneDeadComponentCaches();
@@ -230,6 +283,7 @@ namespace StorageNetwork.Core
 
             cache = new ComponentInterfaceCache(gameObject);
             ComponentCaches[instanceId] = cache;
+            componentCacheMutationVersion++;
             return cache;
         }
 
@@ -240,28 +294,70 @@ namespace StorageNetwork.Core
                 return;
             }
 
-            if (lastComponentCachePruneAt >= 0f && Time.unscaledTime - lastComponentCachePruneAt < 1f)
+            if (!componentCacheAuditInProgress &&
+                lastComponentCachePruneAt >= 0f &&
+                Time.unscaledTime - lastComponentCachePruneAt < ComponentCachePruneSeconds)
             {
                 return;
             }
 
             lastComponentCachePruneFrame = Time.frameCount;
-            lastComponentCachePruneAt = Time.unscaledTime;
-            DeadComponentCacheKeys.Clear();
-            foreach (KeyValuePair<int, ComponentInterfaceCache> pair in ComponentCaches)
+            if (!componentCacheAuditInProgress)
             {
+                lastComponentCachePruneAt = Time.unscaledTime;
+                DeadComponentCacheKeys.Clear();
+                componentCacheAuditMutationVersion = componentCacheMutationVersion;
+                componentCacheAuditEnumerator = ComponentCaches.GetEnumerator();
+                componentCacheAuditInProgress = true;
+            }
+
+            if (componentCacheAuditMutationVersion != componentCacheMutationVersion)
+            {
+                CancelComponentCacheAudit();
+                return;
+            }
+
+            ComponentCachePruneStopwatch.Restart();
+            while (ComponentCachePruneStopwatch.Elapsed.TotalMilliseconds <
+                   ComponentCachePruneBudgetMilliseconds)
+            {
+                if (!componentCacheAuditEnumerator.MoveNext())
+                {
+                    ComponentCachePruneStopwatch.Stop();
+                    componentCacheAuditEnumerator.Dispose();
+                    componentCacheAuditEnumerator = default;
+                    componentCacheAuditInProgress = false;
+                    componentCacheAuditMutationVersion = -1;
+                    foreach (int key in DeadComponentCacheKeys)
+                    {
+                        if (ComponentCaches.Remove(key))
+                        {
+                            componentCacheMutationVersion++;
+                        }
+                    }
+
+                    DeadComponentCacheKeys.Clear();
+                    return;
+                }
+
+                KeyValuePair<int, ComponentInterfaceCache> pair = componentCacheAuditEnumerator.Current;
                 if (!pair.Value.IsLive)
                 {
                     DeadComponentCacheKeys.Add(pair.Key);
                 }
             }
 
-            foreach (int key in DeadComponentCacheKeys)
-            {
-                ComponentCaches.Remove(key);
-            }
+            ComponentCachePruneStopwatch.Stop();
+        }
 
+        private static void CancelComponentCacheAudit()
+        {
+            componentCacheAuditEnumerator.Dispose();
+            componentCacheAuditEnumerator = default;
+            componentCacheAuditInProgress = false;
+            componentCacheAuditMutationVersion = -1;
             DeadComponentCacheKeys.Clear();
+            ComponentCachePruneStopwatch.Reset();
         }
 
         private sealed class ComponentInterfaceCache
@@ -270,11 +366,14 @@ namespace StorageNetwork.Core
             private readonly Component[] components;
             private readonly Dictionary<System.Type, object> typedComponents =
                 new Dictionary<System.Type, object>();
+            private int storageFlagsFrame = -1;
+            private int storageFlagsVersion = -1;
+            private StorageNetworkStorageFlags providerFlags;
 
             public ComponentInterfaceCache(GameObject gameObject)
             {
                 this.gameObject = gameObject;
-                components = gameObject != null ? gameObject.GetComponents<Component>() : new Component[0];
+                components = gameObject != null ? gameObject.GetComponents<Component>() : EmptyArray<Component>.Value;
             }
 
             public bool IsLive => gameObject != null;
@@ -306,6 +405,32 @@ namespace StorageNetwork.Core
                 typedComponents[type] = result;
                 return result;
             }
+
+            public StorageNetworkStorageFlags GetStorageFlags(
+                Storage storage,
+                StorageNetworkStorageFlags tagFlags)
+            {
+                int frame = Time.frameCount;
+                if (storageFlagsFrame != frame || storageFlagsVersion != dynamicFlagsVersion)
+                {
+                    providerFlags = StorageNetworkStorageFlags.None;
+                    foreach (IStorageNetworkStorageFlagsProvider provider in
+                             GetComponents<IStorageNetworkStorageFlagsProvider>())
+                    {
+                        providerFlags |= provider.GetStorageNetworkStorageFlags(storage);
+                    }
+
+                    storageFlagsFrame = frame;
+                    storageFlagsVersion = dynamicFlagsVersion;
+                }
+
+                return tagFlags | providerFlags;
+            }
+        }
+
+        private static class EmptyArray<T>
+        {
+            public static readonly T[] Value = new T[0];
         }
     }
 }

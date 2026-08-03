@@ -26,6 +26,13 @@ namespace StorageNetwork.Core
 
         public static bool IsServerStorage(Storage storage)
         {
+            if (StorageNetworkRuntimeCatalog.TryGet(
+                    storage,
+                    out StorageRuntimeDescriptor descriptor))
+            {
+                return descriptor.IsServerStorage;
+            }
+
             return storage != null &&
                    HasModStorageTag(storage) &&
                    HasServerStorageTag(storage);
@@ -39,6 +46,13 @@ namespace StorageNetwork.Core
             if (storage == null || !HasModStorageTag(storage) || !HasServerStorageTag(storage))
             {
                 return true;
+            }
+
+            if (StorageNetworkRuntimeCatalog.TryGet(
+                    storage,
+                    out StorageRuntimeDescriptor descriptor))
+            {
+                return descriptor.IsOperational;
             }
 
             Operational operational = storage.GetComponent<Operational>();
@@ -74,6 +88,13 @@ namespace StorageNetwork.Core
 
         public static bool IsNetworkPortStorage(Storage storage)
         {
+            if (StorageNetworkRuntimeCatalog.TryGet(
+                    storage,
+                    out StorageRuntimeDescriptor descriptor))
+            {
+                return descriptor.IsNetworkPort;
+            }
+
             return HasInputPortTag(storage) || HasOutputPortTag(storage);
         }
 
@@ -174,6 +195,13 @@ namespace StorageNetwork.Core
 
         public static bool IsPowerStorageServer(Storage storage)
         {
+            if (StorageNetworkRuntimeCatalog.TryGet(
+                    storage,
+                    out StorageRuntimeDescriptor descriptor))
+            {
+                return descriptor.IsPowerStorage;
+            }
+
             return storage?.GetComponent<StorageNetworkPowerStorage>() != null;
         }
 
@@ -182,6 +210,28 @@ namespace StorageNetwork.Core
             if (storage == null || element == null)
             {
                 return false;
+            }
+
+            if (StorageNetworkRuntimeCatalog.TryGet(
+                    storage,
+                    out StorageRuntimeDescriptor descriptor))
+            {
+                if (element.IsGas)
+                {
+                    return (descriptor.Flags & StorageNetworkStorageFlags.GasPort) != 0 ||
+                           descriptor.IsGasStorage;
+                }
+
+                if (element.IsLiquid)
+                {
+                    return (descriptor.Flags & StorageNetworkStorageFlags.LiquidPort) != 0 ||
+                           descriptor.IsLiquidStorage;
+                }
+
+                return element.IsSolid &&
+                       ((descriptor.Flags & StorageNetworkStorageFlags.SolidPort) != 0 ||
+                        descriptor.IsSolidStorage ||
+                        descriptor.IsColdStorage);
             }
 
             if (element.IsGas)
@@ -199,6 +249,13 @@ namespace StorageNetwork.Core
 
         public static bool IsColdStorageServer(Storage storage)
         {
+            if (StorageNetworkRuntimeCatalog.TryGet(
+                    storage,
+                    out StorageRuntimeDescriptor descriptor))
+            {
+                return descriptor.IsColdStorage;
+            }
+
             string prefabId = GetPrefabId(storage);
             return storage?.GetComponent<StorageNetworkColdStorageCooling>() != null ||
                    prefabId == SmallColdStorageServerConfig.ID ||
@@ -208,6 +265,13 @@ namespace StorageNetwork.Core
 
         public static bool IsSolidStorageServer(Storage storage)
         {
+            if (StorageNetworkRuntimeCatalog.TryGet(
+                    storage,
+                    out StorageRuntimeDescriptor descriptor))
+            {
+                return descriptor.IsSolidStorage;
+            }
+
             string prefabId = GetPrefabId(storage);
             return prefabId == SmallSolidServerConfig.ID ||
                    prefabId == MediumSolidServerConfig.ID ||
@@ -216,6 +280,13 @@ namespace StorageNetwork.Core
 
         private static bool IsLiquidStorageServer(Storage storage)
         {
+            if (StorageNetworkRuntimeCatalog.TryGet(
+                    storage,
+                    out StorageRuntimeDescriptor descriptor))
+            {
+                return descriptor.IsLiquidStorage;
+            }
+
             string prefabId = GetPrefabId(storage);
             return prefabId == SmallLiquidServerConfig.ID ||
                    prefabId == MediumLiquidServerConfig.ID ||
@@ -224,6 +295,13 @@ namespace StorageNetwork.Core
 
         private static bool IsGasStorageServer(Storage storage)
         {
+            if (StorageNetworkRuntimeCatalog.TryGet(
+                    storage,
+                    out StorageRuntimeDescriptor descriptor))
+            {
+                return descriptor.IsGasStorage;
+            }
+
             string prefabId = GetPrefabId(storage);
             return prefabId == SmallGasServerConfig.ID ||
                    prefabId == MediumGasServerConfig.ID ||
@@ -232,6 +310,13 @@ namespace StorageNetwork.Core
 
         public static bool IsParticleStorageServer(Storage storage)
         {
+            if (StorageNetworkRuntimeCatalog.TryGet(
+                    storage,
+                    out StorageRuntimeDescriptor descriptor))
+            {
+                return descriptor.IsParticleStorage;
+            }
+
             string prefabId = GetPrefabId(storage);
             return prefabId == SmallParticleServerConfig.ID ||
                    prefabId == MediumParticleServerConfig.ID ||
@@ -248,6 +333,16 @@ namespace StorageNetwork.Core
         /// </summary>
         public static bool HasSettingsButtonTag(Storage storage)
         {
+            if (StorageNetworkRuntimeCatalog.TryGet(
+                    storage,
+                    out StorageRuntimeDescriptor descriptor))
+            {
+                return !descriptor.HasRefrigerator &&
+                       !descriptor.HasReservoir &&
+                       (descriptor.Flags &
+                        StorageNetworkStorageFlags.ShowSettingsButton) != 0;
+            }
+
             return storage != null &&
                    storage.GetComponent<Refrigerator>() == null &&
                    storage.GetComponent<Reservoir>() == null &&
@@ -259,6 +354,14 @@ namespace StorageNetwork.Core
         /// </summary>
         public static bool IsProductionStorage(Storage storage, StorageNetworkEnrollment enrollment = null)
         {
+            if (enrollment == null &&
+                StorageNetworkRuntimeCatalog.TryGet(
+                    storage,
+                    out StorageRuntimeDescriptor descriptor))
+            {
+                return descriptor.IsProductionStorage;
+            }
+
             return (enrollment != null && enrollment.IsComplexRecipeBuilding()) ||
                    (enrollment != null && enrollment.IsEnergyGeneratorBuilding()) ||
                    StorageNetworkEnergyGeneratorRequester.HasFuelInputs(storage?.GetComponent<EnergyGenerator>()) ||
@@ -311,6 +414,13 @@ namespace StorageNetwork.Core
         /// </summary>
         public static bool IsMinionStorage(Storage storage)
         {
+            if (StorageNetworkRuntimeCatalog.TryGet(
+                    storage,
+                    out StorageRuntimeDescriptor descriptor))
+            {
+                return descriptor.IsMinionStorage;
+            }
+
             return storage?.GetComponent<MinionIdentity>() != null;
         }
 
@@ -365,7 +475,19 @@ namespace StorageNetwork.Core
         /// </summary>
         public static bool IsPrimaryComplexFabricatorStorage(Storage storage)
         {
-            ComplexFabricator fabricator = storage != null ? storage.GetComponent<ComplexFabricator>() : null;
+            ComplexFabricator fabricator;
+            if (StorageNetworkRuntimeCatalog.TryGet(
+                    storage,
+                    out StorageRuntimeDescriptor descriptor))
+            {
+                fabricator = descriptor.Fabricator;
+            }
+            else
+            {
+                fabricator = storage != null
+                    ? storage.GetComponent<ComplexFabricator>()
+                    : null;
+            }
             if (fabricator == null)
             {
                 return false;
@@ -381,6 +503,13 @@ namespace StorageNetwork.Core
 
         private static bool HasFlag(Storage storage, StorageNetworkStorageFlags flag)
         {
+            if (StorageNetworkRuntimeCatalog.TryGet(
+                    storage,
+                    out StorageRuntimeDescriptor descriptor))
+            {
+                return (descriptor.Flags & flag) == flag;
+            }
+
             return StorageNetworkInterfaceResolver.HasStorageFlag(storage, flag);
         }
 

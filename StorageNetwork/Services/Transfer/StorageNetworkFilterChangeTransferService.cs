@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
 using StorageNetwork.Core;
 using UnityEngine;
 
@@ -7,6 +6,9 @@ namespace StorageNetwork.Services
 {
     internal static class StorageNetworkFilterChangeTransferService
     {
+        [System.ThreadStatic]
+        private static FilterChangeWorkspace threadWorkspace;
+
         public static void MoveRejectedItemsToNetwork(TreeFilterable filterable)
         {
             Storage source = filterable != null ? filterable.GetFilterStorage() : null;
@@ -20,10 +22,15 @@ namespace StorageNetwork.Services
                 return;
             }
 
-            List<GameObject> rejectedItems = new List<GameObject>();
+            FilterChangeWorkspace workspace = threadWorkspace ??=
+                new FilterChangeWorkspace();
+            List<GameObject> rejectedItems = workspace.RejectedItems;
+            rejectedItems.Clear();
+            HashSet<Tag> acceptedTags = workspace.AcceptedTags;
+            FillAcceptedTags(filterable, acceptedTags);
             foreach (GameObject item in source.items)
             {
-                if (item != null && !IsItemAcceptedByFilter(item, filterable))
+                if (item != null && !IsItemAcceptedByFilter(item, acceptedTags))
                 {
                     rejectedItems.Add(item);
                 }
@@ -42,7 +49,8 @@ namespace StorageNetwork.Services
                     continue;
                 }
 
-                HashSet<Tag> matchTags = StorageItemUtility.GetStorageMatchTags(item);
+                StorageItemUtility.StorageMatchTags matchTags =
+                    StorageItemUtility.GetStorageMatchTagsNonAlloc(item);
                 Storage target = FindAcceptingServer(source, item, matchTags, sourceWorldId);
                 if (target == null)
                 {
@@ -51,9 +59,16 @@ namespace StorageNetwork.Services
 
                 source.Transfer(item, target, block_events: false, hide_popups: true);
             }
+
+            rejectedItems.Clear();
+            acceptedTags.Clear();
         }
 
-        private static Storage FindAcceptingServer(Storage source, GameObject item, HashSet<Tag> matchTags, int sourceWorldId)
+        private static Storage FindAcceptingServer(
+            Storage source,
+            GameObject item,
+            StorageItemUtility.StorageMatchTags matchTags,
+            int sourceWorldId)
         {
             StorageSceneLightweightSnapshot snapshot = StorageSceneCollector.CollectLightweightForWorld(sourceWorldId);
             if (snapshot?.Storages == null)
@@ -81,15 +96,24 @@ namespace StorageNetwork.Services
             return best;
         }
 
-        private static bool IsAcceptingServer(Storage source, Storage target, GameObject item, HashSet<Tag> matchTags, int sourceWorldId)
+        private static bool IsAcceptingServer(
+            Storage source,
+            Storage target,
+            GameObject item,
+            StorageItemUtility.StorageMatchTags matchTags,
+            int sourceWorldId)
         {
+            TreeFilterable targetFilter =
+                StorageNetworkRuntimeCatalog.TryGet(target, out StorageRuntimeDescriptor descriptor)
+                    ? descriptor.TreeFilterable
+                    : null;
             return StorageSceneRegistry.IsLive(target) &&
                    target != source &&
                    StorageNetworkStorageRules.IsNetworkStorageTarget(target, source) &&
                    IsStorageReachableFromWorld(target, sourceWorldId) &&
                    target.RemainingCapacity() >= StorageItemUtility.GetMass(item) &&
                    IsAcceptedByStorageFilters(target.storageFilters, matchTags) &&
-                   IsAcceptedByTreeFilter(target.GetComponent<TreeFilterable>(), item);
+                   IsAcceptedByTreeFilter(targetFilter, item);
         }
 
         private static bool IsStorageReachableFromWorld(Storage storage, int worldId)
@@ -107,40 +131,64 @@ namespace StorageNetwork.Services
             return StorageTargetSelector.GetObjectWorldId(storage.gameObject) == worldId;
         }
 
-        private static bool IsItemAcceptedByFilter(GameObject item, TreeFilterable filterable)
+        private static bool IsItemAcceptedByFilter(
+            GameObject item,
+            HashSet<Tag> acceptedTags)
         {
-            return IsAcceptedByTreeFilter(filterable, item);
+            return acceptedTags.Count > 0 &&
+                   IsAnyMatchTagAccepted(
+                       acceptedTags,
+                       StorageItemUtility.GetStorageMatchTagsNonAlloc(item));
         }
 
         private static bool IsAcceptedByTreeFilter(TreeFilterable filterable, GameObject item)
         {
-            HashSet<Tag> acceptedTags = GetAcceptedTags(filterable);
-            if (acceptedTags.Count == 0)
+            HashSet<Tag> acceptedTags = filterable?.AcceptedTags;
+            if (acceptedTags == null || acceptedTags.Count == 0)
             {
                 return false;
             }
 
-            foreach (Tag tag in StorageItemUtility.GetStorageMatchTags(item))
-            {
-                if (IsAcceptedTagOrCategory(acceptedTags, tag))
-                {
-                    return true;
-                }
-            }
-
-            return false;
+            return IsAnyMatchTagAccepted(
+                acceptedTags,
+                StorageItemUtility.GetStorageMatchTagsNonAlloc(item));
         }
 
-        private static bool IsAcceptedByStorageFilters(IEnumerable<Tag> storageFilters, IEnumerable<Tag> matchTags)
+        private static bool IsAcceptedByStorageFilters(
+            IEnumerable<Tag> storageFilters,
+            StorageItemUtility.StorageMatchTags matchTags)
         {
-            if (storageFilters == null || !storageFilters.Any())
+            if (storageFilters == null)
             {
                 return true;
             }
 
-            foreach (Tag tag in matchTags)
+            bool hasFilter = false;
+            foreach (Tag acceptedTag in storageFilters)
             {
-                if (IsAcceptedTagOrCategory(storageFilters, tag))
+                hasFilter = true;
+                if (IsAcceptedTagOrCategory(acceptedTag, matchTags.PrefabIdTag) ||
+                    IsAcceptedTagOrCategory(acceptedTag, matchTags.PrefabTag) ||
+                    IsAcceptedTagOrCategory(acceptedTag, matchTags.ElementTag) ||
+                    IsAcceptedTagOrCategory(acceptedTag, matchTags.TransferTag))
+                {
+                    return true;
+                }
+            }
+
+            return !hasFilter;
+        }
+
+        private static bool IsAnyMatchTagAccepted(
+            IEnumerable<Tag> acceptedTags,
+            StorageItemUtility.StorageMatchTags matchTags)
+        {
+            foreach (Tag acceptedTag in acceptedTags)
+            {
+                if (IsAcceptedTagOrCategory(acceptedTag, matchTags.PrefabIdTag) ||
+                    IsAcceptedTagOrCategory(acceptedTag, matchTags.PrefabTag) ||
+                    IsAcceptedTagOrCategory(acceptedTag, matchTags.ElementTag) ||
+                    IsAcceptedTagOrCategory(acceptedTag, matchTags.TransferTag))
                 {
                     return true;
                 }
@@ -149,32 +197,28 @@ namespace StorageNetwork.Services
             return false;
         }
 
-        private static bool IsAcceptedTagOrCategory(IEnumerable<Tag> acceptedTags, Tag itemTag)
+        private static bool IsAcceptedTagOrCategory(Tag acceptedTag, Tag itemTag)
         {
-            if (itemTag == Tag.Invalid)
+            if (acceptedTag == Tag.Invalid || itemTag == Tag.Invalid)
             {
                 return false;
             }
 
-            foreach (Tag acceptedTag in acceptedTags)
-            {
-                if (acceptedTag == itemTag ||
-                    DiscoveredResources.Instance != null &&
-                    DiscoveredResources.Instance.GetDiscoveredResourcesFromTag(acceptedTag).Contains(itemTag))
-                {
-                    return true;
-                }
-            }
-
-            return false;
+            return acceptedTag == itemTag ||
+                   DiscoveredResources.Instance != null &&
+                   DiscoveredResources.Instance
+                       .GetDiscoveredResourcesFromTag(acceptedTag)
+                       .Contains(itemTag);
         }
 
-        private static HashSet<Tag> GetAcceptedTags(TreeFilterable filterable)
+        private static void FillAcceptedTags(
+            TreeFilterable filterable,
+            HashSet<Tag> tags)
         {
-            HashSet<Tag> tags = new HashSet<Tag>();
+            tags.Clear();
             if (filterable?.AcceptedTags == null)
             {
-                return tags;
+                return;
             }
 
             foreach (Tag tag in filterable.AcceptedTags)
@@ -184,8 +228,12 @@ namespace StorageNetwork.Services
                     tags.Add(tag);
                 }
             }
+        }
 
-            return tags;
+        private sealed class FilterChangeWorkspace
+        {
+            public readonly List<GameObject> RejectedItems = new List<GameObject>();
+            public readonly HashSet<Tag> AcceptedTags = new HashSet<Tag>();
         }
     }
 }

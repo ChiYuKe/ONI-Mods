@@ -36,12 +36,12 @@ namespace StorageNetwork.UI
             content.sizeDelta = new Vector2(contentWidth, Mathf.Max(compactOrderWindow ? 250f : 310f, contentHeight));
 
             float cursorY = 16f;
-            AddResearchRecipeBranch(content.transform, draft.Plan, 0, ref cursorY);
+            AddResearchRecipeBranch(content.transform, draft.Plan, 0, ref cursorY, "research");
 
             viewport.AddComponent<StorageNetworkPanZoom>().Configure(viewportRect, content);
         }
 
-        private float AddResearchRecipeBranch(Transform parent, ProductionPlanNode node, int depth, ref float cursorY)
+        private float AddResearchRecipeBranch(Transform parent, ProductionPlanNode node, int depth, ref float cursorY, string path)
         {
             const float columnStep = 570f;
             const float recipeWidth = 226f;
@@ -66,15 +66,17 @@ namespace StorageNetwork.UI
             }
 
             List<float> materialCenters = new List<float>();
-            foreach (ProductionPlanRequirement requirement in requirements)
+            for (int requirementIndex = 0; requirementIndex < requirements.Count; requirementIndex++)
             {
+                ProductionPlanRequirement requirement = requirements[requirementIndex];
+                string requirementPath = path + "." + requirementIndex;
                 float materialY = cursorY;
                 float materialCenter = materialY + materialHeight * 0.5f;
 
                 if (requirement.Child != null && depth < 2)
                 {
                     float childCursor = cursorY;
-                    float childCenter = AddResearchRecipeBranch(parent, requirement.Child, depth + 1, ref childCursor);
+                    float childCenter = AddResearchRecipeBranch(parent, requirement.Child, depth + 1, ref childCursor, requirementPath);
                     childCursor = Mathf.Max(childCursor, cursorY + recipeHeight + rowGap);
                     materialCenter = childCenter;
                     materialY = materialCenter - materialHeight * 0.5f;
@@ -86,7 +88,7 @@ namespace StorageNetwork.UI
                     cursorY += materialHeight + rowGap;
                 }
 
-                AddResearchMaterialNode(parent, requirement, new Vector2(materialX, materialY), new Vector2(materialWidth, materialHeight));
+                AddResearchMaterialNode(parent, requirement, new Vector2(materialX, materialY), new Vector2(materialWidth, materialHeight), requirementPath);
                 materialCenters.Add(materialCenter);
             }
 
@@ -189,7 +191,7 @@ namespace StorageNetwork.UI
             AddResearchProgressLine(card.transform, progressY, string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_OUTPUT_AMOUNT), GameUtil.GetFormattedMass(node.OutputAmount * node.OrderCount)), PositiveColor());
         }
 
-        private void AddResearchMaterialNode(Transform parent, ProductionPlanRequirement requirement, Vector2 position, Vector2 size)
+        private void AddResearchMaterialNode(Transform parent, ProductionPlanRequirement requirement, Vector2 position, Vector2 size, string path)
         {
             bool covered = StorageNetworkPlanPreviewText.IsCoveredByNetwork(requirement);
             bool produced = StorageNetworkPlanPreviewText.CanProduceRequirement(requirement);
@@ -235,6 +237,7 @@ namespace StorageNetwork.UI
             status.textWrappingMode = TextWrappingModes.NoWrap;
             status.overflowMode = TextOverflowModes.Ellipsis;
             status.gameObject.AddComponent<LayoutElement>().preferredHeight = 16f;
+            orderResearchRequirementViews[path] = new ResearchRequirementLiveView(name, detail, status);
         }
     }
 }

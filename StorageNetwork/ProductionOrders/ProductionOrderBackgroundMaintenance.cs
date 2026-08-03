@@ -3,7 +3,7 @@ namespace StorageNetwork.ProductionOrders
     /// <summary>
     /// Drives production order state and keep-stock rules independently of the order UI.
     /// </summary>
-    internal sealed class ProductionOrderBackgroundMaintenance : KMonoBehaviour, ISim1000ms
+    internal sealed class ProductionOrderBackgroundMaintenance : KMonoBehaviour, ISim200ms, ISim1000ms
     {
         private const float InventoryRefreshIntervalSeconds = 10f;
         private const float RecipeCatalogRefreshIntervalSeconds = 60f;
@@ -11,6 +11,11 @@ namespace StorageNetwork.ProductionOrders
         private readonly ProductionOrderService service = new ProductionOrderService();
         private float inventoryElapsed = InventoryRefreshIntervalSeconds;
         private float recipeCatalogElapsed = RecipeCatalogRefreshIntervalSeconds;
+
+        public void Sim200ms(float dt)
+        {
+            service.ContinueDeferredProductionPlans();
+        }
 
         public void Sim1000ms(float dt)
         {

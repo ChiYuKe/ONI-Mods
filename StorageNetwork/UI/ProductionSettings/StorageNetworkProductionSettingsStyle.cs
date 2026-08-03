@@ -9,12 +9,7 @@ namespace StorageNetwork.UI
         public static float GetMaterialAutomationCardHeight(StorageNetworkMaterialRequester requester)
         {
             float height = requester != null && requester.LimitEnabled ? 214f : 176f;
-            if (requester != null && !string.IsNullOrEmpty(requester.LastStatus))
-            {
-                height += 30f;
-            }
-
-            return height;
+            return height + 30f;
         }
 
         public static float GetOutputAutomationCardHeight(StorageNetworkMaterialRequester requester)
@@ -25,12 +20,7 @@ namespace StorageNetwork.UI
                 height += 40f;
             }
 
-            if (requester != null && !string.IsNullOrEmpty(requester.LastOutputStatus))
-            {
-                height += 30f;
-            }
-
-            return height;
+            return height + 30f;
         }
 
         public static Color GetEnabledStatusColor(bool enabled)

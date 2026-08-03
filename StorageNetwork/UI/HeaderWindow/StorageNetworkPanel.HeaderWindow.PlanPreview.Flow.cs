@@ -210,7 +210,7 @@ namespace StorageNetwork.UI
             text.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
         }
 
-        private void AddFlowMaterialPill(Transform parent, ProductionPlanRequirement requirement, float width)
+        private TextMeshProUGUI AddFlowMaterialPill(Transform parent, ProductionPlanRequirement requirement, float width)
         {
             Color color = GetRequirementColor(requirement);
             GameObject pill = CreatePlainImage("MaterialPill", parent, new Color(0.84f, 0.84f, 0.78f, 1f));
@@ -234,6 +234,7 @@ namespace StorageNetwork.UI
             text.textWrappingMode = TextWrappingModes.NoWrap;
             text.overflowMode = TextOverflowModes.Ellipsis;
             text.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+            return text;
         }
 
         private static void AddFlowArrow(Transform parent, Color color)

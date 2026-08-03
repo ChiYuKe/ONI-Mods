@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 
 namespace StorageNetwork.ProductionOrders
@@ -35,15 +34,35 @@ namespace StorageNetwork.ProductionOrders
             FabricatorName = fabricatorName;
             Details = details;
             Recipe = recipe;
-            Fabricators = fabricators?
-                .Where(ProductionOrderCenterCatalog.IsOrderProductionFabricator)
-                .Distinct()
-                .ToList() ?? new List<ComplexFabricator>();
+            Fabricators = CopyRegisteredFabricators(fabricators);
             Icon = icon;
             ProductKey = productKey;
             ProductName = productName;
             ProductTag = productTag;
             WorldIds = worldIds ?? new List<int>();
+        }
+
+        private static List<ComplexFabricator> CopyRegisteredFabricators(
+            List<ComplexFabricator> fabricators)
+        {
+            List<ComplexFabricator> result = new List<ComplexFabricator>(
+                fabricators?.Count ?? 0);
+            if (fabricators == null)
+            {
+                return result;
+            }
+
+            for (int i = 0; i < fabricators.Count; i++)
+            {
+                ComplexFabricator fabricator = fabricators[i];
+                if (ProductionOrderCenterCatalog.IsOrderProductionFabricator(fabricator) &&
+                    !result.Contains(fabricator))
+                {
+                    result.Add(fabricator);
+                }
+            }
+
+            return result;
         }
 
         public string Name { get; }
@@ -88,17 +107,34 @@ namespace StorageNetwork.ProductionOrders
 
     internal sealed class ProductionPlanNode
     {
-        public ProductionPlanNode(ComplexRecipe recipe, List<ComplexFabricator> fabricators, Tag productTag, float outputAmount, int orderCount)
+        public ProductionPlanNode(
+            ComplexRecipe recipe,
+            List<ComplexFabricator> fabricators,
+            Tag productTag,
+            float outputAmount,
+            int orderCount,
+            int worldId = -1)
         {
             Recipe = recipe;
-            Fabricators = fabricators?
-                .Where(ProductionOrderCenterCatalog.IsOrderProductionFabricator)
-                .Distinct()
-                .ToList() ?? new List<ComplexFabricator>();
+            Fabricators = new List<ComplexFabricator>(fabricators?.Count ?? 0);
+            if (fabricators != null)
+            {
+                for (int i = 0; i < fabricators.Count; i++)
+                {
+                    ComplexFabricator fabricator = fabricators[i];
+                    if (ProductionOrderCenterCatalog.IsOrderProductionFabricator(fabricator) &&
+                        !Fabricators.Contains(fabricator))
+                    {
+                        Fabricators.Add(fabricator);
+                    }
+                }
+            }
             ProductTag = productTag;
             OutputAmount = outputAmount;
             OrderCount = orderCount;
+            WorldId = worldId;
             Assignments = new List<ProductionPlanAssignment>();
+            FabricatorName = ProductionOrderFormatting.FormatFabricatorGroupName(Fabricators);
         }
 
         public ComplexRecipe Recipe { get; }
@@ -111,9 +147,11 @@ namespace StorageNetwork.ProductionOrders
 
         public int OrderCount { get; }
 
+        public int WorldId { get; }
+
         public List<ProductionPlanAssignment> Assignments { get; }
 
-        public string FabricatorName => ProductionOrderFormatting.FormatFabricatorGroupName(Fabricators);
+        public string FabricatorName { get; }
 
         public List<ProductionPlanRequirement> Requirements { get; } = new List<ProductionPlanRequirement>();
 

@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
 using StorageNetwork.Components;
 using StorageNetwork.Core;
 using StorageNetwork.Services;
@@ -12,14 +11,27 @@ namespace StorageNetwork.UI
 {
     public sealed class StorageNetworkLiquidOutputPortSideScreen : SideScreenContent
     {
-        private readonly List<GameObject> optionRows = new List<GameObject>();
+        private const float LiveRefreshSeconds = 0.5f;
+        private readonly Dictionary<SimHashes, LiquidAmountView> optionAmountViews =
+            new Dictionary<SimHashes, LiquidAmountView>();
+        private readonly Dictionary<SimHashes, float> availableLiquidAmounts =
+            new Dictionary<SimHashes, float>();
+        private readonly List<SimHashes> sortedElements = new List<SimHashes>();
+        private readonly List<LiquidOption> optionWorkspace = new List<LiquidOption>();
+        private readonly List<SimHashes?> lastStructureElements = new List<SimHashes?>();
+        private static ColorStyleSetting blueStyle;
+        private static ColorStyleSetting pinkStyle;
         private GameObject targetObject;
         private StorageNetworkLiquidOutputPortEgress targetEgress;
         private Storage targetStorage;
         private Transform optionRoot;
+        private StorageNetworkKeyedRowCache optionRowCache;
         private GameObject contentRoot;
         private TextMeshProUGUI statusText;
-        private string lastSignature;
+        private SimHashes? lastStructureSelection;
+        private bool hasStructureSignature;
+        private SimHashes? lastStatusSelection;
+        private bool hasStatusSelection;
         private float refreshTimer;
 
         public StorageNetworkLiquidOutputPortSideScreen()
@@ -48,7 +60,7 @@ namespace StorageNetwork.UI
             base.SetTarget(target);
             targetObject = target;
             ResolveTargetComponents();
-            lastSignature = null;
+            InvalidateStructure();
             Refresh(true);
         }
 
@@ -57,7 +69,7 @@ namespace StorageNetwork.UI
             targetObject = null;
             targetEgress = null;
             targetStorage = null;
-            lastSignature = null;
+            InvalidateStructure();
             ClearOptions();
             base.ClearTarget();
         }
@@ -75,13 +87,13 @@ namespace StorageNetwork.UI
                 return;
             }
 
-            refreshTimer -= Time.deltaTime;
+            refreshTimer -= Time.unscaledDeltaTime;
             if (refreshTimer > 0f)
             {
                 return;
             }
 
-            refreshTimer = 1f;
+            refreshTimer = LiveRefreshSeconds;
             Refresh(false);
         }
 
@@ -123,6 +135,7 @@ namespace StorageNetwork.UI
             optionObject.transform.SetParent(contentRoot.transform, false);
             optionRoot = optionObject.transform;
             optionObject.AddComponent<RectTransform>();
+            optionRowCache = new StorageNetworkKeyedRowCache(optionRoot, 32, 120);
             optionObject.AddComponent<LayoutElement>().flexibleHeight = 1f;
             VerticalLayoutGroup optionLayout = optionObject.AddComponent<VerticalLayoutGroup>();
             optionLayout.spacing = 4f;
@@ -197,25 +210,19 @@ namespace StorageNetwork.UI
                 return;
             }
 
+            using var performanceScope =
+                StorageNetworkFrameProfileTool.BeginWork(StorageNetworkPerformanceArea.LiquidSideScreen);
             List<LiquidOption> options = BuildOptions();
-            string signature = BuildSignature(options);
+            bool structureChanged = force || HasStructureChanged(options);
             SetStatusText(options);
-            if (!force && signature == lastSignature)
+            if (!structureChanged)
             {
+                UpdateOptionAmounts(options);
                 return;
             }
 
-            lastSignature = signature;
-            ClearOptions();
-            foreach (LiquidOption option in options)
-            {
-                CreateOptionRow(option);
-            }
-
-            if (options.Count <= 1)
-            {
-                CreateEmptyHint();
-            }
+            RememberStructure(options);
+            ReconcileOptions(options);
         }
 
         private void ResolveTargetComponents()
@@ -252,20 +259,25 @@ namespace StorageNetwork.UI
                 ? targetEgress.ResolveSourceStorage()
                 : null;
             SimHashes? selected = targetEgress.GetSelectedOutputElement();
-            List<LiquidOption> options = new List<LiquidOption>
-            {
-                new LiquidOption(null, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_PORT_FILTER_ANY), string.Empty, !selected.HasValue, 0f)
-            };
+            List<LiquidOption> options = optionWorkspace;
+            options.Clear();
+            options.Add(new LiquidOption(
+                null,
+                Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_PORT_FILTER_ANY),
+                !selected.HasValue,
+                0f));
 
-            foreach (SimHashes elementHash in NetworkStorageTransferService.GetAvailableLiquidElementsInNetwork(targetStorage, specificSource))
+            Dictionary<SimHashes, float> amounts = BuildAvailableLiquidAmounts(specificSource);
+            RefreshSortedElements(amounts);
+
+            foreach (SimHashes elementHash in sortedElements)
             {
                 Element element = ElementLoader.FindElementByHash(elementHash);
                 string name = element != null ? element.name : elementHash.ToString();
-                float amount = GetAvailableElementAmount(elementHash, specificSource);
+                float amount = amounts[elementHash];
                 options.Add(new LiquidOption(
                     elementHash,
                     name,
-                    GameUtil.GetFormattedMass(amount),
                     selected == elementHash,
                     amount));
             }
@@ -273,27 +285,96 @@ namespace StorageNetwork.UI
             return options;
         }
 
-        private float GetAvailableElementAmount(SimHashes elementHash, Storage specificSource)
+        private Dictionary<SimHashes, float> BuildAvailableLiquidAmounts(Storage specificSource)
         {
-            Tag tag = elementHash.CreateTag();
-            float amount = 0f;
-            IEnumerable<Storage> sources = specificSource != null
-                ? new[] { specificSource }
-                : StorageSceneCollector.CollectLightweightForWorld(StorageTargetSelector.GetObjectWorldId(targetStorage?.gameObject)).Storages;
-            foreach (Storage source in sources)
+            Dictionary<SimHashes, float> amounts = availableLiquidAmounts;
+            amounts.Clear();
+            if (specificSource == null)
             {
-                if (source == null ||
-                    source == targetStorage ||
-                    !StorageNetworkStorageRules.IsServerStorage(source) ||
-                    !StorageNetworkStorageRules.IsConnectedNetworkStorage(source))
+                StorageNetworkContentIndexService.FillWorldLiquidMasses(
+                    StorageTargetSelector.GetObjectWorldId(targetStorage?.gameObject),
+                    amounts);
+                return amounts;
+            }
+
+            if (StorageNetworkContentIndexService.TryFillStorageLiquidMasses(
+                    specificSource,
+                    amounts))
+            {
+                return amounts;
+            }
+
+            // Compatibility fallback for an explicitly selected third-party
+            // storage that is not enrolled in the runtime catalog. This scans only
+            // that storage, never the entire world.
+            if (specificSource.items == null)
+            {
+                return amounts;
+            }
+
+            foreach (GameObject item in specificSource.items)
+            {
+                PrimaryElement primaryElement = item != null
+                    ? item.GetComponent<PrimaryElement>()
+                    : null;
+                if (primaryElement == null ||
+                    primaryElement.Mass <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
                 {
                     continue;
                 }
 
-                amount += source.GetAmountAvailable(tag);
+                Element element = ElementLoader.FindElementByHash(primaryElement.ElementID);
+                if (element == null || !element.IsLiquid)
+                {
+                    continue;
+                }
+
+                amounts[primaryElement.ElementID] =
+                    amounts.TryGetValue(primaryElement.ElementID, out float current)
+                        ? current + primaryElement.Mass
+                        : primaryElement.Mass;
             }
 
-            return amount;
+            return amounts;
+        }
+
+        private void RefreshSortedElements(Dictionary<SimHashes, float> amounts)
+        {
+            bool changed = sortedElements.Count != amounts.Count;
+            if (!changed)
+            {
+                for (int index = 0; index < sortedElements.Count; index++)
+                {
+                    if (!amounts.ContainsKey(sortedElements[index]))
+                    {
+                        changed = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!changed)
+            {
+                return;
+            }
+
+            sortedElements.Clear();
+            foreach (SimHashes element in amounts.Keys)
+            {
+                sortedElements.Add(element);
+            }
+
+            sortedElements.Sort(CompareElementsByName);
+        }
+
+        private static int CompareElementsByName(SimHashes left, SimHashes right)
+        {
+            Element leftElement = ElementLoader.FindElementByHash(left);
+            Element rightElement = ElementLoader.FindElementByHash(right);
+            return string.Compare(
+                leftElement != null ? leftElement.name : left.ToString(),
+                rightElement != null ? rightElement.name : right.ToString(),
+                System.StringComparison.CurrentCulture);
         }
 
         private void SetStatusText(List<LiquidOption> options)
@@ -303,23 +384,81 @@ namespace StorageNetwork.UI
                 return;
             }
 
-            LiquidOption selected = options.FirstOrDefault(option => option.Selected);
-            string selectedName = selected != null ? selected.Name : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_PORT_FILTER_ANY);
-            statusText.text = string.Format(
+            SimHashes? selection = null;
+            string selectedName = Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_PORT_FILTER_ANY);
+            for (int index = 0; index < options.Count; index++)
+            {
+                if (options[index].Selected)
+                {
+                    selection = options[index].Element;
+                    selectedName = options[index].Name;
+                    break;
+                }
+            }
+
+            if (hasStatusSelection && lastStatusSelection == selection)
+            {
+                return;
+            }
+
+            hasStatusSelection = true;
+            lastStatusSelection = selection;
+            string text = string.Format(
                 Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.LIQUID_OUTPUT_SIDE_SCREEN_CURRENT),
                 selectedName);
+            if (statusText.text != text)
+            {
+                statusText.text = text;
+            }
         }
 
-        private void CreateOptionRow(LiquidOption option)
+        private void ReconcileOptions(List<LiquidOption> options)
+        {
+            optionRowCache ??= new StorageNetworkKeyedRowCache(optionRoot, 32, 120);
+            optionRowCache.Begin();
+            optionAmountViews.Clear();
+            for (int index = 0; index < options.Count; index++)
+            {
+                LiquidOption option = options[index];
+                string key = GetOptionRowKey(option.Element);
+                GameObject row = optionRowCache.Use(
+                    key,
+                    () => CreateOptionRow(option.Element));
+                if (!optionRowCache.TryGetMetadata(
+                        key,
+                        out LiquidOptionRowView view))
+                {
+                    view = row.GetComponent<LiquidOptionRowBinding>()?.View;
+                    optionRowCache.SetMetadata(key, view);
+                }
+
+                UpdateOptionRow(view, option);
+            }
+
+            if (options.Count <= 1)
+            {
+                optionRowCache.Use("\0empty", CreateEmptyHint);
+            }
+
+            optionRowCache.Commit();
+        }
+
+        private static string GetOptionRowKey(SimHashes? element)
+        {
+            return element.HasValue
+                ? "element:" + ((int)element.Value).ToString()
+                : "any";
+        }
+
+        private GameObject CreateOptionRow(SimHashes? element)
         {
             GameObject row = new GameObject("LiquidFilterOption");
             row.transform.SetParent(optionRoot, false);
             row.AddComponent<RectTransform>();
-            optionRows.Add(row);
 
             KImage background = row.AddComponent<KImage>();
             background.type = Image.Type.Sliced;
-            background.colorStyleSetting = option.Selected ? CreatePinkStyle() : CreateBlueStyle();
+            background.colorStyleSetting = CreateBlueStyle();
             background.ColorState = KImage.ColorSelector.Inactive;
 
             KButton button = row.AddComponent<KButton>();
@@ -328,8 +467,8 @@ namespace StorageNetwork.UI
             button.soundPlayer = new ButtonSoundPlayer();
             button.onClick += () =>
             {
-                targetEgress?.SetOutputElementAndRefresh(option.Element);
-                lastSignature = null;
+                targetEgress?.SetOutputElementAndRefresh(element);
+                InvalidateStructure();
                 Refresh(true);
             };
 
@@ -346,24 +485,102 @@ namespace StorageNetwork.UI
             layout.childForceExpandWidth = false;
             layout.childForceExpandHeight = true;
 
-            AddIcon(row.transform, option.Element);
-            TextMeshProUGUI name = CreateText(row.transform, option.Name, 10f, option.Selected ? FontStyles.Bold : FontStyles.Normal, new Color(0.94f, 0.96f, 0.98f, 1f));
+            AddIcon(row.transform, element);
+            TextMeshProUGUI name = CreateText(row.transform, string.Empty, 10f, FontStyles.Normal, new Color(0.94f, 0.96f, 0.98f, 1f));
             name.textWrappingMode = TextWrappingModes.NoWrap;
             name.overflowMode = TextOverflowModes.Ellipsis;
             name.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
 
-            TextMeshProUGUI amount = CreateText(row.transform, option.Details, 8f, FontStyles.Normal, new Color(0.78f, 0.80f, 0.83f, 1f));
+            TextMeshProUGUI amount = CreateText(
+                row.transform,
+                string.Empty,
+                8f,
+                FontStyles.Normal,
+                new Color(0.78f, 0.80f, 0.83f, 1f));
             amount.textWrappingMode = TextWrappingModes.NoWrap;
             amount.overflowMode = TextOverflowModes.Ellipsis;
             amount.gameObject.AddComponent<LayoutElement>().preferredWidth = 64f;
+            LiquidOptionRowView view = new LiquidOptionRowView(
+                background,
+                name,
+                amount);
+            row.AddComponent<LiquidOptionRowBinding>().View = view;
+            return row;
         }
 
-        private void CreateEmptyHint()
+        private void UpdateOptionRow(LiquidOptionRowView view, LiquidOption option)
+        {
+            if (view == null)
+            {
+                return;
+            }
+
+            ColorStyleSetting style = option.Selected ? CreatePinkStyle() : CreateBlueStyle();
+            if (view.Background.colorStyleSetting != style)
+            {
+                view.Background.colorStyleSetting = style;
+                view.Background.ApplyColorStyleSetting();
+            }
+
+            FontStyles fontStyle = option.Selected ? FontStyles.Bold : FontStyles.Normal;
+            if (view.Name.fontStyle != fontStyle)
+            {
+                view.Name.fontStyle = fontStyle;
+            }
+
+            if (view.Name.text != option.Name)
+            {
+                view.Name.text = option.Name;
+            }
+
+            if (option.Element.HasValue)
+            {
+                int fingerprint = option.AmountKg.GetHashCode();
+                if (view.Amount.LastAmountFingerprint != fingerprint)
+                {
+                    view.Amount.LastAmountFingerprint = fingerprint;
+                    string details = GameUtil.GetFormattedMass(option.AmountKg);
+                    if (view.Amount.Text.text != details)
+                    {
+                        view.Amount.Text.text = details;
+                    }
+                }
+
+                optionAmountViews[option.Element.Value] = view.Amount;
+            }
+        }
+
+        private void UpdateOptionAmounts(IEnumerable<LiquidOption> options)
+        {
+            foreach (LiquidOption option in options)
+            {
+                if (!option.Element.HasValue ||
+                    !optionAmountViews.TryGetValue(option.Element.Value, out LiquidAmountView view) ||
+                    view?.Text == null)
+                {
+                    continue;
+                }
+
+                int fingerprint = option.AmountKg.GetHashCode();
+                if (view.LastAmountFingerprint == fingerprint)
+                {
+                    continue;
+                }
+
+                view.LastAmountFingerprint = fingerprint;
+                string details = GameUtil.GetFormattedMass(option.AmountKg);
+                if (view.Text.text != details)
+                {
+                    view.Text.text = details;
+                }
+            }
+        }
+
+        private GameObject CreateEmptyHint()
         {
             GameObject hint = new GameObject("EmptyHint");
             hint.transform.SetParent(optionRoot, false);
             hint.AddComponent<RectTransform>();
-            optionRows.Add(hint);
 
             LayoutElement layout = hint.AddComponent<LayoutElement>();
             layout.preferredHeight = 32f;
@@ -378,6 +595,7 @@ namespace StorageNetwork.UI
             text.textWrappingMode = TextWrappingModes.Normal;
             text.overflowMode = TextOverflowModes.Ellipsis;
             Stretch(text.rectTransform(), 4f, 4f, 2f, 2f);
+            return hint;
         }
 
         private static void AddIcon(Transform parent, SimHashes? elementHash)
@@ -407,21 +625,62 @@ namespace StorageNetwork.UI
 
         private void ClearOptions()
         {
-            foreach (GameObject row in optionRows)
+            if (optionRowCache != null)
             {
-                if (row != null)
+                optionRowCache.Begin();
+                optionRowCache.Commit();
+            }
+
+            optionAmountViews.Clear();
+        }
+
+        private bool HasStructureChanged(List<LiquidOption> options)
+        {
+            if (!hasStructureSignature ||
+                lastStructureElements.Count != options.Count)
+            {
+                return true;
+            }
+
+            SimHashes? selected = null;
+            for (int index = 0; index < options.Count; index++)
+            {
+                LiquidOption option = options[index];
+                if (lastStructureElements[index] != option.Element)
                 {
-                    Destroy(row);
+                    return true;
+                }
+
+                if (option.Selected)
+                {
+                    selected = option.Element;
                 }
             }
 
-            optionRows.Clear();
+            return lastStructureSelection != selected;
         }
 
-        private static string BuildSignature(List<LiquidOption> options)
+        private void RememberStructure(List<LiquidOption> options)
         {
-            return string.Join("|", options.Select(option =>
-                string.Format("{0}:{1}:{2}", option.Element.HasValue ? ((int)option.Element.Value).ToString() : "any", option.Selected ? "1" : "0", Mathf.RoundToInt(option.AmountKg * 1000f))));
+            lastStructureElements.Clear();
+            lastStructureSelection = null;
+            for (int index = 0; index < options.Count; index++)
+            {
+                LiquidOption option = options[index];
+                lastStructureElements.Add(option.Element);
+                if (option.Selected)
+                {
+                    lastStructureSelection = option.Element;
+                }
+            }
+
+            hasStructureSignature = true;
+        }
+
+        private void InvalidateStructure()
+        {
+            hasStructureSignature = false;
+            hasStatusSelection = false;
         }
 
         private static GameObject CreatePanel(Transform parent, Color color)
@@ -459,41 +718,103 @@ namespace StorageNetwork.UI
 
         private static ColorStyleSetting CreateBlueStyle()
         {
-            ColorStyleSetting style = ScriptableObject.CreateInstance<ColorStyleSetting>();
-            style.inactiveColor = new Color(0.17f, 0.19f, 0.25f, 1f);
-            style.hoverColor = new Color(0.25f, 0.28f, 0.35f, 1f);
-            style.activeColor = new Color(0.11f, 0.12f, 0.16f, 1f);
-            style.disabledColor = new Color(0.42f, 0.41f, 0.40f, 1f);
-            style.disabledActiveColor = style.disabledColor;
-            style.disabledhoverColor = style.disabledColor;
-            return style;
+            if (blueStyle == null)
+            {
+                blueStyle = ScriptableObject.CreateInstance<ColorStyleSetting>();
+                blueStyle.inactiveColor = new Color(0.17f, 0.19f, 0.25f, 1f);
+                blueStyle.hoverColor = new Color(0.25f, 0.28f, 0.35f, 1f);
+                blueStyle.activeColor = new Color(0.11f, 0.12f, 0.16f, 1f);
+                blueStyle.disabledColor = new Color(0.42f, 0.41f, 0.40f, 1f);
+                blueStyle.disabledActiveColor = blueStyle.disabledColor;
+                blueStyle.disabledhoverColor = blueStyle.disabledColor;
+            }
+
+            return blueStyle;
         }
 
         private static ColorStyleSetting CreatePinkStyle()
         {
-            ColorStyleSetting style = CreateBlueStyle();
-            style.inactiveColor = new Color(0.53f, 0.27f, 0.40f, 1f);
-            style.hoverColor = new Color(0.62f, 0.33f, 0.47f, 1f);
-            style.activeColor = new Color(0.79f, 0.45f, 0.62f, 1f);
-            return style;
+            if (pinkStyle == null)
+            {
+                pinkStyle = ScriptableObject.CreateInstance<ColorStyleSetting>();
+                pinkStyle.inactiveColor = new Color(0.53f, 0.27f, 0.40f, 1f);
+                pinkStyle.hoverColor = new Color(0.62f, 0.33f, 0.47f, 1f);
+                pinkStyle.activeColor = new Color(0.79f, 0.45f, 0.62f, 1f);
+                pinkStyle.disabledColor = new Color(0.42f, 0.41f, 0.40f, 1f);
+                pinkStyle.disabledActiveColor = pinkStyle.disabledColor;
+                pinkStyle.disabledhoverColor = pinkStyle.disabledColor;
+            }
+
+            return pinkStyle;
         }
 
-        private sealed class LiquidOption
+        internal static void ResetRuntimeStyles()
         {
-            public LiquidOption(SimHashes? element, string name, string details, bool selected, float amountKg)
+            if (blueStyle != null)
+            {
+                Destroy(blueStyle);
+                blueStyle = null;
+            }
+
+            if (pinkStyle != null)
+            {
+                Destroy(pinkStyle);
+                pinkStyle = null;
+            }
+        }
+
+        private readonly struct LiquidOption
+        {
+            public LiquidOption(
+                SimHashes? element,
+                string name,
+                bool selected,
+                float amountKg)
             {
                 Element = element;
                 Name = name;
-                Details = details;
                 Selected = selected;
                 AmountKg = amountKg;
             }
 
             public SimHashes? Element { get; }
             public string Name { get; }
-            public string Details { get; }
             public bool Selected { get; }
             public float AmountKg { get; }
+        }
+
+        private sealed class LiquidAmountView
+        {
+            public LiquidAmountView(TextMeshProUGUI text, int lastAmountFingerprint)
+            {
+                Text = text;
+                LastAmountFingerprint = lastAmountFingerprint;
+            }
+
+            public TextMeshProUGUI Text { get; }
+            public int LastAmountFingerprint { get; set; }
+        }
+
+        private sealed class LiquidOptionRowView
+        {
+            public LiquidOptionRowView(
+                KImage background,
+                TextMeshProUGUI name,
+                TextMeshProUGUI amount)
+            {
+                Background = background;
+                Name = name;
+                Amount = new LiquidAmountView(amount, int.MinValue);
+            }
+
+            public KImage Background { get; }
+            public TextMeshProUGUI Name { get; }
+            public LiquidAmountView Amount { get; }
+        }
+
+        private sealed class LiquidOptionRowBinding : MonoBehaviour
+        {
+            public LiquidOptionRowView View { get; set; }
         }
     }
 }

@@ -5,6 +5,10 @@ using System.IO;
 using System.Reflection;
 using System.Threading;
 using HarmonyLib;
+using StorageNetwork.Components;
+using StorageNetwork.ProductionOrders;
+using StorageNetwork.Services;
+using StorageNetwork.UI;
 using UnityEngine;
 
 namespace StorageNetwork.Core
@@ -17,6 +21,26 @@ namespace StorageNetwork.Core
         private static readonly Dictionary<MethodBase, bool> PatchedMethods =
             new Dictionary<MethodBase, bool>();
         private static readonly Harmony Harmony = new Harmony("StorageNetwork.HarmonyProfileTool");
+        private static readonly Type[] ExplicitProfileTypes =
+        {
+            typeof(StorageNetworkCore),
+            typeof(StorageNetworkLogicDiy),
+            typeof(StorageNetworkGeyserOutput),
+            typeof(StorageNetworkSolidInputPortIngress),
+            typeof(StorageNetworkLiquidInputPortIngress),
+            typeof(StorageNetworkGasInputPortIngress),
+            typeof(StorageNetworkSolidOutputPortEgress),
+            typeof(StorageNetworkLiquidOutputPortEgress),
+            typeof(StorageNetworkGasOutputPortEgress),
+            typeof(StorageNetworkParticleOutputPortEgress),
+            typeof(StorageNetworkPowerInputPortConsumer),
+            typeof(StorageNetworkPowerOutputPortGenerator),
+            typeof(StorageNetworkPowerService),
+            typeof(NetworkStorageTransferService),
+            typeof(ProductionOrderService),
+            typeof(ProductionOrderBackgroundMaintenance),
+            typeof(StorageNetworkPanel)
+        };
         private static string modPath;
         private static bool installed;
         private static bool verboseLogging;
@@ -73,23 +97,7 @@ namespace StorageNetwork.Core
             long allocatedBytes = Math.Max(
                 0L,
                 GetAllocatedBytesForCurrentThread() - __state.StartedAllocatedBytes);
-            StorageNetworkFrameProfileTool.RecordWork(elapsedTicks, allocatedBytes);
-            if (!verboseLogging)
-            {
-                return;
-            }
-
-            double elapsedMilliseconds = elapsedTicks * 1000d / Stopwatch.Frequency;
-            if (elapsedMilliseconds <= 1d)
-            {
-                return;
-            }
-
-            Debug.Log(string.Format(
-                "{0} {1}: {2:F3}ms",
-                LogPrefix,
-                GetMethodName(__originalMethod),
-                elapsedMilliseconds));
+            StorageNetworkFrameProfileTool.RecordHarmonyWork(elapsedTicks, allocatedBytes);
         }
 
         public static Exception Finalizer(Exception __exception)
@@ -130,15 +138,10 @@ namespace StorageNetwork.Core
             MethodInfo finalizer = AccessTools.Method(typeof(StorageNetworkHarmonyProfileTool), nameof(Finalizer));
             HarmonyMethod prefixPatch = new HarmonyMethod(prefix);
             HarmonyMethod postfixPatch = new HarmonyMethod(postfix);
-            HarmonyMethod finalizerPatch = verboseLogging ? new HarmonyMethod(finalizer) : null;
+            HarmonyMethod finalizerPatch = new HarmonyMethod(finalizer);
 
-            foreach (Type type in typeof(StorageNetworkHarmonyProfileTool).Assembly.GetTypes())
+            foreach (Type type in ExplicitProfileTypes)
             {
-                if (!ShouldProfileType(type))
-                {
-                    continue;
-                }
-
                 foreach (MethodBase method in GetDeclaredMethods(type))
                 {
                     if (!ShouldProfileMethod(method))
@@ -187,26 +190,10 @@ namespace StorageNetwork.Core
                                        BindingFlags.NonPublic |
                                        BindingFlags.DeclaredOnly;
 
-            foreach (ConstructorInfo constructor in type.GetConstructors(Flags))
-            {
-                yield return constructor;
-            }
-
             foreach (MethodInfo method in type.GetMethods(Flags))
             {
                 yield return method;
             }
-        }
-
-        private static bool ShouldProfileType(Type type)
-        {
-            return type != null &&
-                   !IsTypeOrNestedUnder(type, typeof(StorageNetworkHarmonyProfileTool)) &&
-                   !IsTypeOrNestedUnder(type, typeof(StorageNetworkFrameProfileTool)) &&
-                   !type.IsGenericTypeDefinition &&
-                   !type.IsInterface &&
-                   type.Namespace != null &&
-                   type.Namespace.StartsWith("StorageNetwork", StringComparison.Ordinal);
         }
 
         private static bool ShouldProfileMethod(MethodBase method)
@@ -223,10 +210,17 @@ namespace StorageNetwork.Core
             }
 
             string name = method.Name;
-            return !name.StartsWith("get_", StringComparison.Ordinal) &&
-                   !name.StartsWith("set_", StringComparison.Ordinal) &&
-                   !name.StartsWith("add_", StringComparison.Ordinal) &&
-                   !name.StartsWith("remove_", StringComparison.Ordinal);
+            return name == "Update" ||
+                   name == "LateUpdate" ||
+                   name == "Sim200ms" ||
+                   name == "Sim1000ms" ||
+                   name == "EnergySim200ms" ||
+                   name == "Refresh" ||
+                   name == "RefreshBackground" ||
+                   name == "RequestFromNetwork" ||
+                   name == "BuildPlan" ||
+                   name == "MaintainActiveOrderPlan" ||
+                   name.StartsWith("Transfer", StringComparison.Ordinal);
         }
 
         private static bool IsTypeOrNestedUnder(Type type, Type owner)

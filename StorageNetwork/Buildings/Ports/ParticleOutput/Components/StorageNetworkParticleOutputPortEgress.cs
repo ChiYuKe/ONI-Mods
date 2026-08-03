@@ -117,18 +117,9 @@ namespace StorageNetwork.Components
             }
 
             int worldId = StorageTargetSelector.GetObjectWorldId(gameObject);
-            foreach (Storage source in StorageSceneCollector.CollectLightweightForWorld(worldId).Storages)
-            {
-                KPrefabID prefabId = source != null ? source.GetComponent<KPrefabID>() : null;
-                if (prefabId != null &&
-                    prefabId.InstanceID == SourceStorageInstanceId &&
-                    StorageNetworkStorageRules.IsParticleStorageServer(source))
-                {
-                    return source;
-                }
-            }
-
-            return null;
+            return StorageNetworkParticleStorageService.FindStorageByInstanceId(
+                worldId,
+                SourceStorageInstanceId);
         }
 
         public string SliderTitleKey => "STRINGS.UI.UISIDESCREENS.RADBOLTTHRESHOLDSIDESCREEN.TITLE";
@@ -176,18 +167,36 @@ namespace StorageNetwork.Components
 
             launchTimer += dt;
             float requestAmount = GetLaunchAmount();
-            if (launchTimer < MinLaunchInterval || GetAvailableParticles() < requestAmount)
+            if (launchTimer < MinLaunchInterval)
             {
                 return;
             }
 
-            launchTimer = 0f;
-            float payload = StorageNetworkParticleStorageService.Consume(gameObject, requestAmount, GetSpecificSourceStorage());
+            Storage specificSource = null;
+            if (CurrentSourceMode == StorageNetworkMaterialRequester.RequestMode.SpecificStorage)
+            {
+                specificSource = ResolveSourceStorage();
+                if (specificSource == null)
+                {
+                    return;
+                }
+            }
+
+            if (requestAmount < MinPayload)
+            {
+                return;
+            }
+
+            float payload = StorageNetworkParticleStorageService.ConsumeIfAvailable(
+                gameObject,
+                requestAmount,
+                specificSource);
             if (payload < MinPayload)
             {
                 return;
             }
 
+            launchTimer = 0f;
             if (OutputLimitEnabled)
             {
                 OutputLimitUsedParticles += payload;
@@ -279,12 +288,22 @@ namespace StorageNetwork.Components
 
         private float GetAvailableParticles()
         {
-            return StorageNetworkParticleStorageService.GetAvailable(gameObject, GetSpecificSourceStorage());
+            if (CurrentSourceMode == StorageNetworkMaterialRequester.RequestMode.SpecificStorage)
+            {
+                Storage specificSource = ResolveSourceStorage();
+                return specificSource != null
+                    ? StorageNetworkParticleStorageService.GetAvailable(gameObject, specificSource)
+                    : 0f;
+            }
+
+            return StorageNetworkParticleStorageService.GetAvailable(gameObject, null);
         }
 
         private bool IsOutputLimitReached()
         {
-            return OutputLimitEnabled && Mathf.Max(0f, OutputLimitUsedParticles) >= Mathf.Max(0f, OutputLimitParticles) - 0.01f;
+            return OutputLimitEnabled &&
+                   Mathf.Max(0f, OutputLimitUsedParticles) >=
+                   Mathf.Max(0f, OutputLimitParticles) - MinPayload;
         }
 
         private float GetLaunchAmount()
@@ -296,13 +315,6 @@ namespace StorageNetwork.Components
             }
 
             return Mathf.Min(threshold, Mathf.Max(0f, OutputLimitParticles - OutputLimitUsedParticles));
-        }
-
-        private Storage GetSpecificSourceStorage()
-        {
-            return CurrentSourceMode == StorageNetworkMaterialRequester.RequestMode.SpecificStorage
-                ? ResolveSourceStorage()
-                : null;
         }
     }
 }

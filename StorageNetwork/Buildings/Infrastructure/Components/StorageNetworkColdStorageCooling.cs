@@ -26,6 +26,20 @@ namespace StorageNetwork.Components
         [Serialize]
         private float coolingRate = DefaultTargetTemperature;
         private bool energySaving;
+        private float appliedWattage = float.NaN;
+        private System.Action<SimTemperatureTransfer> applyToItemOnRegistered;
+
+        [MyCmpGet]
+        private EnergyConsumer energyConsumer = null;
+
+        [MyCmpGet]
+        private Building building = null;
+
+        [MyCmpGet]
+        private Operational operational = null;
+
+        [MyCmpGet]
+        private Storage storage = null;
 
         public bool IsEnergySaving => energySaving;
 
@@ -34,22 +48,33 @@ namespace StorageNetwork.Components
             get => NormalizeTemperature(coolingRate);
             set
             {
-                coolingRate = NormalizeTemperature(value);
+                float normalized = NormalizeTemperature(value);
+                if (Mathf.Approximately(coolingRate, normalized))
+                {
+                    return;
+                }
+
+                coolingRate = normalized;
                 ApplyEnergyProfile();
-                ApplyToRunningController();
-                ApplyToStoredItems();
+                if (!ApplyToRunningController())
+                {
+                    ApplyToStoredItems();
+                }
             }
         }
 
         protected override void OnSpawn()
         {
             base.OnSpawn();
+            applyToItemOnRegistered = ApplyToItem;
             coolingRate = NormalizeTemperature(IsLegacyCoolingRate(coolingRate) ? DefaultTargetTemperature : coolingRate);
             Subscribe((int)GameHashes.OnStorageChange, OnStorageChanged);
-            GetComponent<Storage>()?.SetDefaultStoredItemModifiers(StoredItemModifiers);
+            storage?.SetDefaultStoredItemModifiers(StoredItemModifiers);
             ApplyEnergyProfile();
-            ApplyToRunningController();
-            ApplyToStoredItems();
+            if (!ApplyToRunningController())
+            {
+                ApplyToStoredItems();
+            }
         }
 
         protected override void OnCleanUp()
@@ -60,6 +85,18 @@ namespace StorageNetwork.Components
 
         private void OnStorageChanged(object data)
         {
+            if (data is GameObject item)
+            {
+                if (storage?.items != null &&
+                    storage.items.Contains(item) &&
+                    operational?.IsActive == true)
+                {
+                    ApplyToItem(EnsureItemCanExchangeTemperature(item));
+                }
+
+                return;
+            }
+
             ApplyToStoredItems();
         }
 
@@ -105,29 +142,49 @@ namespace StorageNetwork.Components
             return Mathf.Min(TargetTemperature, primaryElement.Temperature);
         }
 
-        private void ApplyToRunningController()
+        private bool ApplyToRunningController()
         {
-            gameObject.GetSMI<StorageNetworkColdStorageController.Instance>()?.RefreshTemperatureAdjuster();
+            StorageNetworkColdStorageController.Instance instance =
+                gameObject.GetSMI<StorageNetworkColdStorageController.Instance>();
+            if (instance == null)
+            {
+                return false;
+            }
+
+            instance.RefreshTemperatureAdjuster();
+            return true;
         }
 
         public void ApplyEnergyProfile()
         {
-            EnergyConsumer energyConsumer = GetComponent<EnergyConsumer>();
-            if (energyConsumer != null)
+            if (energyConsumer == null)
             {
-                energyConsumer.BaseWattageRating = energySaving ? GetEnergySaverPowerWatts() : GetCoolingPowerWatts();
+                return;
             }
+
+            float wattage = energySaving ? GetEnergySaverPowerWatts() : GetCoolingPowerWatts();
+            if (Mathf.Approximately(appliedWattage, wattage))
+            {
+                return;
+            }
+
+            appliedWattage = wattage;
+            energyConsumer.BaseWattageRating = wattage;
         }
 
         public void SetEnergySaving(bool value)
         {
+            if (energySaving == value)
+            {
+                return;
+            }
+
             energySaving = value;
             ApplyEnergyProfile();
         }
 
         public float GetEnergySaverPowerWatts()
         {
-            Building building = GetComponent<Building>();
             float baseWatts = building?.Def?.EnergyConsumptionWhenActive ?? 0f;
             if (baseWatts <= 0f)
             {
@@ -139,7 +196,6 @@ namespace StorageNetwork.Components
 
         public float GetCoolingPowerWatts()
         {
-            Building building = GetComponent<Building>();
             float baseWatts = building?.Def?.EnergyConsumptionWhenActive ?? 0f;
             if (baseWatts <= 0f)
             {
@@ -176,8 +232,6 @@ namespace StorageNetwork.Components
 
         public void ApplyToStoredItems()
         {
-            Operational operational = GetComponent<Operational>();
-            Storage storage = GetComponent<Storage>();
             if (operational == null || storage == null || !operational.IsActive)
             {
                 return;
@@ -205,10 +259,10 @@ namespace StorageNetwork.Components
 
             transfer.onSimRegistered = (System.Action<SimTemperatureTransfer>)System.Delegate.Remove(
                 transfer.onSimRegistered,
-                new System.Action<SimTemperatureTransfer>(ApplyToItem));
+                applyToItemOnRegistered);
             transfer.onSimRegistered = (System.Action<SimTemperatureTransfer>)System.Delegate.Combine(
                 transfer.onSimRegistered,
-                new System.Action<SimTemperatureTransfer>(ApplyToItem));
+                applyToItemOnRegistered);
             transfer.enabled = true;
             return transfer;
         }

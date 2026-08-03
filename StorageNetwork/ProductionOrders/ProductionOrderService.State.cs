@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using StorageNetwork.Components;
+using StorageNetwork.Core;
 using StorageNetwork.Services;
 using UnityEngine;
 using static StorageNetwork.STRINGS;
@@ -9,6 +10,10 @@ namespace StorageNetwork.ProductionOrders
 {
     internal sealed partial class ProductionOrderService
     {
+        private readonly Dictionary<OrderAccountingKey, List<ProductionOrderRecord>>
+            producedAmountGroups =
+                new Dictionary<OrderAccountingKey, List<ProductionOrderRecord>>();
+
         private void UpdateProductionOrderStates()
         {
             if (ActiveOrders.Count == 0)
@@ -18,40 +23,70 @@ namespace StorageNetwork.ProductionOrders
 
             EnsureActiveOrderAutomationLeases();
             float currentCycle = GameClock.Instance != null ? GameClock.Instance.GetCycle() : 0f;
-            UpdateProducedAmountsForActiveOrders();
-            foreach (ProductionOrderRecord order in ActiveOrders.Values)
+            if (UpdateProducedAmountsForActiveOrders())
             {
-                if (!IsOrderActive(order))
+                MarkOrdersChanged();
+            }
+            ProductionOrderRuntimeAllocation.BeginMaintenanceSnapshot();
+            try
+            {
+                foreach (ProductionOrderRecord order in ActiveOrders.Values)
                 {
-                    continue;
-                }
+                    if (!IsOrderActive(order))
+                    {
+                        continue;
+                    }
 
-                bool planChanged = MaintainActiveOrderPlan(order);
-                float queueLoad = CalculateOrderQueueLoad(order);
-                order.ObserveActivity(currentCycle, order.ProducedAtSubmit, queueLoad, planChanged || HasActiveOrderWork(order));
-                if (order.ProducedAtSubmit + PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT >= order.RequestedAmount)
-                {
-                    order.State = ProductionOrderState.Completed;
-                    order.CompletedCycle = currentCycle;
-                    CancelOrderQueues(order);
-                    ReleaseOrderAutomation(order.Key);
+                    networkWorldId = GetOrderNetworkWorldId(order);
+                    Runtime.GetNetworkInventory(networkWorldId);
+
+                    ProductionOrderState previousState = order.State;
+                    bool planChanged = MaintainActiveOrderPlan(order);
+                    float queueLoad = CalculateOrderQueueLoad(order);
+                    if (order.ObserveActivity(
+                            currentCycle,
+                            order.ProducedAtSubmit,
+                            queueLoad,
+                            planChanged || HasActiveOrderWork(order)))
+                    {
+                        MarkOrdersChanged();
+                    }
+                    if (order.ProducedAtSubmit + PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT >= order.RequestedAmount)
+                    {
+                        order.State = ProductionOrderState.Completed;
+                        order.CompletedCycle = currentCycle;
+                        CancelOrderQueues(order);
+                        ReleaseOrderAutomation(order.Key);
+                        MarkOrdersChanged();
+                        ProductionOrderRuntimeAllocation.NotifyOrderAssignmentsChanged(order);
+                    }
+                    else if (currentCycle - order.LastActivityCycle >= Config.Instance.AbnormalOrderTimeoutCycles)
+                    {
+                        CancelAbnormalOrder(order, currentCycle);
+                        ProductionOrderRuntimeAllocation.NotifyOrderAssignmentsChanged(order);
+                    }
+                    else if (HasMissingReservedMaterial(order))
+                    {
+                        order.State = ProductionOrderState.WaitingMaterials;
+                    }
+                    else if (ProductionOrderRuntimeAllocation.GetRunningCountForOrder(order) > 0)
+                    {
+                        order.State = ProductionOrderState.Producing;
+                    }
+                    else
+                    {
+                        order.State = ProductionOrderState.Submitted;
+                    }
+
+                    if (order.State != previousState)
+                    {
+                        MarkOrdersChanged();
+                    }
                 }
-                else if (currentCycle - order.LastActivityCycle >= Config.Instance.AbnormalOrderTimeoutCycles)
-                {
-                    CancelAbnormalOrder(order, currentCycle);
-                }
-                else if (HasMissingReservedMaterial(order))
-                {
-                    order.State = ProductionOrderState.WaitingMaterials;
-                }
-                else if (ProductionOrderRuntimeAllocation.GetRunningCountForOrder(order) > 0)
-                {
-                    order.State = ProductionOrderState.Producing;
-                }
-                else
-                {
-                    order.State = ProductionOrderState.Submitted;
-                }
+            }
+            finally
+            {
+                ProductionOrderRuntimeAllocation.EndMaintenanceSnapshot();
             }
         }
 
@@ -154,9 +189,11 @@ namespace StorageNetwork.ProductionOrders
             {
                 ActiveOrders.Remove(key);
             }
+
+            MarkOrdersChanged();
         }
 
-        private static float CalculateOrderQueueLoad(ProductionOrderRecord order)
+        private float CalculateOrderQueueLoad(ProductionOrderRecord order)
         {
             float load = 0f;
             if (order == null)
@@ -166,7 +203,10 @@ namespace StorageNetwork.ProductionOrders
 
             foreach (ProductionOrderQueueAssignment assignment in order.QueueAssignments)
             {
-                if (!IsOrderProductionFabricator(assignment.Fabricator) || assignment.Recipe == null)
+                if (!IsFabricatorReachableFromWorld(
+                        assignment.Fabricator,
+                        GetCurrentNetworkWorldId()) ||
+                    assignment.Recipe == null)
                 {
                     continue;
                 }
@@ -189,7 +229,7 @@ namespace StorageNetwork.ProductionOrders
             return load;
         }
 
-        private static bool HasActiveOrderWork(ProductionOrderRecord order)
+        private bool HasActiveOrderWork(ProductionOrderRecord order)
         {
             if (order == null || order.QueueAssignments == null)
             {
@@ -198,7 +238,11 @@ namespace StorageNetwork.ProductionOrders
 
             foreach (ProductionOrderQueueAssignment assignment in order.QueueAssignments)
             {
-                if (assignment == null || !IsOrderProductionFabricator(assignment.Fabricator) || assignment.Recipe == null)
+                if (assignment == null ||
+                    !IsFabricatorReachableFromWorld(
+                        assignment.Fabricator,
+                        GetCurrentNetworkWorldId()) ||
+                    assignment.Recipe == null)
                 {
                     continue;
                 }
@@ -229,52 +273,150 @@ namespace StorageNetwork.ProductionOrders
             return load;
         }
 
-        private void UpdateProducedAmountsForActiveOrders()
+        private bool UpdateProducedAmountsForActiveOrders()
         {
-            foreach (IGrouping<Tag, ProductionOrderRecord> group in ActiveOrders.Values
-                         .Where(order => order != null &&
-                                         order.State != ProductionOrderState.Cancelled &&
-                                         order.State != ProductionOrderState.Abnormal)
-                         .GroupBy(order => order.ProductTag))
+            bool changed = false;
+            int connectivityVersion = StorageSceneRegistry.ConnectivityVersion;
+            bool rebaseThresholds =
+                observedOrderAccountingConnectivityVersion >= 0 &&
+                observedOrderAccountingConnectivityVersion != connectivityVersion;
+            bool relayOnline = StorageSceneRegistry.IsCrossPlanetRelayOnline();
+            foreach (List<ProductionOrderRecord> cachedOrders in producedAmountGroups.Values)
             {
-                float availableProduct = GetProducedAmountForOrder(group.Key);
-                float allocationThreshold = 0f;
-                foreach (ProductionOrderRecord order in group.OrderBy(order => order.DisplayId))
+                cachedOrders.Clear();
+            }
+
+            foreach (ProductionOrderRecord order in ActiveOrders.Values)
+            {
+                if (order == null ||
+                    order.State == ProductionOrderState.Cancelled ||
+                    order.State == ProductionOrderState.Abnormal)
                 {
-                    allocationThreshold = Mathf.Max(allocationThreshold, order.StockAtSubmit + order.AllocationOffsetAtSubmit);
+                    continue;
+                }
+
+                int orderWorldId = GetOrderNetworkWorldId(order);
+                int partitionId = relayOnline ? -1 : orderWorldId;
+                OrderAccountingKey key = new OrderAccountingKey(
+                    partitionId,
+                    order.ProductTag);
+                if (!producedAmountGroups.TryGetValue(
+                        key,
+                        out List<ProductionOrderRecord> orders))
+                {
+                    orders = new List<ProductionOrderRecord>();
+                    producedAmountGroups.Add(key, orders);
+                }
+
+                orders.Add(order);
+            }
+
+            foreach (KeyValuePair<OrderAccountingKey, List<ProductionOrderRecord>> pair in
+                     producedAmountGroups)
+            {
+                List<ProductionOrderRecord> orders = pair.Value;
+                if (orders.Count == 0)
+                {
+                    continue;
+                }
+
+                orders.Sort(ProductionOrderDisplayIdComparer.Instance);
+                networkWorldId = GetOrderNetworkWorldId(orders[0]);
+                float availableProduct = GetProducedAmountForOrder(pair.Key.ProductTag);
+                if (rebaseThresholds)
+                {
+                    float preservedProduced = 0f;
+                    foreach (ProductionOrderRecord order in orders)
+                    {
+                        preservedProduced += Mathf.Clamp(
+                            order.ProducedAtSubmit,
+                            0f,
+                            order.RequestedAmount);
+                    }
+
+                    float rebasedThreshold = Mathf.Max(
+                        0f,
+                        availableProduct - preservedProduced);
+                    foreach (ProductionOrderRecord order in orders)
+                    {
+                        order.RebaseProductionThreshold(rebasedThreshold);
+                        rebasedThreshold += order.RequestedAmount;
+                        changed = true;
+                    }
+                }
+
+                float allocationThreshold = 0f;
+                foreach (ProductionOrderRecord order in orders)
+                {
+                    allocationThreshold = Mathf.Max(
+                        allocationThreshold,
+                        order.StockAtSubmit + order.AllocationOffsetAtSubmit);
                     if (IsOrderActive(order))
                     {
                         float producedAfterThreshold = availableProduct - allocationThreshold;
-                        order.SetProducedAmount(Mathf.Clamp(producedAfterThreshold, 0f, order.RequestedAmount));
+                        changed |= order.SetProducedAmount(Mathf.Clamp(
+                            producedAfterThreshold,
+                            0f,
+                            order.RequestedAmount));
                     }
 
                     allocationThreshold += order.RequestedAmount;
                 }
             }
+
+            observedOrderAccountingConnectivityVersion = connectivityVersion;
+            return changed;
         }
 
-        private static float GetLeasedPrimaryOutputAmount(ProductionOrderRecord order)
+        private readonly struct OrderAccountingKey : System.IEquatable<OrderAccountingKey>
         {
-            float amount = 0f;
-            foreach (ProductionOrderQueueAssignment assignment in order.QueueAssignments.Where(assignment => assignment.Primary))
+            public OrderAccountingKey(int partitionId, Tag productTag)
             {
-                if (!IsOrderProductionFabricator(assignment.Fabricator) || assignment.Fabricator.outStorage == null || assignment.Fabricator.outStorage.items == null)
-                {
-                    continue;
-                }
-
-                Tag outputTag = assignment.OutputTag != Tag.Invalid ? assignment.OutputTag : order.ProductTag;
-                foreach (GameObject item in assignment.Fabricator.outStorage.items)
-                {
-                    PrimaryElement primaryElement = item != null ? item.GetComponent<PrimaryElement>() : null;
-                    if (primaryElement != null && StorageItemUtility.MatchesStorageTag(item, outputTag))
-                    {
-                        amount += primaryElement.Mass;
-                    }
-                }
+                PartitionId = partitionId;
+                ProductTag = productTag;
             }
 
-            return amount;
+            public int PartitionId { get; }
+
+            public Tag ProductTag { get; }
+
+            public bool Equals(OrderAccountingKey other)
+            {
+                return PartitionId == other.PartitionId && ProductTag == other.ProductTag;
+            }
+
+            public override bool Equals(object obj)
+            {
+                return obj is OrderAccountingKey other && Equals(other);
+            }
+
+            public override int GetHashCode()
+            {
+                return (PartitionId * 397) ^ ProductTag.GetHashCode();
+            }
         }
+
+        private sealed class ProductionOrderDisplayIdComparer :
+            IComparer<ProductionOrderRecord>
+        {
+            public static readonly ProductionOrderDisplayIdComparer Instance =
+                new ProductionOrderDisplayIdComparer();
+
+            public int Compare(ProductionOrderRecord left, ProductionOrderRecord right)
+            {
+                if (ReferenceEquals(left, right))
+                {
+                    return 0;
+                }
+
+                if (left == null)
+                {
+                    return -1;
+                }
+
+                return right == null ? 1 : left.DisplayId.CompareTo(right.DisplayId);
+            }
+        }
+
     }
 }

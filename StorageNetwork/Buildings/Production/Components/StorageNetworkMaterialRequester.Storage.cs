@@ -8,13 +8,13 @@ namespace StorageNetwork.Components
     {
         private HashSet<Storage> BuildSourceExclusions()
         {
-            HashSet<Storage> excluded = new HashSet<Storage>();
-            foreach (Storage storage in GetFabricatorStorages())
+            HashSet<Storage> excluded = fabricatorStorageExclusions;
+            excluded.Clear();
+            if (fabricator != null)
             {
-                if (storage != null)
-                {
-                    excluded.Add(storage);
-                }
+                AddStorageIfPresent(excluded, fabricator.inStorage);
+                AddStorageIfPresent(excluded, fabricator.buildStorage);
+                AddStorageIfPresent(excluded, fabricator.outStorage);
             }
 
             return excluded;
@@ -35,16 +35,19 @@ namespace StorageNetwork.Components
             return StorageItemUtility.MatchesStorageTag(item, tag);
         }
 
-        private IEnumerable<Storage> GetFabricatorStorages()
+        private HashSet<Storage> GetFabricatorStorages()
         {
-            if (fabricator == null)
-            {
-                yield break;
-            }
+            return BuildSourceExclusions();
+        }
 
-            yield return fabricator.inStorage;
-            yield return fabricator.buildStorage;
-            yield return fabricator.outStorage;
+        private static void AddStorageIfPresent(
+            HashSet<Storage> storages,
+            Storage storage)
+        {
+            if (storage != null)
+            {
+                storages.Add(storage);
+            }
         }
 
         internal static int GetStorageInstanceId(Storage storage)

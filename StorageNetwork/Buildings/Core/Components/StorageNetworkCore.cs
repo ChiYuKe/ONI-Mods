@@ -29,8 +29,20 @@ namespace StorageNetwork.Components
         private bool lowBatteryWarningActive;
         private bool backupPowerNotificationActive;
         private bool observedExternalPower;
+        private bool powerStateInitialized;
+        private bool lastExternalPower;
+        private bool lastBackupPower;
         private Guid backupPowerStatusHandle = Guid.Empty;
         private Guid internalBatteryStatusHandle = Guid.Empty;
+
+        [MyCmpGet]
+        private Operational operational = null;
+
+        [MyCmpGet]
+        private KSelectable selectable = null;
+
+        private static readonly EventSystem.IntraObjectHandler<StorageNetworkCore> OnOperationalChangedDelegate =
+            new EventSystem.IntraObjectHandler<StorageNetworkCore>((component, data) => component.OnOperationalChanged(data));
 
         public float InternalBatteryJoulesAvailable => InternalBattery.JoulesAvailable;
 
@@ -38,7 +50,7 @@ namespace StorageNetwork.Components
 
         public bool HasInternalBatteryPower => InternalBattery.HasEnergy;
 
-        public bool HasExternalPower => GetComponent<Operational>()?.IsOperational == true;
+        public bool HasExternalPower => operational?.IsOperational == true;
 
         public bool IsNetworkOnline => HasExternalPower || HasInternalBatteryPower;
 
@@ -48,19 +60,17 @@ namespace StorageNetwork.Components
             InitializeInternalBattery();
             AddInternalBatteryStatus();
             StorageSceneRegistry.Register(gameObject);
+            Subscribe((int)GameHashes.OperationalChanged, OnOperationalChangedDelegate);
+            RefreshBackupPowerStatus();
         }
 
         protected override void OnCleanUp()
         {
+            Unsubscribe((int)GameHashes.OperationalChanged, OnOperationalChangedDelegate);
             RemoveBackupPowerStatus();
             RemoveInternalBatteryStatus();
             StorageSceneRegistry.Unregister(gameObject);
             base.OnCleanUp();
-        }
-
-        public void Update()
-        {
-            RefreshBackupPowerStatus();
         }
 
         public void Sim1000ms(float dt)
@@ -74,8 +84,12 @@ namespace StorageNetwork.Components
             }
 
             StorageNetworkCoreInternalBattery battery = InternalBattery;
+            float before = battery.JoulesAvailable;
             battery.Drain(dt);
             internalBatteryJoules = battery.JoulesAvailable;
+            StorageNetworkPowerService.RecordCoreEnergyDelta(
+                this,
+                internalBatteryJoules - before);
             ShowLowBatteryWarningIfNeeded();
             RefreshBackupPowerStatus();
         }
@@ -87,6 +101,7 @@ namespace StorageNetwork.Components
             float accepted = battery.Recharge(joules);
             internalBatteryJoules = battery.JoulesAvailable;
             ResetLowBatteryWarningIfRecovered();
+            RefreshBackupPowerStatus();
             return accepted;
         }
 
@@ -133,6 +148,14 @@ namespace StorageNetwork.Components
         {
             bool hasExternalPower = HasExternalPower;
             bool isUsingBackupPower = !hasExternalPower && HasInternalBatteryPower;
+            bool networkWasOnline = powerStateInitialized && (lastExternalPower || lastBackupPower);
+            bool networkIsOnline = hasExternalPower || isUsingBackupPower;
+            bool stateChanged = !powerStateInitialized ||
+                lastExternalPower != hasExternalPower ||
+                lastBackupPower != isUsingBackupPower;
+            powerStateInitialized = true;
+            lastExternalPower = hasExternalPower;
+            lastBackupPower = isUsingBackupPower;
 
             if (hasExternalPower)
             {
@@ -142,14 +165,29 @@ namespace StorageNetwork.Components
 
             if (isUsingBackupPower)
             {
+                // Vanilla may restore these statuses while power remains absent, so keep
+                // this low-frequency cleanup even when our own state did not change.
                 RemoveNativeNoPowerStatus();
-                AddBackupPowerStatus();
-                ShowBackupPowerNotificationIfNeeded();
+                if (stateChanged)
+                {
+                    AddBackupPowerStatus();
+                    ShowBackupPowerNotificationIfNeeded();
+                }
             }
-            else
+            else if (stateChanged)
             {
                 RemoveBackupPowerStatus();
             }
+
+            if (stateChanged && networkWasOnline != networkIsOnline)
+            {
+                StorageSceneRegistry.InvalidateConnectivity();
+            }
+        }
+
+        private void OnOperationalChanged(object data)
+        {
+            RefreshBackupPowerStatus();
         }
 
         private bool IsUsingBackupPower => !HasExternalPower && HasInternalBatteryPower;
@@ -169,7 +207,6 @@ namespace StorageNetwork.Components
 
         private void AddBackupPowerStatus()
         {
-            KSelectable selectable = GetComponent<KSelectable>();
             if (selectable == null || backupPowerStatusHandle != Guid.Empty)
             {
                 return;
@@ -180,7 +217,6 @@ namespace StorageNetwork.Components
 
         private void RemoveBackupPowerStatus()
         {
-            KSelectable selectable = GetComponent<KSelectable>();
             if (selectable != null && backupPowerStatusHandle != Guid.Empty)
             {
                 selectable.RemoveStatusItem(backupPowerStatusHandle);
@@ -191,7 +227,6 @@ namespace StorageNetwork.Components
 
         private void RemoveNativeNoPowerStatus()
         {
-            KSelectable selectable = GetComponent<KSelectable>();
             if (selectable == null)
             {
                 return;
@@ -238,7 +273,6 @@ namespace StorageNetwork.Components
 
         private void AddInternalBatteryStatus()
         {
-            KSelectable selectable = GetComponent<KSelectable>();
             if (selectable == null || internalBatteryStatusHandle != Guid.Empty)
             {
                 return;
@@ -249,7 +283,6 @@ namespace StorageNetwork.Components
 
         private void RemoveInternalBatteryStatus()
         {
-            KSelectable selectable = GetComponent<KSelectable>();
             if (selectable != null && internalBatteryStatusHandle != Guid.Empty)
             {
                 selectable.RemoveStatusItem(internalBatteryStatusHandle);

@@ -23,7 +23,7 @@ namespace StorageNetwork.UI
 
             string details = StorageNetworkGeyserText.GetStorageListDetails(geyser);
             bool erupting = IsGeyserErupting(geyser);
-            CreateFoldoutHeader(
+            GameObject header = CreateFoldoutHeader(
                 row.transform,
                 expanded,
                 storageInfo.Name,
@@ -42,6 +42,10 @@ namespace StorageNetwork.UI
                 Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STORAGE_SETTINGS),
                 () => ShowGeyserSettingsDialog(geyser),
                 erupting ? new Color(0.28f, 0.48f, 0.34f, 1f) : new Color(0.62f, 0.24f, 0.24f, 1f));
+            RegisterGeyserLiveView(
+                geyser,
+                header.transform.Find("Amount")?.GetComponent<TextMeshProUGUI>(),
+                header.transform.Find("Info")?.GetComponent<TextMeshProUGUI>());
 
             if (!expanded)
             {

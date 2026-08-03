@@ -50,7 +50,7 @@ namespace StorageNetwork.Patches
             public static void Postfix(ConditionHasControlStation __instance, ref ProcessCondition.Status __result)
             {
                 if (__result != ProcessCondition.Status.Failure ||
-                    !StorageNetworkRocketRelayService.HasStorageNetworkRelayOnModuleField(__instance, "module"))
+                    !StorageNetworkRocketRelayService.HasStorageNetworkRelay(__instance))
                 {
                     return;
                 }
@@ -65,7 +65,7 @@ namespace StorageNetwork.Patches
             public static void Postfix(ConditionPilotOnBoard __instance, ref ProcessCondition.Status __result)
             {
                 if (__result != ProcessCondition.Status.Failure ||
-                    !StorageNetworkRocketRelayService.HasStorageNetworkRelayOnModuleField(__instance, "rocketModule"))
+                    !StorageNetworkRocketRelayService.HasStorageNetworkRelay(__instance))
                 {
                     return;
                 }

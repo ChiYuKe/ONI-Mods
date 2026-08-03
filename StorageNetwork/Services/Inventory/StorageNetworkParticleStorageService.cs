@@ -1,31 +1,97 @@
 using System.Collections.Generic;
-using StorageNetwork.Core;
+using StorageNetwork.Components;
 using UnityEngine;
 
 namespace StorageNetwork.Services
 {
     internal static class StorageNetworkParticleStorageService
     {
-        private static readonly HashSet<HighEnergyParticleStorage> Storages = new HashSet<HighEnergyParticleStorage>();
+        private const float SnapshotLifetimeSeconds = 0.2f;
+
+        private static readonly Dictionary<HighEnergyParticleStorage, ParticleStorageEntry> EntriesByParticleStorage =
+            new Dictionary<HighEnergyParticleStorage, ParticleStorageEntry>();
+        private static readonly Dictionary<Storage, ParticleStorageEntry> EntriesByStorage =
+            new Dictionary<Storage, ParticleStorageEntry>();
+        private static readonly Dictionary<int, ParticleStorageEntry> EntriesByInstanceId =
+            new Dictionary<int, ParticleStorageEntry>();
+        private static readonly Dictionary<int, WorldStorageBucket> BucketsByWorld =
+            new Dictionary<int, WorldStorageBucket>();
 
         public static void Reset()
         {
-            Storages.Clear();
+            EntriesByParticleStorage.Clear();
+            EntriesByStorage.Clear();
+            EntriesByInstanceId.Clear();
+            BucketsByWorld.Clear();
         }
 
         public static void Register(HighEnergyParticleStorage storage)
         {
-            if (storage != null)
+            if (storage == null || storage.gameObject == null)
             {
-                Storages.Add(storage);
+                return;
             }
+
+            if (EntriesByParticleStorage.TryGetValue(storage, out ParticleStorageEntry existing))
+            {
+                UnregisterEntry(existing);
+            }
+
+            Storage backingStorage = storage.GetComponent<Storage>();
+            Operational operational = storage.GetComponent<Operational>();
+            KPrefabID prefabId = storage.GetComponent<KPrefabID>();
+            int instanceId = prefabId != null ? prefabId.InstanceID : KPrefabID.InvalidInstanceID;
+            int worldId = storage.gameObject.GetMyWorldId();
+            ParticleStorageEntry entry = new ParticleStorageEntry(
+                storage,
+                backingStorage,
+                operational,
+                instanceId,
+                worldId);
+
+            EntriesByParticleStorage[storage] = entry;
+            if (backingStorage != null)
+            {
+                EntriesByStorage[backingStorage] = entry;
+            }
+
+            if (instanceId != KPrefabID.InvalidInstanceID)
+            {
+                EntriesByInstanceId[instanceId] = entry;
+            }
+
+            GetOrCreateBucket(worldId).Entries.Add(entry);
         }
 
         public static void Unregister(HighEnergyParticleStorage storage)
         {
-            if (storage != null)
+            if (storage != null &&
+                EntriesByParticleStorage.TryGetValue(storage, out ParticleStorageEntry entry))
             {
-                Storages.Remove(storage);
+                UnregisterEntry(entry);
+            }
+        }
+
+        public static Storage FindStorageByInstanceId(int worldId, int instanceId)
+        {
+            if (instanceId == KPrefabID.InvalidInstanceID ||
+                !EntriesByInstanceId.TryGetValue(instanceId, out ParticleStorageEntry entry) ||
+                !entry.IsLive ||
+                entry.WorldId != worldId)
+            {
+                return null;
+            }
+
+            return entry.BackingStorage;
+        }
+
+        public static void Invalidate(Storage storage)
+        {
+            if (storage != null &&
+                EntriesByStorage.TryGetValue(storage, out ParticleStorageEntry entry) &&
+                BucketsByWorld.TryGetValue(entry.WorldId, out WorldStorageBucket bucket))
+            {
+                bucket.SnapshotValid = false;
             }
         }
 
@@ -37,25 +103,25 @@ namespace StorageNetwork.Services
             }
 
             int worldId = source.GetMyWorldId();
-            if (!StorageSceneRegistry.HasOnlineCoreInWorld(worldId))
+            if (!StorageNetworkPowerService.IsNetworkOnlineForWorld(worldId) ||
+                !BucketsByWorld.TryGetValue(worldId, out WorldStorageBucket bucket))
             {
                 return 0f;
             }
 
+            PruneDeadEntries(bucket);
             float moved = 0f;
-            foreach (HighEnergyParticleStorage storage in GetLiveStorages())
+            for (int i = 0; i < bucket.Entries.Count && amount - moved > 0f; i++)
             {
-                if (amount - moved <= 0f)
-                {
-                    break;
-                }
-
-                if (storage.gameObject == source || storage.gameObject.GetMyWorldId() != worldId || !IsOnline(storage))
+                ParticleStorageEntry entry = bucket.Entries[i];
+                if (entry.GameObject == source || !entry.IsOnline)
                 {
                     continue;
                 }
 
-                moved += storage.Store(amount - moved);
+                float stored = entry.ParticleStorage.Store(amount - moved);
+                moved += stored;
+                bucket.RecordParticleDelta(entry, stored);
             }
 
             return moved;
@@ -74,33 +140,69 @@ namespace StorageNetwork.Services
             }
 
             int worldId = requester.GetMyWorldId();
-            if (!StorageSceneRegistry.HasOnlineCoreInWorld(worldId))
+            if (!StorageNetworkPowerService.IsNetworkOnlineForWorld(worldId))
             {
                 return 0f;
             }
 
             if (specificSource != null)
             {
-                return Consume(specificSource.GetComponent<HighEnergyParticleStorage>(), amount, requester, worldId);
+                return TryGetEntry(specificSource, out ParticleStorageEntry specificEntry) &&
+                       IsUsableSource(specificEntry, requester, worldId)
+                    ? ConsumeFromEntry(specificEntry, amount)
+                    : 0f;
             }
 
-            float moved = 0f;
-            foreach (HighEnergyParticleStorage storage in GetLiveStorages())
+            if (!BucketsByWorld.TryGetValue(worldId, out WorldStorageBucket bucket))
             {
-                if (amount - moved <= 0f)
-                {
-                    break;
-                }
-
-                if (storage.gameObject == requester || storage.gameObject.GetMyWorldId() != worldId || !IsOnline(storage))
-                {
-                    continue;
-                }
-
-                moved += storage.ConsumeAndGet(amount - moved);
+                return 0f;
             }
 
-            return moved;
+            return ConsumeFromBucket(bucket, requester, amount);
+        }
+
+        public static float ConsumeIfAvailable(GameObject requester, float amount, Storage specificSource)
+        {
+            if (requester == null || amount <= 0f)
+            {
+                return 0f;
+            }
+
+            int worldId = requester.GetMyWorldId();
+            if (!StorageNetworkPowerService.IsNetworkOnlineForWorld(worldId))
+            {
+                return 0f;
+            }
+
+            if (specificSource != null)
+            {
+                if (!TryGetEntry(specificSource, out ParticleStorageEntry specificEntry) ||
+                    !IsUsableSource(specificEntry, requester, worldId) ||
+                    specificEntry.ParticleStorage.Particles < amount)
+                {
+                    return 0f;
+                }
+
+                return ConsumeFromEntry(specificEntry, amount);
+            }
+
+            if (!BucketsByWorld.TryGetValue(worldId, out WorldStorageBucket bucket))
+            {
+                return 0f;
+            }
+
+            RefreshSnapshotIfNeeded(bucket);
+            float available = bucket.AvailableParticles;
+            if (TryGetEntry(requester, out ParticleStorageEntry requesterEntry) &&
+                requesterEntry.WorldId == worldId &&
+                requesterEntry.SnapshotOnline)
+            {
+                available -= requesterEntry.ParticleStorage.Particles;
+            }
+
+            return available < amount
+                ? 0f
+                : ConsumeFromBucket(bucket, requester, amount);
         }
 
         public static float GetAvailable(GameObject requester)
@@ -116,28 +218,34 @@ namespace StorageNetwork.Services
             }
 
             int worldId = requester.GetMyWorldId();
-            if (!StorageSceneRegistry.HasOnlineCoreInWorld(worldId))
+            if (!StorageNetworkPowerService.IsNetworkOnlineForWorld(worldId))
             {
                 return 0f;
             }
 
             if (specificSource != null)
             {
-                return GetAvailable(specificSource.GetComponent<HighEnergyParticleStorage>(), requester, worldId);
+                return TryGetEntry(specificSource, out ParticleStorageEntry specificEntry) &&
+                       IsUsableSource(specificEntry, requester, worldId)
+                    ? specificEntry.ParticleStorage.Particles
+                    : 0f;
             }
 
-            float available = 0f;
-            foreach (HighEnergyParticleStorage storage in GetLiveStorages())
+            if (!BucketsByWorld.TryGetValue(worldId, out WorldStorageBucket bucket))
             {
-                if (storage.gameObject == requester || storage.gameObject.GetMyWorldId() != worldId || !IsOnline(storage))
-                {
-                    continue;
-                }
-
-                available += storage.Particles;
+                return 0f;
             }
 
-            return available;
+            RefreshSnapshotIfNeeded(bucket);
+            float available = bucket.AvailableParticles;
+            if (TryGetEntry(requester, out ParticleStorageEntry requesterEntry) &&
+                requesterEntry.WorldId == worldId &&
+                requesterEntry.SnapshotOnline)
+            {
+                available -= requesterEntry.ParticleStorage.Particles;
+            }
+
+            return Mathf.Max(0f, available);
         }
 
         public static float GetCapacity(GameObject requester)
@@ -155,79 +263,270 @@ namespace StorageNetwork.Services
             int worldId = requester.GetMyWorldId();
             if (specificSource != null)
             {
-                return GetCapacity(specificSource.GetComponent<HighEnergyParticleStorage>(), requester, worldId);
+                return TryGetEntry(specificSource, out ParticleStorageEntry specificEntry) &&
+                       IsUsableSource(specificEntry, requester, worldId)
+                    ? specificEntry.ParticleStorage.Capacity()
+                    : 0f;
             }
 
-            float capacity = 0f;
-            foreach (HighEnergyParticleStorage storage in GetLiveStorages())
-            {
-                if (storage.gameObject == requester || storage.gameObject.GetMyWorldId() != worldId || !IsOnline(storage))
-                {
-                    continue;
-                }
-
-                capacity += storage.Capacity();
-            }
-
-            return capacity;
-        }
-
-        private static float Consume(HighEnergyParticleStorage storage, float amount, GameObject requester, int worldId)
-        {
-            if (!IsUsableSource(storage, requester, worldId))
+            if (!BucketsByWorld.TryGetValue(worldId, out WorldStorageBucket bucket))
             {
                 return 0f;
             }
 
-            return storage.ConsumeAndGet(amount);
-        }
-
-        private static float GetAvailable(HighEnergyParticleStorage storage, GameObject requester, int worldId)
-        {
-            return IsUsableSource(storage, requester, worldId) ? storage.Particles : 0f;
-        }
-
-        private static float GetCapacity(HighEnergyParticleStorage storage, GameObject requester, int worldId)
-        {
-            return IsUsableSource(storage, requester, worldId) ? storage.Capacity() : 0f;
-        }
-
-        private static List<HighEnergyParticleStorage> GetLiveStorages()
-        {
-            List<HighEnergyParticleStorage> live = new List<HighEnergyParticleStorage>();
-            foreach (HighEnergyParticleStorage storage in Storages)
+            RefreshSnapshotIfNeeded(bucket);
+            float capacity = bucket.Capacity;
+            if (TryGetEntry(requester, out ParticleStorageEntry requesterEntry) &&
+                requesterEntry.WorldId == worldId &&
+                requesterEntry.SnapshotOnline)
             {
-                if (storage != null && storage.gameObject != null)
-                {
-                    live.Add(storage);
-                }
+                capacity -= requesterEntry.ParticleStorage.Capacity();
             }
 
-            if (live.Count != Storages.Count)
+            return Mathf.Max(0f, capacity);
+        }
+
+        private static float ConsumeFromEntry(ParticleStorageEntry entry, float amount)
+        {
+            float consumed = entry.ParticleStorage.ConsumeAndGet(amount);
+            if (BucketsByWorld.TryGetValue(entry.WorldId, out WorldStorageBucket bucket))
             {
-                Storages.Clear();
-                foreach (HighEnergyParticleStorage storage in live)
-                {
-                    Storages.Add(storage);
-                }
+                bucket.RecordParticleDelta(entry, -consumed);
             }
 
-            return live;
+            return consumed;
         }
 
-        private static bool IsOnline(HighEnergyParticleStorage storage)
+        private static float ConsumeFromBucket(
+            WorldStorageBucket bucket,
+            GameObject requester,
+            float amount)
         {
-            Operational operational = storage.GetComponent<Operational>();
-            return operational == null || operational.IsOperational;
+            PruneDeadEntries(bucket);
+            float moved = 0f;
+            for (int i = 0; i < bucket.Entries.Count && amount - moved > 0f; i++)
+            {
+                ParticleStorageEntry entry = bucket.Entries[i];
+                if (entry.GameObject == requester || !entry.IsOnline)
+                {
+                    continue;
+                }
+
+                float consumed = entry.ParticleStorage.ConsumeAndGet(amount - moved);
+                moved += consumed;
+                bucket.RecordParticleDelta(entry, -consumed);
+            }
+
+            return moved;
         }
 
-        private static bool IsUsableSource(HighEnergyParticleStorage storage, GameObject requester, int worldId)
+        private static bool TryGetEntry(Storage storage, out ParticleStorageEntry entry)
         {
+            if (storage != null &&
+                EntriesByStorage.TryGetValue(storage, out entry) &&
+                entry.IsLive)
+            {
+                return true;
+            }
+
+            entry = null;
+            return false;
+        }
+
+        private static bool TryGetEntry(GameObject gameObject, out ParticleStorageEntry entry)
+        {
+            entry = null;
+            HighEnergyParticleStorage storage = gameObject != null
+                ? gameObject.GetComponent<HighEnergyParticleStorage>()
+                : null;
             return storage != null &&
-                   storage.gameObject != null &&
-                   storage.gameObject != requester &&
-                   storage.gameObject.GetMyWorldId() == worldId &&
-                   IsOnline(storage);
+                   EntriesByParticleStorage.TryGetValue(storage, out entry) &&
+                   entry.IsLive;
+        }
+
+        private static bool IsUsableSource(
+            ParticleStorageEntry entry,
+            GameObject requester,
+            int worldId)
+        {
+            return entry != null &&
+                   entry.IsLive &&
+                   entry.GameObject != requester &&
+                   entry.WorldId == worldId &&
+                   entry.IsOnline;
+        }
+
+        private static void RefreshSnapshotIfNeeded(WorldStorageBucket bucket)
+        {
+            float now = Time.unscaledTime;
+            if (bucket.SnapshotValid &&
+                now >= bucket.SnapshotAt &&
+                now - bucket.SnapshotAt < SnapshotLifetimeSeconds)
+            {
+                return;
+            }
+
+            PruneDeadEntries(bucket);
+            float available = 0f;
+            float capacity = 0f;
+            for (int i = 0; i < bucket.Entries.Count; i++)
+            {
+                ParticleStorageEntry entry = bucket.Entries[i];
+                entry.SnapshotOnline = entry.IsOnline;
+                if (!entry.SnapshotOnline)
+                {
+                    continue;
+                }
+
+                available += entry.ParticleStorage.Particles;
+                capacity += entry.ParticleStorage.Capacity();
+            }
+
+            bucket.AvailableParticles = available;
+            bucket.Capacity = capacity;
+            bucket.SnapshotAt = now;
+            bucket.SnapshotValid = true;
+        }
+
+        private static void PruneDeadEntries(WorldStorageBucket bucket)
+        {
+            for (int i = bucket.Entries.Count - 1; i >= 0; i--)
+            {
+                ParticleStorageEntry entry = bucket.Entries[i];
+                if (entry.IsLive)
+                {
+                    continue;
+                }
+
+                bucket.Entries.RemoveAt(i);
+                RemoveEntryIndexes(entry);
+                bucket.SnapshotValid = false;
+            }
+        }
+
+        private static WorldStorageBucket GetOrCreateBucket(int worldId)
+        {
+            if (!BucketsByWorld.TryGetValue(worldId, out WorldStorageBucket bucket))
+            {
+                bucket = new WorldStorageBucket();
+                BucketsByWorld.Add(worldId, bucket);
+            }
+
+            bucket.SnapshotValid = false;
+            return bucket;
+        }
+
+        private static void UnregisterEntry(ParticleStorageEntry entry)
+        {
+            if (entry == null)
+            {
+                return;
+            }
+
+            if (BucketsByWorld.TryGetValue(entry.WorldId, out WorldStorageBucket bucket))
+            {
+                bucket.Entries.Remove(entry);
+                bucket.SnapshotValid = false;
+                if (bucket.Entries.Count == 0)
+                {
+                    BucketsByWorld.Remove(entry.WorldId);
+                }
+            }
+
+            RemoveEntryIndexes(entry);
+        }
+
+        private static void RemoveEntryIndexes(ParticleStorageEntry entry)
+        {
+            if (entry == null)
+            {
+                return;
+            }
+
+            if (entry.ParticleStorage != null)
+            {
+                EntriesByParticleStorage.Remove(entry.ParticleStorage);
+            }
+
+            if (entry.BackingStorage != null)
+            {
+                EntriesByStorage.Remove(entry.BackingStorage);
+            }
+
+            if (entry.InstanceId != KPrefabID.InvalidInstanceID &&
+                EntriesByInstanceId.TryGetValue(entry.InstanceId, out ParticleStorageEntry indexed) &&
+                indexed == entry)
+            {
+                EntriesByInstanceId.Remove(entry.InstanceId);
+            }
+        }
+
+        private sealed class ParticleStorageEntry
+        {
+            public ParticleStorageEntry(
+                HighEnergyParticleStorage particleStorage,
+                Storage backingStorage,
+                Operational operational,
+                int instanceId,
+                int worldId)
+            {
+                ParticleStorage = particleStorage;
+                BackingStorage = backingStorage;
+                Operational = operational;
+                InstanceId = instanceId;
+                WorldId = worldId;
+            }
+
+            public readonly HighEnergyParticleStorage ParticleStorage;
+            public readonly Storage BackingStorage;
+            public readonly Operational Operational;
+            public readonly int InstanceId;
+            public readonly int WorldId;
+
+            public bool SnapshotOnline;
+
+            public GameObject GameObject =>
+                ParticleStorage != null ? ParticleStorage.gameObject : null;
+
+            public bool IsLive =>
+                ParticleStorage != null && ParticleStorage.gameObject != null;
+
+            public bool IsOnline =>
+                IsLive && (Operational == null || Operational.IsOperational);
+        }
+
+        private sealed class WorldStorageBucket
+        {
+            public readonly List<ParticleStorageEntry> Entries =
+                new List<ParticleStorageEntry>();
+
+            public bool SnapshotValid;
+            public float SnapshotAt;
+            public float AvailableParticles;
+            public float Capacity;
+
+            public void RecordParticleDelta(ParticleStorageEntry entry, float delta)
+            {
+                if (!SnapshotValid || entry == null || Mathf.Approximately(delta, 0f))
+                {
+                    return;
+                }
+
+                bool online = entry.IsOnline;
+                if (online != entry.SnapshotOnline)
+                {
+                    SnapshotValid = false;
+                    return;
+                }
+
+                if (online)
+                {
+                    AvailableParticles = Mathf.Clamp(
+                        AvailableParticles + delta,
+                        0f,
+                        Capacity);
+                }
+            }
         }
     }
 }

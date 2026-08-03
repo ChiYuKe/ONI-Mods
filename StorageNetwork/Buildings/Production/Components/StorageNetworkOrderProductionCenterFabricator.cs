@@ -3,6 +3,7 @@ using System.Linq;
 using System.Reflection;
 using HarmonyLib;
 using KSerialization;
+using StorageNetwork.ProductionOrders;
 using StorageNetwork.Services;
 using UnityEngine;
 
@@ -26,9 +27,6 @@ namespace StorageNetwork.Components
 
         [MyCmpGet]
         private StorageNetworkOrderProductionCenter center = null;
-
-        [MyCmpGet]
-        private StorageNetworkMaterialRequester materialRequester = null;
 
         private readonly ProgressBar[] worldProgressBars = new ProgressBar[3];
 
@@ -136,6 +134,7 @@ namespace StorageNetwork.Components
             SyncVanillaCurrentOrder();
             RefreshWorldProgressBars();
             SyncOperationalActive(HasParallelWorkingOrder);
+            ProductionOrderCenterCatalog.InvalidateRecipes();
         }
 
         public void SetOrderCenterRecipeQueueCount(ComplexRecipe recipe, int count)
@@ -368,8 +367,10 @@ namespace StorageNetwork.Components
         {
             SanitizeBuildStorageTemperatures(recipe);
             EnsureSafeOutputTemperature();
-            List<GameObject> producedOutputs = SpawnOrderProduct(recipe);
-            materialRequester?.ForceStoreProducedOutputs(producedOutputs);
+            // The global SpawnOrderProduct postfix routes the produced objects back into
+            // the network. Calling the requester here as well scans and transfers the same
+            // output list twice for parallel cores.
+            SpawnOrderProduct(recipe);
             core.Clear();
             Trigger(1355439576, recipe);
         }

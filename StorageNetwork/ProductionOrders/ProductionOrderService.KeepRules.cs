@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 using static StorageNetwork.STRINGS;
 
@@ -19,16 +18,29 @@ namespace StorageNetwork.ProductionOrders
                 return;
             }
 
+            string recipeKey = ProductionRecipeCatalog.GetRecipeKey(route.Recipe);
+            if (KeepRules.TryGetValue(product.ProductTag, out ProductionKeepRule existing) &&
+                existing.ProductName == product.ProductName &&
+                existing.RecipeKey == recipeKey &&
+                existing.TargetAmount == targetAmount)
+            {
+                return;
+            }
+
             KeepRules[product.ProductTag] = new ProductionKeepRule(
                 product.ProductTag,
                 product.ProductName,
-                ProductionRecipeCatalog.GetRecipeKey(route.Recipe),
+                recipeKey,
                 targetAmount);
+            MarkOrdersChanged();
         }
 
         public void ClearKeepRule(Tag productTag)
         {
-            KeepRules.Remove(productTag);
+            if (KeepRules.Remove(productTag))
+            {
+                MarkOrdersChanged();
+            }
         }
 
         private void RunKeepRules()
@@ -39,19 +51,38 @@ namespace StorageNetwork.ProductionOrders
             }
 
             float currentCycle = GameClock.Instance != null ? GameClock.Instance.GetCycle() : 0f;
-            Dictionary<Tag, ProductDisplayGroup> products = GetProductGroups().ToDictionary(product => product.ProductTag);
-            foreach (ProductionKeepRule rule in KeepRules.Values.ToList())
+            foreach (ProductionKeepRule rule in KeepRules.Values)
             {
-                if (rule.TargetAmount <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ||
-                    !products.TryGetValue(rule.ProductTag, out ProductDisplayGroup product))
+                if (rule.TargetAmount <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
                 {
                     continue;
                 }
 
-                RecipeDisplayInfo route = product.Routes.FirstOrDefault(candidate => ProductionRecipeCatalog.GetRecipeKey(candidate.Recipe) == rule.RecipeKey);
+                int keepWorldId = GetCurrentNetworkWorldId();
+                RecipeDisplayInfo[] routes = GetCraftableRoutesProducing(rule.ProductTag);
+                RecipeDisplayInfo route = default;
+                for (int routeIndex = 0; routeIndex < routes.Length; routeIndex++)
+                {
+                    RecipeDisplayInfo candidate = routes[routeIndex];
+                    if (ProductionRecipeCatalog.GetRecipeKey(candidate.Recipe) == rule.RecipeKey &&
+                        IsRouteReachableFromWorld(candidate, keepWorldId))
+                    {
+                        route = candidate;
+                        break;
+                    }
+                }
+
                 if (route.Recipe == null)
                 {
-                    route = product.Routes.FirstOrDefault();
+                    for (int routeIndex = 0; routeIndex < routes.Length; routeIndex++)
+                    {
+                        RecipeDisplayInfo candidate = routes[routeIndex];
+                        if (IsRouteReachableFromWorld(candidate, keepWorldId))
+                        {
+                            route = candidate;
+                            break;
+                        }
+                    }
                 }
 
                 if (route.Recipe == null)
@@ -61,11 +92,18 @@ namespace StorageNetwork.ProductionOrders
 
                 ProductionOrderRecord automaticOrder = FindAutomaticDuplicateOrder(rule.ProductTag, route.Recipe);
                 float stockAmount = GetProducedAmountForOrder(rule.ProductTag);
-                float otherCommittedAmount = ActiveOrders.Values
-                    .Where(order => order != automaticOrder &&
-                                    order.ProductTag == rule.ProductTag &&
-                                    IsOrderActive(order))
-                    .Sum(order => Mathf.Max(0f, order.RequestedAmount - order.ProducedAtSubmit));
+                float otherCommittedAmount = 0f;
+                foreach (ProductionOrderRecord order in ActiveOrders.Values)
+                {
+                    if (order != automaticOrder &&
+                        order.ProductTag == rule.ProductTag &&
+                        IsOrderActive(order) &&
+                        IsOrderReachableFromCurrentWorld(order))
+                    {
+                        otherCommittedAmount +=
+                            Mathf.Max(0f, order.RequestedAmount - order.ProducedAtSubmit);
+                    }
+                }
                 float missingAmount = Mathf.Max(0f, rule.TargetAmount - stockAmount - otherCommittedAmount);
                 if (automaticOrder != null)
                 {
@@ -84,6 +122,15 @@ namespace StorageNetwork.ProductionOrders
                     continue;
                 }
 
+                // Keep-rule submission is an exceptional path. Constructing the
+                // single-row display group here keeps the no-op maintenance tick
+                // allocation free without changing the public submission model.
+                List<RecipeDisplayInfo> selectedRoutes = new List<RecipeDisplayInfo>(1)
+                {
+                    route
+                };
+                ProductDisplayGroup product =
+                    new ProductDisplayGroup(route.ProductKey, selectedRoutes);
                 SubmitOrder(product, route, missingAmount, currentCycle, true);
             }
         }
@@ -100,6 +147,7 @@ namespace StorageNetwork.ProductionOrders
             order.State = ProductionOrderState.Cancelled;
             order.CompletedCycle = currentCycle;
             order.AbnormalReason = string.Empty;
+            MarkOrdersChanged();
         }
     }
 }

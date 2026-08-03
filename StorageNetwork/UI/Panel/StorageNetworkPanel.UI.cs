@@ -69,7 +69,7 @@ namespace StorageNetwork.UI
             name.fontStyle = FontStyles.Bold;
             name.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
 
-            if (!string.IsNullOrEmpty(infoText))
+            if (infoText != null)
             {
                 TextMeshProUGUI info = CreateText("Info", header.transform, infoText, Mathf.Max(9, fontSize - 2), TextAlignmentOptions.MidlineLeft);
                 info.color = infoColor ?? new Color(0.34f, 0.36f, 0.34f, 1f);

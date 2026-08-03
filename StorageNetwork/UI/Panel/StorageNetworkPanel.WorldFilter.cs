@@ -10,6 +10,11 @@ namespace StorageNetwork.UI
 {
     public sealed partial class StorageNetworkPanel : KScreen, IInputHandler
     {
+        private GameObject mainWorldFilterButton;
+        private TextMeshProUGUI mainWorldFilterLabel;
+        private int mainWorldFilterLabelSelection = int.MinValue;
+        private int mainWorldFilterLabelMembershipVersion = -1;
+
         private StorageSceneSnapshot CollectMainSnapshot(bool force)
         {
             bool relayOnline = StorageSceneRegistry.IsCrossPlanetRelayOnline();
@@ -76,24 +81,38 @@ namespace StorageNetwork.UI
                 return;
             }
 
-            for (int i = mainWorldFilterContent.childCount - 1; i >= 0; i--)
+            if (mainWorldFilterButton == null)
             {
-                Destroy(mainWorldFilterContent.GetChild(i).gameObject);
+                mainWorldFilterButton = CreateStyledButton(
+                    "MainWorldFilterDropdown",
+                    mainWorldFilterContent,
+                    GetSelectedMainWorldFilterText(),
+                    ToggleMainWorldDropdown,
+                    CreateColorStyle(
+                        new Color(0.17f, 0.19f, 0.25f, 1f),
+                        new Color(0.25f, 0.28f, 0.35f, 1f),
+                        new Color(0.11f, 0.12f, 0.16f, 1f)));
+                RectTransform rect = mainWorldFilterButton.GetComponent<RectTransform>();
+                Stretch(rect, 0f, 0f);
+                SetButtonLabelColor(mainWorldFilterButton, new Color(0.92f, 0.93f, 0.90f, 1f), FontStyles.Normal);
+                AddDropdownArrowIcon(mainWorldFilterButton.transform);
+                mainWorldFilterLabel = mainWorldFilterButton.GetComponentInChildren<TextMeshProUGUI>(true);
             }
 
-            GameObject dropdownButton = CreateStyledButton(
-                "MainWorldFilterDropdown",
-                mainWorldFilterContent,
-                GetSelectedMainWorldFilterText(),
-                ToggleMainWorldDropdown,
-                CreateColorStyle(
-                    new Color(0.17f, 0.19f, 0.25f, 1f),
-                    new Color(0.25f, 0.28f, 0.35f, 1f),
-                    new Color(0.11f, 0.12f, 0.16f, 1f)));
-            RectTransform rect = dropdownButton.GetComponent<RectTransform>();
-            Stretch(rect, 0f, 0f);
-            SetButtonLabelColor(dropdownButton, new Color(0.92f, 0.93f, 0.90f, 1f), FontStyles.Normal);
-            AddDropdownArrowIcon(dropdownButton.transform);
+            int membershipVersion = StorageSceneRegistry.MembershipVersion;
+            if (mainWorldFilterLabelSelection == mainWorldFilterId &&
+                mainWorldFilterLabelMembershipVersion == membershipVersion)
+            {
+                return;
+            }
+
+            mainWorldFilterLabelSelection = mainWorldFilterId;
+            mainWorldFilterLabelMembershipVersion = membershipVersion;
+            string text = GetSelectedMainWorldFilterText();
+            if (mainWorldFilterLabel != null && mainWorldFilterLabel.text != text)
+            {
+                mainWorldFilterLabel.text = text;
+            }
         }
 
         private void ToggleMainWorldDropdown()
@@ -205,6 +224,15 @@ namespace StorageNetwork.UI
         private void EnsureValidMainWorldFilter()
         {
             int activeWorldId = GetActiveWorldFilterId();
+            int membershipVersion = StorageSceneRegistry.MembershipVersion;
+            if (mainWorldFilterValidatedMembershipVersion == membershipVersion &&
+                mainWorldFilterValidatedActiveWorld == activeWorldId)
+            {
+                return;
+            }
+
+            mainWorldFilterValidatedMembershipVersion = membershipVersion;
+            mainWorldFilterValidatedActiveWorld = activeWorldId;
             if (mainWorldFilterId == UnsetEnrollableWorldFilterId)
             {
                 mainWorldFilterId = activeWorldId != UnsetEnrollableWorldFilterId ? activeWorldId : AllEnrollableWorldsFilterId;

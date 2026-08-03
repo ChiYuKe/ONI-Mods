@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using StorageNetwork.Core;
 using StorageNetwork.ProductionOrders;
 using TMPro;
 using UnityEngine;
@@ -10,46 +11,269 @@ namespace StorageNetwork.UI
 {
     public sealed partial class StorageNetworkPanel : KScreen, IInputHandler
     {
+        private const int TrackingVirtualizationThreshold = 16;
+        private const int TrackingVirtualizationOverscan = 2;
+        private const float TrackingRowSpacing = 6f;
+        private const float TrackingVerticalPadding = 12f;
+
         private void RebuildOrderTracking(ProductDisplayGroup product)
         {
-            if (orderTrackingContent == null)
+            if (orderTrackingContent == null ||
+                !orderTrackingContent.gameObject.activeInHierarchy)
             {
                 return;
             }
 
-            IEnumerable<ProductionOrderRecord> sourceRecords = orderTrackingFilterMode == TrackingFilterMode.Current && product != null
+            using var performanceScope =
+                StorageNetworkFrameProfileTool.BeginWork(StorageNetworkPerformanceArea.Tracking);
+            int orderVersion = ProductionOrderService.OrderVersion;
+            int capabilityVersion = StorageSceneRegistry.CapabilityVersion;
+            if (orderTrackingSignature != null &&
+                orderTrackingObservedOrderVersion == orderVersion &&
+                orderTrackingObservedCapabilityVersion == capabilityVersion)
+            {
+                return;
+            }
+
+            IReadOnlyList<ProductionOrderRecord> sourceRecords = orderTrackingFilterMode == TrackingFilterMode.Current && product != null
                 ? productionOrderService.GetRecentOrdersForProduct(product.ProductTag, MaxDisplayedTrackingRecords)
                 : productionOrderService.GetRecentOrders(MaxDisplayedTrackingRecords);
-            List<ProductionOrderRecord> records = sourceRecords
-                .Where(record => StorageNetworkOrderTrackingRules.MatchesFilter(record, orderTrackingFilterMode, orderTrackingSearchText))
-                .ToList();
-            string signature = StorageNetworkOrderTrackingRules.BuildListSignature(product, records, orderTrackingSearchText, orderTrackingFilterMode);
-            if (signature == orderTrackingSignature)
+            List<ProductionOrderRecord> records = orderTrackingRecordBuffer;
+            records.Clear();
+            foreach (ProductionOrderRecord record in sourceRecords)
+            {
+                if (StorageNetworkOrderTrackingRules.MatchesFilter(
+                        record,
+                        orderTrackingFilterMode,
+                        orderTrackingSearchText))
+                {
+                    records.Add(record);
+                }
+            }
+
+            bool structureChanged = orderTrackingSignature == null ||
+                                    HasOrderTrackingStructureChanged(records);
+            orderTrackingObservedOrderVersion = orderVersion;
+            orderTrackingObservedCapabilityVersion = capabilityVersion;
+            orderTrackingSignature = "ready";
+            if (!structureChanged)
+            {
+                foreach (ProductionOrderRecord record in records)
+                {
+                    UpdateTrackingCardLive(record);
+                }
+
+                return;
+            }
+
+            CaptureOrderTrackingStructure(records);
+            ReconcileOrderTrackingRows(records, product, requestLayout: true);
+        }
+
+        private void ReconcileOrderTrackingRows(
+            List<ProductionOrderRecord> records,
+            ProductDisplayGroup product,
+            bool requestLayout)
+        {
+            if (orderTrackingContent == null ||
+                !orderTrackingContent.gameObject.activeInHierarchy)
             {
                 return;
             }
 
-            orderTrackingSignature = signature;
             EnsureOrderTrackingRows();
             orderTrackingRows.Begin();
-            int activeCount = records.Count(StorageNetworkOrderTrackingRules.IsActive);
+            orderTrackingLiveViews.Clear();
+            int activeCount = 0;
+            foreach (ProductionOrderRecord record in records)
+            {
+                if (StorageNetworkOrderTrackingRules.IsActive(record))
+                {
+                    activeCount++;
+                }
+            }
+
             UpdateTrackingHeaderRow(GetTrackingScopeTitle(product), activeCount, records.Count);
             UpdateTrackingBulkActionsRow(records);
             if (records.Count == 0)
             {
                 UpdateTrackingInfoRow("empty", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_EMPTY), 58f);
                 orderTrackingRows.Commit();
-                ForceOrderLayout(orderTrackingContent);
+                if (requestLayout)
+                {
+                    ForceOrderLayout(orderTrackingContent);
+                }
                 return;
             }
 
-            foreach (ProductionOrderRecord record in records)
+            GetTrackingVisibleRange(
+                records,
+                HasTrackingBulkActions(records),
+                out int firstVisible,
+                out int lastVisibleExclusive);
+            if (firstVisible > 0)
             {
-                UpdateTrackingCard(orderTrackingContent, record);
+                UseTrackingSpacer(
+                    "\0virtual-top",
+                    GetTrackingHiddenHeight(records, 0, firstVisible));
+            }
+
+            for (int index = firstVisible; index < lastVisibleExclusive; index++)
+            {
+                UpdateTrackingCard(orderTrackingContent, records[index]);
+            }
+
+            int hiddenAfter = records.Count - lastVisibleExclusive;
+            if (hiddenAfter > 0)
+            {
+                UseTrackingSpacer(
+                    "\0virtual-bottom",
+                    GetTrackingHiddenHeight(
+                        records,
+                        lastVisibleExclusive,
+                        hiddenAfter));
             }
 
             orderTrackingRows.Commit();
-            ForceOrderLayout(orderTrackingContent);
+            if (requestLayout)
+            {
+                ForceOrderLayout(orderTrackingContent);
+            }
+        }
+
+        private bool HasOrderTrackingStructureChanged(
+            List<ProductionOrderRecord> records)
+        {
+            if (orderTrackingStructures.Count != records.Count)
+            {
+                return true;
+            }
+
+            for (int index = 0; index < records.Count; index++)
+            {
+                if (!orderTrackingStructures[index].Matches(records[index]))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private void GetTrackingVisibleRange(
+            List<ProductionOrderRecord> records,
+            bool hasBulkActions,
+            out int firstVisible,
+            out int lastVisibleExclusive)
+        {
+            firstVisible = 0;
+            lastVisibleExclusive = records.Count;
+            if (records.Count <= TrackingVirtualizationThreshold ||
+                orderTrackingContent == null ||
+                orderTrackingScrollRect?.viewport == null ||
+                !ReferenceEquals(orderTrackingScrollRect.content, orderTrackingContent))
+            {
+                return;
+            }
+
+            float viewportHeight = orderTrackingScrollRect.viewport.rect.height;
+            if (viewportHeight <= 1f)
+            {
+                viewportHeight = 600f;
+            }
+
+            float leadingHeight = 30f + TrackingRowSpacing;
+            if (hasBulkActions)
+            {
+                leadingHeight += 24f + TrackingRowSpacing;
+            }
+
+            float startOffset = Mathf.Max(
+                0f,
+                orderTrackingContent.anchoredPosition.y -
+                TrackingVerticalPadding * 0.5f -
+                leadingHeight);
+            float endOffset = startOffset + viewportHeight;
+            float cursor = 0f;
+            int first = 0;
+            while (first < records.Count &&
+                   cursor + GetTrackingCardHeight(records[first]) < startOffset)
+            {
+                cursor += GetTrackingCardHeight(records[first]) +
+                          TrackingRowSpacing;
+                first++;
+            }
+
+            int last = first;
+            float visibleCursor = cursor;
+            while (last < records.Count && visibleCursor < endOffset)
+            {
+                visibleCursor += GetTrackingCardHeight(records[last]) +
+                                 TrackingRowSpacing;
+                last++;
+            }
+
+            firstVisible = Mathf.Max(0, first - TrackingVirtualizationOverscan);
+            lastVisibleExclusive = Mathf.Min(
+                records.Count,
+                last + TrackingVirtualizationOverscan);
+        }
+
+        private static float GetTrackingHiddenHeight(
+            List<ProductionOrderRecord> records,
+            int start,
+            int count)
+        {
+            float height = 0f;
+            int end = Mathf.Min(records.Count, start + count);
+            for (int index = start; index < end; index++)
+            {
+                height += GetTrackingCardHeight(records[index]);
+            }
+
+            if (count > 1)
+            {
+                height += (count - 1) * TrackingRowSpacing;
+            }
+
+            return height;
+        }
+
+        private static float GetTrackingCardHeight(ProductionOrderRecord record)
+        {
+            return record != null && record.MergeCount > 0 ? 174f : 156f;
+        }
+
+        private void UseTrackingSpacer(string key, float height)
+        {
+            GameObject spacer = orderTrackingRows.Use(key, () =>
+            {
+                GameObject created = new GameObject("VirtualSpacer");
+                created.transform.SetParent(orderTrackingContent, false);
+                created.AddComponent<RectTransform>();
+                created.AddComponent<LayoutElement>();
+                return created;
+            });
+            LayoutElement layout = spacer.GetComponent<LayoutElement>();
+            if (layout != null)
+            {
+                layout.preferredHeight = Mathf.Max(0f, height);
+            }
+        }
+
+        private void OnOrderTrackingScroll(Vector2 _)
+        {
+            orderTrackingViewportDirty = true;
+        }
+
+        private void CaptureOrderTrackingStructure(
+            List<ProductionOrderRecord> records)
+        {
+            orderTrackingStructures.Clear();
+            foreach (ProductionOrderRecord record in records)
+            {
+                orderTrackingStructures.Add(new TrackingCardStructure(record));
+            }
         }
 
         private string GetTrackingScopeTitle(ProductDisplayGroup product)
@@ -110,7 +334,7 @@ namespace StorageNetwork.UI
             orderTrackingSignature = null;
         }
 
-        private void AddTrackingCard(Transform parent, ProductionOrderRecord record)
+        private GameObject AddTrackingCard(Transform parent, ProductionOrderRecord record)
         {
             bool abnormal = record.State == ProductionOrderState.Abnormal;
             bool active = StorageNetworkOrderTrackingRules.IsActive(record);
@@ -120,6 +344,7 @@ namespace StorageNetwork.UI
             cardElement.preferredWidth = TrackingContentWidth - 54f;
             cardElement.preferredHeight = 156f;
             cardElement.flexibleWidth = 0f;
+            cardElement.flexibleHeight = 0f;
             KButton cardButton = card.AddComponent<KButton>();
             cardButton.bgImage = card.GetComponent<KImage>();
             cardButton.additionalKImages = new KImage[0];
@@ -174,13 +399,15 @@ namespace StorageNetwork.UI
             title.overflowMode = TextOverflowModes.Ellipsis;
             title.gameObject.AddComponent<LayoutElement>().preferredHeight = 24f;
 
-            AddPlanLine(titleColumn.transform, StorageNetworkOrderTrackingRules.GetSummaryLine(record), 9, FontStyles.Normal, MutedTextColor(), 18f);
+            TextMeshProUGUI summary = AddPlanLine(titleColumn.transform, StorageNetworkOrderTrackingRules.GetSummaryLine(record), 9, FontStyles.Normal, MutedTextColor(), 18f);
+            summary.gameObject.name = "TrackingSummary";
 
             GameObject detailArea = CreatePlainImage("TrackingDetailArea", main.transform, new Color(0.78f, 0.78f, 0.71f, 0.42f));
             detailArea.AddComponent<LayoutElement>().preferredHeight = 54f;
             AddVerticalContainer(detailArea, 4f, 6, 6, 4, 4);
             AddTrackingProgressRow(detailArea.transform, record, stateColor);
-            AddWrappedPlanLine(detailArea.transform, StorageNetworkOrderTrackingRules.GetDetailLine(record), 10, abnormal ? FontStyles.Bold : FontStyles.Normal, abnormal ? DangerColor() : NeutralTextColor(), 17f, 2, 24);
+            TextMeshProUGUI detail = AddWrappedPlanLine(detailArea.transform, StorageNetworkOrderTrackingRules.GetDetailLine(record), 10, abnormal ? FontStyles.Bold : FontStyles.Normal, abnormal ? DangerColor() : NeutralTextColor(), 17f, 2, 24);
+            detail.gameObject.name = "TrackingDetail";
 
             AddTrackingSeparator(card.transform, 1f);
 
@@ -202,16 +429,18 @@ namespace StorageNetwork.UI
                 side.transform,
                 ProductionOrderFormatting.FormatCycleStamp(record.CreatedCycle),
                 Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_CREATED_CYCLE));
-            AddTrackingCyclePair(
+            TextMeshProUGUI estimatedFinish = AddTrackingCyclePair(
                 side.transform,
                 GetTrackingEstimatedFinishCycle(record),
                 record.State == ProductionOrderState.Completed
                     ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_FINISHED_CYCLE)
                     : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_ESTIMATED_FINISH_CYCLE));
+            estimatedFinish.gameObject.name = "TrackingEstimatedFinish";
 
             if (record.MergeCount > 0)
             {
-                AddPlanLine(main.transform, string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_MERGED_ACTIVITY), record.MergeCount, ProductionOrderFormatting.FormatCycleStamp(record.LastActivityCycle)), 8, FontStyles.Italic, MutedTextColor(), 15f);
+                TextMeshProUGUI merged = AddPlanLine(main.transform, string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_MERGED_ACTIVITY), record.MergeCount, ProductionOrderFormatting.FormatCycleStamp(record.LastActivityCycle)), 8, FontStyles.Italic, MutedTextColor(), 15f);
+                merged.gameObject.name = "TrackingMergedActivity";
                 cardElement.preferredHeight += 18f;
             }
 
@@ -226,12 +455,15 @@ namespace StorageNetwork.UI
             {
                 AddTrackingRetryButton(card.transform, () => RetryTrackedOrder(record.Key));
             }
+
+            return card;
         }
 
-        private void AddTrackingCyclePair(Transform parent, string value, string label)
+        private TextMeshProUGUI AddTrackingCyclePair(Transform parent, string value, string label)
         {
-            AddPlanLine(parent, string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_CYCLE_VALUE), value), 9, FontStyles.Bold, NeutralTextColor(), 17f);
+            TextMeshProUGUI valueText = AddPlanLine(parent, string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_CYCLE_VALUE), value), 9, FontStyles.Bold, NeutralTextColor(), 17f);
             AddPlanLine(parent, label, 7, FontStyles.Normal, MutedTextColor(), 12f);
+            return valueText;
         }
 
         private static string GetTrackingEstimatedFinishCycle(ProductionOrderRecord record)
@@ -387,9 +619,11 @@ namespace StorageNetwork.UI
 
         private void UpdateTrackingBulkActionsRow(List<ProductionOrderRecord> records)
         {
-            if (records == null ||
-                (!records.Any(record => record.State == ProductionOrderState.Abnormal) &&
-                 !records.Any(record => record.State == ProductionOrderState.Completed)))
+            GetTrackingBulkActionFlags(
+                records,
+                out bool hasAbnormal,
+                out bool hasCompleted);
+            if (!hasAbnormal && !hasCompleted)
             {
                 return;
             }
@@ -410,22 +644,70 @@ namespace StorageNetwork.UI
                 return created;
             });
 
+            string key = "bulk-actions";
+            if (!orderTrackingRows.TryGetMetadata(
+                    key,
+                    out TrackingBulkActionsView view))
+            {
+                view = new TrackingBulkActionsView();
+                orderTrackingRows.SetMetadata(key, view);
+            }
+
+            int fingerprint = (hasAbnormal ? 1 : 0) |
+                              (hasCompleted ? 2 : 0);
+            if (view.Fingerprint == fingerprint)
+            {
+                return;
+            }
+
+            view.Fingerprint = fingerprint;
             RectTransform rowRect = row.GetComponent<RectTransform>();
             if (rowRect != null)
             {
                 ClearChildren(rowRect);
             }
-            if (records.Any(record => record.State == ProductionOrderState.Abnormal))
+            if (hasAbnormal)
             {
                 AddTrackingBulkButton(row.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_ACTION_CLEAR_ABNORMAL), () => ClearTrackedOrders(ProductionOrderState.Abnormal));
             }
 
-            if (records.Any(record => record.State == ProductionOrderState.Completed))
+            if (hasCompleted)
             {
                 AddTrackingBulkButton(row.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_ACTION_CLEAR_COMPLETED), () => ClearTrackedOrders(ProductionOrderState.Completed));
             }
 
             row.SetActive(true);
+        }
+
+        private static bool HasTrackingBulkActions(
+            List<ProductionOrderRecord> records)
+        {
+            GetTrackingBulkActionFlags(records, out bool abnormal, out bool completed);
+            return abnormal || completed;
+        }
+
+        private static void GetTrackingBulkActionFlags(
+            List<ProductionOrderRecord> records,
+            out bool abnormal,
+            out bool completed)
+        {
+            abnormal = false;
+            completed = false;
+            if (records == null)
+            {
+                return;
+            }
+
+            for (int index = 0; index < records.Count; index++)
+            {
+                ProductionOrderRecord record = records[index];
+                abnormal |= record?.State == ProductionOrderState.Abnormal;
+                completed |= record?.State == ProductionOrderState.Completed;
+                if (abnormal && completed)
+                {
+                    return;
+                }
+            }
         }
 
         private void AddTrackingBulkButton(Transform parent, string label, System.Action onClick)
@@ -499,15 +781,144 @@ namespace StorageNetwork.UI
 
         private void UpdateTrackingCard(Transform parent, ProductionOrderRecord record)
         {
-            string key = "order:" + (record.Key ?? record.DisplayId.ToString());
-            string signature = StorageNetworkOrderTrackingRules.BuildCardSignature(record);
-            bool recreate = orderTrackingRows.TryGetMetadata(key, out string oldSignature) && oldSignature != signature;
-            orderTrackingRows.Use(key, () =>
+            string orderKey = GetTrackingOrderKey(record);
+            string key = "order:" + orderKey;
+            bool hasView = orderTrackingRows.TryGetMetadata(key, out TrackingCardLiveView view);
+            bool recreate = hasView &&
+                            (view.StructuralState != record.State ||
+                             view.HasMergedActivity != (record.MergeCount > 0));
+            GameObject card = orderTrackingRows.Use(key, () =>
             {
-                AddTrackingCard(parent, record);
-                return parent.GetChild(parent.childCount - 1).gameObject;
+                return AddTrackingCard(parent, record);
             }, recreate);
-            orderTrackingRows.SetMetadata(key, signature);
+            if (!hasView || recreate || view?.Root == null)
+            {
+                view = TrackingCardLiveView.Create(card);
+                orderTrackingRows.SetMetadata(key, view);
+            }
+
+            view.StructuralState = record.State;
+            view.HasMergedActivity = record.MergeCount > 0;
+            orderTrackingLiveViews[orderKey] = view;
+            UpdateTrackingCardLive(view, record);
+        }
+
+        private void UpdateTrackingCardLive(ProductionOrderRecord record)
+        {
+            if (record != null &&
+                orderTrackingLiveViews.TryGetValue(
+                    GetTrackingOrderKey(record),
+                    out TrackingCardLiveView view))
+            {
+                UpdateTrackingCardLive(view, record);
+            }
+        }
+
+        private static string GetTrackingOrderKey(ProductionOrderRecord record)
+        {
+            return !string.IsNullOrEmpty(record?.Key)
+                ? record.Key
+                : (record?.DisplayId ?? 0).ToString();
+        }
+
+        private static void UpdateTrackingCardLive(TrackingCardLiveView view, ProductionOrderRecord record)
+        {
+            if (view == null || view.Root == null || record == null)
+            {
+                return;
+            }
+
+            view.CurrentRecord = record;
+            int liveFingerprint = GetTrackingCardLiveFingerprint(record);
+            if (view.LastLiveFingerprint == liveFingerprint)
+            {
+                return;
+            }
+
+            view.LastLiveFingerprint = liveFingerprint;
+            if (view.ProgressViewport != null)
+            {
+                Vector2 anchorMax = view.ProgressViewport.anchorMax;
+                anchorMax.x = Mathf.Clamp01(record.ProducedAtSubmit /
+                    Mathf.Max(record.RequestedAmount, PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT));
+                if (view.ProgressViewport.anchorMax != anchorMax)
+                {
+                    view.ProgressViewport.anchorMax = anchorMax;
+                }
+            }
+
+            SetTextIfChanged(
+                view.Amount,
+                string.Format(
+                    "{0} / {1}",
+                    GameUtil.GetFormattedMass(record.ProducedAtSubmit),
+                    GameUtil.GetFormattedMass(record.RequestedAmount)));
+            SetTextIfChanged(view.Summary, StorageNetworkOrderTrackingRules.GetSummaryLine(record));
+            SetTextIfChanged(view.Detail, StorageNetworkOrderTrackingRules.GetDetailLine(record));
+            SetTextIfChanged(
+                view.EstimatedFinish,
+                string.Format(
+                    Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_CYCLE_VALUE),
+                    GetTrackingEstimatedFinishCycle(record)));
+            if (view.MergedActivity != null)
+            {
+                SetTextIfChanged(
+                    view.MergedActivity,
+                    string.Format(
+                        Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_MERGED_ACTIVITY),
+                        record.MergeCount,
+                        ProductionOrderFormatting.FormatCycleStamp(record.LastActivityCycle)));
+            }
+        }
+
+        private static int GetTrackingCardLiveFingerprint(
+            ProductionOrderRecord record)
+        {
+            unchecked
+            {
+                int fingerprint = record.DisplayId;
+                fingerprint = (fingerprint * 397) ^ record.State.GetHashCode();
+                fingerprint = (fingerprint * 397) ^ record.RequestedAmount.GetHashCode();
+                fingerprint = (fingerprint * 397) ^ record.ProducedAtSubmit.GetHashCode();
+                fingerprint = (fingerprint * 397) ^ record.OrderCount;
+                fingerprint = (fingerprint * 397) ^ record.MergeCount;
+                fingerprint = (fingerprint * 397) ^ record.LastActivityCycle.GetHashCode();
+                fingerprint = (fingerprint * 397) ^ record.CompletedCycle.GetHashCode();
+                fingerprint = (fingerprint * 397) ^
+                              (record.AbnormalReason != null
+                                  ? System.StringComparer.Ordinal.GetHashCode(record.AbnormalReason)
+                                  : 0);
+                if (record.QueueAssignments == null)
+                {
+                    return fingerprint;
+                }
+
+                fingerprint = (fingerprint * 397) ^ record.QueueAssignments.Count;
+                foreach (ProductionOrderQueueAssignment assignment in record.QueueAssignments)
+                {
+                    if (assignment == null)
+                    {
+                        fingerprint *= 397;
+                        continue;
+                    }
+
+                    fingerprint = (fingerprint * 397) ^ assignment.OrderCount;
+                    fingerprint = (fingerprint * 397) ^ (assignment.Primary ? 1 : 0);
+                    fingerprint = (fingerprint * 397) ^
+                                  (assignment.Fabricator != null
+                                      ? assignment.Fabricator.GetInstanceID()
+                                      : 0);
+                    fingerprint = (fingerprint * 397) ^
+                                  ProductionOrderRuntimeAllocation
+                                      .GetRunningCountForAssignment(record, assignment);
+                    fingerprint = (fingerprint * 397) ^
+                                  ProductionOrderRuntimeAllocation
+                                      .GetProgressForAssignment(record, assignment)
+                                      .GetHashCode();
+                }
+
+                return fingerprint;
+            }
         }
 
         private void CancelTrackedOrder(string orderKey)
@@ -529,6 +940,71 @@ namespace StorageNetwork.UI
             lastOrderStatus = productionOrderService.ClearOrdersByState(state);
             productionOrderService.Refresh();
             RebuildOrderDetails();
+        }
+
+        private sealed class TrackingCardLiveView
+        {
+            public GameObject Root { get; private set; }
+            public RectTransform ProgressViewport { get; private set; }
+            public TextMeshProUGUI Amount { get; private set; }
+            public TextMeshProUGUI Summary { get; private set; }
+            public TextMeshProUGUI Detail { get; private set; }
+            public TextMeshProUGUI EstimatedFinish { get; private set; }
+            public TextMeshProUGUI MergedActivity { get; private set; }
+            public ProductionOrderState StructuralState { get; set; }
+            public bool HasMergedActivity { get; set; }
+            public int LastLiveFingerprint { get; set; } = int.MinValue;
+            public ProductionOrderRecord CurrentRecord { get; set; }
+
+            public static TrackingCardLiveView Create(GameObject root)
+            {
+                Transform progressRow = root != null
+                    ? root.transform.Find("TrackingMain/TrackingDetailArea/TrackingProgressRow")
+                    : null;
+                return new TrackingCardLiveView
+                {
+                    Root = root,
+                    ProgressViewport = progressRow?.Find("ProgressTrack/ProgressFillViewport") as RectTransform,
+                    Amount = progressRow?.Find("TrackingAmount")?.GetComponent<TextMeshProUGUI>(),
+                    Summary = root?.transform.Find("TrackingMain/TrackingTop/TrackingTitleColumn/TrackingSummary")?.GetComponent<TextMeshProUGUI>(),
+                    Detail = root?.transform.Find("TrackingMain/TrackingDetailArea/TrackingDetail")?.GetComponent<TextMeshProUGUI>(),
+                    EstimatedFinish = root?.transform.Find("TrackingSide/TrackingEstimatedFinish")?.GetComponent<TextMeshProUGUI>(),
+                    MergedActivity = root?.transform.Find("TrackingMain/TrackingMergedActivity")?.GetComponent<TextMeshProUGUI>()
+                };
+            }
+        }
+
+        private sealed class TrackingBulkActionsView
+        {
+            public int Fingerprint { get; set; } = int.MinValue;
+        }
+
+        private readonly struct TrackingCardStructure
+        {
+            public TrackingCardStructure(ProductionOrderRecord record)
+            {
+                Key = record?.Key ?? string.Empty;
+                DisplayId = record?.DisplayId ?? 0;
+                State = record != null ? record.State : ProductionOrderState.Cancelled;
+                HasMergedActivity = record != null && record.MergeCount > 0;
+            }
+
+            public string Key { get; }
+
+            public int DisplayId { get; }
+
+            public ProductionOrderState State { get; }
+
+            public bool HasMergedActivity { get; }
+
+            public bool Matches(ProductionOrderRecord record)
+            {
+                return record != null &&
+                       string.Equals(Key, record.Key ?? string.Empty, System.StringComparison.Ordinal) &&
+                       DisplayId == record.DisplayId &&
+                       State == record.State &&
+                       HasMergedActivity == (record.MergeCount > 0);
+            }
         }
 
     }

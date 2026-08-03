@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
 using StorageNetwork.Core;
 using StorageNetwork.Services;
 using TMPro;
@@ -11,7 +10,23 @@ namespace StorageNetwork.UI
 {
     public sealed partial class StorageNetworkPanel : KScreen, IInputHandler
     {
+        private const float CategorySummaryTrendRefreshSeconds = 10f;
+        private const int CategorySummaryVirtualizationThreshold = 32;
+        private const int CategorySummaryVirtualizationOverscan = 3;
+        private const float CategorySummaryRowHeight = 24f;
+        private const float CategorySummaryRowSpacing = 3f;
+        private const float CategorySummaryVerticalPadding = 8f;
         private readonly StorageNetworkCategorySummaryTrendSampler categorySummaryTrendSampler = new StorageNetworkCategorySummaryTrendSampler();
+        private readonly List<Storage> categorySummaryStorages = new List<Storage>();
+        private readonly Dictionary<string, ItemTotalAccumulator> categorySummaryTotalsByKey = new Dictionary<string, ItemTotalAccumulator>();
+        private readonly Dictionary<Tag, StorageNetworkIndexedItemTotal> categorySummaryIndexedTotals =
+            new Dictionary<Tag, StorageNetworkIndexedItemTotal>();
+        private readonly List<StorageNetworkCategorySummaryItemTotal> categorySummaryTotals = new List<StorageNetworkCategorySummaryItemTotal>();
+        private readonly Dictionary<string, CategorySummaryRowView> categorySummaryLiveRows = new Dictionary<string, CategorySummaryRowView>();
+        private int categorySummaryTitleFingerprint = int.MinValue;
+        private float categorySummaryStoredKg;
+        private ScrollRect categorySummaryScrollRect;
+        private bool categorySummaryViewportDirty;
 
         private void CreateCategorySummaryButton(Transform parent)
         {
@@ -41,7 +56,7 @@ namespace StorageNetwork.UI
         private void ShowCategorySummaryPanel()
         {
             EnsureCategorySummaryPanel();
-            categorySummarySignature = null;
+            InvalidateCategorySummaryValues();
             categorySummaryRoot.SetActive(true);
             categorySummaryRoot.transform.SetAsLastSibling();
             UpdateCategorySummaryPanel();
@@ -54,7 +69,7 @@ namespace StorageNetwork.UI
                 categorySummaryRoot.SetActive(false);
             }
 
-            categorySummarySignature = null;
+            InvalidateCategorySummaryValues();
         }
 
         private void EnsureCategorySummaryPanel()
@@ -91,13 +106,13 @@ namespace StorageNetwork.UI
             closeRect.sizeDelta = new Vector2(22f, 20f);
 
             GameObject viewport = CreateBox("Viewport", categorySummaryRoot.transform, new Color(0.80f, 0.79f, 0.74f, 1f));
-            SetStretch(viewport.GetComponent<RectTransform>(), 10f, 24f, 10f, 70f);
+            SetStretch(viewport.GetComponent<RectTransform>(), 10f, 10f, 10f, 70f);
             viewport.AddComponent<RectMask2D>();
 
             GameObject content = new GameObject("Content");
             content.transform.SetParent(viewport.transform, false);
             categorySummaryContent = content.AddComponent<RectTransform>();
-            categorySummaryRows = new StorageNetworkKeyedRowCache(categorySummaryContent);
+            categorySummaryRows = new StorageNetworkKeyedRowCache(categorySummaryContent, 32, 120);
             categorySummaryContent.anchorMin = new Vector2(0f, 1f);
             categorySummaryContent.anchorMax = new Vector2(1f, 1f);
             categorySummaryContent.pivot = new Vector2(0.5f, 1f);
@@ -116,12 +131,14 @@ namespace StorageNetwork.UI
             Scrollbar scrollbar = CreateScrollbar(categorySummaryRoot.transform, 70f, 10f);
 
             ScrollRect scrollRect = viewport.AddComponent<ScrollRect>();
+            categorySummaryScrollRect = scrollRect;
             scrollRect.viewport = viewport.GetComponent<RectTransform>();
             scrollRect.content = categorySummaryContent;
             ConfigureSmoothVerticalScroll(scrollRect, 26f);
             scrollRect.verticalScrollbar = scrollbar;
             scrollRect.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHideAndExpandViewport;
             scrollRect.verticalScrollbarSpacing = 2f;
+            scrollRect.onValueChanged.AddListener(OnCategorySummaryScroll);
             viewport.AddComponent<ScrollWheelBlocker>();
 
             categorySummaryRoot.SetActive(false);
@@ -134,31 +151,146 @@ namespace StorageNetwork.UI
                 return;
             }
 
-            List<Storage> storages = new List<Storage>();
+            using var performanceScope =
+                StorageNetworkFrameProfileTool.BeginWork(StorageNetworkPerformanceArea.CategorySummary);
+            int contentVersion = StorageNetworkContentIndexService.ChangeVersion;
+            int membershipVersion = StorageSceneRegistry.MembershipVersion;
+            string categoryKey = selectedCategoryKey ?? string.Empty;
+            float now = Time.unscaledTime;
+            bool categoryChanged = !string.Equals(
+                categorySummaryObservedCategoryKey,
+                categoryKey,
+                System.StringComparison.Ordinal);
+            bool membershipChanged =
+                categorySummaryObservedMembershipVersion != membershipVersion;
+            int scopedStorageVersion = int.MinValue;
+            bool hasScopedStorageVersion = !categoryChanged &&
+                                           !membershipChanged &&
+                                           StorageNetworkContentIndexService.TryGetStorageDisplayVersion(
+                                               categorySummaryStorages,
+                                               out scopedStorageVersion);
+            bool valuesDirty = categoryChanged ||
+                               membershipChanged ||
+                               (hasScopedStorageVersion
+                                   ? categorySummaryObservedStorageVersion != scopedStorageVersion
+                                   : categorySummaryObservedContentVersion != contentVersion);
+            bool trendRefreshDue = now >= categorySummaryNextTrendRefreshTime;
+            bool viewportDirty = categorySummaryViewportDirty;
+            if (!valuesDirty && !trendRefreshDue && !viewportDirty)
+            {
+                return;
+            }
+
+            List<Storage> storages = categorySummaryStorages;
+            List<StorageNetworkCategorySummaryItemTotal> totals = categorySummaryTotals;
+            if (valuesDirty)
+            {
+                RebuildCategorySummaryValues(storages, totals);
+                // Stable key order prevents live mass changes from moving siblings.
+                totals.Sort((left, right) =>
+                    string.Compare(left.Key, right.Key, System.StringComparison.Ordinal));
+                int titleFingerprint = CombineCategorySummaryFingerprint(
+                    storages.Count,
+                    categorySummaryStoredKg);
+                if (titleFingerprint != categorySummaryTitleFingerprint || categoryChanged)
+                {
+                    categorySummaryTitleFingerprint = titleFingerprint;
+                    SetCategorySummaryTitle(
+                        StorageCategories.GetName(selectedCategoryKey),
+                        storages.Count,
+                        categorySummaryStoredKg);
+                }
+
+                categorySummaryObservedContentVersion = contentVersion;
+                categorySummaryObservedMembershipVersion = membershipVersion;
+                categorySummaryObservedStorageVersion =
+                    StorageNetworkContentIndexService.TryGetStorageDisplayVersion(
+                        storages,
+                        out int rebuiltStorageVersion)
+                        ? rebuiltStorageVersion
+                        : int.MinValue;
+            }
+
+            if (valuesDirty || trendRefreshDue)
+            {
+                categorySummaryTrendSampler.Record(categoryKey, totals);
+                if (trendRefreshDue)
+                {
+                    categorySummaryNextTrendRefreshTime = now +
+                        CategorySummaryTrendRefreshSeconds;
+                }
+            }
+
+            bool structureChanged = valuesDirty &&
+                                    HasCategorySummaryStructureChanged(categoryKey, totals);
+            if (structureChanged || viewportDirty)
+            {
+                ReconcileCategorySummaryRows(totals, categoryKey);
+            }
+            else
+            {
+                UpdateCategorySummaryRowsLive(totals, categoryKey);
+            }
+
+            categorySummaryObservedCategoryKey = categoryKey;
+            categorySummaryViewportDirty = false;
+            // Activating/deactivating keyed rows already dirties Unity's layout.
+            // Let the canvas coalesce that work at the end of the frame instead
+            // of forcing a synchronous rebuild for every transient item key.
+        }
+
+        private void RebuildCategorySummaryValues(
+            List<Storage> storages,
+            List<StorageNetworkCategorySummaryItemTotal> totals)
+        {
+            storages.Clear();
+            totals.Clear();
+            categorySummaryTotalsByKey.Clear();
+            categorySummaryIndexedTotals.Clear();
             if (currentSnapshot?.Storages != null)
             {
                 foreach (StorageInfo info in currentSnapshot.Storages)
                 {
                     Storage storage = info?.Storage;
-                    if (storage != null && StorageNetworkStorageDisplay.GetCategoryKey(info) == selectedCategoryKey)
+                    if (storage != null &&
+                        StorageNetworkStorageDisplay.GetCategoryKey(info) == selectedCategoryKey)
                     {
                         storages.Add(storage);
                     }
                 }
             }
 
-            string categoryName = StorageCategories.GetName(selectedCategoryKey);
-            float storedKg = 0f;
-            Dictionary<string, ItemTotalAccumulator> totalsByKey = new Dictionary<string, ItemTotalAccumulator>();
-            foreach (Storage storage in storages)
+            if (StorageNetworkContentIndexService.TryFillStorageItemTotals(
+                    storages,
+                    categorySummaryIndexedTotals,
+                    allowStaleContent: true,
+                    out categorySummaryStoredKg))
             {
-                if (storage == null)
+                foreach (StorageNetworkIndexedItemTotal indexed in
+                         categorySummaryIndexedTotals.Values)
                 {
-                    continue;
+                    string key = indexed.KeyTag.Name;
+                    if (string.IsNullOrEmpty(key))
+                    {
+                        continue;
+                    }
+
+                    totals.Add(new StorageNetworkCategorySummaryItemTotal(
+                        key,
+                        StorageNetworkStorageDisplay.GetStoredItemName(
+                            indexed.Representative),
+                        indexed.MassKg,
+                        indexed.Representative));
                 }
 
-                storedKg += storage.MassStored();
-                if (storage.items == null)
+                return;
+            }
+
+            categorySummaryStoredKg = GetCategorySummaryStoredMass(storages);
+
+            foreach (Storage storage in storages)
+            {
+                if (storage?.items == null)
                 {
                     continue;
                 }
@@ -172,75 +304,273 @@ namespace StorageNetwork.UI
 
                     string key = StorageItemUtility.GetStoredItemKey(item);
                     float mass = GetStoredItemMass(item);
-                    if (totalsByKey.TryGetValue(key, out ItemTotalAccumulator accumulator))
+                    if (categorySummaryTotalsByKey.TryGetValue(
+                            key,
+                            out ItemTotalAccumulator accumulator))
                     {
                         accumulator.MassKg += mass;
-                        totalsByKey[key] = accumulator;
+                        categorySummaryTotalsByKey[key] = accumulator;
                     }
                     else
                     {
-                        totalsByKey.Add(key, new ItemTotalAccumulator(key, StorageNetworkStorageDisplay.GetStoredItemName(item), mass, item));
+                        categorySummaryTotalsByKey.Add(
+                            key,
+                            new ItemTotalAccumulator(
+                                key,
+                                StorageNetworkStorageDisplay.GetStoredItemName(item),
+                                mass,
+                                item));
                     }
                 }
             }
 
-            SetCategorySummaryTitle(categoryName, storages.Count, storedKg);
-
-            List<StorageNetworkCategorySummaryItemTotal> totals = new List<StorageNetworkCategorySummaryItemTotal>(totalsByKey.Count);
-            foreach (ItemTotalAccumulator total in totalsByKey.Values)
+            foreach (ItemTotalAccumulator total in categorySummaryTotalsByKey.Values)
             {
-                totals.Add(new StorageNetworkCategorySummaryItemTotal(total.Key, total.Name, total.MassKg, total.Representative));
+                totals.Add(new StorageNetworkCategorySummaryItemTotal(
+                    total.Key,
+                    total.Name,
+                    total.MassKg,
+                    total.Representative));
             }
 
-            totals.Sort((left, right) =>
-            {
-                int compare = right.MassKg.CompareTo(left.MassKg);
-                return compare != 0 ? compare : string.Compare(left.Name, right.Name, System.StringComparison.CurrentCulture);
-            });
+        }
 
-            categorySummaryTrendSampler.Record(selectedCategoryKey, totals);
-            string signature = StorageNetworkCategorySummarySignature.Build(selectedCategoryKey, storages, totals);
-            if (signature == categorySummarySignature)
+        private static float GetCategorySummaryStoredMass(List<Storage> storages)
+        {
+            float storedKg = 0f;
+            foreach (Storage storage in storages)
             {
-                return;
+                if (storage != null)
+                {
+                    storedKg += storage.MassStored();
+                }
             }
 
-            categorySummarySignature = signature;
-            categorySummaryRows ??= new StorageNetworkKeyedRowCache(categorySummaryContent);
-            categorySummaryRows.Begin();
+            return storedKg;
+        }
 
-            if (totals.Count == 0)
+        private bool HasCategorySummaryStructureChanged(
+            string categoryKey,
+            List<StorageNetworkCategorySummaryItemTotal> totals)
+        {
+            bool changed = !string.Equals(
+                               categorySummaryObservedCategoryKey,
+                               categoryKey,
+                               System.StringComparison.Ordinal) ||
+                           categorySummaryStructureKeys.Count != totals.Count;
+            if (!changed)
             {
-                UpdateSummaryText("empty", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SUMMARY_EMPTY), 12, FontStyles.Normal, 26f);
-                categorySummaryRows.Commit();
-                ForceCategorySummaryLayout();
-                return;
+                for (int index = 0; index < totals.Count; index++)
+                {
+                    if (!string.Equals(
+                            categorySummaryStructureKeys[index],
+                            totals[index].Key,
+                            System.StringComparison.Ordinal))
+                    {
+                        changed = true;
+                        break;
+                    }
+                }
             }
 
+            if (!changed)
+            {
+                return false;
+            }
+
+            categorySummaryStructureKeys.Clear();
             foreach (StorageNetworkCategorySummaryItemTotal total in totals)
             {
-                UpdateCategorySummaryItemRow(total, categorySummaryTrendSampler.GetTrendPerCycle(selectedCategoryKey, total.Key));
+                categorySummaryStructureKeys.Add(total.Key);
+            }
+
+            return true;
+        }
+
+        private void ReconcileCategorySummaryRows(
+            List<StorageNetworkCategorySummaryItemTotal> totals,
+            string categoryKey)
+        {
+            categorySummaryRows ??= new StorageNetworkKeyedRowCache(categorySummaryContent, 32, 120);
+            categorySummaryRows.Begin();
+            categorySummaryLiveRows.Clear();
+            if (totals.Count == 0)
+            {
+                UpdateSummaryText(
+                    "empty",
+                    Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SUMMARY_EMPTY),
+                    12,
+                    FontStyles.Normal,
+                    26f);
+                categorySummaryRows.Commit();
+                return;
+            }
+
+            GetCategorySummaryVisibleRange(
+                totals.Count,
+                out int firstVisible,
+                out int lastVisibleExclusive);
+            if (firstVisible > 0)
+            {
+                UseCategorySummarySpacer(
+                    "\0virtual-top",
+                    firstVisible * (CategorySummaryRowHeight + CategorySummaryRowSpacing) -
+                    CategorySummaryRowSpacing);
+            }
+
+            for (int totalIndex = firstVisible;
+                 totalIndex < lastVisibleExclusive;
+                 totalIndex++)
+            {
+                StorageNetworkCategorySummaryItemTotal total = totals[totalIndex];
+                GameObject row = categorySummaryRows.Use(
+                    "item:" + total.Key,
+                    CreateCategorySummaryItemRow);
+                CategorySummaryRowView view = row.GetComponent<CategorySummaryRowView>();
+                if (view == null)
+                {
+                    continue;
+                }
+
+                categorySummaryLiveRows[total.Key] = view;
+                StorageNetworkStorageDisplay.SetStoredItemIcon(view.Icon, total.Representative);
+                SetTextIfChanged(view.Name, total.Name);
+                UpdateCategorySummaryItemRowLive(
+                    view,
+                    total,
+                    categorySummaryTrendSampler.GetTrendPerCycle(categoryKey, total.Key));
+            }
+
+            int hiddenAfter = totals.Count - lastVisibleExclusive;
+            if (hiddenAfter > 0)
+            {
+                UseCategorySummarySpacer(
+                    "\0virtual-bottom",
+                    hiddenAfter * (CategorySummaryRowHeight + CategorySummaryRowSpacing) -
+                    CategorySummaryRowSpacing);
             }
 
             categorySummaryRows.Commit();
-            ForceCategorySummaryLayout();
+        }
+
+        private void GetCategorySummaryVisibleRange(
+            int totalCount,
+            out int firstVisible,
+            out int lastVisibleExclusive)
+        {
+            firstVisible = 0;
+            lastVisibleExclusive = totalCount;
+            if (totalCount <= CategorySummaryVirtualizationThreshold ||
+                categorySummaryContent == null ||
+                categorySummaryScrollRect?.viewport == null)
+            {
+                return;
+            }
+
+            float viewportHeight = categorySummaryScrollRect.viewport.rect.height;
+            if (viewportHeight <= 1f)
+            {
+                viewportHeight = 600f;
+            }
+
+            float scrollOffset = Mathf.Max(0f, categorySummaryContent.anchoredPosition.y);
+            StorageNetworkVirtualizedRange range =
+                StorageNetworkVirtualizedRange.Calculate(
+                    totalCount,
+                    CategorySummaryVirtualizationThreshold,
+                    CategorySummaryVirtualizationOverscan,
+                    CategorySummaryRowHeight,
+                    CategorySummaryRowSpacing,
+                    CategorySummaryVerticalPadding,
+                    scrollOffset,
+                    viewportHeight);
+            firstVisible = range.First;
+            lastVisibleExclusive = range.LastExclusive;
+        }
+
+        private void UseCategorySummarySpacer(string key, float height)
+        {
+            GameObject spacer = categorySummaryRows.Use(key, () =>
+            {
+                GameObject created = new GameObject("VirtualSpacer");
+                created.transform.SetParent(categorySummaryContent, false);
+                created.AddComponent<RectTransform>();
+                created.AddComponent<LayoutElement>();
+                return created;
+            });
+            LayoutElement layout = spacer.GetComponent<LayoutElement>();
+            if (layout != null)
+            {
+                layout.preferredHeight = Mathf.Max(0f, height);
+            }
+        }
+
+        private void OnCategorySummaryScroll(Vector2 _)
+        {
+            categorySummaryViewportDirty = true;
+        }
+
+        private void UpdateCategorySummaryRowsLive(
+            List<StorageNetworkCategorySummaryItemTotal> totals,
+            string categoryKey)
+        {
+            foreach (StorageNetworkCategorySummaryItemTotal total in totals)
+            {
+                if (categorySummaryLiveRows.TryGetValue(
+                        total.Key,
+                        out CategorySummaryRowView view) &&
+                    view != null)
+                {
+                    UpdateCategorySummaryItemRowLive(
+                        view,
+                        total,
+                        categorySummaryTrendSampler.GetTrendPerCycle(categoryKey, total.Key));
+                }
+            }
+        }
+
+        private static int CombineCategorySummaryFingerprint(int storageCount, float storedKg)
+        {
+            unchecked
+            {
+                return (storageCount * 397) ^ storedKg.GetHashCode();
+            }
+        }
+
+        private void InvalidateCategorySummaryValues()
+        {
+            categorySummaryObservedContentVersion = -1;
+            categorySummaryObservedStorageVersion = int.MinValue;
+            categorySummaryObservedMembershipVersion = -1;
+            categorySummaryNextTrendRefreshTime = 0f;
+            categorySummaryTitleFingerprint = int.MinValue;
+            categorySummaryViewportDirty = true;
         }
 
         private void ClearCategorySummaryContent()
         {
             categorySummaryRows?.ClearDestroy();
-            categorySummaryRows = categorySummaryContent != null ? new StorageNetworkKeyedRowCache(categorySummaryContent) : null;
+            categorySummaryRows = categorySummaryContent != null
+                ? new StorageNetworkKeyedRowCache(categorySummaryContent, 32, 120)
+                : null;
+            categorySummaryLiveRows.Clear();
+            categorySummaryStructureKeys.Clear();
+            categorySummaryObservedCategoryKey = null;
+            categorySummaryViewportDirty = true;
+            InvalidateCategorySummaryValues();
         }
 
         private void SetCategorySummaryTitle(string categoryName, int storageCount, float storedKg)
         {
             if (categorySummaryTitle != null)
             {
-                categorySummaryTitle.text = string.Format(
-                    Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SUMMARY_TITLE_LINE),
-                    categoryName,
-                    storageCount,
-                    GameUtil.GetFormattedMass(storedKg));
+                SetTextIfChanged(
+                    categorySummaryTitle,
+                    string.Format(
+                        Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SUMMARY_TITLE_LINE),
+                        categoryName,
+                        storageCount,
+                        GameUtil.GetFormattedMass(storedKg)));
             }
         }
 
@@ -267,7 +597,7 @@ namespace StorageNetwork.UI
             TextMeshProUGUI label = row.GetComponent<TextMeshProUGUI>();
             if (label != null)
             {
-                label.text = text;
+                SetTextIfChanged(label, text);
                 label.fontSize = size;
                 label.fontStyle = style;
             }
@@ -279,20 +609,33 @@ namespace StorageNetwork.UI
             }
         }
 
-        private void UpdateCategorySummaryItemRow(StorageNetworkCategorySummaryItemTotal total, float? trendKgPerCycle)
+        private static void UpdateCategorySummaryItemRowLive(
+            CategorySummaryRowView view,
+            StorageNetworkCategorySummaryItemTotal total,
+            float? trendKgPerCycle)
         {
-            GameObject row = categorySummaryRows.Use("item:" + total.Key, () => CreateCategorySummaryItemRow());
-            CategorySummaryRowView view = row.GetComponent<CategorySummaryRowView>();
-            if (view == null)
+            int massFingerprint = total.MassKg.GetHashCode();
+            if (view.LastMassFingerprint != massFingerprint)
             {
-                return;
+                view.LastMassFingerprint = massFingerprint;
+                SetTextIfChanged(view.Mass, GameUtil.GetFormattedMass(total.MassKg));
             }
 
-            StorageNetworkStorageDisplay.SetStoredItemIcon(view.Icon, total.Representative);
-            view.Name.text = total.Name;
-            view.Mass.text = GameUtil.GetFormattedMass(total.MassKg);
-            view.Trend.text = StorageNetworkCategorySummaryTrend.Format(trendKgPerCycle);
-            view.Trend.color = StorageNetworkCategorySummaryTrend.GetColor(trendKgPerCycle);
+            int trendFingerprint = trendKgPerCycle.HasValue
+                ? trendKgPerCycle.Value.GetHashCode()
+                : int.MinValue + 1;
+            if (view.LastTrendFingerprint != trendFingerprint)
+            {
+                view.LastTrendFingerprint = trendFingerprint;
+                SetTextIfChanged(
+                    view.Trend,
+                    StorageNetworkCategorySummaryTrend.Format(trendKgPerCycle));
+                Color trendColor = StorageNetworkCategorySummaryTrend.GetColor(trendKgPerCycle);
+                if (view.Trend.color != trendColor)
+                {
+                    view.Trend.color = trendColor;
+                }
+            }
         }
 
         private GameObject CreateCategorySummaryItemRow()
@@ -336,12 +679,6 @@ namespace StorageNetwork.UI
             return row;
         }
 
-        private void ForceCategorySummaryLayout()
-        {
-            Canvas.ForceUpdateCanvases();
-            LayoutRebuilder.ForceRebuildLayoutImmediate(categorySummaryContent);
-        }
-
         private struct ItemTotalAccumulator
         {
             public ItemTotalAccumulator(string key, string name, float massKg, GameObject representative)
@@ -370,6 +707,10 @@ namespace StorageNetwork.UI
             public TextMeshProUGUI Mass { get; private set; }
 
             public TextMeshProUGUI Trend { get; private set; }
+
+            public int LastMassFingerprint { get; set; } = int.MinValue;
+
+            public int LastTrendFingerprint { get; set; } = int.MinValue;
 
             public void Configure(Image icon, TextMeshProUGUI name, TextMeshProUGUI mass, TextMeshProUGUI trend)
             {

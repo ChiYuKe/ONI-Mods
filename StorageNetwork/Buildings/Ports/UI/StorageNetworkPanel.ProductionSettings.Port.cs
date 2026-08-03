@@ -252,7 +252,7 @@ namespace StorageNetwork.UI
         private void AddSolidInputPortSettingsCard(Storage storage, StorageNetworkSolidInputPortIngress ingress)
         {
             GameObject card = CreateProductionCard("SolidInputPortSettingsCard", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.INPUT_PORT_STORE_TITLE), 0f);
-            MakeProductionCardAutoHeight(card, string.IsNullOrEmpty(ingress.LastStatus) ? 150f : 174f);
+            MakeProductionCardAutoHeight(card, 174f);
             bool online = StorageSceneRegistry.HasOnlineCoreInWorld(GetStorageWorldId(storage));
             bool enabled = ingress.InputStoreEnabled;
 
@@ -268,17 +268,24 @@ namespace StorageNetwork.UI
             }, enabled);
             CreateProductionActionRow(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_POLICY), GetInputPortStoreModeName(ingress), () => ShowInputPortStorePicker(storage, ingress));
             CreateFinePrint(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.INPUT_PORT_STORE_DESC));
-            if (!string.IsNullOrEmpty(ingress.LastStatus))
-            {
-                TextMeshProUGUI status = CreateFinePrint(card.transform, string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.INPUT_PORT_STORE_STATUS), ingress.LastStatus));
-                SetFinePrintPreferredHeight(status, 22f);
-            }
+            TextMeshProUGUI status = CreateFinePrint(
+                card.transform,
+                string.IsNullOrEmpty(ingress.LastStatus)
+                    ? string.Empty
+                    : string.Format(
+                        Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.INPUT_PORT_STORE_STATUS),
+                        ingress.LastStatus));
+            SetFinePrintPreferredHeight(status, 22f);
+            AddPortStatusLiveBinding(
+                status,
+                () => ingress.LastStatus,
+                StorageNetwork.STRINGS.UI.STORAGE_NETWORK.INPUT_PORT_STORE_STATUS);
         }
 
         private void AddSolidOutputPortSettingsCard(Storage storage, StorageNetworkSolidOutputPortEgress egress)
         {
             GameObject card = CreateProductionCard("SolidOutputPortSettingsCard", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_OUTPUT_PORT_REQUEST_TITLE), 0f);
-            MakeProductionCardAutoHeight(card, string.IsNullOrEmpty(egress.LastStatus) ? 264f : 288f);
+            MakeProductionCardAutoHeight(card, 288f);
             bool online = StorageSceneRegistry.HasOnlineCoreInWorld(GetStorageWorldId(storage));
             bool enabled = egress.OutputRequestEnabled;
 
@@ -292,7 +299,7 @@ namespace StorageNetwork.UI
             grid.AddComponent<RectTransform>();
             bool compact = productionSettingsRoot != null && productionSettingsRoot.GetComponent<RectTransform>().rect.width < 620f;
             LayoutElement gridLayout = grid.AddComponent<LayoutElement>();
-            float controlHeight = string.IsNullOrEmpty(egress.LastStatus) ? 218f : 242f;
+            float controlHeight = 242f;
             float limitHeight = egress.OutputLimitEnabled ? 154f : 118f;
             gridLayout.minHeight = compact ? controlHeight + limitHeight + 8f : Mathf.Max(controlHeight, limitHeight);
             gridLayout.preferredHeight = -1f;
@@ -329,11 +336,18 @@ namespace StorageNetwork.UI
             CreateProductionActionRow(controlCard.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_PORT_FILTER), GetOutputPortFilterName(egress), () => ShowOutputPortMaterialFilterPicker(storage, egress));
             CreateProductionActionRow(controlCard.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_PORT_REQUEST_RATE), GetOutputPortRequestRateName(egress), () => ShowOutputPortRequestRateDialog(egress));
             CreateFinePrint(controlCard.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_OUTPUT_PORT_REQUEST_DESC));
-            if (!string.IsNullOrEmpty(egress.LastStatus))
-            {
-                TextMeshProUGUI status = CreateFinePrint(controlCard.transform, string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_OUTPUT_PORT_REQUEST_STATUS), egress.LastStatus));
-                SetFinePrintPreferredHeight(status, 22f);
-            }
+            TextMeshProUGUI outputStatus = CreateFinePrint(
+                controlCard.transform,
+                string.IsNullOrEmpty(egress.LastStatus)
+                    ? string.Empty
+                    : string.Format(
+                        Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_OUTPUT_PORT_REQUEST_STATUS),
+                        egress.LastStatus));
+            SetFinePrintPreferredHeight(outputStatus, 22f);
+            AddPortStatusLiveBinding(
+                outputStatus,
+                () => egress.LastStatus,
+                StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_OUTPUT_PORT_REQUEST_STATUS);
 
             GameObject limitCard = CreateProductionCard(grid.transform, "SolidOutputLimitCard", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_PORT_LIMIT_ENABLED), 0f);
             ApplyAutomationCardLayout(limitCard, limitHeight);
@@ -344,11 +358,16 @@ namespace StorageNetwork.UI
             }, egress.OutputLimitEnabled);
             if (egress.OutputLimitEnabled)
             {
-                CreateProductionActionRow(
+                TextMeshProUGUI limitLabel = CreateProductionActionRow(
                     limitCard.transform,
                     string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_PORT_LIMIT), GameUtil.GetFormattedMass(Mathf.Max(0f, egress.OutputLimitUsedKg)), GameUtil.GetFormattedMass(Mathf.Max(0f, egress.OutputLimitKg))),
                     Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_PORT_SET_LIMIT),
                     () => ShowOutputPortLimitDialog(storage, egress));
+                AddMassLimitLiveBinding(
+                    limitLabel,
+                    () => egress.OutputLimitUsedKg,
+                    () => egress.OutputLimitKg,
+                    StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_PORT_LIMIT);
             }
             CreateProductionActionRow(limitCard.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_PORT_OUTPUT_RATE), GetOutputPortRequestRateName(egress), () => ShowOutputPortRequestRateDialog(egress));
         }
@@ -356,7 +375,7 @@ namespace StorageNetwork.UI
         private void AddLiquidInputPortSettingsCard(Storage storage, StorageNetworkLiquidInputPortIngress ingress)
         {
             GameObject card = CreateProductionCard("LiquidInputPortSettingsCard", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.INPUT_PORT_STORE_TITLE), 0f);
-            MakeProductionCardAutoHeight(card, string.IsNullOrEmpty(ingress.LastStatus) ? 150f : 174f);
+            MakeProductionCardAutoHeight(card, 174f);
             bool online = StorageSceneRegistry.HasOnlineCoreInWorld(GetStorageWorldId(storage));
             bool enabled = ingress.InputStoreEnabled;
 
@@ -386,19 +405,24 @@ namespace StorageNetwork.UI
                 () => ShowInputPortStorePicker(storage, ingress));
             CreateFinePrint(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.INPUT_PORT_STORE_DESC));
 
-            if (!string.IsNullOrEmpty(ingress.LastStatus))
-            {
-                TextMeshProUGUI status = CreateFinePrint(
-                    card.transform,
-                    string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.INPUT_PORT_STORE_STATUS), ingress.LastStatus));
-                SetFinePrintPreferredHeight(status, 22f);
-            }
+            TextMeshProUGUI status = CreateFinePrint(
+                card.transform,
+                string.IsNullOrEmpty(ingress.LastStatus)
+                    ? string.Empty
+                    : string.Format(
+                        Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.INPUT_PORT_STORE_STATUS),
+                        ingress.LastStatus));
+            SetFinePrintPreferredHeight(status, 22f);
+            AddPortStatusLiveBinding(
+                status,
+                () => ingress.LastStatus,
+                StorageNetwork.STRINGS.UI.STORAGE_NETWORK.INPUT_PORT_STORE_STATUS);
         }
 
         private void AddLiquidOutputPortSettingsCard(Storage storage, StorageNetworkLiquidOutputPortEgress egress)
         {
             GameObject card = CreateProductionCard("LiquidOutputPortSettingsCard", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_PORT_REQUEST_TITLE), 0f);
-            MakeProductionCardAutoHeight(card, string.IsNullOrEmpty(egress.LastStatus) ? 264f : 288f);
+            MakeProductionCardAutoHeight(card, 288f);
             bool online = StorageSceneRegistry.HasOnlineCoreInWorld(GetStorageWorldId(storage));
             bool enabled = egress.OutputRequestEnabled;
 
@@ -416,7 +440,7 @@ namespace StorageNetwork.UI
             grid.AddComponent<RectTransform>();
             bool compact = productionSettingsRoot != null && productionSettingsRoot.GetComponent<RectTransform>().rect.width < 620f;
             LayoutElement gridLayout = grid.AddComponent<LayoutElement>();
-            float controlHeight = string.IsNullOrEmpty(egress.LastStatus) ? 186f : 210f;
+            float controlHeight = 210f;
             float limitHeight = egress.OutputLimitEnabled ? 154f : 118f;
             gridLayout.minHeight = compact ? controlHeight + limitHeight + 8f : Mathf.Max(controlHeight, limitHeight);
             gridLayout.preferredHeight = -1f;
@@ -470,13 +494,18 @@ namespace StorageNetwork.UI
                 GetOutputPortRequestRateName(egress),
                 () => ShowOutputPortRequestRateDialog(egress));
             CreateFinePrint(controlCard.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_PORT_REQUEST_DESC));
-            if (!string.IsNullOrEmpty(egress.LastStatus))
-            {
-                TextMeshProUGUI status = CreateFinePrint(
-                    controlCard.transform,
-                    string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_PORT_REQUEST_STATUS), egress.LastStatus));
-                SetFinePrintPreferredHeight(status, 22f);
-            }
+            TextMeshProUGUI outputStatus = CreateFinePrint(
+                controlCard.transform,
+                string.IsNullOrEmpty(egress.LastStatus)
+                    ? string.Empty
+                    : string.Format(
+                        Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_PORT_REQUEST_STATUS),
+                        egress.LastStatus));
+            SetFinePrintPreferredHeight(outputStatus, 22f);
+            AddPortStatusLiveBinding(
+                outputStatus,
+                () => egress.LastStatus,
+                StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_PORT_REQUEST_STATUS);
 
             GameObject limitCard = CreateProductionCard(grid.transform, "LiquidOutputLimitCard", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_PORT_LIMIT_ENABLED), 0f);
             ApplyAutomationCardLayout(limitCard, limitHeight);
@@ -492,7 +521,7 @@ namespace StorageNetwork.UI
                 egress.OutputLimitEnabled);
             if (egress.OutputLimitEnabled)
             {
-                CreateProductionActionRow(
+                TextMeshProUGUI limitLabel = CreateProductionActionRow(
                     limitCard.transform,
                     string.Format(
                         Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_PORT_LIMIT),
@@ -500,6 +529,11 @@ namespace StorageNetwork.UI
                         GameUtil.GetFormattedMass(Mathf.Max(0f, egress.OutputLimitKg))),
                     Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_PORT_SET_LIMIT),
                     () => ShowOutputPortLimitDialog(storage, egress));
+                AddMassLimitLiveBinding(
+                    limitLabel,
+                    () => egress.OutputLimitUsedKg,
+                    () => egress.OutputLimitKg,
+                    StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_PORT_LIMIT);
             }
             CreateProductionActionRow(
                 limitCard.transform,
@@ -511,7 +545,7 @@ namespace StorageNetwork.UI
         private void AddGasInputPortSettingsCard(Storage storage, StorageNetworkGasInputPortIngress ingress)
         {
             GameObject card = CreateProductionCard("GasInputPortSettingsCard", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GAS_INPUT_PORT_STORE_TITLE), 0f);
-            MakeProductionCardAutoHeight(card, string.IsNullOrEmpty(ingress.LastStatus) ? 150f : 174f);
+            MakeProductionCardAutoHeight(card, 174f);
             bool online = StorageSceneRegistry.HasOnlineCoreInWorld(GetStorageWorldId(storage));
             bool enabled = ingress.InputStoreEnabled;
 
@@ -523,17 +557,24 @@ namespace StorageNetwork.UI
             }, enabled);
             CreateProductionActionRow(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_POLICY), GetInputPortStoreModeName(ingress), () => ShowInputPortStorePicker(storage, ingress));
             CreateFinePrint(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GAS_INPUT_PORT_STORE_DESC));
-            if (!string.IsNullOrEmpty(ingress.LastStatus))
-            {
-                TextMeshProUGUI status = CreateFinePrint(card.transform, string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GAS_INPUT_PORT_STORE_STATUS), ingress.LastStatus));
-                SetFinePrintPreferredHeight(status, 22f);
-            }
+            TextMeshProUGUI status = CreateFinePrint(
+                card.transform,
+                string.IsNullOrEmpty(ingress.LastStatus)
+                    ? string.Empty
+                    : string.Format(
+                        Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GAS_INPUT_PORT_STORE_STATUS),
+                        ingress.LastStatus));
+            SetFinePrintPreferredHeight(status, 22f);
+            AddPortStatusLiveBinding(
+                status,
+                () => ingress.LastStatus,
+                StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GAS_INPUT_PORT_STORE_STATUS);
         }
 
         private void AddGasOutputPortSettingsCard(Storage storage, StorageNetworkGasOutputPortEgress egress)
         {
             GameObject card = CreateProductionCard("GasOutputPortSettingsCard", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GAS_OUTPUT_PORT_REQUEST_TITLE), 0f);
-            MakeProductionCardAutoHeight(card, string.IsNullOrEmpty(egress.LastStatus) ? 264f : 288f);
+            MakeProductionCardAutoHeight(card, 288f);
             bool online = StorageSceneRegistry.HasOnlineCoreInWorld(GetStorageWorldId(storage));
             bool enabled = egress.OutputRequestEnabled;
 
@@ -544,7 +585,7 @@ namespace StorageNetwork.UI
             grid.AddComponent<RectTransform>();
             bool compact = productionSettingsRoot != null && productionSettingsRoot.GetComponent<RectTransform>().rect.width < 620f;
             LayoutElement gridLayout = grid.AddComponent<LayoutElement>();
-            float controlHeight = string.IsNullOrEmpty(egress.LastStatus) ? 186f : 210f;
+            float controlHeight = 210f;
             float limitHeight = egress.OutputLimitEnabled ? 154f : 118f;
             gridLayout.minHeight = compact ? controlHeight + limitHeight + 8f : Mathf.Max(controlHeight, limitHeight);
             gridLayout.preferredHeight = -1f;
@@ -580,11 +621,18 @@ namespace StorageNetwork.UI
             CreateProductionActionRow(controlCard.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_PORT_FILTER), GetOutputPortFilterName(egress), () => ShowOutputPortGasFilterPicker(storage, egress));
             CreateProductionActionRow(controlCard.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_PORT_REQUEST_RATE), GetOutputPortRequestRateName(egress), () => ShowOutputPortRequestRateDialog(egress));
             CreateFinePrint(controlCard.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GAS_OUTPUT_PORT_REQUEST_DESC));
-            if (!string.IsNullOrEmpty(egress.LastStatus))
-            {
-                TextMeshProUGUI status = CreateFinePrint(controlCard.transform, string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GAS_OUTPUT_PORT_REQUEST_STATUS), egress.LastStatus));
-                SetFinePrintPreferredHeight(status, 22f);
-            }
+            TextMeshProUGUI outputStatus = CreateFinePrint(
+                controlCard.transform,
+                string.IsNullOrEmpty(egress.LastStatus)
+                    ? string.Empty
+                    : string.Format(
+                        Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GAS_OUTPUT_PORT_REQUEST_STATUS),
+                        egress.LastStatus));
+            SetFinePrintPreferredHeight(outputStatus, 22f);
+            AddPortStatusLiveBinding(
+                outputStatus,
+                () => egress.LastStatus,
+                StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GAS_OUTPUT_PORT_REQUEST_STATUS);
 
             GameObject limitCard = CreateProductionCard(grid.transform, "GasOutputLimitCard", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_PORT_LIMIT_ENABLED), 0f);
             ApplyAutomationCardLayout(limitCard, limitHeight);
@@ -595,7 +643,12 @@ namespace StorageNetwork.UI
             }, egress.OutputLimitEnabled);
             if (egress.OutputLimitEnabled)
             {
-                CreateProductionActionRow(limitCard.transform, string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_PORT_LIMIT), GameUtil.GetFormattedMass(Mathf.Max(0f, egress.OutputLimitUsedKg)), GameUtil.GetFormattedMass(Mathf.Max(0f, egress.OutputLimitKg))), Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_PORT_SET_LIMIT), () => ShowOutputPortLimitDialog(storage, egress));
+                TextMeshProUGUI limitLabel = CreateProductionActionRow(limitCard.transform, string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_PORT_LIMIT), GameUtil.GetFormattedMass(Mathf.Max(0f, egress.OutputLimitUsedKg)), GameUtil.GetFormattedMass(Mathf.Max(0f, egress.OutputLimitKg))), Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_PORT_SET_LIMIT), () => ShowOutputPortLimitDialog(storage, egress));
+                AddMassLimitLiveBinding(
+                    limitLabel,
+                    () => egress.OutputLimitUsedKg,
+                    () => egress.OutputLimitKg,
+                    StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_PORT_LIMIT);
             }
             CreateProductionActionRow(limitCard.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_PORT_OUTPUT_RATE), GetOutputPortRequestRateName(egress), () => ShowOutputPortRequestRateDialog(egress));
         }
@@ -682,7 +735,7 @@ namespace StorageNetwork.UI
                 output.OutputLimitEnabled);
             if (output.OutputLimitEnabled)
             {
-                CreateProductionActionRow(
+                TextMeshProUGUI limitLabel = CreateProductionActionRow(
                     card.transform,
                     string.Format(
                         Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.POWER_OUTPUT_PORT_LIMIT),
@@ -690,6 +743,7 @@ namespace StorageNetwork.UI
                         GameUtil.GetFormattedJoules(Mathf.Max(0f, output.OutputLimitJoules), "F1", GameUtil.TimeSlice.None)),
                     Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_PORT_SET_LIMIT),
                     () => ShowPowerOutputLimitDialog(output));
+                AddPowerLimitLiveBinding(limitLabel, output);
             }
             CreateProductionActionRow(
                 card.transform,
@@ -773,13 +827,107 @@ namespace StorageNetwork.UI
                 output.OutputLimitEnabled);
             if (output.OutputLimitEnabled)
             {
-                CreateProductionActionRow(
+                TextMeshProUGUI limitLabel = CreateProductionActionRow(
                     card.transform,
                     string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PARTICLE_OUTPUT_PORT_LIMIT), FormatParticles(output.OutputLimitUsedParticles), FormatParticles(output.OutputLimitParticles)),
                     Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_PORT_SET_LIMIT),
                     () => ShowParticleOutputLimitDialog(output));
+                AddParticleLimitLiveBinding(limitLabel, output);
             }
             CreateFinePrint(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PARTICLE_OUTPUT_PORT_REQUEST_DESC));
+        }
+
+        private void AddPortStatusLiveBinding(
+            TextMeshProUGUI target,
+            System.Func<string> status,
+            string localizedFormat)
+        {
+            if (target == null || status == null)
+            {
+                return;
+            }
+
+            AddProductionSettingsLiveBinding(
+                () => GetLiveStringFingerprint(status()),
+                () => SetTextIfChanged(
+                    target,
+                    string.IsNullOrEmpty(status())
+                        ? string.Empty
+                        : string.Format(Get(localizedFormat), status())));
+        }
+
+        private void AddMassLimitLiveBinding(
+            TextMeshProUGUI target,
+            System.Func<float> used,
+            System.Func<float> limit,
+            string localizedFormat)
+        {
+            if (target == null || used == null || limit == null)
+            {
+                return;
+            }
+
+            AddProductionSettingsLiveBinding(
+                () => CombineLiveFingerprint(used(), limit()),
+                () => SetTextIfChanged(
+                    target,
+                    string.Format(
+                        Get(localizedFormat),
+                        GameUtil.GetFormattedMass(Mathf.Max(0f, used())),
+                        GameUtil.GetFormattedMass(Mathf.Max(0f, limit())))));
+        }
+
+        private void AddPowerLimitLiveBinding(
+            TextMeshProUGUI target,
+            StorageNetworkPowerOutputPortGenerator output)
+        {
+            if (target == null || output == null)
+            {
+                return;
+            }
+
+            AddProductionSettingsLiveBinding(
+                () => CombineLiveFingerprint(
+                    output.OutputLimitUsedJoules,
+                    output.OutputLimitJoules),
+                () => SetTextIfChanged(
+                    target,
+                    string.Format(
+                        Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.POWER_OUTPUT_PORT_LIMIT),
+                        GameUtil.GetFormattedJoules(
+                            Mathf.Max(0f, output.OutputLimitUsedJoules),
+                            "F1",
+                            GameUtil.TimeSlice.None),
+                        GameUtil.GetFormattedJoules(
+                            Mathf.Max(0f, output.OutputLimitJoules),
+                            "F1",
+                            GameUtil.TimeSlice.None))));
+        }
+
+        private void AddParticleLimitLiveBinding(
+            TextMeshProUGUI target,
+            StorageNetworkParticleOutputPortEgress output)
+        {
+            if (target == null || output == null)
+            {
+                return;
+            }
+
+            AddProductionSettingsLiveBinding(
+                () => CombineLiveFingerprint(
+                    output.OutputLimitUsedParticles,
+                    output.OutputLimitParticles),
+                () => SetTextIfChanged(
+                    target,
+                    string.Format(
+                        Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PARTICLE_OUTPUT_PORT_LIMIT),
+                        FormatParticles(output.OutputLimitUsedParticles),
+                        FormatParticles(output.OutputLimitParticles))));
+        }
+
+        private static int GetLiveStringFingerprint(string value)
+        {
+            return string.IsNullOrEmpty(value) ? 0 : value.GetHashCode();
         }
 
         private static int GetStorageWorldId(Storage storage)

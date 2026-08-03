@@ -28,6 +28,25 @@ namespace StorageNetwork.Patches
 
             public static void Postfix(ComplexFabricator __instance, List<GameObject> __result)
             {
+                // LiquidCooledRefinery calls base.SpawnOrderProduct first and only
+                // heats its coolant after that call returns. The base postfix would
+                // therefore run too early and interfere with the refinery's coolant
+                // processing. Its derived-method patch below handles it after the
+                // complete vanilla override has finished.
+                if (__instance is LiquidCooledRefinery)
+                {
+                    return;
+                }
+
+                StorageNetworkProductionOutputHandler.ForceStoreProducedOutputs(__instance, __result);
+            }
+        }
+
+        [HarmonyPatch(typeof(LiquidCooledRefinery), "SpawnOrderProduct")]
+        public static class LiquidCooledRefinerySpawnOrderProductPatch
+        {
+            public static void Postfix(LiquidCooledRefinery __instance, List<GameObject> __result)
+            {
                 StorageNetworkProductionOutputHandler.ForceStoreProducedOutputs(__instance, __result);
             }
         }

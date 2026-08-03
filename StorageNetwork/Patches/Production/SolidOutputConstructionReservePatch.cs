@@ -1,28 +1,43 @@
 using HarmonyLib;
+using StorageNetwork.Components;
 using StorageNetwork.Services;
 
 namespace StorageNetwork.Patches
 {
     public static class SolidOutputConstructionReservePatch
     {
+        [HarmonyPatch(typeof(StorageNetworkSolidOutputPortEgress), "OnSpawn")]
+        public static class SolidOutputPortOnSpawnPatch
+        {
+            public static void Postfix(StorageNetworkSolidOutputPortEgress __instance)
+            {
+                StorageNetworkConstructionSupplyService.RegisterSolidOutputPort(__instance?.PortStorage);
+            }
+        }
+
+        [HarmonyPatch(typeof(StorageNetworkSolidOutputPortEgress), "OnCleanUp")]
+        public static class SolidOutputPortOnCleanUpPatch
+        {
+            public static void Prefix(StorageNetworkSolidOutputPortEgress __instance)
+            {
+                StorageNetworkConstructionSupplyService.UnregisterSolidOutputPort(__instance?.PortStorage);
+            }
+        }
+
         [HarmonyPatch(typeof(SolidConduitDispenser), "FindSuitableItem", new System.Type[0])]
         public static class SolidConduitDispenserFindSuitableItemPatch
         {
             public static void Postfix(SolidConduitDispenser __instance, ref Pickupable __result)
             {
-                if (__result == null ||
-                    __instance == null ||
-                    __instance.storage == null ||
-                    __instance.GetComponent<StorageNetwork.Components.StorageNetworkSolidOutputPortEgress>() == null)
+                if (__instance == null ||
+                    !StorageNetworkConstructionSupplyService.IsRegisteredSolidOutputPort(__instance.storage) ||
+                    __result == null ||
+                    !StorageNetworkConstructionSupplyService.IsConstructionReserved(__result))
                 {
                     return;
                 }
 
-                if (!StorageNetworkConstructionSupplyService.IsConstructionReserved(__result.gameObject))
-                {
-                    return;
-                }
-
+                StorageNetworkConstructionSupplyService.RecordLegacyReservedSelection();
                 __result = FindUnreservedItem(__instance.storage);
             }
 
@@ -37,7 +52,7 @@ namespace StorageNetwork.Patches
                 {
                     Pickupable pickupable = item != null ? item.GetComponent<Pickupable>() : null;
                     if (pickupable != null &&
-                        !StorageNetworkConstructionSupplyService.IsConstructionReserved(item))
+                        !StorageNetworkConstructionSupplyService.IsConstructionReserved(pickupable))
                     {
                         return pickupable;
                     }
@@ -52,12 +67,10 @@ namespace StorageNetwork.Patches
         {
             public static void Prefix(Storage __instance, UnityEngine.GameObject go)
             {
-                if (__instance != null &&
-                    go != null &&
-                    __instance.GetComponent<StorageNetwork.Components.StorageNetworkSolidOutputPortEgress>() != null)
+                if (go != null &&
+                    StorageNetworkConstructionSupplyService.IsRegisteredSolidOutputPort(__instance))
                 {
-                    StorageNetworkConstructionSupplyService.ClearConstructionReservation(go);
-                    StorageNetworkConstructionSupplyService.ClearSolidOutputBufferMarker(go);
+                    StorageNetworkConstructionSupplyService.ClearLegacyTagsForSolidOutputTransfer(go);
                 }
             }
         }
@@ -68,10 +81,7 @@ namespace StorageNetwork.Patches
             public static void Prefix(ref Chore.Precondition.Context context)
             {
                 Pickupable pickupable = context.data as Pickupable;
-                if (pickupable != null)
-                {
-                    StorageNetworkConstructionSupplyService.ClearSolidOutputBufferMarker(pickupable.gameObject);
-                }
+                StorageNetworkConstructionSupplyService.ClearBufferMarkerForFetch(pickupable);
             }
         }
     }

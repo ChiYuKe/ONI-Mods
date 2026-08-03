@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using StorageNetwork.Components;
 using StorageNetwork.Core;
 using TUNING;
 using UnityEngine;
@@ -12,24 +13,29 @@ namespace StorageNetwork.Services
         {
             if (!StorageSceneRegistry.IsLive(left) || !StorageSceneRegistry.IsLive(right))
             {
-                return StorageSceneRegistry.IsLive(left).CompareTo(StorageSceneRegistry.IsLive(right));
+                return StorageSceneRegistry.IsLive(right).CompareTo(StorageSceneRegistry.IsLive(left));
             }
 
-            float leftAvailable = left.GetAmountAvailable(tag);
-            float rightAvailable = right.GetAmountAvailable(tag);
-            int compare = leftAvailable.CompareTo(rightAvailable);
+            float leftAvailable = StorageNetworkContentIndexService.GetStorageAmount(left, tag);
+            float rightAvailable = StorageNetworkContentIndexService.GetStorageAmount(right, tag);
+            int compare = rightAvailable.CompareTo(leftAvailable);
             if (compare != 0)
             {
                 return compare;
             }
 
-            compare = IsFilterAccepting(left, tag).CompareTo(IsFilterAccepting(right, tag));
+            compare = IsFilterAccepting(right, tag).CompareTo(IsFilterAccepting(left, tag));
             if (compare != 0)
             {
                 return compare;
             }
 
-            return left.RemainingCapacity().CompareTo(right.RemainingCapacity());
+            compare = StorageNetworkContentIndexService.GetRemainingCapacity(right)
+                .CompareTo(StorageNetworkContentIndexService.GetRemainingCapacity(left));
+            return compare != 0
+                ? compare
+                : StorageItemUtility.GetStorageInstanceId(left)
+                    .CompareTo(StorageItemUtility.GetStorageInstanceId(right));
         }
 
         private static bool IsUsableOutputTarget(Storage target, GameObject item, HashSet<Tag> matchTags, HashSet<Storage> excludedStorages, int sourceWorldId = -1)
@@ -41,9 +47,9 @@ namespace StorageNetwork.Services
                    StorageNetworkStorageRules.IsConnectedNetworkStorage(target) &&
                    !StorageNetworkStorageRules.IsMinionStorage(target) &&
                    !StorageNetworkStorageRules.IsProductionStorage(target) &&
-                   target.RemainingCapacity() > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT &&
+                   StorageNetworkContentIndexService.GetRemainingCapacity(target) > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT &&
                    IsStorageAccepting(target, matchTags) &&
-                   (target.items == null || !target.items.Contains(item));
+                   !IsItemOwnedByStorage(target, item);
         }
 
         private static bool IsUsableOutputTarget(Storage target, GameObject item, StorageItemUtility.StorageMatchTags matchTags, HashSet<Storage> excludedStorages, int sourceWorldId = -1)
@@ -55,9 +61,58 @@ namespace StorageNetwork.Services
                    StorageNetworkStorageRules.IsConnectedNetworkStorage(target) &&
                    !StorageNetworkStorageRules.IsMinionStorage(target) &&
                    !StorageNetworkStorageRules.IsProductionStorage(target) &&
-                   target.RemainingCapacity() > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT &&
+                   StorageNetworkContentIndexService.GetRemainingCapacity(target) > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT &&
                    IsStorageAccepting(target, matchTags) &&
-                   (target.items == null || !target.items.Contains(item));
+                   !IsItemOwnedByStorage(target, item);
+        }
+
+        private static bool IsUsableOutputTargetNative(
+            Storage target,
+            GameObject item,
+            HashSet<Tag> matchTags,
+            HashSet<Storage> excludedStorages,
+            int sourceWorldId,
+            float remainingCapacity)
+        {
+            return StorageSceneRegistry.IsLive(target) &&
+                   IsStorageReachableFromWorld(target, sourceWorldId) &&
+                   (excludedStorages == null || !excludedStorages.Contains(target)) &&
+                   StorageNetworkStorageRules.IsServerStorage(target) &&
+                   StorageNetworkStorageRules.IsConnectedNetworkStorage(target) &&
+                   !StorageNetworkStorageRules.IsMinionStorage(target) &&
+                   !StorageNetworkStorageRules.IsProductionStorage(target) &&
+                   remainingCapacity > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT &&
+                   IsStorageAccepting(target, matchTags) &&
+                   !IsItemOwnedByStorage(target, item);
+        }
+
+        private static bool IsUsableOutputTargetNative(
+            Storage target,
+            GameObject item,
+            StorageItemUtility.StorageMatchTags matchTags,
+            HashSet<Storage> excludedStorages,
+            int sourceWorldId,
+            float remainingCapacity)
+        {
+            return StorageSceneRegistry.IsLive(target) &&
+                   IsStorageReachableFromWorld(target, sourceWorldId) &&
+                   (excludedStorages == null || !excludedStorages.Contains(target)) &&
+                   StorageNetworkStorageRules.IsServerStorage(target) &&
+                   StorageNetworkStorageRules.IsConnectedNetworkStorage(target) &&
+                   !StorageNetworkStorageRules.IsMinionStorage(target) &&
+                   !StorageNetworkStorageRules.IsProductionStorage(target) &&
+                   remainingCapacity > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT &&
+                   IsStorageAccepting(target, matchTags) &&
+                   !IsItemOwnedByStorage(target, item);
+        }
+
+        private static bool IsItemOwnedByStorage(Storage storage, GameObject item)
+        {
+            // Storage.Store reparents directly, giving candidate selection an
+            // O(1) ownership check instead of a scan of every target's item list.
+            return storage != null &&
+                   item != null &&
+                   item.transform.parent == storage.transform;
         }
 
         public static bool IsAutoOutputCandidateIgnoringReservation(Storage target, GameObject item, StorageItemUtility.StorageMatchTags matchTags, HashSet<Storage> excludedStorages, int sourceWorldId = -1)
@@ -71,21 +126,52 @@ namespace StorageNetwork.Services
             return IsElementOutputTargetCandidate(target, element, tag, excludedStorages, sourceWorldId, true);
         }
 
+        internal static bool IsUsableElementOutputTarget(
+            Storage target,
+            SimHashes elementHash,
+            int sourceWorldId)
+        {
+            Element element = ElementLoader.FindElementByHash(elementHash);
+            return element != null &&
+                   IsElementOutputTargetCandidate(
+                       target,
+                       element,
+                       elementHash.CreateTag(),
+                       EmptyStorageExclusions,
+                       sourceWorldId,
+                       true);
+        }
+
         private static bool IsElementOutputTargetCandidate(Storage target, Element element, Tag tag, HashSet<Storage> excludedStorages, int sourceWorldId, bool requireCapacity)
+        {
+            return IsElementOutputTargetStructuralCandidate(
+                       target,
+                       element,
+                       tag,
+                       excludedStorages,
+                       sourceWorldId) &&
+                   (!requireCapacity || StorageNetworkContentIndexService.GetRemainingCapacity(target) > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT) &&
+                   IsElementOutputStorageAccepting(target, element, tag);
+        }
+
+        private static bool IsElementOutputTargetStructuralCandidate(
+            Storage target,
+            Element element,
+            Tag tag,
+            HashSet<Storage> excludedStorages,
+            int sourceWorldId)
         {
             return StorageSceneRegistry.IsLive(target) &&
                    element != null &&
                    tag != Tag.Invalid &&
                    IsStorageReachableFromWorld(target, sourceWorldId) &&
-                   !excludedStorages.Contains(target) &&
+                   (excludedStorages == null || !excludedStorages.Contains(target)) &&
                    StorageNetworkStorageRules.IsServerStorage(target) &&
                    StorageNetworkStorageRules.IsConnectedNetworkStorage(target) &&
                    StorageNetworkStorageRules.MatchesElementState(target, element) &&
                    !StorageNetworkStorageRules.IsNetworkPortStorage(target) &&
                    !StorageNetworkStorageRules.IsMinionStorage(target) &&
-                   !StorageNetworkStorageRules.IsProductionStorage(target) &&
-                   (!requireCapacity || target.RemainingCapacity() > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT) &&
-                   IsElementOutputStorageAccepting(target, element, tag);
+                   !StorageNetworkStorageRules.IsProductionStorage(target);
         }
 
         private static bool IsUsableNetworkSource(Storage source, IEnumerable<Tag> tags, HashSet<Storage> excludedStorages, int destinationWorldId)
@@ -131,6 +217,28 @@ namespace StorageNetwork.Services
                    HasNoExplicitStorageFilter(target);
         }
 
+        private static bool IsAutoOutputMatchNative(
+            Storage target,
+            HashSet<Tag> matchTags,
+            float available)
+        {
+            return available > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ||
+                   AcceptsByElementStateWithoutFilterUi(target, matchTags) ||
+                   IsFilterAccepting(target, matchTags) ||
+                   HasNoExplicitStorageFilter(target);
+        }
+
+        private static bool IsAutoOutputMatchNative(
+            Storage target,
+            StorageItemUtility.StorageMatchTags matchTags,
+            float available)
+        {
+            return available > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ||
+                   AcceptsByElementStateWithoutFilterUi(target, matchTags) ||
+                   IsFilterAccepting(target, matchTags) ||
+                   HasNoExplicitStorageFilter(target);
+        }
+
         private static bool IsFilterAccepting(Storage target, HashSet<Tag> matchTags)
         {
             if (StorageNetworkFilterBypass.ShouldBypassUserFilter(target))
@@ -138,7 +246,7 @@ namespace StorageNetwork.Services
                 return AnyTagAcceptedByStorageFilter(target.storageFilters, matchTags);
             }
 
-            TreeFilterable filterable = target != null ? target.GetComponent<TreeFilterable>() : null;
+            TreeFilterable filterable = GetTreeFilterable(target);
             if (IsEmptyFilteredPort(target, filterable))
             {
                 return false;
@@ -154,7 +262,7 @@ namespace StorageNetwork.Services
                 return IsStorageFilterAcceptingTag(target.storageFilters, tag);
             }
 
-            TreeFilterable filterable = target != null ? target.GetComponent<TreeFilterable>() : null;
+            TreeFilterable filterable = GetTreeFilterable(target);
             if (IsEmptyFilteredPort(target, filterable))
             {
                 return false;
@@ -228,14 +336,14 @@ namespace StorageNetwork.Services
 
             if (element.IsLiquid || element.IsGas)
             {
-                return target.GetAmountAvailable(tag) > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ||
+                return StorageNetworkContentIndexService.GetStorageAmount(target, tag) > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ||
                        !HasUserConfiguredFilter(target) ||
                        IsFilterAccepting(target, tag) ||
                        IsStorageFilterAcceptingTag(target.storageFilters, tag);
             }
 
             return IsStorageAccepting(target, tag) &&
-                   (target.GetAmountAvailable(tag) > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ||
+                   (StorageNetworkContentIndexService.GetStorageAmount(target, tag) > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ||
                     IsFilterAccepting(target, tag) ||
                     HasNoExplicitStorageFilter(target));
         }
@@ -307,7 +415,7 @@ namespace StorageNetwork.Services
 
         private static bool AcceptsByElementStateWithoutFilterUi(Storage target, IEnumerable<Tag> tags)
         {
-            if (target == null || tags == null || target.GetComponent<TreeFilterable>() != null)
+            if (target == null || tags == null || GetTreeFilterable(target) != null)
             {
                 return false;
             }
@@ -333,7 +441,7 @@ namespace StorageNetwork.Services
 
         private static bool AcceptsByElementStateWithoutFilterUi(Storage target, Tag tag)
         {
-            if (target == null || tag == Tag.Invalid || target.GetComponent<TreeFilterable>() != null)
+            if (target == null || tag == Tag.Invalid || GetTreeFilterable(target) != null)
             {
                 return false;
             }
@@ -430,7 +538,9 @@ namespace StorageNetwork.Services
             float available = 0f;
             foreach (Tag tag in matchTags)
             {
-                available = Mathf.Max(available, target.GetAmountAvailable(tag));
+                available = Mathf.Max(
+                    available,
+                    StorageNetworkContentIndexService.GetStorageAmount(target, tag));
             }
 
             return available;
@@ -444,11 +554,45 @@ namespace StorageNetwork.Services
             }
 
             float available = 0f;
-            available = Mathf.Max(available, target.GetAmountAvailable(matchTags.PrefabIdTag));
-            available = Mathf.Max(available, target.GetAmountAvailable(matchTags.PrefabTag));
-            available = Mathf.Max(available, target.GetAmountAvailable(matchTags.ElementTag));
-            available = Mathf.Max(available, target.GetAmountAvailable(matchTags.TransferTag));
+            available = Mathf.Max(available, StorageNetworkContentIndexService.GetStorageAmount(target, matchTags.PrefabIdTag));
+            available = Mathf.Max(available, StorageNetworkContentIndexService.GetStorageAmount(target, matchTags.PrefabTag));
+            available = Mathf.Max(available, StorageNetworkContentIndexService.GetStorageAmount(target, matchTags.ElementTag));
+            available = Mathf.Max(available, StorageNetworkContentIndexService.GetStorageAmount(target, matchTags.TransferTag));
             return available;
+        }
+
+        private static float GetNativeAmountAvailableByAnyMatchTag(
+            Storage target,
+            HashSet<Tag> matchTags)
+        {
+            if (!StorageSceneRegistry.IsLive(target) || matchTags == null)
+            {
+                return 0f;
+            }
+
+            float available = 0f;
+            foreach (Tag tag in matchTags)
+            {
+                available = Mathf.Max(
+                    available,
+                    StorageNetworkContentShadowReader.GetStorageAmount(target, tag));
+            }
+
+            return available;
+        }
+
+        private static float GetNativeAmountAvailableByAnyMatchTag(
+            Storage target,
+            StorageItemUtility.StorageMatchTags matchTags)
+        {
+            if (!StorageSceneRegistry.IsLive(target))
+            {
+                return 0f;
+            }
+
+            return StorageNetworkContentShadowReader.GetMaximumStorageAmount(
+                target,
+                matchTags);
         }
 
         private static bool HasNoExplicitStorageFilter(Storage target)
@@ -458,15 +602,39 @@ namespace StorageNetwork.Services
                 return false;
             }
 
-            TreeFilterable filterable = target != null ? target.GetComponent<TreeFilterable>() : null;
+            TreeFilterable filterable = GetTreeFilterable(target);
             return (filterable == null || filterable.GetTags() == null || filterable.GetTags().Count == 0) &&
                    (target.storageFilters == null || target.storageFilters.Count == 0);
         }
 
         private static bool HasUserConfiguredFilter(Storage target)
         {
-            return target != null &&
-                   target.GetComponent<StorageNetwork.Components.StorageNetworkFilterState>()?.UserConfigured == true;
+            if (target == null)
+            {
+                return false;
+            }
+
+            StorageNetworkFilterState filterState =
+                StorageNetworkRuntimeCatalog.TryGet(
+                    target,
+                    out StorageRuntimeDescriptor descriptor)
+                    ? descriptor.FilterState
+                    : target.GetComponent<StorageNetworkFilterState>();
+            return filterState?.UserConfigured == true;
+        }
+
+        private static TreeFilterable GetTreeFilterable(Storage target)
+        {
+            if (target == null)
+            {
+                return null;
+            }
+
+            return StorageNetworkRuntimeCatalog.TryGet(
+                    target,
+                    out StorageRuntimeDescriptor descriptor)
+                ? descriptor.TreeFilterable
+                : target.GetComponent<TreeFilterable>();
         }
 
         private static bool IsFilteredPort(Storage target)

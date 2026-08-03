@@ -19,11 +19,23 @@ namespace StorageNetwork.Components
         [MyCmpGet]
         private PrimaryElement primaryElement = null;
 
+        [MyCmpGet]
+        private KSelectable selectable = null;
+
         private bool isErupting = false;
         private bool lastAppliedEmitting = false;
         private bool hasAppliedEmitting = false;
         private bool isNetworkCapturing = false;
         private Guid networkStatusHandle = Guid.Empty;
+        private readonly ElementOutputTargetQuery cachedTargetQuery =
+            new ElementOutputTargetQuery();
+        private int cachedTargetWorldId = int.MinValue;
+        private int cachedTargetElementHash;
+        private int cachedTargetPolicy = -1;
+        private int cachedSpecificTargetId = KPrefabID.InvalidInstanceID;
+        private int cachedTargetCapabilityVersion = -1;
+        private int cachedTargetMembershipVersion = -1;
+        private int cachedTargetConnectivityVersion = -1;
 
         private static StatusItem networkStatusItem;
 
@@ -58,8 +70,7 @@ namespace StorageNetwork.Components
                 return;
             }
 
-            string captureState = GetCaptureState();
-            if (captureState != null)
+            if (GetCaptureState() != GeyserCaptureState.Ready)
             {
                 bool preventWorldOutput = ShouldPreventWorldOutput();
                 isNetworkCapturing = preventWorldOutput;
@@ -113,7 +124,14 @@ namespace StorageNetwork.Components
             SetNativeEmitterEnabled(false);
             SuppressNativeOverpressureStatus();
 
-            float overflow = StoreElementInNetwork(output.elementHash, mass, temperature, output.addedDiseaseIdx, GetDiseaseCount(output, dt), targetQuery.Targets);
+            float overflow = StoreElementInNetwork(
+                output.elementHash,
+                mass,
+                temperature,
+                output.addedDiseaseIdx,
+                GetDiseaseCount(output, dt),
+                targetQuery.Targets,
+                GetOutputWorldId());
             if (Config.Instance.AllowGeyserWorldOutputFallback &&
                 overflow > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
             {
@@ -135,7 +153,7 @@ namespace StorageNetwork.Components
                 return;
             }
 
-            if (GetCaptureState() != null)
+            if (GetCaptureState() != GeyserCaptureState.Ready)
             {
                 bool preventWorldOutput = ShouldPreventWorldOutput();
                 isNetworkCapturing = preventWorldOutput;
@@ -236,12 +254,12 @@ namespace StorageNetwork.Components
                 return false;
             }
 
-            if (GetCaptureState() != null)
+            if (GetCaptureState() != GeyserCaptureState.Ready)
             {
                 return false;
             }
 
-            return FindOutputTargets(emitter.outputElement).Count > 0;
+            return FindOutputTargetQuery(emitter.outputElement).Targets.Count > 0;
         }
 
         public bool IsRuntimeErupting()
@@ -249,82 +267,109 @@ namespace StorageNetwork.Components
             return IsEruptingNow();
         }
 
-        private string GetCaptureState()
+        private GeyserCaptureState GetCaptureState()
         {
             if (enrollment == null)
             {
-                return "[StorageNetwork][Geyser] Missing enrollment component.";
+                return GeyserCaptureState.MissingEnrollment;
             }
 
             if (emitter == null)
             {
-                return "[StorageNetwork][Geyser] Missing ElementEmitter component.";
+                return GeyserCaptureState.MissingEmitter;
             }
 
             if (!enrollment.IncludedInSceneNetwork)
             {
-                return "[StorageNetwork][Geyser] Not enrolled into the storage network.";
+                return GeyserCaptureState.NotEnrolled;
             }
 
             if (!enrollment.DirectGeyserOutputToNetwork)
             {
-                return "[StorageNetwork][Geyser] Direct network output is disabled.";
+                return GeyserCaptureState.DirectOutputDisabled;
             }
 
             if (!enrollment.IsAnalyzedGeyser())
             {
-                return "[StorageNetwork][Geyser] Geyser is not analyzed yet.";
+                return GeyserCaptureState.NotAnalyzed;
             }
 
             if (emitter.outputElement.elementHash == SimHashes.Vacuum)
             {
-                return "[StorageNetwork][Geyser] Output element is vacuum.";
+                return GeyserCaptureState.Vacuum;
             }
 
             if (emitter.outputElement.massGenerationRate <= 0f)
             {
-                return "[StorageNetwork][Geyser] Output mass generation rate is zero.";
+                return GeyserCaptureState.NoOutput;
             }
 
             int worldId = GetOutputWorldId();
             if (!StorageSceneRegistry.HasOnlineCoreInWorld(worldId))
             {
-                return string.Format("[StorageNetwork][Geyser] No online core in world {0}.", worldId);
+                return GeyserCaptureState.NetworkOffline;
             }
 
             if (enrollment.CurrentGeyserOutputStoreMode == StorageNetworkMaterialRequester.OutputStoreMode.SpecificStorage &&
                 enrollment.ResolveGeyserOutputStorage() == null)
             {
-                return "[StorageNetwork][Geyser] Specific target server is missing or unavailable.";
+                return GeyserCaptureState.SpecificTargetUnavailable;
             }
 
-            return null;
-        }
-
-        private List<Storage> FindOutputTargets(ElementConverter.OutputElement output)
-        {
-            if (output.elementHash == SimHashes.Vacuum)
-            {
-                return new List<Storage>();
-            }
-
-            Storage specificTarget = enrollment.CurrentGeyserOutputStoreMode == StorageNetworkMaterialRequester.OutputStoreMode.SpecificStorage
-                ? enrollment.ResolveGeyserOutputStorage()
-                : null;
-            return NetworkStorageTransferService.FindElementOutputTargets(output.elementHash, null, specificTarget, null, GetOutputWorldId());
+            return GeyserCaptureState.Ready;
         }
 
         private ElementOutputTargetQuery FindOutputTargetQuery(ElementConverter.OutputElement output)
         {
             if (output.elementHash == SimHashes.Vacuum)
             {
-                return new ElementOutputTargetQuery();
+                cachedTargetQuery.Reset();
+                return cachedTargetQuery;
             }
 
-            Storage specificTarget = enrollment.CurrentGeyserOutputStoreMode == StorageNetworkMaterialRequester.OutputStoreMode.SpecificStorage
+            StorageNetworkMaterialRequester.OutputStoreMode policy =
+                enrollment.CurrentGeyserOutputStoreMode;
+            Storage specificTarget = policy == StorageNetworkMaterialRequester.OutputStoreMode.SpecificStorage
                 ? enrollment.ResolveGeyserOutputStorage()
                 : null;
-            return StorageTargetSelector.FindElementOutputTargetsWithCapacityState(output.elementHash, null, specificTarget, null, GetOutputWorldId());
+            int worldId = GetOutputWorldId();
+            int specificTargetId = StorageItemUtility.GetStorageInstanceId(specificTarget);
+            int capabilityVersion = StorageSceneRegistry.CapabilityVersion;
+            int membershipVersion = StorageSceneRegistry.MembershipVersion;
+            int connectivityVersion = StorageSceneRegistry.ConnectivityVersion;
+            if (cachedTargetWorldId != worldId ||
+                cachedTargetElementHash != (int)output.elementHash ||
+                cachedTargetPolicy != (int)policy ||
+                cachedSpecificTargetId != specificTargetId ||
+                cachedTargetCapabilityVersion != capabilityVersion ||
+                cachedTargetMembershipVersion != membershipVersion ||
+                cachedTargetConnectivityVersion != connectivityVersion)
+            {
+                StorageTargetSelector.FillElementOutputTargetsWithCapacityState(
+                    output.elementHash,
+                    null,
+                    specificTarget,
+                    null,
+                    worldId,
+                    cachedTargetQuery);
+                cachedTargetWorldId = worldId;
+                cachedTargetElementHash = (int)output.elementHash;
+                cachedTargetPolicy = (int)policy;
+                cachedSpecificTargetId = specificTargetId;
+                cachedTargetCapabilityVersion = capabilityVersion;
+                cachedTargetMembershipVersion = membershipVersion;
+                cachedTargetConnectivityVersion = connectivityVersion;
+            }
+            else
+            {
+                StorageTargetSelector.RefreshElementOutputTargetCapacities(
+                    output.elementHash,
+                    cachedTargetQuery,
+                    null,
+                    worldId);
+            }
+
+            return cachedTargetQuery;
         }
 
         private bool HasOutputCandidateIgnoringCapacity(ElementConverter.OutputElement output)
@@ -364,7 +409,6 @@ namespace StorageNetwork.Components
                 return;
             }
 
-            KSelectable selectable = GetComponent<KSelectable>();
             if (selectable != null)
             {
                 selectable.RemoveStatusItem(Db.Get().MiscStatusItems.SpoutOverPressure, false);
@@ -373,7 +417,6 @@ namespace StorageNetwork.Components
 
         private void AddStatusItem()
         {
-            KSelectable selectable = GetComponent<KSelectable>();
             if (selectable == null || networkStatusHandle != Guid.Empty)
             {
                 return;
@@ -389,7 +432,6 @@ namespace StorageNetwork.Components
                 return;
             }
 
-            KSelectable selectable = GetComponent<KSelectable>();
             if (selectable != null)
             {
                 selectable.RemoveStatusItem(networkStatusHandle);
@@ -476,7 +518,7 @@ namespace StorageNetwork.Components
                 return Loc.Get(Loc.UI.STORAGE_NETWORK.GEYSER_STATUS_MISSING_EMITTER);
             }
 
-            if (GetCaptureState() != null)
+            if (GetCaptureState() != GeyserCaptureState.Ready)
             {
                 return ShouldPreventWorldOutput()
                     ? Loc.Get(Loc.UI.STORAGE_NETWORK.GEYSER_STATUS_NETWORK_PAUSED)
@@ -521,7 +563,9 @@ namespace StorageNetwork.Components
 
         private string GetTargetSummaryText(ElementConverter.OutputElement output)
         {
-            if (emitter == null || output.elementHash == SimHashes.Vacuum || GetCaptureState() != null)
+            if (emitter == null ||
+                output.elementHash == SimHashes.Vacuum ||
+                GetCaptureState() != GeyserCaptureState.Ready)
             {
                 return Loc.Get(Loc.UI.STORAGE_NETWORK.NONE);
             }
@@ -606,7 +650,8 @@ namespace StorageNetwork.Components
             float temperature,
             byte diseaseIdx,
             int diseaseCount,
-            List<Storage> targets)
+            List<Storage> targets,
+            int sourceWorldId)
         {
             Element element = ElementLoader.FindElementByHash(elementHash);
             if (element == null)
@@ -625,6 +670,14 @@ namespace StorageNetwork.Components
                 if (remaining <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
                 {
                     break;
+                }
+
+                if (!StorageTargetSelector.IsUsableElementOutputTarget(
+                        target,
+                        elementHash,
+                        sourceWorldId))
+                {
+                    continue;
                 }
 
                 float amount = Mathf.Min(remaining, Mathf.Max(0f, target.RemainingCapacity()));
@@ -652,9 +705,24 @@ namespace StorageNetwork.Components
                 }
 
                 remaining -= amount;
+                StorageNetworkContentIndexService.Invalidate(target);
             }
 
             return Mathf.Max(0f, remaining);
+        }
+
+        private enum GeyserCaptureState
+        {
+            Ready,
+            MissingEnrollment,
+            MissingEmitter,
+            NotEnrolled,
+            DirectOutputDisabled,
+            NotAnalyzed,
+            Vacuum,
+            NoOutput,
+            NetworkOffline,
+            SpecificTargetUnavailable
         }
     }
 }

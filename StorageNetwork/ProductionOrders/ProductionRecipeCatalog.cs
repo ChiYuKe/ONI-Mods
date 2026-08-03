@@ -33,7 +33,16 @@ namespace StorageNetwork.ProductionOrders
                         continue;
                     }
 
-                    string key = GetRecipeKey(recipe);
+                    int fabricatorWorldId = StorageNetworkWorldUtility.GetObjectWorldId(fabricator.gameObject);
+                    if (!IsFabricatorNetworkAvailable(fabricator, fabricatorWorldId))
+                    {
+                        continue;
+                    }
+
+                    string recipeKey = GetRecipeKey(recipe);
+                    string key = StorageSceneRegistry.IsCrossPlanetRelayOnline()
+                        ? recipeKey
+                        : string.Format("{0}|world:{1}", recipeKey, fabricatorWorldId);
                     if (!recipeFabricators.TryGetValue(key, out List<ComplexFabricator> fabricators))
                     {
                         fabricators = new List<ComplexFabricator>();
@@ -75,8 +84,14 @@ namespace StorageNetwork.ProductionOrders
 
         public static List<RecipeDisplayInfo> GetCraftableRecipeDisplayInfos(StorageNetworkOrderProductionCenter center)
         {
+            StorageSceneRegistry.EnsureSceneSeeded();
             ComplexFabricator fabricator = center != null ? center.GetComponent<ComplexFabricator>() : null;
-            if (center == null || !ProductionOrderService.IsOrderProductionFabricator(fabricator))
+            int worldId = center != null
+                ? StorageNetworkWorldUtility.GetObjectWorldId(center.gameObject)
+                : -1;
+            if (center == null ||
+                !ProductionOrderService.IsOrderProductionFabricator(fabricator) ||
+                !IsFabricatorNetworkAvailable(fabricator, worldId))
             {
                 return new List<RecipeDisplayInfo>();
             }
@@ -108,7 +123,7 @@ namespace StorageNetwork.ProductionOrders
                 .ToList();
         }
 
-        private static List<StorageNetworkOrderProductionCenter> GetOrderProductionCenters()
+        private static IReadOnlyList<StorageNetworkOrderProductionCenter> GetOrderProductionCenters()
         {
             StorageSceneRegistry.EnsureSceneSeeded();
             return ProductionOrderCenterCatalog.GetCenters();
@@ -123,7 +138,22 @@ namespace StorageNetwork.ProductionOrders
                 : Enumerable.Empty<ComplexRecipe>();
         }
 
-        public static List<ProductDisplayGroup> BuildProductGroups(List<RecipeDisplayInfo> recipes)
+        private static bool IsFabricatorNetworkAvailable(
+            ComplexFabricator fabricator,
+            int worldId)
+        {
+            if (!StorageSceneRegistry.IsLive(fabricator) ||
+                worldId < 0 ||
+                !StorageSceneRegistry.HasOnlineCoreInWorld(worldId))
+            {
+                return false;
+            }
+
+            StorageNetworkEnrollment enrollment = fabricator.GetComponent<StorageNetworkEnrollment>();
+            return enrollment != null && enrollment.IncludedInSceneNetwork;
+        }
+
+        public static List<ProductDisplayGroup> BuildProductGroups(IEnumerable<RecipeDisplayInfo> recipes)
         {
             return recipes
                 .GroupBy(recipe => recipe.ProductKey)

@@ -16,10 +16,14 @@ namespace StorageNetwork.UI
         private const float TrackingContentWidth = 460f;
 
         private RectTransform productListContent;
+        private ScrollRect productScrollRect;
+        private bool productViewportDirty;
         private StorageNetworkKeyedRowCache productRows;
         private RectTransform orderDetailsContent;
         private RectTransform orderDetailsViewport;
         private RectTransform orderTrackingContent;
+        private ScrollRect orderTrackingScrollRect;
+        private bool orderTrackingViewportDirty;
         private StorageNetworkKeyedRowCache orderTrackingRows;
         private RectTransform orderTrackingRowsContent;
         private KInputTextField orderTrackingSearchInput;
@@ -29,15 +33,28 @@ namespace StorageNetwork.UI
         private bool inlineOrderTracking;
         private readonly ProductionOrderService productionOrderService = new ProductionOrderService();
         private List<ProductDisplayGroup> orderProducts = new List<ProductDisplayGroup>();
-        private List<RecipeDisplayInfo> craftableRecipes = new List<RecipeDisplayInfo>();
+        private IReadOnlyList<RecipeDisplayInfo> craftableRecipes = new RecipeDisplayInfo[0];
         private string lastOrderStatus;
         private string selectedProductKey;
         private int selectedRouteIndex;
         private float requestedProductAmount;
         private float orderAmountStep = 100f;
         private float orderPanelRefreshElapsed;
+        private int orderPanelObservedContentVersion = -1;
+        private int orderPanelObservedRecipeVersion = -1;
+        private int orderPanelObservedOrderVersion = -1;
+        private int orderPanelObservedCapabilityVersion = -1;
+        private int orderPanelObservedConnectivityVersion = -1;
         private string orderDetailsSignature;
         private string orderTrackingSignature;
+        private int orderTrackingObservedOrderVersion = -1;
+        private int orderTrackingObservedCapabilityVersion = -1;
+        private readonly List<ProductionOrderRecord> orderTrackingRecordBuffer =
+            new List<ProductionOrderRecord>(MaxDisplayedTrackingRecords);
+        private readonly List<TrackingCardStructure> orderTrackingStructures =
+            new List<TrackingCardStructure>(MaxDisplayedTrackingRecords);
+        private readonly Dictionary<string, TrackingCardLiveView> orderTrackingLiveViews =
+            new Dictionary<string, TrackingCardLiveView>();
         private string orderTrackingSearchText;
         private TrackingFilterMode orderTrackingFilterMode = TrackingFilterMode.Current;
         private KInputTextField orderAmountInput;
@@ -173,6 +190,8 @@ namespace StorageNetwork.UI
             productRows = new StorageNetworkKeyedRowCache(productListContent);
             Scrollbar scrollbar = CreateScrollbar(pane.transform, 96f, 8f);
             WireScrollRect(viewport.gameObject, productListContent, scrollbar, 24f);
+            productScrollRect = viewport.GetComponent<ScrollRect>();
+            productScrollRect.onValueChanged.AddListener(OnProductListScroll);
         }
 
         private void CreateOrderWorkspacePane(Transform parent)
@@ -200,6 +219,8 @@ namespace StorageNetwork.UI
             Scrollbar scrollbar = CreateScrollbar(pane.transform, 42f, 8f);
             ConfigureTrackingContentForHorizontalScroll(orderTrackingContent);
             WireScrollRect(viewport.gameObject, orderTrackingContent, scrollbar, 22f, allowHorizontal: true);
+            orderTrackingScrollRect = viewport.GetComponent<ScrollRect>();
+            orderTrackingScrollRect.onValueChanged.AddListener(OnOrderTrackingScroll);
         }
 
         private void CreateOrderTrackingSearchBar(Transform parent)
@@ -236,8 +257,7 @@ namespace StorageNetwork.UI
             orderTrackingSearchInput.onValueChanged.AddListener(value =>
             {
                 orderTrackingSearchText = value;
-                orderTrackingSignature = null;
-                RebuildOrderDetails();
+                orderTrackingSearchDebounce.Request();
             });
 
             GameObject filterRow = new GameObject("TrackingFilterRow");
@@ -315,6 +335,21 @@ namespace StorageNetwork.UI
                 return;
             }
 
+            if (productViewportDirty)
+            {
+                productViewportDirty = false;
+                RebuildProductList();
+            }
+
+            if (orderTrackingViewportDirty)
+            {
+                orderTrackingViewportDirty = false;
+                ReconcileOrderTrackingRows(
+                    orderTrackingRecordBuffer,
+                    GetSelectedProduct(),
+                    requestLayout: false);
+            }
+
             if (boundOrderProductionCenter == null && windowRect != null && !windowRect.gameObject.activeSelf)
             {
                 CloseHeaderWindow();
@@ -322,7 +357,7 @@ namespace StorageNetwork.UI
             }
 
             orderPanelRefreshElapsed += dt;
-            if (orderPanelRefreshElapsed < 1f)
+            if (orderPanelRefreshElapsed < LiveRefreshSeconds)
             {
                 return;
             }
@@ -334,6 +369,27 @@ namespace StorageNetwork.UI
                 RebuildOrderTracking(GetSelectedProduct());
                 return;
             }
+
+            int contentVersion = StorageNetwork.Services.StorageNetworkContentIndexService.ChangeVersion;
+            int recipeVersion = ProductionOrderCenterCatalog.Version;
+            int orderVersion = ProductionOrderService.OrderVersion;
+            int capabilityVersion = StorageNetwork.Core.StorageSceneRegistry.CapabilityVersion;
+            int connectivityVersion = StorageNetwork.Core.StorageSceneRegistry.ConnectivityVersion;
+            if (orderPanelObservedContentVersion == contentVersion &&
+                orderPanelObservedRecipeVersion == recipeVersion &&
+                orderPanelObservedOrderVersion == orderVersion &&
+                orderPanelObservedCapabilityVersion == capabilityVersion &&
+                orderPanelObservedConnectivityVersion == connectivityVersion)
+            {
+                RebuildOrderTracking(GetSelectedProduct());
+                return;
+            }
+
+            orderPanelObservedContentVersion = contentVersion;
+            orderPanelObservedRecipeVersion = recipeVersion;
+            orderPanelObservedOrderVersion = orderVersion;
+            orderPanelObservedCapabilityVersion = capabilityVersion;
+            orderPanelObservedConnectivityVersion = connectivityVersion;
 
             EnsureValidOrderWorldFilter();
             orderProducts = GetFilteredOrderProductGroups();

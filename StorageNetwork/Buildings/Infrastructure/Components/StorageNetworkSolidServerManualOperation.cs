@@ -49,25 +49,27 @@ namespace StorageNetwork.Components
             }
 
             bool allowManualOperation = automatable == null || !automatable.GetAutomationOnly();
+            if (manualFetchInitialized && manualFetchEnabled == allowManualOperation)
+            {
+                return;
+            }
+
+            manualFetchInitialized = true;
+            manualFetchEnabled = allowManualOperation;
             storage.allowItemRemoval = allowManualOperation;
             storage.allowUIItemRemoval = allowManualOperation;
             storage.fetchCategory = allowManualOperation
                 ? Storage.FetchCategory.GeneralStorage
                 : Storage.FetchCategory.Building;
 
-            if (!manualFetchInitialized || manualFetchEnabled != allowManualOperation)
+            if (allowManualOperation)
             {
-                manualFetchInitialized = true;
-                manualFetchEnabled = allowManualOperation;
-                if (allowManualOperation)
-                {
-                    EnsureFilteredStorage();
-                    filteredStorage.FilterChanged();
-                }
-                else
-                {
-                    CleanupFilteredStorage();
-                }
+                EnsureFilteredStorage();
+                filteredStorage.FilterChanged();
+            }
+            else
+            {
+                CleanupFilteredStorage();
             }
         }
 

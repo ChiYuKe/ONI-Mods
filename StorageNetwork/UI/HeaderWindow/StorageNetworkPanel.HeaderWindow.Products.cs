@@ -10,6 +10,14 @@ namespace StorageNetwork.UI
 {
     public sealed partial class StorageNetworkPanel : KScreen, IInputHandler
     {
+        private const int ProductVirtualizationThreshold = 32;
+        private const int ProductVirtualizationOverscan = 3;
+        private const float ProductRowHeight = 56f;
+        private const float ProductRowSpacing = 6f;
+        private const float ProductVerticalPadding = 12f;
+        private static ColorStyleSetting productNormalStyle;
+        private static ColorStyleSetting productSelectedStyle;
+
         private void RebuildProductList()
         {
             productRows ??= new StorageNetworkKeyedRowCache(productListContent);
@@ -28,18 +36,98 @@ namespace StorageNetwork.UI
                 return;
             }
 
-            foreach (ProductDisplayGroup product in orderProducts.Take(MaxDisplayedProducts))
+            int totalCount = Mathf.Min(orderProducts.Count, MaxDisplayedProducts);
+            GetProductVisibleRange(
+                totalCount,
+                out int firstVisible,
+                out int lastVisibleExclusive);
+            if (firstVisible > 0)
             {
-                CreateProductButton(product);
+                UseProductSpacer(
+                    "\0virtual-top",
+                    firstVisible * (ProductRowHeight + ProductRowSpacing) -
+                    ProductRowSpacing);
+            }
+
+            for (int index = firstVisible; index < lastVisibleExclusive; index++)
+            {
+                CreateProductButton(orderProducts[index]);
+            }
+
+            int hiddenAfter = totalCount - lastVisibleExclusive;
+            if (hiddenAfter > 0)
+            {
+                UseProductSpacer(
+                    "\0virtual-bottom",
+                    hiddenAfter * (ProductRowHeight + ProductRowSpacing) -
+                    ProductRowSpacing);
             }
 
             productRows.Commit();
         }
 
+        private void GetProductVisibleRange(
+            int totalCount,
+            out int firstVisible,
+            out int lastVisibleExclusive)
+        {
+            firstVisible = 0;
+            lastVisibleExclusive = totalCount;
+            if (totalCount <= ProductVirtualizationThreshold ||
+                productListContent == null ||
+                productScrollRect?.viewport == null)
+            {
+                return;
+            }
+
+            float viewportHeight = productScrollRect.viewport.rect.height;
+            if (viewportHeight <= 1f)
+            {
+                viewportHeight = 600f;
+            }
+
+            StorageNetworkVirtualizedRange range =
+                StorageNetworkVirtualizedRange.Calculate(
+                    totalCount,
+                    ProductVirtualizationThreshold,
+                    ProductVirtualizationOverscan,
+                    ProductRowHeight,
+                    ProductRowSpacing,
+                    ProductVerticalPadding,
+                    Mathf.Max(0f, productListContent.anchoredPosition.y),
+                    viewportHeight);
+            firstVisible = range.First;
+            lastVisibleExclusive = range.LastExclusive;
+        }
+
+        private void UseProductSpacer(string key, float height)
+        {
+            GameObject spacer = productRows.Use(key, () =>
+            {
+                GameObject created = new GameObject("VirtualSpacer");
+                created.transform.SetParent(productListContent, false);
+                created.AddComponent<RectTransform>();
+                created.AddComponent<LayoutElement>();
+                return created;
+            });
+            LayoutElement layout = spacer.GetComponent<LayoutElement>();
+            if (layout != null)
+            {
+                layout.preferredHeight = Mathf.Max(0f, height);
+            }
+        }
+
+        private void OnProductListScroll(Vector2 _)
+        {
+            productViewportDirty = true;
+        }
+
         private void CreateProductButton(ProductDisplayGroup product)
         {
             bool selected = product.ProductKey == selectedProductKey;
-            GameObject button = productRows.Use("product:" + product.ProductKey, () => CreateProductButtonObject(product));
+            GameObject button = productRows.Use(
+                "product:" + product.ProductKey,
+                () => CreateProductButtonObject(product.ProductKey));
 
             ProductButtonView view = button.GetComponent<ProductButtonView>();
             if (view != null)
@@ -50,10 +138,9 @@ namespace StorageNetwork.UI
                     view.Icon.sprite = product.Icon;
                 }
 
-                view.Name.text = product.ProductName;
-                view.Meta.text = string.Format(
-                    Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_PRODUCT_META),
-                    GameUtil.GetFormattedMass(productionOrderService.GetNetworkAvailableAmount(product.ProductTag)),
+                SetTextIfChanged(view.Name, product.ProductName);
+                view.SetMeta(
+                    productionOrderService.GetNetworkAvailableAmount(product.ProductTag),
                     product.Routes.Count);
             }
         }
@@ -79,7 +166,7 @@ namespace StorageNetwork.UI
             }
         }
 
-        private GameObject CreateProductButtonObject(ProductDisplayGroup product)
+        private GameObject CreateProductButtonObject(string productKey)
         {
             GameObject button = new GameObject("ProductButton");
             button.transform.SetParent(productListContent, false);
@@ -96,7 +183,7 @@ namespace StorageNetwork.UI
             kButton.bgImage = background;
             kButton.additionalKImages = new KImage[0];
             kButton.soundPlayer = new ButtonSoundPlayer();
-            kButton.onClick += () => SelectProduct(product.ProductKey);
+            kButton.onClick += () => SelectProduct(productKey);
 
             HorizontalLayoutGroup layout = button.AddComponent<HorizontalLayoutGroup>();
             layout.padding = new RectOffset(7, 8, 4, 4);
@@ -156,13 +243,31 @@ namespace StorageNetwork.UI
 
         private static ColorStyleSetting CreateProductRowStyle(bool selected)
         {
+            ColorStyleSetting cached = selected
+                ? productSelectedStyle
+                : productNormalStyle;
+            if (cached != null)
+            {
+                return cached;
+            }
+
             Color normal = selected
                 ? OniPinkInactive()
                 : new Color(0.17f, 0.19f, 0.25f, 1f);
-            return CreateColorStyle(
+            cached = CreateColorStyle(
                 normal,
                 selected ? OniPinkHover() : new Color(0.25f, 0.28f, 0.35f, 1f),
                 selected ? OniPinkActive() : new Color(0.11f, 0.12f, 0.16f, 1f));
+            if (selected)
+            {
+                productSelectedStyle = cached;
+            }
+            else
+            {
+                productNormalStyle = cached;
+            }
+
+            return cached;
         }
 
         private void SelectProduct(string productKey, bool rebuild = true)
@@ -195,6 +300,8 @@ namespace StorageNetwork.UI
             private KImage background;
 
             private GameObject accent;
+            private bool? selectedState;
+            private int lastMetaFingerprint = int.MinValue;
 
             public Image Icon { get; private set; }
 
@@ -213,10 +320,17 @@ namespace StorageNetwork.UI
 
             public void SetSelected(bool selected)
             {
+                if (selectedState == selected)
+                {
+                    return;
+                }
+
+                selectedState = selected;
                 if (background != null)
                 {
                     background.colorStyleSetting = CreateProductRowStyle(selected);
                     background.ColorState = KImage.ColorSelector.Inactive;
+                    background.ApplyColorStyleSetting();
                 }
 
                 if (accent != null)
@@ -233,6 +347,26 @@ namespace StorageNetwork.UI
                 {
                     Meta.color = selected ? new Color(0.93f, 0.86f, 0.90f, 1f) : new Color(0.70f, 0.73f, 0.78f, 1f);
                 }
+            }
+
+            public void SetMeta(float availableAmount, int routeCount)
+            {
+                int fingerprint;
+                unchecked
+                {
+                    fingerprint = (availableAmount.GetHashCode() * 397) ^ routeCount;
+                }
+
+                if (lastMetaFingerprint == fingerprint)
+                {
+                    return;
+                }
+
+                lastMetaFingerprint = fingerprint;
+                SetTextIfChanged(Meta, string.Format(
+                    Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_PRODUCT_META),
+                    GameUtil.GetFormattedMass(availableAmount),
+                    routeCount));
             }
         }
 

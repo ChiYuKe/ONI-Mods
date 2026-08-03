@@ -1,4 +1,5 @@
 using System.Linq;
+using StorageNetwork.Core;
 using StorageNetwork.ProductionOrders;
 using TMPro;
 using UnityEngine;
@@ -11,6 +12,8 @@ namespace StorageNetwork.UI
     {
         private void RebuildOrderDetails()
         {
+            using var performanceScope =
+                StorageNetworkFrameProfileTool.BeginWork(StorageNetworkPerformanceArea.OrderEditor);
             if (IsOrderWorldFilterBlockedByRelay())
             {
                 string relayOfflineSignature = "relay_offline";
@@ -22,6 +25,7 @@ namespace StorageNetwork.UI
 
                 orderDetailsSignature = relayOfflineSignature;
                 DeactivateOrderInputs();
+                ResetOrderWorkspaceLiveViews();
                 ClearChildren(orderDetailsContent);
                 AddInfoText(orderDetailsContent, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CROSS_WORLD_RELAY_OFFLINE), 96f);
                 RebuildOrderTracking(null);
@@ -41,6 +45,7 @@ namespace StorageNetwork.UI
 
                 orderDetailsSignature = emptySignature;
                 DeactivateOrderInputs();
+                ResetOrderWorkspaceLiveViews();
                 ClearChildren(orderDetailsContent);
                 AddInfoText(orderDetailsContent, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.RECIPE_WINDOW_EMPTY), 96f);
                 RebuildOrderTracking(null);
@@ -63,24 +68,22 @@ namespace StorageNetwork.UI
                 productionOrderService.GetKeepRule(product.ProductTag),
                 selectedRouteIndex,
                 requestedProductAmount,
-                lastOrderStatus) + string.Format("|stock:{0:0.###}|auto:{1:0.###}",
-                    productionOrderService.GetNetworkRawAmount(product.ProductTag),
-                    productionOrderService.GetActiveOrdersForProduct(product.ProductTag, 100)
-                        .Where(order => order.IsAutomatic)
-                        .Sum(order => Mathf.Max(0f, order.RequestedAmount - order.ProducedAtSubmit)));
+                lastOrderStatus);
             if (signature == orderDetailsSignature)
             {
+                UpdateOrderWorkspaceLive(product, draft);
                 RebuildOrderTracking(product);
                 return;
             }
 
             orderDetailsSignature = signature;
             DeactivateOrderInputs();
+            ResetOrderWorkspaceLiveViews();
             ClearChildren(orderDetailsContent);
             AddOrderWorkspace(orderDetailsContent, product, route, draft);
+            UpdateOrderWorkspaceLive(product, draft);
             RebuildOrderTracking(product);
 
-            ForceOrderLayout(orderDetailsContent);
             ApplyOrderWorkspaceViewportFill();
             ForceOrderLayout(orderDetailsContent);
         }
@@ -127,7 +130,6 @@ namespace StorageNetwork.UI
                 return 0f;
             }
 
-            Canvas.ForceUpdateCanvases();
             float height = orderDetailsViewport.rect.height;
             VerticalLayoutGroup layout = orderDetailsContent != null ? orderDetailsContent.GetComponent<VerticalLayoutGroup>() : null;
             if (layout != null)

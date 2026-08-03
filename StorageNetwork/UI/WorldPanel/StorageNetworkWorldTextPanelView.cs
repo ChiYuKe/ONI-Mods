@@ -79,10 +79,10 @@ namespace StorageNetwork.UI.WorldPanel
                 return;
             }
 
-            titleText.text = content.Title;
-            lineOneText.text = content.LineOne;
-            lineTwoText.text = content.LineTwo;
-            lineThreeText.text = content.LineThree;
+            SetTextIfChanged(titleText, content.Title);
+            SetTextIfChanged(lineOneText, content.LineOne);
+            SetTextIfChanged(lineTwoText, content.LineTwo);
+            SetTextIfChanged(lineThreeText, content.LineThree);
         }
 
         /// <summary>
@@ -98,7 +98,11 @@ namespace StorageNetwork.UI.WorldPanel
             Bounds bounds = Util.GetBounds(target);
             Vector3 targetPosition = target.transform.GetPosition();
             float top = bounds.size.y > 0f ? bounds.max.y : targetPosition.y + 1.2f;
-            rootRect.transform.SetPosition(new Vector3(targetPosition.x, top + VerticalOffset, targetPosition.z));
+            Vector3 position = new Vector3(targetPosition.x, top + VerticalOffset, targetPosition.z);
+            if (rootRect.transform.position != position)
+            {
+                rootRect.transform.SetPosition(position);
+            }
         }
 
         /// <summary>
@@ -122,6 +126,15 @@ namespace StorageNetwork.UI.WorldPanel
                 lineOneText = null;
                 lineTwoText = null;
                 lineThreeText = null;
+            }
+        }
+
+        private static void SetTextIfChanged(TextMeshProUGUI text, string value)
+        {
+            string normalized = value ?? string.Empty;
+            if (text != null && text.text != normalized)
+            {
+                text.text = normalized;
             }
         }
 

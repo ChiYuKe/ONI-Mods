@@ -102,11 +102,12 @@ namespace StorageNetwork.UI
 
         private void SetGeyserSettingsTitle(Geyser geyser)
         {
-            TextMeshProUGUI title = productionSettingsRoot.GetComponentsInChildren<TextMeshProUGUI>(true)
-                .FirstOrDefault(text => text.name == "ProductionSettingsTitle");
+            TextMeshProUGUI title = productionSettingsTitle;
             if (title != null)
             {
-                title.text = geyser.GetProperName() + "\n" + StorageNetworkGeyserText.GetStorageListDetails(geyser);
+                SetTextIfChanged(
+                    title,
+                    geyser.GetProperName() + "\n" + StorageNetworkGeyserText.GetStorageListDetails(geyser));
             }
         }
 
