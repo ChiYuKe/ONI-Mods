@@ -9,9 +9,18 @@ namespace ONIVisualEnhancer
         private const string SolidShader = "Klei/Substance";
 
         private static readonly Dictionary<int, MaterialSnapshot> originals = new Dictionary<int, MaterialSnapshot>();
+        private static float lastApplyTime = float.MinValue;
 
         public static void ApplySettings()
         {
+            float now = Time.unscaledTime;
+            if (now - lastApplyTime < 0.15f)
+            {
+                return;
+            }
+
+            lastApplyTime = now;
+
             if (!VisualEnhancerSettings.MaterialAdjustmentsEnabled)
             {
                 RestoreAll();
@@ -64,41 +73,58 @@ namespace ONIVisualEnhancer
                 return false;
             }
 
-            string shaderName = material.shader.name;
-            if (shaderName == LiquidShader)
+            switch (material.shader.name)
             {
-                liquid = true;
-                return true;
+                case LiquidShader:
+                    liquid = true;
+                    return true;
+                case SolidShader:
+                    return true;
+                default:
+                    return false;
             }
-
-            return shaderName == SolidShader;
         }
 
         private static void ApplyMaterial(Material material, MaterialSnapshot snapshot, bool liquid)
         {
             if (liquid)
             {
-                ApplyColor(material, snapshot, "_Colour", VisualEnhancerSettings.LiquidColor);
-                ApplyColor(material, snapshot, "_ShineColour", VisualEnhancerSettings.LiquidShine);
-                ApplyColor(material, snapshot, "_SpecColor", VisualEnhancerSettings.LiquidShine);
-                ApplyFloat(material, snapshot, "_Frequency", VisualEnhancerSettings.LiquidFlow);
-                ApplyFloat(material, snapshot, "_Fresnel", VisualEnhancerSettings.LiquidShine);
-                ApplyFloat(material, snapshot, "_Glossiness", VisualEnhancerSettings.LiquidShine);
-                ApplyFloat(material, snapshot, "_Shininess", VisualEnhancerSettings.LiquidShine);
-                ApplyFloat(material, snapshot, "_SpecInt", VisualEnhancerSettings.LiquidShine);
+                ApplyLiquid(material, snapshot);
             }
             else
             {
-                ApplyColor(material, snapshot, "_Colour", VisualEnhancerSettings.SolidColor);
-                ApplyColor(material, snapshot, "_ShineColour", VisualEnhancerSettings.SolidShine);
-                ApplyColor(material, snapshot, "_SpecColor", VisualEnhancerSettings.SolidShine);
-                ApplyFloat(material, snapshot, "_Fresnel", VisualEnhancerSettings.SolidShine);
-                ApplyFloat(material, snapshot, "_Glossiness", VisualEnhancerSettings.SolidShine);
-                ApplyFloat(material, snapshot, "_Shininess", VisualEnhancerSettings.SolidShine);
-                ApplyFloat(material, snapshot, "_SpecInt", VisualEnhancerSettings.SolidShine);
+                ApplySolid(material, snapshot);
             }
+        }
 
-            ApplyFloat(material, snapshot, "_WorldUVScale", VisualEnhancerSettings.MaterialTextureScale);
+        private static void ApplyLiquid(Material material, MaterialSnapshot snapshot)
+        {
+            ApplyColor(material, snapshot, "_Colour", MaterialMultiplier(VisualEnhancerSettings.LiquidColor));
+            ApplyColor(material, snapshot, "_ShineColour", MaterialMultiplier(VisualEnhancerSettings.LiquidShine));
+            ApplyColor(material, snapshot, "_SpecColor", MaterialMultiplier(VisualEnhancerSettings.LiquidShine));
+            ApplyFloat(material, snapshot, "_Frequency", MaterialMultiplier(VisualEnhancerSettings.LiquidFlow));
+            ApplyFloat(material, snapshot, "_Fresnel", MaterialMultiplier(VisualEnhancerSettings.LiquidShine));
+            ApplyFloat(material, snapshot, "_Glossiness", MaterialMultiplier(VisualEnhancerSettings.LiquidShine));
+            ApplyFloat(material, snapshot, "_Shininess", MaterialMultiplier(VisualEnhancerSettings.LiquidShine));
+            ApplyFloat(material, snapshot, "_SpecInt", MaterialMultiplier(VisualEnhancerSettings.LiquidShine));
+            ApplyFloat(material, snapshot, "_WorldUVScale", MaterialMultiplier(VisualEnhancerSettings.MaterialTextureScale));
+        }
+
+        private static void ApplySolid(Material material, MaterialSnapshot snapshot)
+        {
+            ApplyColor(material, snapshot, "_ColourTint", MaterialMultiplier(VisualEnhancerSettings.SolidColor));
+            ApplyColor(material, snapshot, "_ShineColour", MaterialMultiplier(VisualEnhancerSettings.SolidShine));
+            ApplyColor(material, snapshot, "_SpecColor", MaterialMultiplier(VisualEnhancerSettings.SolidShine));
+            ApplyFloat(material, snapshot, "_Fresnel", MaterialMultiplier(VisualEnhancerSettings.SolidShine));
+            ApplyFloat(material, snapshot, "_Glossiness", MaterialMultiplier(VisualEnhancerSettings.SolidShine));
+            ApplyFloat(material, snapshot, "_Shininess", MaterialMultiplier(VisualEnhancerSettings.SolidShine));
+            ApplyFloat(material, snapshot, "_SpecInt", MaterialMultiplier(VisualEnhancerSettings.SolidShine));
+            ApplyFloat(material, snapshot, "_WorldUVScale", MaterialMultiplier(VisualEnhancerSettings.MaterialTextureScale));
+        }
+
+        private static float MaterialMultiplier(float adjustment)
+        {
+            return 1f + adjustment * 0.15f;
         }
 
         private static void ApplyColor(Material material, MaterialSnapshot snapshot, string property, float multiplier)
@@ -140,6 +166,7 @@ namespace ONIVisualEnhancer
             private static readonly string[] ColorProperties =
             {
                 "_Colour",
+                "_ColourTint",
                 "_ShineColour",
                 "_SpecColor"
             };

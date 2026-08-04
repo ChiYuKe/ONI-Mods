@@ -4,17 +4,14 @@ namespace ONIVisualEnhancer
 {
     internal static class VisualEnhancerController
     {
-        private const string RootName = "ONIVisualEnhancerOverlay";
+        private const string RootName = "ONIVisualEnhancerRoot";
 
-        private static VisualEnhancerOverlay overlay;
         private static VisualEnhancerSettingsWindow settingsWindow;
 
         public static void EnsureOverlay()
         {
-            if (overlay != null)
+            if (settingsWindow != null)
             {
-                overlay.ApplyPreset(VisualEnhancerSettings.GetCurrentPreset());
-                EnsureSettingsWindow(overlay.gameObject);
                 return;
             }
 
@@ -25,18 +22,10 @@ namespace ONIVisualEnhancer
                 Object.DontDestroyOnLoad(root);
             }
 
-            overlay = root.GetComponent<VisualEnhancerOverlay>();
-            if (overlay == null)
-            {
-                overlay = root.AddComponent<VisualEnhancerOverlay>();
-            }
-
-            overlay.ApplyPreset(VisualEnhancerSettings.GetCurrentPreset());
             EnsureSettingsWindow(root);
             CameraPostProcessInstaller.Install();
             MaterialVisualController.ApplySettings();
             GameVignetteController.ApplySavedState();
-            VisualEnhancerToggleButton.SetState(VisualEnhancerSettings.GetCurrentPreset());
         }
 
         public static void ToggleSettingsWindow()
@@ -48,27 +37,17 @@ namespace ONIVisualEnhancer
             }
         }
 
-        public static void CyclePreset(int direction)
-        {
-            VisualPreset preset = VisualEnhancerSettings.CyclePreset(direction);
-            ApplySettingsChanged();
-        }
-
         public static void ApplySettingsChanged()
         {
-            VisualPreset preset = VisualEnhancerSettings.GetCurrentPreset();
             EnsureOverlay();
-            overlay.ApplyPreset(preset);
             CameraPostProcessInstaller.Install();
             MaterialVisualController.ApplySettings();
-            VisualEnhancerToggleButton.SetState(preset);
             GameVignetteController.ApplySavedState();
         }
 
         public static void ResetRuntimeState()
         {
             MaterialVisualController.ClearRuntimeState();
-            overlay = null;
             settingsWindow = null;
         }
 

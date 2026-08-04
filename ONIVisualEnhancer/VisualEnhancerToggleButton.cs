@@ -33,19 +33,18 @@ namespace ONIVisualEnhancer
             buttonTransform.SetSiblingIndex(redAlertButton.transform.GetSiblingIndex() + 1);
             SetIcon(buttonTransform);
             ConfigureButton(buttonTransform);
-            ConfigureTooltip(buttonTransform, VisualEnhancerSettings.GetCurrentPreset());
-            SetState(VisualEnhancerSettings.GetCurrentPreset());
+            ConfigureTooltip(buttonTransform);
+            SetState(VisualEnhancerSettings.CameraPostProcessEnabled);
         }
 
-        public static void SetState(VisualPreset preset)
+        public static void SetState(bool enabled)
         {
             if (button == null)
             {
                 return;
             }
 
-            button.ChangeState(preset.Mode == VisualPresetMode.Off ? 0 : 1);
-            ConfigureTooltip(button.transform, preset);
+            button.ChangeState(enabled ? 1 : 0);
         }
 
         private static void SetIcon(Transform buttonTransform)
@@ -74,11 +73,11 @@ namespace ONIVisualEnhancer
             }
         }
 
-        private static void ConfigureTooltip(Transform buttonTransform, VisualPreset preset)
+        private static void ConfigureTooltip(Transform buttonTransform)
         {
             if (buttonTransform.TryGetComponent(out ToolTip tooltip))
             {
-                tooltip.SetSimpleTooltip("Visual Enhancer: " + preset.Name + "\nClick to open settings.");
+                tooltip.SetSimpleTooltip("Visual Enhancer: Click to open settings.");
             }
         }
     }

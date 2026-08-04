@@ -4,15 +4,20 @@ namespace ONIVisualEnhancer
 {
     internal sealed class CameraPostProcessEffect : MonoBehaviour
     {
-        private Material customMaterial;
-        private Material hueSaturationMaterial;
-        private Material bloomMaskMaterial;
-        private Material bloomCompositeMaterial;
-        private Material blurMaterial;
+        private const int PassComposite = 0;
+        private const int PassBloomBright = 1;
+        private const int PassBloomBlurH = 2;
+        private const int PassBloomBlurV = 3;
+        private const int PassBloomAdd = 4;
+
+        private Material postProcessMaterial;
         private bool shaderMissingLogged;
         private bool bloomFailed;
+        private bool postProcessFailed;
 
         public static bool ShaderAvailable { get; private set; }
+
+        public static bool ShaderTakesOver { get; private set; }
 
         private void OnEnable()
         {
@@ -21,90 +26,73 @@ namespace ONIVisualEnhancer
 
         private void OnRenderImage(RenderTexture source, RenderTexture destination)
         {
+            if (source == null || destination == null)
+            {
+                return;
+            }
+
             if (!VisualEnhancerSettings.CameraPostProcessEnabled || !EnsureMaterials())
             {
                 Graphics.Blit(source, destination);
                 return;
             }
 
-            RenderTexture current = source;
-            RenderTexture hueTarget = null;
-            bool releaseCurrent = false;
-
-            if (hueSaturationMaterial != null && ShouldRunHueSaturation())
+            try
             {
-                ApplyHueSaturation(hueSaturationMaterial);
-                hueTarget = RenderTexture.GetTemporary(source.width, source.height, 0);
-                Graphics.Blit(current, hueTarget, hueSaturationMaterial);
-                current = hueTarget;
-                releaseCurrent = true;
+                RunPostProcess(source, destination);
+            }
+            catch (System.Exception exception)
+            {
+                postProcessFailed = true;
+                Debug.LogWarning("[ONIVisualEnhancer] Post-process failed and has been disabled for this session: " + exception);
+                Graphics.Blit(source, destination);
+            }
+        }
+
+        private void RunPostProcess(RenderTexture source, RenderTexture destination)
+        {
+            if (postProcessFailed)
+            {
+                Graphics.Blit(source, destination);
+                return;
             }
 
-            if (customMaterial != null && ShouldRunCustomShader())
-            {
-                ApplyCustomSettings(customMaterial);
-                RenderTexture customTarget = RenderTexture.GetTemporary(source.width, source.height, 0);
-                Graphics.Blit(current, customTarget, customMaterial);
-                if (releaseCurrent)
-                {
-                    RenderTexture.ReleaseTemporary(current);
-                }
+            ApplyParameters();
 
-                current = customTarget;
-                releaseCurrent = true;
-            }
+            RenderTexture composite = RenderTexture.GetTemporary(source.width, source.height, 0);
+            Graphics.Blit(source, composite, postProcessMaterial, PassComposite);
 
             if (CanRunBloom())
             {
-                if (!TryRunBloom(current, destination))
-                {
-                    Graphics.Blit(current, destination);
-                }
+                TryRunBloom(composite, destination);
             }
             else
             {
-                Graphics.Blit(current, destination);
+                Graphics.Blit(composite, destination);
             }
 
-            if (releaseCurrent)
-            {
-                RenderTexture.ReleaseTemporary(current);
-            }
+            RenderTexture.ReleaseTemporary(composite);
         }
 
         private bool EnsureMaterials()
         {
-            if (IsUsable(hueSaturationMaterial) || IsUsable(customMaterial) || IsUsable(bloomCompositeMaterial))
+            if (IsUsable(postProcessMaterial))
             {
+                ShaderTakesOver = true;
                 return true;
-            }
-
-            Shader hueSaturation = VisualEnhancerShaderLoader.Find("Klei/PostFX/HueSaturation");
-            if (hueSaturation != null)
-            {
-                hueSaturationMaterial = CreateMaterial(hueSaturation);
-            }
-
-            Shader bloomMask = VisualEnhancerShaderLoader.Find("Klei/PostFX/BloomMask");
-            Shader bloomComposite = VisualEnhancerShaderLoader.Find("Klei/PostFX/BloomComposite");
-            Shader blur = VisualEnhancerShaderLoader.Find("Klei/PostFX/Blur");
-            if (bloomMask != null && bloomComposite != null && blur != null)
-            {
-                bloomMaskMaterial = CreateMaterial(bloomMask);
-                bloomCompositeMaterial = CreateMaterial(bloomComposite);
-                blurMaterial = CreateMaterial(blur);
             }
 
             Shader custom = VisualEnhancerShaderLoader.GetCustomPostProcessShader();
             if (custom != null)
             {
-                customMaterial = CreateMaterial(custom);
+                postProcessMaterial = CreateMaterial(custom);
             }
 
-            ShaderAvailable = IsUsable(hueSaturationMaterial) || IsUsable(bloomCompositeMaterial) || IsUsable(customMaterial);
+            ShaderAvailable = IsUsable(postProcessMaterial);
+            ShaderTakesOver = ShaderAvailable;
             if (!ShaderAvailable && !shaderMissingLogged)
             {
-                Debug.Log("[ONIVisualEnhancer] No usable camera post-process shaders were found; using overlay fallback.");
+                Debug.Log("[ONIVisualEnhancer] No custom post-process shader found; falling back to GUI overlay.");
                 shaderMissingLogged = true;
             }
 
@@ -123,148 +111,80 @@ namespace ONIVisualEnhancer
             return material != null && material.shader != null && material.shader.isSupported;
         }
 
-        private static bool ShouldRunHueSaturation()
+        private void ApplyParameters()
         {
-            return Mathf.Abs(VisualEnhancerSettings.HueShift - 1f) > 0.001f ||
-                Mathf.Abs(VisualEnhancerSettings.Saturation - 1f) > 0.001f;
-        }
+            Material m = postProcessMaterial;
 
-        private static bool ShouldRunCustomShader()
-        {
-            return Mathf.Abs(VisualEnhancerSettings.Exposure - 1f) > 0.001f ||
-                Mathf.Abs(VisualEnhancerSettings.Contrast - 1f) > 0.001f ||
-                Mathf.Abs(VisualEnhancerSettings.Temperature - 1f) > 0.001f ||
-                VisualEnhancerSettings.ChromaticAberration > 0.001f ||
-                VisualEnhancerSettings.LensDistortion > 0.001f;
-        }
+            m.SetFloat("_Exposure", VisualEnhancerSettings.Exposure);
+            m.SetFloat("_Contrast", VisualEnhancerSettings.Contrast);
+            m.SetFloat("_Saturation", VisualEnhancerSettings.Saturation);
+            m.SetFloat("_Temperature", VisualEnhancerSettings.Temperature);
+            m.SetFloat("_HueShift", VisualEnhancerSettings.HueShift);
+            m.SetFloat("_ChromaticAberration", VisualEnhancerSettings.ChromaticAberration);
+            m.SetFloat("_LensDistortion", VisualEnhancerSettings.LensDistortion);
+            m.SetFloat("_Brightness", VisualEnhancerSettings.Brightness);
+            m.SetFloat("_Shadow", VisualEnhancerSettings.Shadow);
 
-        private static void ApplyHueSaturation(Material target)
-        {
-            target.SetFloat("_Hue", (VisualEnhancerSettings.HueShift - 1f) * 0.5f);
-            target.SetFloat("_Saturation", VisualEnhancerSettings.Saturation);
-        }
-
-        private static void ApplyCustomSettings(Material target)
-        {
-            target.SetFloat("_Exposure", VisualEnhancerSettings.Exposure);
-            target.SetFloat("_Contrast", VisualEnhancerSettings.Contrast);
-            target.SetFloat("_Temperature", VisualEnhancerSettings.Temperature);
-            target.SetFloat("_ChromaticAberration", VisualEnhancerSettings.ChromaticAberration);
-            target.SetFloat("_LensDistortion", VisualEnhancerSettings.LensDistortion);
+            m.SetFloat("_BloomThreshold", 0.85f);
+            m.SetFloat("_BloomIntensity", VisualEnhancerSettings.Bloom * 0.25f);
         }
 
         private bool CanRunBloom()
         {
             return !bloomFailed &&
                 VisualEnhancerSettings.Bloom > 0.001f &&
-                IsUsable(bloomMaskMaterial) &&
-                IsUsable(bloomCompositeMaterial) &&
-                IsUsable(blurMaterial);
+                postProcessMaterial != null &&
+                postProcessMaterial.HasProperty("_BloomTex");
         }
 
-        private bool TryRunBloom(RenderTexture source, RenderTexture destination)
+        private void TryRunBloom(RenderTexture source, RenderTexture destination)
         {
-            if (source == null || destination == null)
-            {
-                return false;
-            }
-
             try
             {
                 RunBloom(source, destination);
-                return true;
             }
             catch (System.Exception exception)
             {
                 bloomFailed = true;
                 Debug.LogWarning("[ONIVisualEnhancer] Bloom failed and has been disabled for this session: " + exception);
-                return false;
+                Graphics.Blit(source, destination);
             }
         }
 
         private void RunBloom(RenderTexture source, RenderTexture destination)
         {
-            RenderTexture temporary = null;
-            RenderTexture blurred = null;
+            int width = Mathf.Max(source.width / 4, 4);
+            int height = Mathf.Max(source.height / 4, 4);
 
-            try
+            RenderTexture bright = RenderTexture.GetTemporary(width, height, 0);
+            Graphics.Blit(source, bright, postProcessMaterial, PassBloomBright);
+
+            RenderTexture blurred = RenderTexture.GetTemporary(width, height, 0);
+            RenderTexture scratch = RenderTexture.GetTemporary(width, height, 0);
+
+            int iterations = Mathf.Clamp(Mathf.RoundToInt(VisualEnhancerSettings.Bloom * 3f), 1, 6);
+            for (int i = 0; i < iterations; i++)
             {
-                temporary = RenderTexture.GetTemporary(source.width, source.height, 0);
-                Graphics.Blit(source, temporary, bloomMaskMaterial);
-
-                int width = Mathf.Max(source.width / 4, 4);
-                int height = Mathf.Max(source.height / 4, 4);
-                blurred = RenderTexture.GetTemporary(width, height, 0);
-                DownSample4x(temporary, blurred);
-                RenderTexture.ReleaseTemporary(temporary);
-                temporary = null;
-
-                int iterations = Mathf.Clamp(Mathf.RoundToInt(VisualEnhancerSettings.Bloom * 3f), 1, 6);
-                for (int i = 0; i < iterations; i++)
-                {
-                    RenderTexture next = RenderTexture.GetTemporary(width, height, 0);
-                    FourTapCone(blurred, next, i);
-                    RenderTexture.ReleaseTemporary(blurred);
-                    blurred = next;
-                }
-
-                bloomCompositeMaterial.SetTexture("_BloomTex", blurred);
-                Graphics.Blit(source, destination, bloomCompositeMaterial);
+                Graphics.Blit(i == 0 ? bright : scratch, blurred, postProcessMaterial, PassBloomBlurH);
+                Graphics.Blit(blurred, scratch, postProcessMaterial, PassBloomBlurV);
             }
-            finally
-            {
-                if (temporary != null)
-                {
-                    RenderTexture.ReleaseTemporary(temporary);
-                }
 
-                if (blurred != null)
-                {
-                    RenderTexture.ReleaseTemporary(blurred);
-                }
-            }
-        }
+            RenderTexture final = RenderTexture.GetTemporary(source.width, source.height, 0);
+            postProcessMaterial.SetTexture("_BloomTex", scratch);
+            Graphics.Blit(source, final, postProcessMaterial, PassBloomAdd);
+            Graphics.Blit(final, destination);
 
-        private void DownSample4x(RenderTexture source, RenderTexture destination)
-        {
-            const float offset = 1f;
-            Graphics.BlitMultiTap(
-                source,
-                destination,
-                blurMaterial,
-                new Vector2(-offset, -offset),
-                new Vector2(-offset, offset),
-                new Vector2(offset, offset),
-                new Vector2(offset, -offset));
-        }
-
-        private void FourTapCone(RenderTexture source, RenderTexture destination, int iteration)
-        {
-            float offset = 0.5f + iteration * Mathf.Lerp(0.2f, 1.0f, VisualEnhancerSettings.Bloom * 0.5f);
-            Graphics.BlitMultiTap(
-                source,
-                destination,
-                blurMaterial,
-                new Vector2(-offset, -offset),
-                new Vector2(-offset, offset),
-                new Vector2(offset, offset),
-                new Vector2(offset, -offset));
+            RenderTexture.ReleaseTemporary(bright);
+            RenderTexture.ReleaseTemporary(blurred);
+            RenderTexture.ReleaseTemporary(scratch);
+            RenderTexture.ReleaseTemporary(final);
         }
 
         private void OnDestroy()
         {
-            DestroyMaterial(customMaterial);
-            DestroyMaterial(hueSaturationMaterial);
-            DestroyMaterial(bloomMaskMaterial);
-            DestroyMaterial(bloomCompositeMaterial);
-            DestroyMaterial(blurMaterial);
-        }
-
-        private static void DestroyMaterial(Material material)
-        {
-            if (material != null)
+            if (postProcessMaterial != null)
             {
-                Destroy(material);
+                Destroy(postProcessMaterial);
             }
         }
     }

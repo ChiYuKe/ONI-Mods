@@ -11,18 +11,8 @@ namespace ONIVisualEnhancer
 
         private GameObject canvasRoot;
         private RectTransform panelRect;
-        private TextMeshProUGUI presetLabel;
-        private TextMeshProUGUI tintValue;
-        private TextMeshProUGUI vignetteValue;
-        private TextMeshProUGUI scanlineValue;
-        private TextMeshProUGUI grainValue;
         private TextMeshProUGUI brightnessValue;
         private TextMeshProUGUI shadowValue;
-        private TextMeshProUGUI letterboxValue;
-        private TextMeshProUGUI scanlineDensityValue;
-        private TextMeshProUGUI grainScaleValue;
-        private TextMeshProUGUI grainSpeedValue;
-        private TextMeshProUGUI pulseValue;
         private TextMeshProUGUI exposureValue;
         private TextMeshProUGUI contrastValue;
         private TextMeshProUGUI saturationValue;
@@ -143,29 +133,14 @@ namespace ONIVisualEnhancer
             bodyRect.offsetMax = new Vector2(-12f, -72f);
 
             RectTransform content = CreateScrollBody(body.transform);
-            CreatePresetSection(content);
             CreateToggleSection(content);
             CreateCameraPostProcessToggle(content);
+            CreatePostProcessingSection(content);
             CreateCameraPostProcessingSection(content);
             CreateMaterialToggleSection(content);
             CreateMaterialSection(content);
-            CreatePostProcessingSection(content);
             CreateFooter(content);
             Refresh();
-        }
-
-        private void CreatePresetSection(Transform parent)
-        {
-            GameObject card = CreateCard("PresetCard", parent, 76f);
-            AddCardTitle(card.transform, "滤镜预设");
-
-            GameObject row = CreateRow("PresetRow", card.transform, 36f, 8f);
-            CreateButton("PreviousPreset", row.transform, "<", () => VisualEnhancerController.CyclePreset(-1), BlueStyle(), 42f);
-            presetLabel = CreateText("PresetName", row.transform, string.Empty, 13, TextAlignmentOptions.Center);
-            presetLabel.color = new Color(0.12f, 0.13f, 0.13f, 1f);
-            presetLabel.fontStyle = FontStyles.Bold;
-            presetLabel.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
-            CreateButton("NextPreset", row.transform, ">", () => VisualEnhancerController.CyclePreset(1), BlueStyle(), 42f);
         }
 
         private void CreateToggleSection(Transform parent)
@@ -186,19 +161,10 @@ namespace ONIVisualEnhancer
 
         private void CreatePostProcessingSection(Transform parent)
         {
-            GameObject card = CreateCard("PostProcessingCard", parent, 438f);
-            AddCardTitle(card.transform, "叠加层后期参数");
-            brightnessValue = CreateSliderRow(card.transform, "亮度", VisualEnhancerSettings.Brightness, VisualEnhancerSettings.SetBrightness);
-            shadowValue = CreateSliderRow(card.transform, "暗部压低", VisualEnhancerSettings.Shadow, VisualEnhancerSettings.SetShadow);
-            tintValue = CreateSliderRow(card.transform, "色调强度", VisualEnhancerSettings.TintIntensity, VisualEnhancerSettings.SetTintIntensity);
-            vignetteValue = CreateSliderRow(card.transform, "暗角强度", VisualEnhancerSettings.VignetteIntensity, VisualEnhancerSettings.SetVignetteIntensity);
-            letterboxValue = CreateSliderRow(card.transform, "电影遮罩", VisualEnhancerSettings.Letterbox, VisualEnhancerSettings.SetLetterbox);
-            scanlineValue = CreateSliderRow(card.transform, "扫描线强度", VisualEnhancerSettings.ScanlineIntensity, VisualEnhancerSettings.SetScanlineIntensity);
-            scanlineDensityValue = CreateSliderRow(card.transform, "扫描线密度", VisualEnhancerSettings.ScanlineDensity, VisualEnhancerSettings.SetScanlineDensity);
-            grainValue = CreateSliderRow(card.transform, "颗粒强度", VisualEnhancerSettings.GrainIntensity, VisualEnhancerSettings.SetGrainIntensity);
-            grainScaleValue = CreateSliderRow(card.transform, "颗粒大小", VisualEnhancerSettings.GrainScale, VisualEnhancerSettings.SetGrainScale);
-            grainSpeedValue = CreateSliderRow(card.transform, "颗粒速度", VisualEnhancerSettings.GrainSpeed, VisualEnhancerSettings.SetGrainSpeed);
-            pulseValue = CreateSliderRow(card.transform, "色彩脉冲", VisualEnhancerSettings.Pulse, VisualEnhancerSettings.SetPulse);
+            GameObject card = CreateCard("PostProcessingCard", parent, 104f);
+            AddCardTitle(card.transform, "基础调整");
+            brightnessValue = CreateSliderRow(card.transform, "亮度", VisualEnhancerSettings.Brightness, VisualEnhancerSettings.SetBrightness, -1f, 1f);
+            shadowValue = CreateSliderRow(card.transform, "暗部压低", VisualEnhancerSettings.Shadow, VisualEnhancerSettings.SetShadow, 0f, 1f);
         }
 
         private void CreateCameraPostProcessToggle(Transform parent)
@@ -221,14 +187,14 @@ namespace ONIVisualEnhancer
         {
             GameObject card = CreateCard("CameraPostProcessingCard", parent, 326f);
             AddCardTitle(card.transform, "相机后期参数");
-            exposureValue = CreateSliderRow(card.transform, "曝光", VisualEnhancerSettings.Exposure, VisualEnhancerSettings.SetExposure);
-            contrastValue = CreateSliderRow(card.transform, "对比度", VisualEnhancerSettings.Contrast, VisualEnhancerSettings.SetContrast);
-            saturationValue = CreateSliderRow(card.transform, "饱和度", VisualEnhancerSettings.Saturation, VisualEnhancerSettings.SetSaturation);
-            temperatureValue = CreateSliderRow(card.transform, "色温", VisualEnhancerSettings.Temperature, VisualEnhancerSettings.SetTemperature);
-            hueShiftValue = CreateSliderRow(card.transform, "色相偏移", VisualEnhancerSettings.HueShift, VisualEnhancerSettings.SetHueShift);
-            chromaticAberrationValue = CreateSliderRow(card.transform, "色散", VisualEnhancerSettings.ChromaticAberration, VisualEnhancerSettings.SetChromaticAberration);
-            lensDistortionValue = CreateSliderRow(card.transform, "镜头畸变", VisualEnhancerSettings.LensDistortion, VisualEnhancerSettings.SetLensDistortion);
-            bloomValue = CreateSliderRow(card.transform, "泛光", VisualEnhancerSettings.Bloom, VisualEnhancerSettings.SetBloom);
+            exposureValue = CreateSliderRow(card.transform, "曝光", VisualEnhancerSettings.Exposure, VisualEnhancerSettings.SetExposure, -1f, 1f);
+            contrastValue = CreateSliderRow(card.transform, "对比度", VisualEnhancerSettings.Contrast, VisualEnhancerSettings.SetContrast, -1f, 1f);
+            saturationValue = CreateSliderRow(card.transform, "饱和度", VisualEnhancerSettings.Saturation, VisualEnhancerSettings.SetSaturation, -1f, 1f);
+            temperatureValue = CreateSliderRow(card.transform, "色温", VisualEnhancerSettings.Temperature, VisualEnhancerSettings.SetTemperature, -1f, 1f);
+            hueShiftValue = CreateSliderRow(card.transform, "色相偏移", VisualEnhancerSettings.HueShift, VisualEnhancerSettings.SetHueShift, -1f, 1f);
+            chromaticAberrationValue = CreateSliderRow(card.transform, "色散", VisualEnhancerSettings.ChromaticAberration, VisualEnhancerSettings.SetChromaticAberration, 0f, 1f);
+            lensDistortionValue = CreateSliderRow(card.transform, "镜头畸变", VisualEnhancerSettings.LensDistortion, VisualEnhancerSettings.SetLensDistortion, -1f, 1f);
+            bloomValue = CreateSliderRow(card.transform, "泛光", VisualEnhancerSettings.Bloom, VisualEnhancerSettings.SetBloom, 0f, 1f);
         }
 
         private void CreateMaterialToggleSection(Transform parent)
@@ -251,15 +217,15 @@ namespace ONIVisualEnhancer
         {
             GameObject card = CreateCard("MaterialCard", parent, 252f);
             AddCardTitle(card.transform, "材质参数");
-            liquidColorValue = CreateSliderRow(card.transform, "液体色彩", VisualEnhancerSettings.LiquidColor, VisualEnhancerSettings.SetLiquidColor);
-            liquidShineValue = CreateSliderRow(card.transform, "液体反光", VisualEnhancerSettings.LiquidShine, VisualEnhancerSettings.SetLiquidShine);
-            liquidFlowValue = CreateSliderRow(card.transform, "液体流动", VisualEnhancerSettings.LiquidFlow, VisualEnhancerSettings.SetLiquidFlow);
-            solidColorValue = CreateSliderRow(card.transform, "固体色彩", VisualEnhancerSettings.SolidColor, VisualEnhancerSettings.SetSolidColor);
-            solidShineValue = CreateSliderRow(card.transform, "固体反光", VisualEnhancerSettings.SolidShine, VisualEnhancerSettings.SetSolidShine);
-            materialTextureScaleValue = CreateSliderRow(card.transform, "纹理缩放", VisualEnhancerSettings.MaterialTextureScale, VisualEnhancerSettings.SetMaterialTextureScale);
+            liquidColorValue = CreateSliderRow(card.transform, "液体色彩", VisualEnhancerSettings.LiquidColor, VisualEnhancerSettings.SetLiquidColor, -1f, 1f);
+            liquidShineValue = CreateSliderRow(card.transform, "液体反光", VisualEnhancerSettings.LiquidShine, VisualEnhancerSettings.SetLiquidShine, -1f, 1f);
+            liquidFlowValue = CreateSliderRow(card.transform, "液体流动", VisualEnhancerSettings.LiquidFlow, VisualEnhancerSettings.SetLiquidFlow, -1f, 1f);
+            solidColorValue = CreateSliderRow(card.transform, "固体色彩", VisualEnhancerSettings.SolidColor, VisualEnhancerSettings.SetSolidColor, -1f, 1f);
+            solidShineValue = CreateSliderRow(card.transform, "固体反光", VisualEnhancerSettings.SolidShine, VisualEnhancerSettings.SetSolidShine, -1f, 1f);
+            materialTextureScaleValue = CreateSliderRow(card.transform, "纹理缩放", VisualEnhancerSettings.MaterialTextureScale, VisualEnhancerSettings.SetMaterialTextureScale, -1f, 1f);
         }
 
-        private TextMeshProUGUI CreateSliderRow(Transform parent, string label, float value, System.Action<float> apply)
+        private TextMeshProUGUI CreateSliderRow(Transform parent, string label, float value, System.Action<float> apply, float minValue = 0f, float maxValue = 2f)
         {
             GameObject row = CreateRow(label + "Row", parent, 34f, 8f);
 
@@ -268,7 +234,7 @@ namespace ONIVisualEnhancer
             name.fontStyle = FontStyles.Bold;
             name.gameObject.AddComponent<LayoutElement>().preferredWidth = 86f;
 
-            Slider slider = CreateSlider(row.transform, value);
+            Slider slider = CreateSlider(row.transform, value, minValue, maxValue);
             slider.gameObject.GetComponent<LayoutElement>().flexibleWidth = 1f;
 
             TextMeshProUGUI valueText = CreateText("Value", row.transform, value.ToString("0.00"), 11, TextAlignmentOptions.MidlineRight);
@@ -316,53 +282,30 @@ namespace ONIVisualEnhancer
 
         private void ResetIntensities()
         {
-            VisualEnhancerSettings.SetTintIntensity(1f);
-            VisualEnhancerSettings.SetVignetteIntensity(1f);
-            VisualEnhancerSettings.SetScanlineIntensity(1f);
-            VisualEnhancerSettings.SetGrainIntensity(1f);
-            VisualEnhancerSettings.SetBrightness(1f);
+            VisualEnhancerSettings.SetBrightness(0f);
             VisualEnhancerSettings.SetShadow(0f);
-            VisualEnhancerSettings.SetLetterbox(1f);
-            VisualEnhancerSettings.SetScanlineDensity(1f);
-            VisualEnhancerSettings.SetGrainScale(1f);
-            VisualEnhancerSettings.SetGrainSpeed(1f);
-            VisualEnhancerSettings.SetPulse(0f);
-            VisualEnhancerSettings.SetExposure(1f);
-            VisualEnhancerSettings.SetContrast(1f);
-            VisualEnhancerSettings.SetSaturation(1f);
-            VisualEnhancerSettings.SetTemperature(1f);
-            VisualEnhancerSettings.SetHueShift(1f);
+            VisualEnhancerSettings.SetExposure(0f);
+            VisualEnhancerSettings.SetContrast(0f);
+            VisualEnhancerSettings.SetSaturation(0f);
+            VisualEnhancerSettings.SetTemperature(0f);
+            VisualEnhancerSettings.SetHueShift(0f);
             VisualEnhancerSettings.SetChromaticAberration(0f);
             VisualEnhancerSettings.SetLensDistortion(0f);
             VisualEnhancerSettings.SetBloom(0f);
-            VisualEnhancerSettings.SetLiquidColor(1f);
-            VisualEnhancerSettings.SetLiquidShine(1f);
-            VisualEnhancerSettings.SetLiquidFlow(1f);
-            VisualEnhancerSettings.SetSolidColor(1f);
-            VisualEnhancerSettings.SetSolidShine(1f);
-            VisualEnhancerSettings.SetMaterialTextureScale(1f);
+            VisualEnhancerSettings.SetLiquidColor(0f);
+            VisualEnhancerSettings.SetLiquidShine(0f);
+            VisualEnhancerSettings.SetLiquidFlow(0f);
+            VisualEnhancerSettings.SetSolidColor(0f);
+            VisualEnhancerSettings.SetSolidShine(0f);
+            VisualEnhancerSettings.SetMaterialTextureScale(0f);
             VisualEnhancerController.ApplySettingsChanged();
             Rebuild();
         }
 
         public void Refresh()
         {
-            if (presetLabel != null)
-            {
-                presetLabel.text = VisualEnhancerSettings.GetCurrentPreset().Name;
-            }
-
-            SetText(tintValue, VisualEnhancerSettings.TintIntensity);
-            SetText(vignetteValue, VisualEnhancerSettings.VignetteIntensity);
-            SetText(scanlineValue, VisualEnhancerSettings.ScanlineIntensity);
-            SetText(grainValue, VisualEnhancerSettings.GrainIntensity);
             SetText(brightnessValue, VisualEnhancerSettings.Brightness);
             SetText(shadowValue, VisualEnhancerSettings.Shadow);
-            SetText(letterboxValue, VisualEnhancerSettings.Letterbox);
-            SetText(scanlineDensityValue, VisualEnhancerSettings.ScanlineDensity);
-            SetText(grainScaleValue, VisualEnhancerSettings.GrainScale);
-            SetText(grainSpeedValue, VisualEnhancerSettings.GrainSpeed);
-            SetText(pulseValue, VisualEnhancerSettings.Pulse);
             SetText(exposureValue, VisualEnhancerSettings.Exposure);
             SetText(contrastValue, VisualEnhancerSettings.Contrast);
             SetText(saturationValue, VisualEnhancerSettings.Saturation);
@@ -568,7 +511,7 @@ namespace ONIVisualEnhancer
             return row;
         }
 
-        private static Slider CreateSlider(Transform parent, float value)
+        private static Slider CreateSlider(Transform parent, float value, float minValue, float maxValue)
         {
             GameObject root = new GameObject("Slider");
             root.transform.SetParent(parent, false);
@@ -576,8 +519,8 @@ namespace ONIVisualEnhancer
             root.AddComponent<LayoutElement>().preferredHeight = 22f;
 
             Slider slider = root.AddComponent<Slider>();
-            slider.minValue = 0f;
-            slider.maxValue = 2f;
+            slider.minValue = minValue;
+            slider.maxValue = maxValue;
             slider.value = value;
 
             GameObject background = CreateImage("Background", root.transform, new Color(0.34f, 0.34f, 0.32f, 1f));
