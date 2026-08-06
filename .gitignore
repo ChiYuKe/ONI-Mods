@@ -367,6 +367,7 @@ ONI源码/
 Managed/
 .tools/
 .tmp_video_frames/
+.video_frames_031536/
 templates/
 docs/
 
