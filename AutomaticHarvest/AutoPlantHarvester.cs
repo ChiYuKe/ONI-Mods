@@ -22,6 +22,8 @@ namespace AutomaticHarvest
 
         private static readonly FieldInfo MaturityField = typeof(Growing).GetField("maturity", BindingFlags.NonPublic | BindingFlags.Instance);
         private static readonly MethodInfo SpawnPlantFiberMethod = typeof(PlantFiberProducer).GetMethod("SpawnPlantFiber", BindingFlags.Instance | BindingFlags.NonPublic);
+        private static readonly PropertyInfo CompletedByProperty =
+            typeof(Harvestable).GetProperty("completed_by", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
 
         public Vector3 storageFXOffset = Vector3.zero;
 
@@ -78,6 +80,7 @@ namespace AutomaticHarvest
             }
 
             WorkerBase fiberSkilledWorker = FindPlantFiberSkilledWorker();
+            WorkerBase seedHarvestWorker = FindSeedHarvestSkilledWorker();
 
             foreach (GameObject plant in plants)
             {
@@ -97,9 +100,24 @@ namespace AutomaticHarvest
                 try
                 {
                     PlantFiberProducer fiberProducer = plant.GetComponent<PlantFiberProducer>();
-                    harvestable.Harvest();
+                    SeedProducer seedProducer = plant.GetComponent<SeedProducer>();
+                    if (seedProducer != null)
+                    {
+                        SetCompletedBy(harvestable, seedHarvestWorker);
+                    }
 
-                    if (fiberSkilledWorker != null && fiberProducer != null)
+                    try
+                    {
+                        harvestable.Harvest();
+                    }
+                    finally
+                    {
+                        SetCompletedBy(harvestable, null);
+                    }
+
+                    if (fiberSkilledWorker != null &&
+                        fiberProducer != null &&
+                        !HasPlantFiberSkill(seedHarvestWorker))
                     {
                         SpawnPlantFiberMethod?.Invoke(fiberProducer, null);
                     }
@@ -312,6 +330,47 @@ namespace AutomaticHarvest
             }
 
             return null;
+        }
+
+        private static WorkerBase FindSeedHarvestSkilledWorker()
+        {
+            WorkerBase bestWorker = null;
+            float bestBonus = float.MinValue;
+
+            foreach (MinionIdentity minionIdentity in Components.LiveMinionIdentities.Items)
+            {
+                if (minionIdentity == null)
+                {
+                    continue;
+                }
+
+                WorkerBase worker = minionIdentity.GetComponent<WorkerBase>();
+                AttributeConverters converters = minionIdentity.GetComponent<AttributeConverters>();
+                if (worker == null || converters == null)
+                {
+                    continue;
+                }
+
+                float bonus = converters.Get(Db.Get().AttributeConverters.SeedHarvestChance).Evaluate();
+                if (bestWorker == null || bonus > bestBonus)
+                {
+                    bestWorker = worker;
+                    bestBonus = bonus;
+                }
+            }
+
+            return bestWorker;
+        }
+
+        private static bool HasPlantFiberSkill(WorkerBase worker)
+        {
+            MinionResume resume = worker?.GetComponent<MinionResume>();
+            return resume != null && resume.HasPerk(Db.Get().SkillPerks.CanSalvagePlantFiber);
+        }
+
+        private static void SetCompletedBy(Harvestable harvestable, WorkerBase worker)
+        {
+            CompletedByProperty?.SetValue(harvestable, worker);
         }
 
         private static void PreventHarvestTask(GameObject plant, Harvestable harvestable)
