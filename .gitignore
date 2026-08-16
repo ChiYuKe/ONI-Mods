@@ -371,6 +371,9 @@ Managed/
 templates/
 docs/
 
+# Local Unity project used to build asset bundles (not part of the mod source tree)
+ONIUnity项目/
+
 # Local StorageNetwork test harness (not part of the mod source tree)
 StorageNetwork.Tests/
 
