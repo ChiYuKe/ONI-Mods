@@ -12,7 +12,7 @@
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <OutputPath>..\..\..\..\Documents\Klei\OxygenNotIncluded\mods\Dev\WireAnywhere\</OutputPath>
+    <OutputPath>$(UserProfile)\Documents\Klei\OxygenNotIncluded\mods\Dev\WireAnywhere\</OutputPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <OutputPath>bin\Release\</OutputPath>
@@ -39,7 +39,7 @@
       <Private>False</Private>
     </Reference>
     <Reference Include="PLib">
-      <HintPath>..\Managed\PLib.dll</HintPath>
+      <HintPath>D:\Program Files (x86)\Steam\steamapps\common\OxygenNotIncluded\OxygenNotIncluded_Data\Managed\PLib.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.UI">
@@ -72,6 +72,6 @@
     </Reference>
   </ItemGroup>
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="&quot;C:\Users\Administrator\Desktop\Project\NOIMods\packages\ILRepack.2.0.44\tools\ILRepack.exe&quot; /out:&quot;$(TargetDir)WireAnywhere.dll&quot; &quot;$(TargetDir)WireAnywhere.dll&quot; &quot;C:\Users\Administrator\Desktop\Project\NOIMods\Managed\PLib.dll&quot; /lib:&quot;C:\Users\Administrator\Desktop\Project\NOIMods\Managed&quot;" />
+    <Exec Command="&quot;$(MSBuildProjectDirectory)\..\packages\ILRepack.2.0.44\tools\ILRepack.exe&quot; /out:&quot;$(TargetDir)WireAnywhere.dll&quot; &quot;$(TargetDir)WireAnywhere.dll&quot; &quot;D:\Program Files (x86)\Steam\steamapps\common\OxygenNotIncluded\OxygenNotIncluded_Data\Managed\PLib.dll&quot; /lib:&quot;D:\Program Files (x86)\Steam\steamapps\common\OxygenNotIncluded\OxygenNotIncluded_Data\Managed&quot;" />
   </Target>
 </Project>

@@ -12,7 +12,7 @@
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <OutputPath>..\..\..\..\Documents\Klei\OxygenNotIncluded\mods\Dev\RunningOutOfTime\</OutputPath>
+    <OutputPath>$(UserProfile)\Documents\Klei\OxygenNotIncluded\mods\Dev\RunningOutOfTime\</OutputPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <OutputPath>bin\Release\</OutputPath>
@@ -39,7 +39,7 @@
       <Private>False</Private>
     </Reference>
     <Reference Include="PLib">
-      <HintPath>..\Managed\PLib.dll</HintPath>
+      <HintPath>D:\Program Files (x86)\Steam\steamapps\common\OxygenNotIncluded\OxygenNotIncluded_Data\Managed\PLib.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Unity.TextMeshPro">

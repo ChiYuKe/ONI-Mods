@@ -31,7 +31,7 @@
       <Private>False</Private>
     </Reference>
     <Reference Include="PLib">
-      <HintPath>..\Managed\PLib.dll</HintPath>
+      <HintPath>D:\Program Files (x86)\Steam\steamapps\common\OxygenNotIncluded\OxygenNotIncluded_Data\Managed\PLib.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.CoreModule">

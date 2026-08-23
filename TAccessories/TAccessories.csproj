@@ -12,7 +12,7 @@
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <OutputPath>..\..\..\..\Documents\Klei\OxygenNotIncluded\mods\Dev\Taccessories\</OutputPath>
+    <OutputPath>$(UserProfile)\Documents\Klei\OxygenNotIncluded\mods\Dev\TAccessories\</OutputPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <OutputPath>bin\Release\</OutputPath>
@@ -31,7 +31,7 @@
       <Private>False</Private>
     </Reference>
     <Reference Include="EternalDecay">
-      <HintPath>..\..\..\..\Documents\Klei\OxygenNotIncluded\mods\Dev\EternalDecay\EternalDecay.dll</HintPath>
+      <HintPath>$(UserProfile)\Documents\Klei\OxygenNotIncluded\mods\Dev\EternalDecay\EternalDecay.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.CoreModule">

@@ -11,7 +11,7 @@
     <GameManagedDir>D:\Program Files (x86)\Steam\steamapps\common\OxygenNotIncluded\OxygenNotIncluded_Data\Managed</GameManagedDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)'=='Debug'">
-    <OutputPath>..\..\..\..\Documents\Klei\OxygenNotIncluded\mods\Dev\DeepSeekDanmaku\</OutputPath>
+    <OutputPath>$(UserProfile)\Documents\Klei\OxygenNotIncluded\mods\Dev\DeepSeekDanmaku\</OutputPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)'=='Release'">
     <OutputPath>bin\Release\</OutputPath>
@@ -21,7 +21,7 @@
     <Reference Include="Assembly-CSharp"><HintPath>$(GameManagedDir)\Assembly-CSharp.dll</HintPath><Private>False</Private></Reference>
     <Reference Include="Assembly-CSharp-firstpass"><HintPath>$(GameManagedDir)\Assembly-CSharp-firstpass.dll</HintPath><Private>False</Private></Reference>
     <Reference Include="Newtonsoft.Json"><HintPath>$(GameManagedDir)\Newtonsoft.Json.dll</HintPath><Private>False</Private></Reference>
-    <Reference Include="PLib"><HintPath>..\Managed\PLib.dll</HintPath><Private>False</Private></Reference>
+    <Reference Include="PLib"><HintPath>$(GameManagedDir)\PLib.dll</HintPath><Private>False</Private></Reference>
     <Reference Include="UnityEngine.CoreModule"><HintPath>$(GameManagedDir)\UnityEngine.CoreModule.dll</HintPath><Private>False</Private></Reference>
     <Reference Include="UnityEngine.JSONSerializeModule"><HintPath>$(GameManagedDir)\UnityEngine.JSONSerializeModule.dll</HintPath><Private>False</Private></Reference>
     <Reference Include="UnityEngine.UI"><HintPath>$(GameManagedDir)\UnityEngine.UI.dll</HintPath><Private>False</Private></Reference>
@@ -35,6 +35,6 @@
     <None Include="config.example.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <Target Name="MergePLib" AfterTargets="Build">
-    <Exec Command="&quot;$(MSBuildProjectDirectory)\..\packages\ILRepack.2.0.44\tools\ILRepack.exe&quot; /out:&quot;$(TargetPath)&quot; &quot;$(TargetPath)&quot; &quot;$(MSBuildProjectDirectory)\..\Managed\PLib.dll&quot; /lib:&quot;$(MSBuildProjectDirectory)\..\Managed&quot;" />
+    <Exec Command="&quot;$(MSBuildProjectDirectory)\..\packages\ILRepack.2.0.44\tools\ILRepack.exe&quot; /out:&quot;$(TargetPath)&quot; &quot;$(TargetPath)&quot; &quot;$(GameManagedDir)\PLib.dll&quot; /lib:&quot;$(GameManagedDir)&quot;" />
   </Target>
 </Project>

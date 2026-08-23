@@ -10,14 +10,13 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <GameManagedDir>D:\Program Files (x86)\Steam\steamapps\common\OxygenNotIncluded\OxygenNotIncluded_Data\Managed</GameManagedDir>
-    <RepoManagedDir>$(MSBuildProjectDirectory)\..\Managed</RepoManagedDir>
     <ILRepackTool>$(MSBuildProjectDirectory)\..\packages\ILRepack.2.0.44\tools\ILRepack.exe</ILRepackTool>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <OutputPath>..\..\..\..\Documents\Klei\OxygenNotIncluded\mods\Dev\MiniBox\</OutputPath>
+    <OutputPath>$(UserProfile)\Documents\Klei\OxygenNotIncluded\mods\Dev\MiniBox\</OutputPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <OutputPath>..\..\..\..\Documents\Klei\OxygenNotIncluded\mods\Dev\MiniBox\</OutputPath>
+    <OutputPath>$(UserProfile)\Documents\Klei\OxygenNotIncluded\mods\Dev\MiniBox\</OutputPath>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="0Harmony">
@@ -41,7 +40,7 @@
       <Private>False</Private>
     </Reference>
     <Reference Include="PLib">
-      <HintPath>$(RepoManagedDir)\PLib.dll</HintPath>
+      <HintPath>$(GameManagedDir)\PLib.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.UI">
@@ -74,7 +73,7 @@
     </Reference>
   </ItemGroup>
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="&quot;$(ILRepackTool)&quot; /out:&quot;$(TargetDir)MiniBox.dll&quot; &quot;$(TargetDir)MiniBox.dll&quot; &quot;$(RepoManagedDir)\PLib.dll&quot; /lib:&quot;$(RepoManagedDir)&quot;" />
+    <Exec Command="&quot;$(ILRepackTool)&quot; /out:&quot;$(TargetDir)MiniBox.dll&quot; &quot;$(TargetDir)MiniBox.dll&quot; &quot;$(GameManagedDir)\PLib.dll&quot; /lib:&quot;$(GameManagedDir)&quot;" />
   </Target>
   <Target Name="CopyTranslations" AfterTargets="Build">
     <ItemGroup>
