@@ -122,7 +122,7 @@ namespace MadeInAbyss
                 public class AMMO_POUCH
                 {
                     public static LocString NAME = "探窟弹药包";
-                    public static LocString DESC = "探窟家的标准装具，鼓鼓囊囊地塞满了备用工具和口粮。\n\n装备后：携带量 +800kg，挖掘 +2。";
+                    public static LocString DESC = "探窟家的标准装具，鼓鼓囊囊地塞满了备用工具和口粮，内衬的护符能抵御浅层的诅咒。\n\n装备后：携带量 +800kg，挖掘 +2。\n免疫「阿比斯之渊」与「诱惑之森」的上升负荷（第 1~2 层）。";
                     public static LocString RECIPE_DESC = "为复制人缝制一个探窟弹药包。";
                 }
             }

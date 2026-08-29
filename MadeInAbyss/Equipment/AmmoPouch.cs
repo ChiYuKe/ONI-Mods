@@ -104,6 +104,15 @@ namespace MadeInAbyss
                 null);
 
             def.RecipeDescription = Strings.Get("STRINGS.EQUIPMENT.PREFABS.AMMO_POUCH.RECIPE_DESC");
+
+            // 抗诅咒：装备期间免疫浅层（第 1~2 层）的上升负荷，卸下后失效。
+            ResourceSet<Effect> effects = Db.Get().effects;
+            foreach (string curseId in new[] { "AbyssCurse1", "AbyssCurse2" })
+            {
+                Effect curse = effects.TryGet(curseId);
+                if (curse != null)
+                    def.EffectImmunites.Add(curse);
+            }
             return def;
         }
 
