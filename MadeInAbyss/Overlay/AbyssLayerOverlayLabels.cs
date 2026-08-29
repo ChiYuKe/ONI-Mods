@@ -53,19 +53,19 @@ namespace MadeInAbyss
                 TextMeshProUGUI label = labelGo.GetComponent<TextMeshProUGUI>();
                 if (font != null)
                     label.font = font;
-                label.fontSize = 15;
+                label.fontSize = 26;
                 label.fontStyle = FontStyles.Bold;
                 label.enableWordWrapping = false;
                 label.raycastTarget = false;
                 label.color = Color.Lerp(AbyssLayerOverlayColors(i), Color.white, 0.35f);
-                label.text = $"第 {i + 1} 层 {AbyssStatics.Layers[i].Name}";
+                label.text = $"第 {i + 1} 层 {AbyssStatics.Layers[i].Name} · {AbyssStatics.Layers[i].EnglishName}";
 
                 RectTransform rt = label.rectTransform;
                 rt.anchorMin = new Vector2(0f, 0f);
                 rt.anchorMax = new Vector2(0f, 0f);
                 rt.pivot = new Vector2(0f, 0.5f);
                 rt.anchoredPosition = new Vector2(12f, 0f);
-                rt.sizeDelta = new Vector2(260f, 22f);
+                rt.sizeDelta = new Vector2(520f, 34f);
                 labels[i] = label;
             }
 

@@ -13,16 +13,20 @@ namespace MadeInAbyss
             /// <summary>层阶序号（0 基，对应配置数组下标）。</summary>
             public readonly int Index;
 
-            /// <summary>层阶名称（动漫中的六层）。</summary>
+            /// <summary>层阶名称（动漫中的六层，中文）。</summary>
             public readonly string Name;
+
+            /// <summary>层阶英文名。</summary>
+            public readonly string EnglishName;
 
             /// <summary>该层的诅咒效果 ID。</summary>
             public readonly string CurseEffectId;
 
-            public LayerDef(int index, string name, string curseEffectId)
+            public LayerDef(int index, string name, string englishName, string curseEffectId)
             {
                 Index = index;
                 Name = name;
+                EnglishName = englishName;
                 CurseEffectId = curseEffectId;
             }
         }
@@ -30,12 +34,12 @@ namespace MadeInAbyss
         /// <summary>六层深渊定义，深度阈值取自配置 LayerDepthM。</summary>
         public static readonly LayerDef[] Layers =
         {
-            new LayerDef(0, "阿比斯之渊", "AbyssCurse1"),
-            new LayerDef(1, "诱惑之森", "AbyssCurse2"),
-            new LayerDef(2, "大断层", "AbyssCurse3"),
-            new LayerDef(3, "巨人之杯", "AbyssCurse4"),
-            new LayerDef(4, "亡骸之海", "AbyssCurse5"),
-            new LayerDef(5, "最终地", "AbyssCurse6"),
+            new LayerDef(0, "阿比斯之渊", "Edge of the Abyss", "AbyssCurse1"),
+            new LayerDef(1, "诱惑之森", "Forest of Temptation", "AbyssCurse2"),
+            new LayerDef(2, "大断层", "Great Fault", "AbyssCurse3"),
+            new LayerDef(3, "巨人之杯", "Goblets of Giants", "AbyssCurse4"),
+            new LayerDef(4, "亡骸之海", "Sea of Corpses", "AbyssCurse5"),
+            new LayerDef(5, "最终地", "Capital of the Unreturned", "AbyssCurse6"),
         };
 
         /// <summary>所有诅咒效果 ID（用于生骸免疫）。</summary>
