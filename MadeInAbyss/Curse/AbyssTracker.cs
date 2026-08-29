@@ -124,7 +124,11 @@ namespace MadeInAbyss
             if (isNarehate)
                 return;
             if (effects.HasImmunityTo(curseEffect))
+            {
+                // 免疫来源若是弹药包，抵挡一次后损坏掉落。
+                ConsumeAmmoPouchCharge();
                 return;
+            }
 
             effects.Add(layer.CurseEffectId, true);
 
@@ -261,6 +265,39 @@ namespace MadeInAbyss
                     return id;
             }
             return null;
+        }
+
+        /// <summary>
+        /// 弹药包抵挡诅咒后损坏：卸下并销毁原装备，原地掉落损坏的弹药包。
+        /// </summary>
+        private void ConsumeAmmoPouchCharge()
+        {
+            Equipment equipment = GetComponent<Equipment>();
+            EquipmentSlot pouchSlot = Db.Get().AssignableSlots.TryGet(AmmoPouch.SlotId) as EquipmentSlot;
+            if (equipment == null || pouchSlot == null)
+                return;
+
+            AssignableSlotInstance slotInstance = equipment.GetSlot(pouchSlot);
+            Equippable pouch = slotInstance != null ? slotInstance.assignable as Equippable : null;
+            if (pouch == null)
+                return;
+            if (pouch.GetComponent<KPrefabID>().PrefabTag.Name != AmmoPouch.ItemId)
+                return;
+
+            string dupeName = gameObject.GetProperName();
+            Vector3 position = transform.GetPosition();
+
+            pouch.Unassign();
+            Util.KDestroyGameObject(pouch.gameObject);
+
+            GameObject prefab = Assets.GetPrefab(AmmoPouchDamagedConfig.ID);
+            if (prefab != null)
+                GameUtil.KInstantiate(prefab, position, Grid.SceneLayer.Ore, null, 0).SetActive(true);
+
+            Notify(
+                NotificationType.BadMinor,
+                STRINGS.MISC.NOTIFICATIONS.ABYSS_POUCH_CONSUMED.NAME,
+                $"{dupeName} 的探窟弹药包抵挡了一次上升负荷，随后损坏掉落在地，可以缝补修复。");
         }
 
         private void Notify(NotificationType type, string title, string body)

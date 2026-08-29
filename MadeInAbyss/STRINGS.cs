@@ -113,6 +113,15 @@ namespace MadeInAbyss
             }
         }
 
+        public class ITEMS
+        {
+            public class AMMO_POUCH_DAMAGED
+            {
+                public static LocString NAME = "损坏的弹药包";
+                public static LocString DESC = "内衬的护符在抵挡诅咒时碎裂了。把它和布料一起送到服装纺织机，还能缝补一新。";
+            }
+        }
+
         public class EQUIPMENT
         {
             public class PREFABS
@@ -120,8 +129,9 @@ namespace MadeInAbyss
                 public class AMMO_POUCH
                 {
                     public static LocString NAME = "探窟弹药包";
-                    public static LocString DESC = "探窟家的标准装具，鼓鼓囊囊地塞满了备用工具和口粮，内衬的护符能抵御浅层的诅咒。\n\n装备后：携带量 +800kg，挖掘 +2。\n免疫「阿比斯之渊」与「诱惑之森」的上升负荷（第 1~2 层）。";
+                    public static LocString DESC = "探窟家的标准装具，鼓鼓囊囊地塞满了备用工具和口粮，内衬的护符能抵挡浅层的诅咒——每抵挡一次便会损坏掉落。\n\n装备后：携带量 +800kg，挖掘 +2。\n可抵挡一次第 1~2 层的上升负荷，抵挡后损坏掉落。";
                     public static LocString RECIPE_DESC = "为复制人缝制一个探窟弹药包。";
+                    public static LocString REPAIR_DESC = "将损坏的弹药包缝补一新。";
                 }
             }
         }
@@ -158,6 +168,12 @@ namespace MadeInAbyss
                 {
                     public static LocString NAME = UI.FormatAsBold("深渊遗物！");
                     public static LocString TOOLTIP = "在深渊中挖掘出了远古的遗物。";
+                }
+
+                public class ABYSS_POUCH_CONSUMED
+                {
+                    public static LocString NAME = UI.FormatAsBold("弹药包损坏");
+                    public static LocString TOOLTIP = "探窟弹药包抵挡了一次上升负荷后损坏，掉落在地。";
                 }
 
                 public class ABYSS_NAREHATE

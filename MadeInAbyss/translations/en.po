@@ -144,14 +144,14 @@ msgid "探窟弹药包"
 msgstr "Delver's Ammo Pouch"
 
 msgctxt "MadeInAbyss.STRINGS.EQUIPMENT.PREFABS.AMMO_POUCH.DESC"
-msgid "探窟家的标准装具，鼓鼓囊囊地塞满了备用工具和口粮，内衬的护符能抵御浅层的诅咒。
+msgid "探窟家的标准装具，鼓鼓囊囊地塞满了备用工具和口粮，内衬的护符能抵挡浅层的诅咒——每抵挡一次便会损坏掉落。
 
 装备后：携带量 +800kg，挖掘 +2。
-免疫「阿比斯之渊」与「诱惑之森」的上升负荷（第 1~2 层）。"
-msgstr "Standard issue delver gear, stuffed with spare tools and rations; the talisman lining wards off the shallower curses.
+可抵挡一次第 1~2 层的上升负荷，抵挡后损坏掉落。"
+msgstr "Standard issue delver gear, stuffed with spare tools and rations; the talisman lining wards off the shallower curses — but it breaks and falls off after each ward.
 
 When equipped: Carrying capacity +800kg, Digging +2.
-Immune to the Curses of the Abyss from the first two layers."
+Wards off one Curse of the Abyss from the first two layers before it breaks."
 
 msgctxt "MadeInAbyss.STRINGS.EQUIPMENT.PREFABS.AMMO_POUCH.RECIPE_DESC"
 msgid "为复制人缝制一个探窟弹药包。"
@@ -172,3 +172,23 @@ msgstr "They are definitely not napping — the Curse of the Abyss claimed them,
 msgctxt "MadeInAbyss.STRINGS.MISC.STATUSITEM_TOOLTIPS.ABYSS_NAREHATE_DEAD"
 msgid "他们不是在打盹——深渊重塑了他们的血肉，他们正以生骸的形态继续活着。"
 msgstr "They are definitely not napping — the Abyss remade their flesh, and they live on as a Narehate."
+
+msgctxt "MadeInAbyss.STRINGS.MISC.NOTIFICATIONS.ABYSS_POUCH_CONSUMED.NAME"
+msgid "弹药包损坏"
+msgstr "Ammo Pouch Broken"
+
+msgctxt "MadeInAbyss.STRINGS.MISC.NOTIFICATIONS.ABYSS_POUCH_CONSUMED.TOOLTIP"
+msgid "探窟弹药包抵挡了一次上升负荷后损坏，掉落在地。"
+msgstr "The ammo pouch broke after warding off a Curse of the Abyss and dropped to the ground."
+
+msgctxt "MadeInAbyss.STRINGS.ITEMS.AMMO_POUCH_DAMAGED.NAME"
+msgid "损坏的弹药包"
+msgstr "Broken Ammo Pouch"
+
+msgctxt "MadeInAbyss.STRINGS.ITEMS.AMMO_POUCH_DAMAGED.DESC"
+msgid "内衬的护符在抵挡诅咒时碎裂了。把它和布料一起送到服装纺织机，还能缝补一新。"
+msgstr "The talisman lining shattered while warding off a curse. Take it to the Clothing Fabricator with some fabric to sew it back together."
+
+msgctxt "MadeInAbyss.STRINGS.EQUIPMENT.PREFABS.AMMO_POUCH.REPAIR_DESC"
+msgid "将损坏的弹药包缝补一新。"
+msgstr "Sew a broken ammo pouch back into shape."

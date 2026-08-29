@@ -20,6 +20,8 @@ namespace MadeInAbyss
 
         public static ComplexRecipe recipe;
 
+        public static ComplexRecipe repairRecipe;
+
         /// <summary>
         /// 在可分配槽位资源集中注册“弹药包”装备槽：
         /// MinionAssignablesProxy.ConfigureAssignableSlots 会遍历该资源集，
@@ -109,6 +111,26 @@ namespace MadeInAbyss
                     fabricators = new List<Tag> { FabricatorId },
                     sortOrder = 2,
                 };
+
+                // 修补配方：损坏的弹药包 + 1 布料 → 探窟弹药包
+                ComplexRecipe.RecipeElement[] repairInputs = new ComplexRecipe.RecipeElement[]
+                {
+                    new ComplexRecipe.RecipeElement(new Tag[] { AmmoPouchDamagedConfig.ID.ToTag() }, 1f, ComplexRecipe.RecipeElement.TemperatureOperation.AverageTemperature, "", false, false),
+                    new ComplexRecipe.RecipeElement(GameTags.Fabrics, 1f, ComplexRecipe.RecipeElement.TemperatureOperation.AverageTemperature, "", false, false),
+                };
+                ComplexRecipe.RecipeElement[] repairOutputs = new ComplexRecipe.RecipeElement[]
+                {
+                    new ComplexRecipe.RecipeElement(ItemId.ToTag(), 1f, ComplexRecipe.RecipeElement.TemperatureOperation.AverageTemperature, false),
+                };
+
+                repairRecipe = new ComplexRecipe(ComplexRecipeManager.MakeRecipeID(FabricatorId, repairInputs, repairOutputs), repairInputs, repairOutputs)
+                {
+                    time = 20f,
+                    description = Strings.Get("STRINGS.EQUIPMENT.PREFABS.AMMO_POUCH.REPAIR_DESC"),
+                    nameDisplay = ComplexRecipe.RecipeNameDisplay.Result,
+                    fabricators = new List<Tag> { FabricatorId },
+                    sortOrder = 3,
+                };
             }
         }
     }
@@ -169,6 +191,43 @@ namespace MadeInAbyss
             KBatchedAnimController anim;
             if (go.TryGetComponent(out anim))
                 anim.sceneLayer = Grid.SceneLayer.BuildingBack;
+        }
+    }
+
+    /// <summary>
+    /// 损坏的弹药包：抵挡一次诅咒后掉落的残骸，不可装备，
+    /// 可与布料一起在服装纺织机上缝补修复。
+    /// </summary>
+    public class AmmoPouchDamagedConfig : IEntityConfig
+    {
+        public const string ID = "Ammo_Pouch_Damaged";
+
+        public GameObject CreatePrefab()
+        {
+            return EntityTemplates.CreateLooseEntity(
+                ID,
+                Strings.Get("STRINGS.ITEMS.AMMO_POUCH_DAMAGED.NAME"),
+                Strings.Get("STRINGS.ITEMS.AMMO_POUCH_DAMAGED.DESC"),
+                5f,
+                false,
+                Assets.GetAnim("shirt_decor01_kanim"),
+                "object",
+                Grid.SceneLayer.Ore,
+                EntityTemplates.CollisionShape.RECTANGLE,
+                0.75f,
+                0.4f,
+                true,
+                0,
+                SimHashes.Creature,
+                null);
+        }
+
+        public void OnPrefabInit(GameObject inst)
+        {
+        }
+
+        public void OnSpawn(GameObject spawned)
+        {
         }
     }
 }
