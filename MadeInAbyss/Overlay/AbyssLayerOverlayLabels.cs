@@ -1,0 +1,136 @@
+using TMPro;
+using UnityEngine;
+
+namespace MadeInAbyss
+{
+    /// <summary>
+    /// 「深渊层阶」概览层的文字标注：概览激活时在屏幕左侧绘制每层的名称标签，
+    /// 标签随镜头移动对齐各层带的垂直位置，切走概览或离开画面时隐藏。
+    /// </summary>
+    public static class AbyssLayerOverlayLabels
+    {
+        private static Game subscribedGame;
+        private static Canvas canvas;
+        private static readonly TextMeshProUGUI[] labels = new TextMeshProUGUI[AbyssStatics.Layers.Length];
+        private static bool overlayActive;
+
+        /// <summary>随概览菜单初始化（每个游戏实例一次）。由 OverlayMenu 补丁调用。</summary>
+        public static void Initialize()
+        {
+            if (subscribedGame == Game.Instance)
+                return;
+            subscribedGame = Game.Instance;
+            Game.Instance.Subscribe(1798162660, OnOverlayChanged);
+            overlayActive = false;
+        }
+
+        private static void OnOverlayChanged(object data)
+        {
+            HashedString mode = ((Boxed<HashedString>)data).value;
+            overlayActive = mode == AbyssLayerOverlay.Mode;
+            if (overlayActive)
+                EnsureBuilt();
+            if (canvas != null)
+                canvas.gameObject.SetActive(overlayActive);
+        }
+
+        private static void EnsureBuilt()
+        {
+            if (canvas != null)
+                return;
+
+            GameObject canvasGo = new GameObject("AbyssLayerOverlayCanvas", typeof(Canvas));
+            canvas = canvasGo.GetComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 900;
+
+            TMP_FontAsset font = FindCjkFont();
+
+            for (int i = 0; i < labels.Length; i++)
+            {
+                GameObject labelGo = new GameObject($"layerLabel{i}", typeof(TextMeshProUGUI));
+                labelGo.transform.SetParent(canvas.transform, false);
+                TextMeshProUGUI label = labelGo.GetComponent<TextMeshProUGUI>();
+                if (font != null)
+                    label.font = font;
+                label.fontSize = 15;
+                label.fontStyle = FontStyles.Bold;
+                label.enableWordWrapping = false;
+                label.raycastTarget = false;
+                label.color = Color.Lerp(AbyssLayerOverlayColors(i), Color.white, 0.35f);
+                label.text = $"第 {i + 1} 层 {AbyssStatics.Layers[i].Name}";
+
+                RectTransform rt = label.rectTransform;
+                rt.anchorMin = new Vector2(0f, 0f);
+                rt.anchorMax = new Vector2(0f, 0f);
+                rt.pivot = new Vector2(0f, 0.5f);
+                rt.anchoredPosition = new Vector2(12f, 0f);
+                rt.sizeDelta = new Vector2(260f, 22f);
+                labels[i] = label;
+            }
+
+            canvasGo.AddComponent<LabelUpdater>();
+        }
+
+        private static TMP_FontAsset FindCjkFont()
+        {
+            TMP_FontAsset[] fonts = Resources.FindObjectsOfTypeAll<TMP_FontAsset>();
+            foreach (TMP_FontAsset font in fonts)
+            {
+                if (font != null && font.name != null && font.name.Contains("Noto"))
+                    return font;
+            }
+            return TMP_Settings.defaultFontAsset;
+        }
+
+        private static Color AbyssLayerOverlayColors(int layer)
+        {
+            // 与概览层染色同源：通过反射外的公共入口不可用，这里按层返回概览的层色。
+            switch (layer)
+            {
+                case 0: return new Color32(0xC7, 0xC7, 0x4A, 0xFF);
+                case 1: return new Color32(0xF2, 0x91, 0x3D, 0xFF);
+                case 2: return new Color32(0xB0, 0x4A, 0xF2, 0xFF);
+                case 3: return new Color32(0xF4, 0x4A, 0x4A, 0xFF);
+                case 4: return new Color32(0x4A, 0x9B, 0xF2, 0xFF);
+                default: return new Color32(0xF2, 0x41, 0x8A, 0xFF);
+            }
+        }
+
+        /// <summary>每帧把标签对齐到各自层带中心的屏幕位置。</summary>
+        private class LabelUpdater : MonoBehaviour
+        {
+            private void Update()
+            {
+                if (!overlayActive || canvas == null)
+                    return;
+
+                Camera cam = Camera.main;
+                if (cam == null)
+                    return;
+
+                int worldId = ClusterManager.Instance.activeWorldId;
+                float surfaceY = AbyssAnchors.GetSurfaceY(worldId);
+                float[] thresholds = AbyssStatics.GetLayerThresholds(worldId);
+                if (float.IsNaN(surfaceY) || thresholds == null || thresholds.Length < labels.Length)
+                    return;
+
+                for (int i = 0; i < labels.Length; i++)
+                {
+                    if (labels[i] == null)
+                        continue;
+
+                    float bandTop = i == 0 ? surfaceY : surfaceY - thresholds[i - 1];
+                    float bandBottom = surfaceY - thresholds[i];
+                    float bandCenter = (bandTop + bandBottom) * 0.5f;
+
+                    Vector3 screen = cam.WorldToScreenPoint(new Vector3(cam.transform.position.x, bandCenter, 0f));
+                    bool visible = screen.z > 0f && screen.y > 50f && screen.y < Screen.height - 30f;
+                    labels[i].gameObject.SetActive(visible);
+                    if (visible)
+                        labels[i].rectTransform.anchoredPosition = new Vector2(12f, screen.y);
+                }
+            }
+        }
+    }
+}

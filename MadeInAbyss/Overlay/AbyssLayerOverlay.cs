@@ -51,6 +51,9 @@ namespace MadeInAbyss
                     "以颜色显示深渊的六个层阶分布：\n黄·阿比斯之渊 / 橙·诱惑之森 / 紫·大断层 / 红·巨人之杯 / 蓝·亡骸之海 / 品红·最终地",
                     "深渊层阶");
                 list.Add((KIconToggleMenu.ToggleInfo)toggle);
+
+                // 初始化概览层的文字标注（订阅概览切换事件）。
+                AbyssLayerOverlayLabels.Initialize();
             }
         }
 
