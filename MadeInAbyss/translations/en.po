@@ -142,3 +142,23 @@ msgstr "Curse of the Abyss"
 msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.DEATHS.ABYSSCURSE.DESCRIPTION"
 msgid "{Target} 的生命被上升负荷夺走，化作了深渊的一部分。"
 msgstr "{Target}'s life was claimed by the Curse of the Abyss, becoming part of the depths forever."
+
+msgctxt "MadeInAbyss.STRINGS.ASSIGNABLE_SLOTS.AMMOPOUCH.NAME"
+msgid "弹药包"
+msgstr "Ammo Pouch"
+
+msgctxt "MadeInAbyss.STRINGS.EQUIPMENT.PREFABS.AMMO_POUCH.NAME"
+msgid "探窟弹药包"
+msgstr "Delver's Ammo Pouch"
+
+msgctxt "MadeInAbyss.STRINGS.EQUIPMENT.PREFABS.AMMO_POUCH.DESC"
+msgid "探窟家的标准装具，鼓鼓囊囊地塞满了备用工具和口粮。
+
+装备后：携带量 +800kg，挖掘 +2。"
+msgstr "Standard issue delver gear, stuffed with spare tools and rations.
+
+When equipped: Carrying capacity +800kg, Digging +2."
+
+msgctxt "MadeInAbyss.STRINGS.EQUIPMENT.PREFABS.AMMO_POUCH.RECIPE_DESC"
+msgid "为复制人缝制一个探窟弹药包。"
+msgstr "Sew an ammo pouch for a duplicant."
