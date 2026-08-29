@@ -235,7 +235,7 @@ namespace MadeInAbyss
     }
 
     /// <summary>
-    /// 损坏的弹药包会缓缓渗出「护符凝液」：每 5 秒 1kg，
+    /// 损坏的弹药包会缓缓渗出「祈愿培养基」：每 5 秒 1kg，
     /// 单包总渗漏量 10~15kg（生成时随机），存入容器后暂停渗漏。
     /// </summary>
     public class DamagedPouchLeaker : KMonoBehaviour, ISim1000ms

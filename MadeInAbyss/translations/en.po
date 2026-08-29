@@ -194,9 +194,9 @@ msgid "将损坏的弹药包缝补一新。"
 msgstr "Sew a broken ammo pouch back into shape."
 
 msgctxt "MadeInAbyss.STRINGS.ELEMENTS.TALISMANCONDENSATE.NAME"
-msgid "护符凝液"
-msgstr "Talisman Condensate"
+msgid "祈愿培养基"
+msgstr "Wishing Culture Medium"
 
 msgctxt "MadeInAbyss.STRINGS.ELEMENTS.TALISMANCONDENSATE.DESC"
-msgid "从碎裂的护符中缓缓渗出的粉红色露液，带着淡淡的深渊气息。性质黏稠，几乎不会流动。"
-msgstr "A pink dew slowly seeping from a shattered talisman, carrying a faint trace of the Abyss. Viscous and barely flows at all."
+msgid "从碎裂的护符中缓缓渗出的粉红色液体，微光中仿佛承载着未曾说出口的祈愿。性质黏稠，几乎不会流动。"
+msgstr "A pink liquid slowly seeping from a shattered talisman, its faint shimmer carrying unspoken wishes. Viscous and barely flows at all."
