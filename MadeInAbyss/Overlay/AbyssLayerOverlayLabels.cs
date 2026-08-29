@@ -53,7 +53,7 @@ namespace MadeInAbyss
                 TextMeshProUGUI label = labelGo.GetComponent<TextMeshProUGUI>();
                 if (font != null)
                     label.font = font;
-                label.fontSize = 26;
+                label.fontSize = 40;
                 label.fontStyle = FontStyles.Bold;
                 label.enableWordWrapping = false;
                 label.raycastTarget = false;
