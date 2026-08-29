@@ -11,10 +11,6 @@ namespace MadeInAbyss
     /// </summary>
     public class AbyssTracker : KMonoBehaviour, ISim1000ms
     {
-        /// <summary>本次下潜抵达的最深深度（米）。</summary>
-        [Serialize]
-        private float maxDepthThisDive;
-
         /// <summary>历史最深探索深度（米），决定笛级。</summary>
         [Serialize]
         private float maxDepthEver;
@@ -23,15 +19,12 @@ namespace MadeInAbyss
         [Serialize]
         private int whistleRank;
 
-        /// <summary>本次上升是否已结算过诅咒（避免连续爬升重复触发）。</summary>
+        /// <summary>上一秒的深度（米），用于检测层界跨越。</summary>
         [Serialize]
-        private bool curseConsumedThisDive;
+        private float prevDepth = float.NaN;
 
         private Klei.AI.Effects effects;
         private Health health;
-
-        /// <summary>诊断用：上次打印深度的层阶。</summary>
-        private int lastLoggedLayer = -1;
 
         protected override void OnSpawn()
         {
@@ -88,42 +81,31 @@ namespace MadeInAbyss
             UpdateWhistle(worldId, depth, config);
 
             if (config.EnableCurse)
-                UpdateCurse(worldId, depth, thresholds, config);
+                UpdateCurse(depth, thresholds, config);
         }
 
         // —— 上升负荷 ——
 
-        private void UpdateCurse(int worldId, float depth, float[] thresholds, AbyssConfig config)
+        /// <summary>
+        /// 逐边界结算：上升途中每跨过一层边界（进入上一层带），
+        /// 就结算被离开层阶的诅咒（6→5、5→4、4→3、3→2、2→1 各结算一次）。
+        /// </summary>
+        private void UpdateCurse(float depth, float[] thresholds, AbyssConfig config)
         {
-            // 下潜到比之前更深的位置时重置结算标记：一段连续上升只触发一次诅咒。
-            if (depth > maxDepthThisDive)
-            {
-                maxDepthThisDive = depth;
-                curseConsumedThisDive = false;
-            }
+            float prev = prevDepth;
+            prevDepth = depth;
 
-            // 诊断：首次进入某个层阶深度时打印一次。
-            int depthLayer = AbyssStatics.GetLayerIndex(maxDepthThisDive, thresholds);
-            if (depthLayer != lastLoggedLayer && depthLayer >= 0)
-            {
-                Debug.Log($"[MadeInAbyss] {gameObject.GetProperName()} 抵达深度 {Mathf.RoundToInt(maxDepthThisDive)}m（第 {depthLayer + 1} 层，已结算={curseConsumedThisDive}）");
-                lastLoggedLayer = depthLayer;
-            }
-            if (depth < config.SurfaceResetM)
-                lastLoggedLayer = -1;
+            if (float.IsNaN(prev))
+                return;
 
-            bool ascending = depth <= maxDepthThisDive - config.AscentTriggerM;
-            int layerIndex = AbyssStatics.GetLayerIndex(maxDepthThisDive, thresholds);
-            if (ascending && !curseConsumedThisDive && layerIndex >= 0)
-            {
-                curseConsumedThisDive = true;
-                ApplyCurse(layerIndex);
-            }
+            if (depth >= prev)
+                return; // 没有上升
 
-            if (depth < config.SurfaceResetM)
+            for (int i = 0; i < thresholds.Length && i < AbyssStatics.Layers.Length; i++)
             {
-                maxDepthThisDive = 0f;
-                curseConsumedThisDive = false;
+                // 上升越过第 i 层的边界：结算第 i 层（被离开层阶）的诅咒。
+                if (prev >= thresholds[i] && depth < thresholds[i])
+                    ApplyCurse(i);
             }
         }
 
@@ -157,7 +139,7 @@ namespace MadeInAbyss
                 return;
             }
 
-            Debug.Log($"[MadeInAbyss] {gameObject.GetProperName()} 触发诅咒：层={layerIndex + 1} 深度={Mathf.RoundToInt(maxDepthThisDive)}m 免疫={hasImmunity}");
+            Debug.Log($"[MadeInAbyss] {gameObject.GetProperName()} 触发诅咒：层={layerIndex + 1} 免疫={hasImmunity}");
 
             effects.Add(layer.CurseEffectId, true);
 
