@@ -42,19 +42,19 @@ namespace MadeInAbyss
                 public class ABYSSCURSE4
                 {
                     public static LocString NAME = UI.FormatAsHotkey("上升负荷·剧痛");
-                    public static LocString TOOLTIP = "第4层「巨人之杯」的诅咒：\n\n全身如同被撕裂般剧痛，七窍渗血。\n\n持续损失生命，力量与挖掘能力下降。";
+                    public static LocString TOOLTIP = "第4层「巨人之杯」的诅咒：\n\n全身如同被撕裂般剧痛，七窍渗血。\n\n立即受到 20 点伤害，力量与挖掘能力下降。";
                 }
 
                 public class ABYSSCURSE5
                 {
                     public static LocString NAME = UI.FormatAsHotkey("上升负荷·感觉剥夺");
-                    public static LocString TOOLTIP = "第5层「亡骸之海」的诅咒：\n\n感觉被深渊一点点夺走，身体不再听从使唤，开始自残或停止思考。\n\n持续损失生命，压力急剧增加，运动与学习能力严重下降。";
+                    public static LocString TOOLTIP = "第5层「亡骸之海」的诅咒：\n\n感觉被深渊一点点夺走，身体不再听从使唤，开始自残或停止思考。\n\n立即受到 30 点伤害，压力急剧增加，运动与学习能力严重下降。";
                 }
 
                 public class ABYSSCURSE6
                 {
                     public static LocString NAME = UI.FormatAsHotkey("上升负荷·失去人性");
-                    public static LocString TOOLTIP = "第6层「最终地」的诅咒：\n\n深渊的意志碾过了人类的边界——若能活下来，他们将不再是原来的自己。\n\n持续大量损失生命，压力狂涨。幸存者将化为生骸。";
+                    public static LocString TOOLTIP = "第6层「最终地」的诅咒：\n\n深渊的意志碾过了人类的边界——若能活下来，他们将不再是原来的自己。\n\n立即受到 50 点伤害，压力狂涨。幸存者将化为生骸。";
                 }
 
                 // —— 笛级（探窟家头衔的永久加成） ——

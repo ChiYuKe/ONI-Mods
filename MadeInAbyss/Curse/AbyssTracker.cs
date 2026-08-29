@@ -127,6 +127,14 @@ namespace MadeInAbyss
 
             effects.Add(layer.CurseEffectId, true);
 
+            // 深层诅咒在施放时造成一次性伤害。
+            if (layerIndex < AbyssStatics.CurseInstantDamageHp.Length)
+            {
+                float instantDamage = AbyssStatics.CurseInstantDamageHp[layerIndex];
+                if (instantDamage > 0f && health != null && health.State != Health.HealthState.Dead)
+                    health.Damage(instantDamage);
+            }
+
             bool isFinalLayer = layerIndex == AbyssStatics.Layers.Length - 1;
             if (isFinalLayer)
             {

@@ -44,6 +44,9 @@ namespace MadeInAbyss
             "AbyssCurse1", "AbyssCurse2", "AbyssCurse3", "AbyssCurse4", "AbyssCurse5", "AbyssCurse6",
         };
 
+        /// <summary>各层诅咒施放时造成的一次性伤害（HP）；前三层不扣血。</summary>
+        public static readonly float[] CurseInstantDamageHp = { 0f, 0f, 0f, 20f, 30f, 50f };
+
         public class WhistleDef
         {
             /// <summary>笛级序号（0 = 无笛级，1 = 红笛 … 5 = 白笛）：笛级 i 需要抵达第 i 层，白笛为最高笛级（含最终地）。</summary>

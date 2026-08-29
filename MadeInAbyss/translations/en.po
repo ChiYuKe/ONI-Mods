@@ -36,24 +36,24 @@ msgid "上升负荷·剧痛"
 msgstr "Curse of the Abyss: Agony"
 
 msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSCURSE4.TOOLTIP"
-msgid "第4层「巨人之杯」的诅咒：\n\n全身如同被撕裂般剧痛，七窍渗血。\n\n持续损失生命，力量与挖掘能力下降。"
-msgstr "The curse of Layer 4, the Goblets of Giants:\n\nA tearing agony throughout the whole body, bleeding from every sense.\n\nContinuously loses Health; Strength and Digging decrease."
+msgid "第4层「巨人之杯」的诅咒：\n\n全身如同被撕裂般剧痛，七窍渗血。\n\n立即受到 20 点伤害，力量与挖掘能力下降。"
+msgstr "The curse of Layer 4, the Goblets of Giants:\n\nA tearing agony throughout the whole body, bleeding from every sense.\n\nImmediately takes 20 damage; Strength and Digging decrease."
 
 msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSCURSE5.NAME"
 msgid "上升负荷·感觉剥夺"
 msgstr "Curse of the Abyss: Sensory Deprivation"
 
 msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSCURSE5.TOOLTIP"
-msgid "第5层「亡骸之海」的诅咒：\n\n感觉被深渊一点点夺走，身体不再听从使唤，开始自残或停止思考。\n\n持续损失生命，压力急剧增加，运动与学习能力严重下降。"
-msgstr "The curse of Layer 5, the Sea of Corpses:\n\nThe Abyss strips away the senses one by one; the body no longer obeys.\n\nContinuously loses Health, stress skyrockets, Athletics and Learning severely decrease."
+msgid "第5层「亡骸之海」的诅咒：\n\n感觉被深渊一点点夺走，身体不再听从使唤，开始自残或停止思考。\n\n立即受到 30 点伤害，压力急剧增加，运动与学习能力严重下降。"
+msgstr "The curse of Layer 5, the Sea of Corpses:\n\nThe Abyss strips away the senses one by one; the body no longer obeys.\n\nImmediately takes 30 damage, stress skyrockets, Athletics and Learning severely decrease."
 
 msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSCURSE6.NAME"
 msgid "上升负荷·失去人性"
 msgstr "Curse of the Abyss: Loss of Humanity"
 
 msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSCURSE6.TOOLTIP"
-msgid "第6层「最终地」的诅咒：\n\n深渊的意志碾过了人类的边界——若能活下来，他们将不再是原来的自己。\n\n持续大量损失生命，压力狂涨。幸存者将化为生骸。"
-msgstr "The curse of Layer 6, the Capital of the Unreturned:\n\nThe will of the Abyss grinds past the boundary of humanity — those who survive will not remain who they were.\n\nMassively loses Health while stress spirals. Survivors become Narehate."
+msgid "第6层「最终地」的诅咒：\n\n深渊的意志碾过了人类的边界——若能活下来，他们将不再是原来的自己。\n\n立即受到 50 点伤害，压力狂涨。幸存者将化为生骸。"
+msgstr "The curse of Layer 6, the Capital of the Unreturned:\n\nThe will of the Abyss grinds past the boundary of humanity — those who survive will not remain who they were.\n\nImmediately takes 50 damage while stress spirals. Survivors become Narehate."
 
 msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSWHISTLEBLUE.NAME"
 msgid "蓝笛探窟家"

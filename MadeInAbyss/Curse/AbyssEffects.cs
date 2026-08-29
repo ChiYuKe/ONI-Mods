@@ -33,19 +33,18 @@ namespace MadeInAbyss
                 .Add(attributes.Machinery.Id, -5f)                  // 机械操作 -5
                 .Add(attributes.Construction.Id, -3f));             // 建造 -3
 
+            // 第 4~6 层的扣血为施放诅咒时的一次性伤害（数值见 AbyssStatics.CurseInstantDamageHp）。
+
             Add(modifiers, "AbyssCurse4", duration, isBad: true, mods => mods
-                .Add(amounts.HitPoints.deltaAttribute.Id, -20f / 600f) // 生命 -20/周期
                 .Add(attributes.Strength.Id, -5f)                   // 力量 -5
                 .Add(attributes.Digging.Id, -5f));                  // 挖掘 -5
 
             Add(modifiers, "AbyssCurse5", duration, isBad: true, mods => mods
-                .Add(amounts.HitPoints.deltaAttribute.Id, -30f / 600f) // 生命 -30/周期
                 .Add(amounts.Stress.deltaAttribute.Id, 25f / 600f)  // 压力 +25%/周期
                 .Add(attributes.Athletics.Id, -8f)                  // 运动 -8
                 .Add(attributes.Learning.Id, -6f));                 // 学习 -6
 
             Add(modifiers, "AbyssCurse6", duration, isBad: true, mods => mods
-                .Add(amounts.HitPoints.deltaAttribute.Id, -50f / 600f) // 生命 -50/周期
                 .Add(amounts.Stress.deltaAttribute.Id, 40f / 600f)); // 压力 +40%/周期
 
             // —— 笛级永久加成（红笛为荣誉头衔，无效果） ——
