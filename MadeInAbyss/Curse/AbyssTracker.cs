@@ -30,6 +30,9 @@ namespace MadeInAbyss
         private Klei.AI.Effects effects;
         private Health health;
 
+        /// <summary>诊断用：上次打印深度的层阶。</summary>
+        private int lastLoggedLayer = -1;
+
         protected override void OnSpawn()
         {
             base.OnSpawn();
@@ -95,6 +98,16 @@ namespace MadeInAbyss
                 curseConsumedThisDive = false;
             }
 
+            // 诊断：首次进入某个层阶深度时打印一次。
+            int depthLayer = AbyssStatics.GetLayerIndex(maxDepthThisDive);
+            if (depthLayer != lastLoggedLayer && depthLayer >= 0)
+            {
+                Debug.Log($"[MadeInAbyss] {gameObject.GetProperName()} 抵达深度 {Mathf.RoundToInt(maxDepthThisDive)}m（第 {depthLayer + 1} 层，已结算={curseConsumedThisDive}）");
+                lastLoggedLayer = depthLayer;
+            }
+            if (depth < config.SurfaceResetM)
+                lastLoggedLayer = -1;
+
             bool ascending = depth <= maxDepthThisDive - config.AscentTriggerM;
             int layerIndex = AbyssStatics.GetLayerIndex(maxDepthThisDive);
             if (ascending && !curseConsumedThisDive && layerIndex >= 0)
@@ -121,6 +134,7 @@ namespace MadeInAbyss
                 return;
 
             bool isFinalLayer = layerIndex == AbyssStatics.Layers.Length - 1;
+            bool hasImmunity = effects.HasImmunityTo(curseEffect);
 
             // 最终地的诅咒：弹药包可以挡下一次（30 点伤害、包损坏掉落、不化为生骸）。
             if (isFinalLayer && TryGetEquippedPouch(out Equippable finalPouch))
@@ -132,13 +146,15 @@ namespace MadeInAbyss
             }
 
             // 免疫（弹药包对第 1~2 层诅咒的免疫）挡下：诅咒与减益都不上身。
-            if (effects.HasImmunityTo(curseEffect))
+            if (hasImmunity)
             {
                 Debug.Log($"[MadeInAbyss] {gameObject.GetProperName()} 的 {curseEffect.Name} 被免疫挡下");
                 if (TryGetEquippedPouch(out Equippable immunePouch))
                     ConsumeAmmoPouchCharge(immunePouch);
                 return;
             }
+
+            Debug.Log($"[MadeInAbyss] {gameObject.GetProperName()} 触发诅咒：层={layerIndex + 1} 深度={Mathf.RoundToInt(maxDepthThisDive)}m 免疫={hasImmunity}");
 
             effects.Add(layer.CurseEffectId, true);
 

@@ -84,6 +84,23 @@ namespace MadeInAbyss
         }
 
         /// <summary>
+        /// 记录装备事件：验证弹药包的免疫（EffectImmunites）是否成功挂载。
+        /// </summary>
+        [HarmonyPatch(typeof(Equippable), "OnEquip")]
+        public static class Equippable_OnEquip_Patch
+        {
+            public static void Postfix(Equippable __instance, AssignableSlotInstance slot)
+            {
+                EquipmentDef def = __instance.def;
+                if (def == null)
+                    return;
+                int immunityCount = def.EffectImmunites != null ? def.EffectImmunites.Count : 0;
+                string slotName = (slot != null && slot.slot != null) ? slot.slot.Name : "?";
+                Debug.Log($"[MadeInAbyss] 装备事件：{def.Id} → 卡槽「{slotName}」，免疫数={immunityCount}");
+            }
+        }
+
+        /// <summary>
         /// 在服装纺织机上注册弹药包配方。
         /// </summary>
         [HarmonyPatch(typeof(Db), "Initialize")]
