@@ -52,8 +52,8 @@ msgid "上升负荷·失去人性"
 msgstr "<color=#F2418A>Curse of the Abyss: Loss of Humanity</color>"
 
 msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSCURSE6.TOOLTIP"
-msgid "第6层「最终地」的诅咒：\n\n深渊的意志碾过了人类的边界——若能活下来，他们将不再是原来的自己。\n\n立即受到 50 点伤害，压力狂涨。幸存者将化为生骸。"
-msgstr "The curse of Layer 6, the Capital of the Unreturned:\n\nThe will of the Abyss grinds past the boundary of humanity — those who survive will not remain who they were.\n\nImmediately takes 50 damage while stress spirals. Survivors become Narehate."
+msgid "第6层「最终地」的诅咒：\n\n深渊的意志碾过了人类的边界——从最终地上升的复制人将立即被重塑为生骸，变成一只随机的小动物。"
+msgstr "The will of the Abyss grinds past the boundary of humanity — anyone ascending from the Capital of the Unreturned is at once remade into a Narehate, a random critter."
 
 msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSWHISTLEBLUE.NAME"
 msgid "蓝笛探窟家"

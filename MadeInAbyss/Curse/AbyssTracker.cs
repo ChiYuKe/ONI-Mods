@@ -23,13 +23,6 @@ namespace MadeInAbyss
         [Serialize]
         private int whistleRank;
 
-        /// <summary>是否已从最终地诅咒中幸存并化为生骸。</summary>
-        [Serialize]
-        private bool isNarehate;
-
-        /// <summary>是否正在经历最终地诅咒（结束后结算生骸化）。</summary>
-        private bool narehatePending;
-
         private Klei.AI.Effects effects;
         private Health health;
 
@@ -85,9 +78,6 @@ namespace MadeInAbyss
 
             if (config.EnableCurse)
                 UpdateCurse(depth, config);
-
-            if (config.EnableNarehate && narehatePending)
-                UpdateNarehate();
         }
 
         // —— 上升负荷 ——
@@ -120,9 +110,6 @@ namespace MadeInAbyss
             if (curseEffect == null)
                 return;
 
-            // 已化为生骸的复制人不受诅咒影响。
-            if (isNarehate)
-                return;
             if (effects.HasImmunityTo(curseEffect))
             {
                 // 免疫来源若是弹药包，抵挡一次后损坏掉落。
@@ -131,6 +118,15 @@ namespace MadeInAbyss
             }
 
             effects.Add(layer.CurseEffectId, true);
+
+            bool isFinalLayer = layerIndex == AbyssStatics.Layers.Length - 1;
+
+            // 最终地的诅咒直接把复制人重塑为生骸（随机小动物），原作设定：诅咒降临的瞬间就开始改变。
+            if (isFinalLayer && AbyssConfig.Instance.EnableNarehate)
+            {
+                TransformIntoNarehate();
+                return;
+            }
 
             // 深层诅咒在施放时造成一次性伤害；足以致死的伤害由深渊直接夺命（专属死亡方式）。
             if (layerIndex < AbyssStatics.CurseInstantDamageHp.Length)
@@ -146,11 +142,8 @@ namespace MadeInAbyss
                 }
             }
 
-            bool isFinalLayer = layerIndex == AbyssStatics.Layers.Length - 1;
             if (isFinalLayer)
             {
-                if (AbyssConfig.Instance.EnableNarehate)
-                    narehatePending = true;
                 Notify(
                     NotificationType.Bad,
                     STRINGS.MISC.NOTIFICATIONS.ABYSS_CURSE_FINAL.NAME,
@@ -200,21 +193,6 @@ namespace MadeInAbyss
 
         // —— 生骸化 ——
 
-        private void UpdateNarehate()
-        {
-            if (effects == null)
-                return;
-
-            string finalCurse = AbyssStatics.CurseEffectIds[AbyssStatics.CurseEffectIds.Length - 1];
-            if (effects.HasEffect(finalCurse))
-                return;
-
-            // 从最终地诅咒的持续影响中存活下来了，但深渊重塑了他们的血肉。
-            narehatePending = false;
-            isNarehate = true;
-            TransformIntoNarehate();
-        }
-
         private void TransformIntoNarehate()
         {
             string dupeName = gameObject.GetProperName();
@@ -236,19 +214,24 @@ namespace MadeInAbyss
                         critterName = $"生骸·{dupeName}";
                         selectable.SetName(critterName);
                     }
+                    Debug.Log($"[MadeInAbyss] {dupeName} 化为生骸：{critterId}");
                 }
+            }
+            else
+            {
+                Debug.LogWarning("[MadeInAbyss] 没有找到可用的生骸动物 prefab，本次只执行死亡结算");
             }
 
             Notify(
                 NotificationType.Bad,
                 STRINGS.MISC.NOTIFICATIONS.ABYSS_NAREHATE.NAME,
-                $"{dupeName} 从「最终地」的诅咒中幸存了下来，但深渊重塑了他们的血肉——化为了一只生骸{(critterName != null ? $"（{critterName}）" : "")}。");
+                $"{dupeName} 从「最终地」上升，被深渊重塑了血肉——化为了一只生骸{(critterName != null ? $"（{critterName}）" : "")}。");
 
             DeathMonitor.Instance deathSmi = gameObject.GetSMI<DeathMonitor.Instance>();
             if (deathSmi != null && AbyssDeaths.Narehate != null)
                 deathSmi.Kill(AbyssDeaths.Narehate);
             else
-                Debug.LogWarning("[MadeInAbyss] 未找到死亡监视器，生骸化只完成了.spawn 部分");
+                Debug.LogWarning("[MadeInAbyss] 未找到死亡监视器，生骸化只完成了 spawn 部分");
         }
 
         private static string PickNarehateCritter()

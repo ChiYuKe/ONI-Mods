@@ -21,7 +21,7 @@ namespace MadeInAbyss
         /// <summary>是否启用深渊遗物掉落。</summary>
         public bool EnableRelics = true;
 
-        /// <summary>是否启用生骸化（从最终地诅咒中幸存的复制人会被随机重塑为一只小动物）。</summary>
+        /// <summary>是否启用生骸化（从「最终地」上升的复制人会被立即随机重塑为一只小动物）。</summary>
         public bool EnableNarehate = true;
 
         /// <summary>六层深渊的触发深度（米，相对探窟营地/打印舱所在高度，1 格 = 1 米）。</summary>
