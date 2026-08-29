@@ -58,7 +58,7 @@ namespace MadeInAbyss
                 label.enableWordWrapping = false;
                 label.raycastTarget = false;
                 label.color = Color.Lerp(AbyssLayerOverlayColors(i), Color.white, 0.35f);
-                label.text = $"第 {i + 1} 层 {AbyssStatics.Layers[i].Name} · {AbyssStatics.Layers[i].EnglishName}";
+                label.text = Strings.Get($"STRINGS.OVERLAYS.ABYSS_LAYERS.LAYER{i + 1}.NAME");
 
                 RectTransform rt = label.rectTransform;
                 rt.anchorMin = new Vector2(0f, 0f);
@@ -119,6 +119,9 @@ namespace MadeInAbyss
                 {
                     if (labels[i] == null)
                         continue;
+
+                    // 每帧刷新文本以跟随游戏语言。
+                    labels[i].text = Strings.Get($"STRINGS.OVERLAYS.ABYSS_LAYERS.LAYER{i + 1}.NAME");
 
                     // 层带 i 的染色范围为 [阈值i, 阈值i+1)，标签取染色带的中点；
                     // 最后一层向下无限延伸，取其下方半个层高处。

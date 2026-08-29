@@ -105,6 +105,42 @@ namespace MadeInAbyss
             }
         }
 
+        public class OVERLAYS
+        {
+            public class ABYSS_LAYERS
+            {
+                public class LAYER1
+                {
+                    public static LocString NAME = "第 1 层 阿比斯之渊";
+                }
+
+                public class LAYER2
+                {
+                    public static LocString NAME = "第 2 层 诱惑之森";
+                }
+
+                public class LAYER3
+                {
+                    public static LocString NAME = "第 3 层 大断层";
+                }
+
+                public class LAYER4
+                {
+                    public static LocString NAME = "第 4 层 巨人之杯";
+                }
+
+                public class LAYER5
+                {
+                    public static LocString NAME = "第 5 层 亡骸之海";
+                }
+
+                public class LAYER6
+                {
+                    public static LocString NAME = "第 6 层 最终地";
+                }
+            }
+        }
+
         public class ASSIGNABLE_SLOTS
         {
             public class AMMOPOUCH

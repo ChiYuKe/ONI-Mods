@@ -206,3 +206,27 @@ msgstr "Pink mist rising from boiling Wishing Culture Medium. Harmless to breath
 msgctxt "MadeInAbyss.STRINGS.EQUIPMENT.PREFABS.AMMO_POUCH.GENERICNAME"
 msgid "弹药包"
 msgstr "Ammo Pouch"
+msgctxt "MadeInAbyss.STRINGS.OVERLAYS.ABYSS_LAYERS.LAYER1.NAME"
+msgid "第 1 层 阿比斯之渊"
+msgstr "Layer 1 · Edge of the Abyss"
+
+msgctxt "MadeInAbyss.STRINGS.OVERLAYS.ABYSS_LAYERS.LAYER2.NAME"
+msgid "第 2 层 诱惑之森"
+msgstr "Layer 2 · Forest of Temptation"
+
+msgctxt "MadeInAbyss.STRINGS.OVERLAYS.ABYSS_LAYERS.LAYER3.NAME"
+msgid "第 3 层 大断层"
+msgstr "Layer 3 · Great Fault"
+
+msgctxt "MadeInAbyss.STRINGS.OVERLAYS.ABYSS_LAYERS.LAYER4.NAME"
+msgid "第 4 层 巨人之杯"
+msgstr "Layer 4 · Goblets of Giants"
+
+msgctxt "MadeInAbyss.STRINGS.OVERLAYS.ABYSS_LAYERS.LAYER5.NAME"
+msgid "第 5 层 亡骸之海"
+msgstr "Layer 5 · Sea of Corpses"
+
+msgctxt "MadeInAbyss.STRINGS.OVERLAYS.ABYSS_LAYERS.LAYER6.NAME"
+msgid "第 6 层 最终地"
+msgstr "Layer 6 · Capital of the Unreturned"
+
