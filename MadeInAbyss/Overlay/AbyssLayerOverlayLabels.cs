@@ -120,11 +120,15 @@ namespace MadeInAbyss
                     if (labels[i] == null)
                         continue;
 
-                    float bandTop = i == 0 ? surfaceY : surfaceY - thresholds[i - 1];
-                    float bandBottom = surfaceY - thresholds[i];
-                    float bandCenter = (bandTop + bandBottom) * 0.5f;
+                    // 层带 i 的染色范围为 [阈值i, 阈值i+1)，标签取染色带的中点；
+                    // 最后一层向下无限延伸，取其下方半个层高处。
+                    float bandTopDepth = thresholds[i];
+                    float bandBottomDepth = (i + 1 < thresholds.Length)
+                        ? thresholds[i + 1]
+                        : thresholds[i] + (thresholds[i] - (i > 0 ? thresholds[i - 1] : 0f)) * 0.5f;
+                    float bandCenterDepth = (bandTopDepth + bandBottomDepth) * 0.5f;
 
-                    Vector3 screen = cam.WorldToScreenPoint(new Vector3(cam.transform.position.x, bandCenter, 0f));
+                    Vector3 screen = cam.WorldToScreenPoint(new Vector3(cam.transform.position.x, surfaceY - bandCenterDepth, 0f));
                     bool visible = screen.z > 0f && screen.y > 50f && screen.y < Screen.height - 30f;
                     labels[i].gameObject.SetActive(visible);
                     if (visible)
