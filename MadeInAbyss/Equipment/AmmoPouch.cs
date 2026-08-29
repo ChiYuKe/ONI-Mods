@@ -222,7 +222,8 @@ namespace MadeInAbyss
                 true,
                 0,
                 SimHashes.Creature,
-                null);
+                // IndustrialIngredient：进入沙盒生成列表的「工业产品」分类，也可作为储存过滤项。
+                new List<Tag> { GameTags.IndustrialIngredient });
             go.AddOrGet<DamagedPouchLeaker>();
             return go;
         }
