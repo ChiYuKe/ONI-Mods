@@ -3,8 +3,8 @@ elements:
   - elementId: TalismanCondensate
     maxMass: 800
     liquidCompression: 1.01
-    speed: 10
-    minHorizontalFlow: 0.01
+    speed: 1.1
+    minHorizontalFlow: 1.1
     minVerticalFlow: 0.01
     specificHeatCapacity: 4.3
     thermalConductivity: 0.58
