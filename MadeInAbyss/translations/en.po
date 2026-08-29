@@ -202,3 +202,7 @@ msgstr "Wishing Vapor"
 msgctxt "MadeInAbyss.STRINGS.ELEMENTS.WISHINGVAPOR.DESC"
 msgid "祈愿培养基沸腾时升起的粉色雾气。吸入无害，但那股香气总让人想起没能实现的愿望。"
 msgstr "Pink mist rising from boiling Wishing Culture Medium. Harmless to breathe, but its scent always brings unfulfilled wishes to mind."
+
+msgctxt "MadeInAbyss.STRINGS.EQUIPMENT.PREFABS.AMMO_POUCH.GENERICNAME"
+msgid "弹药包"
+msgstr "Ammo Pouch"
