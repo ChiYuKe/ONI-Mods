@@ -12,7 +12,7 @@ msgid "上升负荷·眩晕"
 msgstr "Curse of the Abyss: Dizziness"
 
 msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSCURSE1.TOOLTIP"
-msgid "第1层「阿比斯之源」的诅咒：\n\n从浅层返回时出现轻微的眩晕与恶心，注意力难以集中。\n\n压力增加，运动能力下降。"
+msgid "第1层「阿比斯之渊」的诅咒：\n\n从浅层返回时出现轻微的眩晕与恶心，注意力难以集中。\n\n压力增加，运动能力下降。"
 msgstr "The curse of Layer 1, the Edge of the Abyss:\n\nA faint dizziness and nausea linger after ascending from the shallows.\n\nStress increases and Athletics decreases."
 
 msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSCURSE2.NAME"

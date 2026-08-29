@@ -24,7 +24,7 @@ namespace MadeInAbyss
                 public class ABYSSCURSE1
                 {
                     public static LocString NAME = UI.FormatAsHotkey("上升负荷·眩晕");
-                    public static LocString TOOLTIP = "第1层「阿比斯之源」的诅咒：\n\n从浅层返回时出现轻微的眩晕与恶心，注意力难以集中。\n\n压力增加，运动能力下降。";
+                    public static LocString TOOLTIP = "第1层「阿比斯之渊」的诅咒：\n\n从浅层返回时出现轻微的眩晕与恶心，注意力难以集中。\n\n压力增加，运动能力下降。";
                 }
 
                 public class ABYSSCURSE2
