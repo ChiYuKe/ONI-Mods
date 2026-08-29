@@ -238,6 +238,17 @@ namespace MadeInAbyss
             if (!config.EnableWhistle)
                 return;
 
+            // 笛级只升不降：白笛（最高笛级）拿到后不再参与任何重评，
+            // 且当前笛级效果若因任何原因丢失会立即补回。
+            if (whistleRank >= 2 && effects != null)
+            {
+                string currentEffect = AbyssStatics.Whistles[whistleRank].EffectId;
+                if (!string.IsNullOrEmpty(currentEffect) && !effects.HasEffect(currentEffect))
+                    effects.Add(currentEffect, true);
+            }
+            if (whistleRank >= AbyssStatics.Whistles.Length - 1)
+                return;
+
             int newRank = AbyssStatics.GetWhistleRank(worldId, maxDepthEver);
             newRank = Mathf.Clamp(newRank, 0, AbyssStatics.Whistles.Length - 1);
             if (newRank <= whistleRank)
