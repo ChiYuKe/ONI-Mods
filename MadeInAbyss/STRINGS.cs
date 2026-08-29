@@ -124,6 +124,12 @@ namespace MadeInAbyss
 
         public class ELEMENTS
         {
+            public class WISHINGVAPOR
+            {
+                public static LocString NAME = "祈愿雾气";
+                public static LocString DESC = "祈愿培养基沸腾时升起的粉色雾气。吸入无害，但那股香气总让人想起没能实现的愿望。";
+            }
+
             public class TALISMANCONDENSATE
             {
                 public static LocString NAME = "祈愿培养基";

@@ -3,7 +3,7 @@ elements:
   - elementId: TalismanCondensate
     maxMass: 800
     liquidCompression: 1.01
-    speed: 30
+    speed: 10
     minHorizontalFlow: 0.01
     minVerticalFlow: 0.01
     specificHeatCapacity: 4.3
@@ -14,7 +14,7 @@ elements:
     lowTemp: 271.15
     highTemp: 375.15
     lowTempTransitionTarget: Ice
-    highTempTransitionTarget: Steam
+    highTempTransitionTarget: WishingVapor
     defaultTemperature: 298
     defaultMass: 10
     molarMass: 25
@@ -26,4 +26,26 @@ elements:
     isDisabled: false
     state: Liquid
     localizationID: STRINGS.ELEMENTS.TALISMANCONDENSATE.NAME
+    dlcId: ""
+
+  - elementId: WishingVapor
+    specificHeatCapacity: 4.3
+    thermalConductivity: 0.25
+    solidSurfaceAreaMultiplier: 25
+    liquidSurfaceAreaMultiplier: 1
+    gasSurfaceAreaMultiplier: 1
+    flow: 0.08
+    lowTemp: 375.15
+    lowTempTransitionTarget: TalismanCondensate
+    defaultTemperature: 380
+    defaultPressure: 57
+    molarMass: 25
+    toxicity: 0
+    lightAbsorptionFactor: 0.1
+    radiationAbsorptionFactor: 0.08
+    radiationPer1000Mass: 0
+    materialCategory: Unbreathable
+    isDisabled: false
+    state: Gas
+    localizationID: STRINGS.ELEMENTS.WISHINGVAPOR.NAME
     dlcId: ""
