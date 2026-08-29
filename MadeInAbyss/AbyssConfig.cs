@@ -71,7 +71,11 @@ namespace MadeInAbyss
                     string json = File.ReadAllText(path);
                     AbyssConfig loaded = JsonConvert.DeserializeObject<AbyssConfig>(json);
                     if (loaded != null)
+                    {
                         instance = loaded;
+                        if (instance.LayerDepthM == null || instance.LayerDepthM.Length == 0)
+                            instance.LayerDepthM = new float[] { 30f, 50f, 70f, 90f, 110f, 130f };
+                    }
                 }
                 else
                 {

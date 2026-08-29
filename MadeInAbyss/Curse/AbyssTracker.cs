@@ -38,6 +38,8 @@ namespace MadeInAbyss
             base.OnSpawn();
             effects = GetComponent<Klei.AI.Effects>();
             health = GetComponent<Health>();
+            // 兼容旧存档中可能越界的笛级序号。
+            whistleRank = Mathf.Clamp(whistleRank, 0, AbyssStatics.Whistles.Length - 1);
             ReapplyPersistentState();
         }
 
@@ -153,6 +155,7 @@ namespace MadeInAbyss
                 return;
 
             int newRank = AbyssStatics.GetWhistleRank(maxDepthEver);
+            newRank = Mathf.Clamp(newRank, 0, AbyssStatics.Whistles.Length - 1);
             if (newRank <= whistleRank)
                 return;
 

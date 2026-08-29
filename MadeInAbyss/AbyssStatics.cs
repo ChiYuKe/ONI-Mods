@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace MadeInAbyss
 {
@@ -45,7 +46,7 @@ namespace MadeInAbyss
 
         public class WhistleDef
         {
-            /// <summary>笛级序号（0 = 无笛级，1 = 红笛 … 5 = 白笛），与层阶序号对应：笛级 i 需要抵达第 i 层。</summary>
+            /// <summary>笛级序号（0 = 无笛级，1 = 红笛 … 5 = 白笛）：笛级 i 需要抵达第 i 层，白笛为最高笛级（含最终地）。</summary>
             public readonly int Rank;
 
             public readonly string Name;
@@ -92,11 +93,14 @@ namespace MadeInAbyss
 
         /// <summary>
         /// 计算给定历史最深深度（米）对应的笛级序号；未进入第 1 层时返回 0。
+        /// 红笛对应第 1 层、白笛对应第 5 层；抵达第 6 层「最终地」不再晋升更高笛级。
         /// </summary>
         public static int GetWhistleRank(float deepestDepthM)
         {
             int layer = GetLayerIndex(deepestDepthM);
-            return layer + 1;
+            if (layer < 0)
+                return 0;
+            return Mathf.Min(layer + 1, Whistles.Length - 1);
         }
     }
 }
