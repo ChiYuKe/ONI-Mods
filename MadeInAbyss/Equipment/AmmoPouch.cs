@@ -210,6 +210,10 @@ namespace MadeInAbyss
             if (go.TryGetComponent(out anim))
                 anim.sceneLayer = Grid.SceneLayer.BuildingBack;
 
+            // 模板本体不应留在场景中（否则开局会在世界原点/出生点看到实体），
+            // 纺织机产出与生成流程会显式激活实例。
+            go.SetActive(false);
+
             Debug.Log("[MadeInAbyss] 探窟弹药包装备已注册");
         }
     }
@@ -247,6 +251,7 @@ namespace MadeInAbyss
 
         public void OnPrefabInit(GameObject inst)
         {
+            inst.SetActive(false);
             Debug.Log("[MadeInAbyss] 损坏的弹药包实体已注册");
         }
 
