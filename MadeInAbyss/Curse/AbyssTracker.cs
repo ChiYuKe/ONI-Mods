@@ -71,7 +71,11 @@ namespace MadeInAbyss
             if (GetComponent<MinionIdentity>() == null)
                 return;
 
+            // 经由 DeathMonitor 死亡的复制人（如被诅咒夺命）Health.State 不会变为 Dead，
+            // 因此还要检查死亡/濒死标签。
             if (health != null && health.State == Health.HealthState.Dead)
+                return;
+            if (gameObject.HasTag(GameTags.Dead) || gameObject.HasTag(GameTags.Dying))
                 return;
 
             int worldId = this.GetMyWorldId();
@@ -127,12 +131,18 @@ namespace MadeInAbyss
 
             effects.Add(layer.CurseEffectId, true);
 
-            // 深层诅咒在施放时造成一次性伤害。
+            // 深层诅咒在施放时造成一次性伤害；足以致死的伤害由深渊直接夺命（专属死亡方式）。
             if (layerIndex < AbyssStatics.CurseInstantDamageHp.Length)
             {
                 float instantDamage = AbyssStatics.CurseInstantDamageHp[layerIndex];
                 if (instantDamage > 0f && health != null && health.State != Health.HealthState.Dead)
-                    health.Damage(instantDamage);
+                {
+                    DeathMonitor.Instance deathSmi = gameObject.GetSMI<DeathMonitor.Instance>();
+                    if (instantDamage >= health.hitPoints && deathSmi != null && AbyssDeaths.Curse != null)
+                        deathSmi.Kill(AbyssDeaths.Curse);
+                    else
+                        health.Damage(instantDamage);
+                }
             }
 
             bool isFinalLayer = layerIndex == AbyssStatics.Layers.Length - 1;

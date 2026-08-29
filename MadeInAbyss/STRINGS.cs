@@ -91,6 +91,15 @@ namespace MadeInAbyss
                     public static LocString TOOLTIP = "深渊的诅咒已在其身上留下永恒的印记——但他们不再被深渊排斥。\n\n免疫一切上升负荷。\n运动 +5，挖掘 +5，力量 +3，压力减少；学习 -5。";
                 }
             }
+
+            public class DEATHS
+            {
+                public class ABYSSCURSE
+                {
+                    public static LocString NAME = "深渊的诅咒";
+                    public static LocString DESCRIPTION = "{Target} 的生命被上升负荷夺走，化作了深渊的一部分。";
+                }
+            }
         }
 
         public class MISC

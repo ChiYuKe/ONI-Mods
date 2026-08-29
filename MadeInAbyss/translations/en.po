@@ -134,3 +134,11 @@ msgstr "Became a Narehate"
 msgctxt "MadeInAbyss.STRINGS.MISC.NOTIFICATIONS.ABYSS_NAREHATE.TOOLTIP"
 msgid "从「最终地」的诅咒中幸存下来的复制人化为了生骸——深渊不再排斥他们。"
 msgstr "A duplicant survived the curse of the Capital of the Unreturned and became a Narehate — the Abyss no longer rejects them."
+
+msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.DEATHS.ABYSSCURSE.NAME"
+msgid "深渊的诅咒"
+msgstr "Curse of the Abyss"
+
+msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.DEATHS.ABYSSCURSE.DESCRIPTION"
+msgid "{Target} 的生命被上升负荷夺走，化作了深渊的一部分。"
+msgstr "{Target}'s life was claimed by the Curse of the Abyss, becoming part of the depths forever."
