@@ -24,8 +24,11 @@ namespace MadeInAbyss
         /// <summary>是否启用生骸化（从「最终地」上升的复制人会被立即随机重塑为一只小动物）。</summary>
         public bool EnableNarehate = true;
 
-        /// <summary>六层深渊的触发深度（米，相对探窟营地/打印舱所在高度，1 格 = 1 米）。</summary>
-        public float[] LayerDepthM = { 30f, 50f, 70f, 90f, 110f, 130f };
+        /// <summary>
+        /// 六层深渊的深度划分，以世界最大深度（营地表锚点到世界底部）的百分比表示。
+        /// 例如 20 = 世界深度的 20% 处为第 1 层边界；每个世界按自身深度独立计算。
+        /// </summary>
+        public float[] LayerDepthPercents = { 20f, 35f, 50f, 65f, 80f, 95f };
 
         /// <summary>判定“正在上升”所需的下降回退量（米）：当前深度比本次最深浅这么多米时视为上升。</summary>
         public float AscentTriggerM = 3f;
@@ -33,8 +36,8 @@ namespace MadeInAbyss
         /// <summary>回到营地附近多少米以内时重置本次下潜记录。</summary>
         public float SurfaceResetM = 5f;
 
-        /// <summary>遗物掉落的最小深度（米）。</summary>
-        public float RelicMinDepthM = 40f;
+        /// <summary>遗物掉落的最小深度，以世界最大深度的百分比表示。</summary>
+        public float RelicMinDepthPercent = 25f;
 
         /// <summary>每次挖透一格时的遗物掉落概率（百分比）。</summary>
         public float RelicChancePercent = 2.5f;
@@ -73,8 +76,8 @@ namespace MadeInAbyss
                     if (loaded != null)
                     {
                         instance = loaded;
-                        if (instance.LayerDepthM == null || instance.LayerDepthM.Length == 0)
-                            instance.LayerDepthM = new float[] { 30f, 50f, 70f, 90f, 110f, 130f };
+                        if (instance.LayerDepthPercents == null || instance.LayerDepthPercents.Length == 0)
+                            instance.LayerDepthPercents = new float[] { 20f, 35f, 50f, 65f, 80f, 95f };
                     }
                 }
                 else

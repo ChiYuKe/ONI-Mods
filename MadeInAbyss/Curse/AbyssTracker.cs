@@ -76,20 +76,24 @@ namespace MadeInAbyss
                 return;
 
             int worldId = this.GetMyWorldId();
+            float[] thresholds = AbyssStatics.GetLayerThresholds(worldId);
+            if (thresholds == null)
+                return;
+
             float y = transform.GetPosition().y;
             float depth = AbyssAnchors.GetDepthM(worldId, y);
             if (float.IsNaN(depth))
                 return;
 
-            UpdateWhistle(depth, config);
+            UpdateWhistle(worldId, depth, config);
 
             if (config.EnableCurse)
-                UpdateCurse(depth, config);
+                UpdateCurse(worldId, depth, thresholds, config);
         }
 
         // —— 上升负荷 ——
 
-        private void UpdateCurse(float depth, AbyssConfig config)
+        private void UpdateCurse(int worldId, float depth, float[] thresholds, AbyssConfig config)
         {
             // 下潜到比之前更深的位置时重置结算标记：一段连续上升只触发一次诅咒。
             if (depth > maxDepthThisDive)
@@ -99,7 +103,7 @@ namespace MadeInAbyss
             }
 
             // 诊断：首次进入某个层阶深度时打印一次。
-            int depthLayer = AbyssStatics.GetLayerIndex(maxDepthThisDive);
+            int depthLayer = AbyssStatics.GetLayerIndex(maxDepthThisDive, thresholds);
             if (depthLayer != lastLoggedLayer && depthLayer >= 0)
             {
                 Debug.Log($"[MadeInAbyss] {gameObject.GetProperName()} 抵达深度 {Mathf.RoundToInt(maxDepthThisDive)}m（第 {depthLayer + 1} 层，已结算={curseConsumedThisDive}）");
@@ -109,7 +113,7 @@ namespace MadeInAbyss
                 lastLoggedLayer = -1;
 
             bool ascending = depth <= maxDepthThisDive - config.AscentTriggerM;
-            int layerIndex = AbyssStatics.GetLayerIndex(maxDepthThisDive);
+            int layerIndex = AbyssStatics.GetLayerIndex(maxDepthThisDive, thresholds);
             if (ascending && !curseConsumedThisDive && layerIndex >= 0)
             {
                 curseConsumedThisDive = true;
@@ -226,7 +230,7 @@ namespace MadeInAbyss
 
         // —— 笛级 ——
 
-        private void UpdateWhistle(float depth, AbyssConfig config)
+        private void UpdateWhistle(int worldId, float depth, AbyssConfig config)
         {
             if (depth > maxDepthEver)
                 maxDepthEver = depth;
@@ -234,7 +238,7 @@ namespace MadeInAbyss
             if (!config.EnableWhistle)
                 return;
 
-            int newRank = AbyssStatics.GetWhistleRank(maxDepthEver);
+            int newRank = AbyssStatics.GetWhistleRank(worldId, maxDepthEver);
             newRank = Mathf.Clamp(newRank, 0, AbyssStatics.Whistles.Length - 1);
             if (newRank <= whistleRank)
                 return;

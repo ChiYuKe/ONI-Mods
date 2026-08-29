@@ -93,11 +93,34 @@ namespace MadeInAbyss
         public const string NarehateEffectId = "AbyssNarehate";
 
         /// <summary>
-        /// 计算给定深度（米）所抵达的最深层阶；未进入第 1 层时返回 -1。
+        /// 计算指定世界六层深渊的深度阈值（米）：
+        /// 以营地表锚点为地表、世界底部（y=0）为基准，按配置百分比等比例划分。
+        /// 该世界没有锚点时返回 null。
         /// </summary>
-        public static int GetLayerIndex(float depthM)
+        public static float[] GetLayerThresholds(int worldId)
         {
-            float[] thresholds = AbyssConfig.Instance.LayerDepthM;
+            float surfaceY = AbyssAnchors.GetSurfaceY(worldId);
+            if (float.IsNaN(surfaceY))
+                return null;
+
+            float maxDepth = Mathf.Max(1f, surfaceY);
+            float[] percents = AbyssConfig.Instance.LayerDepthPercents;
+            if (percents == null || percents.Length == 0)
+                percents = new float[] { 20f, 35f, 50f, 65f, 80f, 95f };
+
+            float[] thresholds = new float[Mathf.Min(percents.Length, Layers.Length)];
+            for (int i = 0; i < thresholds.Length; i++)
+                thresholds[i] = maxDepth * Mathf.Clamp(percents[i], 0f, 100f) / 100f;
+            return thresholds;
+        }
+
+        /// <summary>
+        /// 计算给定深度（米）在一组阈值下所抵达的最深层阶；未进入第 1 层时返回 -1。
+        /// </summary>
+        public static int GetLayerIndex(float depthM, float[] thresholds)
+        {
+            if (thresholds == null)
+                return -1;
             int deepest = -1;
             for (int i = 0; i < thresholds.Length && i < Layers.Length; i++)
             {
@@ -108,12 +131,20 @@ namespace MadeInAbyss
         }
 
         /// <summary>
-        /// 计算给定历史最深深度（米）对应的笛级序号；未进入第 1 层时返回 0。
+        /// 计算给定世界、给定深度（米）所抵达的最深层阶；未进入第 1 层时返回 -1。
+        /// </summary>
+        public static int GetLayerIndex(int worldId, float depthM)
+        {
+            return GetLayerIndex(depthM, GetLayerThresholds(worldId));
+        }
+
+        /// <summary>
+        /// 计算给定世界、给定历史最深深度（米）对应的笛级序号；未进入第 1 层时返回 0。
         /// 红笛对应第 1 层、白笛对应第 5 层；抵达第 6 层「最终地」不再晋升更高笛级。
         /// </summary>
-        public static int GetWhistleRank(float deepestDepthM)
+        public static int GetWhistleRank(int worldId, float deepestDepthM)
         {
-            int layer = GetLayerIndex(deepestDepthM);
+            int layer = GetLayerIndex(worldId, deepestDepthM);
             if (layer < 0)
                 return 0;
             return Mathf.Min(layer + 1, Whistles.Length - 1);

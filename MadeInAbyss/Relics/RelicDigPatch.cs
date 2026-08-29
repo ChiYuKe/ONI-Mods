@@ -53,15 +53,22 @@ namespace MadeInAbyss
                 processedCells.Clear();
 
             int worldId = (int)Grid.WorldIdx[cell];
+            float[] thresholds = AbyssStatics.GetLayerThresholds(worldId);
             float depth = AbyssAnchors.GetDepthM(worldId, Grid.CellToPos(cell).y);
-            if (float.IsNaN(depth) || depth < config.RelicMinDepthM)
+            if (float.IsNaN(depth) || thresholds == null)
+                return;
+
+            // 遗物最小深度按世界最大深度的百分比换算。
+            float maxDepth = AbyssAnchors.GetSurfaceY(worldId);
+            float relicMinDepth = maxDepth * Mathf.Clamp(config.RelicMinDepthPercent, 0f, 100f) / 100f;
+            if (depth < relicMinDepth)
                 return;
 
             float chance = Mathf.Clamp(config.RelicChancePercent, 0f, 100f);
             if (UnityEngine.Random.value * 100f >= chance)
                 return;
 
-            string artifactId = PickArtifact(depth);
+            string artifactId = PickArtifact(depth, thresholds);
             if (string.IsNullOrEmpty(artifactId))
                 return;
 
@@ -106,19 +113,21 @@ namespace MadeInAbyss
 
         /// <summary>
         /// 按深度分层加权挑选一件原版遗物：
-        /// 40m 以下以低阶为主，越深越可能挖出高阶遗物。
+        /// 以层深阈值为界分三档，越深越可能挖出高阶遗物。
         /// </summary>
-        private static string PickArtifact(float depth)
+        private static string PickArtifact(float depth, float[] thresholds)
         {
             BuildPool();
             if (artifactsByTier.Count == 0)
                 return null;
 
-            // (品阶下标, 权重) 按深度分三档。
+            // (品阶下标, 权重) 按深度分三档（浅层边界 / 中层边界）。
+            float midBoundary = thresholds.Length > 1 ? thresholds[1] : 30f;
+            float deepBoundary = thresholds.Length > 3 ? thresholds[3] : 90f;
             TierWeight[] weights;
-            if (depth < 70f)
+            if (depth < midBoundary)
                 weights = new[] { new TierWeight(0, 6f), new TierWeight(1, 4f) };
-            else if (depth < 100f)
+            else if (depth < deepBoundary)
                 weights = new[] { new TierWeight(1, 5f), new TierWeight(2, 3f), new TierWeight(3, 2f) };
             else
                 weights = new[] { new TierWeight(2, 3f), new TierWeight(3, 4f), new TierWeight(4, 2f), new TierWeight(5, 1f) };

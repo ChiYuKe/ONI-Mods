@@ -79,14 +79,17 @@ namespace MadeInAbyss
             if (float.IsNaN(surfaceY))
                 return Clear;
 
+            float[] thresholds = AbyssStatics.GetLayerThresholds(worldId);
+            if (thresholds == null || thresholds.Length == 0)
+                return Clear;
+
             Grid.CellToXY(cell, out int x, out int y);
             float depth = surfaceY - y;
 
-            float[] thresholds = AbyssConfig.Instance.LayerDepthM;
-            if (thresholds == null || thresholds.Length == 0 || depth < thresholds[0])
+            if (depth < thresholds[0])
                 return Clear;
 
-            int layer = AbyssStatics.GetLayerIndex(depth);
+            int layer = AbyssStatics.GetLayerIndex(depth, thresholds);
             if (layer < 0 || layer >= LayerColors.Length)
                 return Clear;
 
