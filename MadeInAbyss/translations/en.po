@@ -164,3 +164,11 @@ msgstr "Became a Narehate"
 msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.DEATHS.ABYSSNAREHATE.DESCRIPTION"
 msgid "{Target} 的血肉被深渊重塑——他们以另一种形态活了下来。"
 msgstr "{Target}'s flesh was remade by the Abyss — they live on in another form."
+
+msgctxt "MadeInAbyss.STRINGS.MISC.STATUSITEM_TOOLTIPS.ABYSS_CURSE_DEAD"
+msgid "他们不是在打盹——深渊的诅咒带走了他们，让他们化作了深渊的一部分。"
+msgstr "They are definitely not napping — the Curse of the Abyss claimed them, and they have become part of the depths."
+
+msgctxt "MadeInAbyss.STRINGS.MISC.STATUSITEM_TOOLTIPS.ABYSS_NAREHATE_DEAD"
+msgid "他们不是在打盹——深渊重塑了他们的血肉，他们正以生骸的形态继续活着。"
+msgstr "They are definitely not napping — the Abyss remade their flesh, and they live on as a Narehate."

@@ -40,5 +40,32 @@ namespace MadeInAbyss
                     "dead_on_back");
             }
         }
+
+        /// <summary>
+        /// 死亡状态项的悬浮提示按死因定制：深渊相关的死亡不再显示原版的“打盹”笑话。
+        /// </summary>
+        [HarmonyPatch(typeof(Database.DuplicantStatusItems), MethodType.Constructor)]
+        public static class DuplicantStatusItems_Constructor_Patch
+        {
+            public static void Postfix(Database.DuplicantStatusItems __instance)
+            {
+                StatusItem dead = __instance.Dead;
+                if (dead == null)
+                    return;
+
+                dead.resolveTooltipCallback = (string text, object data) =>
+                {
+                    Death death = data as Death;
+                    if (death != null)
+                    {
+                        if (death.Id == CurseDeathId)
+                            return Strings.Get("STRINGS.MISC.STATUSITEM_TOOLTIPS.ABYSS_CURSE_DEAD");
+                        if (death.Id == NarehateDeathId)
+                            return Strings.Get("STRINGS.MISC.STATUSITEM_TOOLTIPS.ABYSS_NAREHATE_DEAD");
+                    }
+                    return text;
+                };
+            }
+        }
     }
 }

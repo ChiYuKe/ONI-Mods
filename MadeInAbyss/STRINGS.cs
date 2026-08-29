@@ -128,6 +128,12 @@ namespace MadeInAbyss
 
         public class MISC
         {
+            public class STATUSITEM_TOOLTIPS
+            {
+                public static LocString ABYSS_CURSE_DEAD = "他们不是在打盹——深渊的诅咒带走了他们，让他们化作了深渊的一部分。";
+                public static LocString ABYSS_NAREHATE_DEAD = "他们不是在打盹——深渊重塑了他们的血肉，他们正以生骸的形态继续活着。";
+            }
+
             public class NOTIFICATIONS
             {
                 public class ABYSS_CURSE
