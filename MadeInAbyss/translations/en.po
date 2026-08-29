@@ -144,14 +144,8 @@ msgid "探窟弹药包"
 msgstr "Delver's Ammo Pouch"
 
 msgctxt "MadeInAbyss.STRINGS.EQUIPMENT.PREFABS.AMMO_POUCH.DESC"
-msgid "探窟家的标准装具，鼓鼓囊囊地塞满了备用工具和口粮，内衬的护符能抵挡浅层的诅咒——每抵挡一次便会损坏掉落。
-
-装备后：携带量 +800kg，挖掘 +2。
-可抵挡一次第 1~2 层的上升负荷，抵挡后损坏掉落。"
-msgstr "Standard issue delver gear, stuffed with spare tools and rations; the talisman lining wards off the shallower curses — but it breaks and falls off after each ward.
-
-When equipped: Carrying capacity +800kg, Digging +2.
-Wards off one Curse of the Abyss from the first two layers before it breaks."
+msgid "探窟家的标准装具，鼓鼓囊囊地塞满了备用工具和口粮，内衬的护符散发着微光。\n\n装备后：携带量 +800kg，挖掘 +2。\n\n常驻免疫第 1~2 层（阿比斯之渊/诱惑之森）的上升负荷；从第 4、5、6 层上升（4→3、5→4、6→5）时可挡下一次诅咒，只受 30 点伤害，随后损坏掉落。"
+msgstr "Standard issue delver gear, stuffed with spare tools and rations, the talisman lining glimmers faintly.\n\nWhen equipped: Carrying capacity +800kg, Digging +2.\n\nPermanently immune to the Curses of the Abyss from the first two layers; ascending from layers 4, 5 or 6 (4->3, 5->4, 6->5) wards off the curse once — taking only 30 damage as the pouch breaks and falls."
 
 msgctxt "MadeInAbyss.STRINGS.EQUIPMENT.PREFABS.AMMO_POUCH.RECIPE_DESC"
 msgid "为复制人缝制一个探窟弹药包。"

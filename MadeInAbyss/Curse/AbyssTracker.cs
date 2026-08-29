@@ -136,21 +136,20 @@ namespace MadeInAbyss
             bool isFinalLayer = layerIndex == AbyssStatics.Layers.Length - 1;
             bool hasImmunity = effects.HasImmunityTo(curseEffect);
 
-            // 最终地的诅咒：弹药包可以挡下一次（30 点伤害、包损坏掉落、不化为生骸）。
-            if (isFinalLayer && TryGetEquippedPouch(out Equippable finalPouch))
+            // 深层边界上升（4→3、5→4、6→5）：弹药包挡下一次诅咒——
+            // 扣 30 点伤害、包损坏掉落、减益不上身。
+            if (layerIndex >= 3 && TryGetEquippedPouch(out Equippable deepPouch))
             {
-                Debug.Log($"[MadeInAbyss] {gameObject.GetProperName()} 的最终地诅咒被弹药包挡下");
-                ConsumeAmmoPouchCharge(finalPouch);
+                Debug.Log($"[MadeInAbyss] {gameObject.GetProperName()} 从第 {layerIndex + 1} 层上升，诅咒被弹药包挡下（{layerIndex + 1}→{layerIndex}）");
+                ConsumeAmmoPouchCharge(deepPouch);
                 DealCurseDamage(AbyssStatics.FinalLayerPouchBlockedDamage);
                 return;
             }
 
-            // 免疫（弹药包对第 1~2 层诅咒的免疫）挡下：诅咒与减益都不上身。
+            // 第 1~2 层：弹药包提供常驻免疫，不消耗、不减益。
             if (hasImmunity)
             {
                 Debug.Log($"[MadeInAbyss] {gameObject.GetProperName()} 的 {curseEffect.Name} 被免疫挡下");
-                if (TryGetEquippedPouch(out Equippable immunePouch))
-                    ConsumeAmmoPouchCharge(immunePouch);
                 return;
             }
 
