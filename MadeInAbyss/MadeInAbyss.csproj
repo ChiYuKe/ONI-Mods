@@ -46,6 +46,9 @@
     <None Include="mod_info.yaml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="elements\**\*.*" Exclude="elements\**\*.cs;$(DefaultItemExcludes)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <Target Name="CopyAssets" AfterTargets="Build">
     <ItemGroup>

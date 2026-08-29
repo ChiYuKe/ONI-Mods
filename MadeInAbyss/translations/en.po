@@ -186,9 +186,17 @@ msgid "损坏的弹药包"
 msgstr "Broken Ammo Pouch"
 
 msgctxt "MadeInAbyss.STRINGS.ITEMS.AMMO_POUCH_DAMAGED.DESC"
-msgid "内衬的护符在抵挡诅咒时碎裂了。把它和布料一起送到服装纺织机，还能缝补一新。"
-msgstr "The talisman lining shattered while warding off a curse. Take it to the Clothing Fabricator with some fabric to sew it back together."
+msgid "内衬的护符在抵挡诅咒时碎裂了，还在缓缓渗出粉红色的护符凝液。把它和布料一起送到服装纺织机，还能缝补一新。"
+msgstr "The talisman lining shattered while warding off a curse, and pink talisman condensate is slowly seeping out. Take it to the Clothing Fabricator with some fabric to sew it back together."
 
 msgctxt "MadeInAbyss.STRINGS.EQUIPMENT.PREFABS.AMMO_POUCH.REPAIR_DESC"
 msgid "将损坏的弹药包缝补一新。"
 msgstr "Sew a broken ammo pouch back into shape."
+
+msgctxt "MadeInAbyss.STRINGS.ELEMENTS.TALISMANCONDENSATE.NAME"
+msgid "护符凝液"
+msgstr "Talisman Condensate"
+
+msgctxt "MadeInAbyss.STRINGS.ELEMENTS.TALISMANCONDENSATE.DESC"
+msgid "从碎裂的护符中缓缓渗出的粉红色露液，带着淡淡的深渊气息。性质黏稠，几乎不会流动。"
+msgstr "A pink dew slowly seeping from a shattered talisman, carrying a faint trace of the Abyss. Viscous and barely flows at all."

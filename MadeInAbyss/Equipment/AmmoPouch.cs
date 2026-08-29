@@ -1,4 +1,5 @@
 using HarmonyLib;
+using KSerialization;
 using Klei.AI;
 using STRINGS;
 using System;
@@ -204,7 +205,7 @@ namespace MadeInAbyss
 
         public GameObject CreatePrefab()
         {
-            return EntityTemplates.CreateLooseEntity(
+            GameObject go = EntityTemplates.CreateLooseEntity(
                 ID,
                 Strings.Get("STRINGS.ITEMS.AMMO_POUCH_DAMAGED.NAME"),
                 Strings.Get("STRINGS.ITEMS.AMMO_POUCH_DAMAGED.DESC"),
@@ -220,6 +221,8 @@ namespace MadeInAbyss
                 0,
                 SimHashes.Creature,
                 null);
+            go.AddOrGet<DamagedPouchLeaker>();
+            return go;
         }
 
         public void OnPrefabInit(GameObject inst)
@@ -228,6 +231,67 @@ namespace MadeInAbyss
 
         public void OnSpawn(GameObject spawned)
         {
+        }
+    }
+
+    /// <summary>
+    /// 损坏的弹药包会缓缓渗出「护符凝液」：每 5 秒 1kg，
+    /// 单包总渗漏量 10~15kg（生成时随机），存入容器后暂停渗漏。
+    /// </summary>
+    public class DamagedPouchLeaker : KMonoBehaviour, ISim1000ms
+    {
+        /// <summary>已渗漏的总质量（kg）。</summary>
+        [Serialize]
+        private float leakedMass;
+
+        /// <summary>渗漏上限（kg），生成时随机 10~15。</summary>
+        [Serialize]
+        private float leakCapacity;
+
+        private float cycleTimer;
+
+        private const float LeakIntervalS = 5f;
+        private const float LeakTemperatureK = 298f;
+
+        protected override void OnSpawn()
+        {
+            base.OnSpawn();
+            if (leakCapacity <= 0f)
+                leakCapacity = UnityEngine.Random.Range(10f, 15f);
+        }
+
+        public void Sim1000ms(float dt)
+        {
+            if (leakedMass >= leakCapacity)
+                return;
+            if (gameObject.HasTag(GameTags.Stored))
+                return;
+
+            cycleTimer += dt;
+            if (cycleTimer < LeakIntervalS)
+                return;
+            cycleTimer -= LeakIntervalS;
+
+            int cell = Grid.PosToCell(this);
+            if (!Grid.IsValidCell(cell))
+                return;
+
+            Element element = ElementLoader.FindElementByHash(AbyssElements.TalismanCondensate);
+            if (element == null || element.substance == null)
+                return;
+
+            float mass = Mathf.Min(1f, leakCapacity - leakedMass);
+            SimMessages.AddRemoveSubstance(
+                cell,
+                AbyssElements.TalismanCondensate,
+                CellEventLogger.Instance.ElementConsumerSimUpdate,
+                mass,
+                LeakTemperatureK,
+                byte.MaxValue,
+                0,
+                true,
+                -1);
+            leakedMass += mass;
         }
     }
 }

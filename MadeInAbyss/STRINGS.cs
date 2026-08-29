@@ -118,7 +118,16 @@ namespace MadeInAbyss
             public class AMMO_POUCH_DAMAGED
             {
                 public static LocString NAME = "损坏的弹药包";
-                public static LocString DESC = "内衬的护符在抵挡诅咒时碎裂了。把它和布料一起送到服装纺织机，还能缝补一新。";
+                public static LocString DESC = "内衬的护符在抵挡诅咒时碎裂了，还在缓缓渗出粉红色的护符凝液。把它和布料一起送到服装纺织机，还能缝补一新。";
+            }
+        }
+
+        public class ELEMENTS
+        {
+            public class TALISMANCONDENSATE
+            {
+                public static LocString NAME = "护符凝液";
+                public static LocString DESC = "从碎裂的护符中缓缓渗出的粉红色露液，带着淡淡的深渊气息。性质黏稠，几乎不会流动。";
             }
         }
 
