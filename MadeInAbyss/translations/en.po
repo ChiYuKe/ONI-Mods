@@ -198,5 +198,5 @@ msgid "祈愿培养基"
 msgstr "Wishing Culture Medium"
 
 msgctxt "MadeInAbyss.STRINGS.ELEMENTS.TALISMANCONDENSATE.DESC"
-msgid "从碎裂的护符中缓缓渗出的粉红色液体，微光中仿佛承载着未曾说出口的祈愿。性质黏稠，几乎不会流动。"
-msgstr "A pink liquid slowly seeping from a shattered talisman, its faint shimmer carrying unspoken wishes. Viscous and barely flows at all."
+msgid "入口顺滑，矿物质丰富（铁元素含量爆表），带有淡淡的\"爸爸再爱我一次\"的回甘。粘度适中，比水厚重，比悔恨轻盈"
+msgstr "Smooth on the palate, rich in minerals (iron content off the charts), with a faint aftertaste of \"Papa, love me again.\" Moderate viscosity — thicker than water, lighter than regret."

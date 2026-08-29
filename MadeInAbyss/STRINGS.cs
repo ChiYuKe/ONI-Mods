@@ -127,7 +127,7 @@ namespace MadeInAbyss
             public class TALISMANCONDENSATE
             {
                 public static LocString NAME = "祈愿培养基";
-                public static LocString DESC = "从碎裂的护符中缓缓渗出的粉红色液体，微光中仿佛承载着未曾说出口的祈愿。性质黏稠，几乎不会流动。";
+                public static LocString DESC = "入口顺滑，矿物质丰富（铁元素含量爆表），带有淡淡的\"爸爸再爱我一次\"的回甘。粘度适中，比水厚重，比悔恨轻盈";
             }
         }
 
