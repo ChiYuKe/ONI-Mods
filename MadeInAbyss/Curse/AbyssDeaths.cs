@@ -43,8 +43,9 @@ namespace MadeInAbyss
 
         /// <summary>
         /// 死亡状态项的悬浮提示按死因定制：深渊相关的死亡不再显示原版的“打盹”笑话。
+        /// 注意：DuplicantStatusItems 的构造函数带 ResourceSet 参数，必须显式指定参数类型。
         /// </summary>
-        [HarmonyPatch(typeof(Database.DuplicantStatusItems), MethodType.Constructor)]
+        [HarmonyPatch(typeof(Database.DuplicantStatusItems), MethodType.Constructor, new Type[] { typeof(ResourceSet) })]
         public static class DuplicantStatusItems_Constructor_Patch
         {
             public static void Postfix(Database.DuplicantStatusItems __instance)
