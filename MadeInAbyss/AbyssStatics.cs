@@ -45,7 +45,10 @@ namespace MadeInAbyss
         };
 
         /// <summary>各层诅咒施放时造成的一次性伤害（HP）；前三层不扣血。</summary>
-        public static readonly float[] CurseInstantDamageHp = { 0f, 0f, 0f, 20f, 30f, 50f };
+        public static readonly float[] CurseInstantDamageHp = { 0f, 0f, 0f, 20f, 30f, 80f };
+
+        /// <summary>最终地诅咒被弹药包挡下时受到的伤害（HP）。</summary>
+        public const float FinalLayerPouchBlockedDamage = 30f;
 
         /// <summary>
         /// 生骸化时随机变成的小动物；当前游戏版本不存在的 prefab 会被自动跳过（兼容 DLC 差异）。

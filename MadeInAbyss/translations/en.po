@@ -52,8 +52,8 @@ msgid "上升负荷·失去人性"
 msgstr "<color=#F2418A>Curse of the Abyss: Loss of Humanity</color>"
 
 msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSCURSE6.TOOLTIP"
-msgid "第6层「最终地」的诅咒：\n\n深渊的意志碾过了人类的边界——从最终地上升的复制人将立即被重塑为生骸，变成一只随机的小动物。"
-msgstr "The will of the Abyss grinds past the boundary of humanity — anyone ascending from the Capital of the Unreturned is at once remade into a Narehate, a random critter."
+msgid "第6层「最终地」的诅咒：\n\n从最终地上升将受到 80 点伤害，幸存者会被深渊立即重塑为生骸，变成一只随机的小动物；探窟弹药包可以挡下这一次——只受 30 点伤害并损坏掉落。"
+msgstr "Ascending from the Capital of the Unreturned deals 80 damage; survivors are at once remade into a Narehate, a random critter. A Delver's Ammo Pouch can ward this off once — taking only 30 damage as the pouch breaks and falls."
 
 msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSWHISTLEBLUE.NAME"
 msgid "蓝笛探窟家"

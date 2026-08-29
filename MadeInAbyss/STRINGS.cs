@@ -59,7 +59,7 @@ namespace MadeInAbyss
                 public class ABYSSCURSE6
                 {
                     public static LocString NAME = UI.FormatAsColor("上升负荷·失去人性", "#F2418A");
-                    public static LocString TOOLTIP = "第6层「最终地」的诅咒：\n\n深渊的意志碾过了人类的边界——从最终地上升的复制人将立即被重塑为生骸，变成一只随机的小动物。";
+                    public static LocString TOOLTIP = "第6层「最终地」的诅咒：\n\n从最终地上升将受到 80 点伤害，幸存者会被深渊立即重塑为生骸，变成一只随机的小动物；探窟弹药包可以挡下这一次——只受 30 点伤害并损坏掉落。";
                 }
 
                 // —— 笛级（探窟家头衔的永久加成），按笛级进阶配色 ——

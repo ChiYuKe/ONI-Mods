@@ -110,51 +110,87 @@ namespace MadeInAbyss
             if (curseEffect == null)
                 return;
 
+            bool isFinalLayer = layerIndex == AbyssStatics.Layers.Length - 1;
+
+            // 最终地的诅咒：弹药包可以挡下一次（30 点伤害、包损坏掉落、不化为生骸）。
+            if (isFinalLayer && TryGetEquippedPouch(out Equippable finalPouch))
+            {
+                Debug.Log($"[MadeInAbyss] {gameObject.GetProperName()} 的最终地诅咒被弹药包挡下");
+                ConsumeAmmoPouchCharge(finalPouch);
+                DealCurseDamage(AbyssStatics.FinalLayerPouchBlockedDamage);
+                return;
+            }
+
+            // 免疫（弹药包对第 1~2 层诅咒的免疫）挡下：诅咒与减益都不上身。
             if (effects.HasImmunityTo(curseEffect))
             {
-                // 免疫来源若是弹药包，抵挡一次后损坏掉落。
                 Debug.Log($"[MadeInAbyss] {gameObject.GetProperName()} 的 {curseEffect.Name} 被免疫挡下");
-                ConsumeAmmoPouchCharge();
+                if (TryGetEquippedPouch(out Equippable immunePouch))
+                    ConsumeAmmoPouchCharge(immunePouch);
                 return;
             }
 
             effects.Add(layer.CurseEffectId, true);
 
-            bool isFinalLayer = layerIndex == AbyssStatics.Layers.Length - 1;
-
-            // 最终地的诅咒直接把复制人重塑为生骸（随机小动物），原作设定：诅咒降临的瞬间就开始改变。
-            if (isFinalLayer && AbyssConfig.Instance.EnableNarehate)
+            // 最终地：没有弹药包则受到 80 点伤害，幸存者立即被深渊重塑为生骸，伤害致死则正常死亡。
+            if (isFinalLayer)
             {
-                TransformIntoNarehate();
+                bool survived = DealCurseDamage(AbyssStatics.CurseInstantDamageHp[layerIndex]);
+                if (survived && AbyssConfig.Instance.EnableNarehate)
+                    TransformIntoNarehate();
                 return;
             }
 
-            // 深层诅咒在施放时造成一次性伤害；足以致死的伤害由深渊直接夺命（专属死亡方式）。
+            // 其余层阶的诅咒在施放时造成一次性伤害；足以致死的伤害由深渊直接夺命（专属死亡方式）。
             if (layerIndex < AbyssStatics.CurseInstantDamageHp.Length)
-            {
-                float instantDamage = AbyssStatics.CurseInstantDamageHp[layerIndex];
-                if (instantDamage > 0f && health != null && health.State != Health.HealthState.Dead)
-                {
-                    DeathMonitor.Instance deathSmi = gameObject.GetSMI<DeathMonitor.Instance>();
-                    if (instantDamage >= health.hitPoints && deathSmi != null && AbyssDeaths.Curse != null)
-                        deathSmi.Kill(AbyssDeaths.Curse);
-                    else
-                        health.Damage(instantDamage);
-                }
-            }
-
-            if (isFinalLayer)
-            {
-                Notify(
-                    NotificationType.Bad,
-                    STRINGS.MISC.NOTIFICATIONS.ABYSS_CURSE_FINAL.NAME,
-                    string.Format(STRINGS.MISC.NOTIFICATIONS.ABYSS_CURSE_FINAL.TOOLTIP, gameObject.GetProperName()));
-            }
+                DealCurseDamage(AbyssStatics.CurseInstantDamageHp[layerIndex]);
 
             Notify(
                 NotificationType.BadMinor,
                 STRINGS.MISC.NOTIFICATIONS.ABYSS_CURSE.NAME,
                 $"{gameObject.GetProperName()} 从深渊第 {layerIndex + 1} 层「{layer.Name}」上升，受到了诅咒：{curseEffect.Name}");
+        }
+
+        /// <summary>
+        /// 结算诅咒的一次性伤害；足以致死时以「深渊的诅咒」直接夺命。
+        /// 返回复制人是否仍然存活。
+        /// </summary>
+        private bool DealCurseDamage(float amount)
+        {
+            if (health == null || health.State == Health.HealthState.Dead || amount <= 0f)
+                return health != null && health.State != Health.HealthState.Dead;
+
+            if (amount >= health.hitPoints)
+            {
+                DeathMonitor.Instance deathSmi = gameObject.GetSMI<DeathMonitor.Instance>();
+                if (deathSmi != null && AbyssDeaths.Curse != null)
+                {
+                    deathSmi.Kill(AbyssDeaths.Curse);
+                    return false;
+                }
+            }
+            health.Damage(amount);
+            return health.State != Health.HealthState.Dead && !gameObject.HasTag(GameTags.Dead);
+        }
+
+        /// <summary>弹药包卡槽上是否装着探窟弹药包。</summary>
+        private bool TryGetEquippedPouch(out Equippable pouch)
+        {
+            pouch = null;
+            Equipment equipment = GetComponent<Equipment>();
+            EquipmentSlot pouchSlot = Db.Get().AssignableSlots.TryGet(AmmoPouch.SlotId) as EquipmentSlot;
+            if (equipment == null || pouchSlot == null)
+                return false;
+
+            AssignableSlotInstance slotInstance = equipment.GetSlot(pouchSlot);
+            Equippable equipped = slotInstance != null ? slotInstance.assignable as Equippable : null;
+            if (equipped == null)
+                return false;
+            if (equipped.GetComponent<KPrefabID>().PrefabTag.Name != AmmoPouch.ItemId)
+                return false;
+
+            pouch = equipped;
+            return true;
         }
 
         // —— 笛级 ——
@@ -254,28 +290,10 @@ namespace MadeInAbyss
         /// <summary>
         /// 弹药包抵挡诅咒后损坏：卸下并销毁原装备，原地掉落损坏的弹药包。
         /// </summary>
-        private void ConsumeAmmoPouchCharge()
+        private void ConsumeAmmoPouchCharge(Equippable pouch)
         {
-            Equipment equipment = GetComponent<Equipment>();
-            EquipmentSlot pouchSlot = Db.Get().AssignableSlots.TryGet(AmmoPouch.SlotId) as EquipmentSlot;
-            if (equipment == null || pouchSlot == null)
-            {
-                Debug.LogWarning($"[MadeInAbyss] 无法消耗弹药包：equipment={equipment != null}, slot={pouchSlot != null}");
-                return;
-            }
-
-            AssignableSlotInstance slotInstance = equipment.GetSlot(pouchSlot);
-            Equippable pouch = slotInstance != null ? slotInstance.assignable as Equippable : null;
             if (pouch == null)
-            {
-                Debug.LogWarning("[MadeInAbyss] 无法消耗弹药包：弹药包卡槽上没有已分配的装备");
                 return;
-            }
-            if (pouch.GetComponent<KPrefabID>().PrefabTag.Name != AmmoPouch.ItemId)
-            {
-                Debug.LogWarning($"[MadeInAbyss] 无法消耗弹药包：卡槽上是 {pouch.GetComponent<KPrefabID>().PrefabTag.Name} 而非 {AmmoPouch.ItemId}");
-                return;
-            }
 
             string dupeName = gameObject.GetProperName();
             Vector3 position = transform.GetPosition();
