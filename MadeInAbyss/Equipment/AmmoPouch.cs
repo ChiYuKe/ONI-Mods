@@ -192,6 +192,8 @@ namespace MadeInAbyss
             KBatchedAnimController anim;
             if (go.TryGetComponent(out anim))
                 anim.sceneLayer = Grid.SceneLayer.BuildingBack;
+
+            Debug.Log("[MadeInAbyss] 探窟弹药包装备已注册");
         }
     }
 
@@ -227,6 +229,7 @@ namespace MadeInAbyss
 
         public void OnPrefabInit(GameObject inst)
         {
+            Debug.Log("[MadeInAbyss] 损坏的弹药包实体已注册");
         }
 
         public void OnSpawn(GameObject spawned)
