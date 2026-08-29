@@ -9,7 +9,7 @@ msgstr ""
 
 msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSCURSE1.NAME"
 msgid "上升负荷·眩晕"
-msgstr "Curse of the Abyss: Dizziness"
+msgstr "<color=#C7C74A>Curse of the Abyss: Dizziness</color>"
 
 msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSCURSE1.TOOLTIP"
 msgid "第1层「阿比斯之渊」的诅咒：\n\n从浅层返回时出现轻微的眩晕与恶心，注意力难以集中。\n\n压力增加，运动能力下降。"
@@ -17,7 +17,7 @@ msgstr "The curse of Layer 1, the Edge of the Abyss:\n\nA faint dizziness and na
 
 msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSCURSE2.NAME"
 msgid "上升负荷·恶心"
-msgstr "Curse of the Abyss: Nausea"
+msgstr "<color=#F2913D>Curse of the Abyss: Nausea</color>"
 
 msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSCURSE2.TOOLTIP"
 msgid "第2层「诱惑之森」的诅咒：\n\n强烈头痛伴随四肢麻木，浑身像被重锤敲打过。\n\n压力增加，运动能力进一步下降，体力恢复减缓。"
@@ -25,7 +25,7 @@ msgstr "The curse of Layer 2, the Forest of Temptation:\n\nA pounding headache a
 
 msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSCURSE3.NAME"
 msgid "上升负荷·幻觉"
-msgstr "Curse of the Abyss: Hallucinations"
+msgstr "<color=#B04AF2>Curse of the Abyss: Hallucinations</color>"
 
 msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSCURSE3.TOOLTIP"
 msgid "第3层「大断层」的诅咒：\n\n剧烈的眩晕中交织着幻视与幻听，分不清现实与深渊的低语。\n\n压力大幅增加，学习、机械操作与建造能力下降。"
@@ -33,7 +33,7 @@ msgstr "The curse of Layer 3, the Great Fault:\n\nViolent vertigo entwined with 
 
 msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSCURSE4.NAME"
 msgid "上升负荷·剧痛"
-msgstr "Curse of the Abyss: Agony"
+msgstr "<color=#F44A4A>Curse of the Abyss: Agony</color>"
 
 msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSCURSE4.TOOLTIP"
 msgid "第4层「巨人之杯」的诅咒：\n\n全身如同被撕裂般剧痛，七窍渗血。\n\n立即受到 20 点伤害，力量与挖掘能力下降。"
@@ -41,7 +41,7 @@ msgstr "The curse of Layer 4, the Goblets of Giants:\n\nA tearing agony througho
 
 msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSCURSE5.NAME"
 msgid "上升负荷·感觉剥夺"
-msgstr "Curse of the Abyss: Sensory Deprivation"
+msgstr "<color=#4A9BF2>Curse of the Abyss: Sensory Deprivation</color>"
 
 msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSCURSE5.TOOLTIP"
 msgid "第5层「亡骸之海」的诅咒：\n\n感觉被深渊一点点夺走，身体不再听从使唤，开始自残或停止思考。\n\n立即受到 30 点伤害，压力急剧增加，运动与学习能力严重下降。"
@@ -49,7 +49,7 @@ msgstr "The curse of Layer 5, the Sea of Corpses:\n\nThe Abyss strips away the s
 
 msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSCURSE6.NAME"
 msgid "上升负荷·失去人性"
-msgstr "Curse of the Abyss: Loss of Humanity"
+msgstr "<color=#F2418A>Curse of the Abyss: Loss of Humanity</color>"
 
 msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSCURSE6.TOOLTIP"
 msgid "第6层「最终地」的诅咒：\n\n深渊的意志碾过了人类的边界——若能活下来，他们将不再是原来的自己。\n\n立即受到 50 点伤害，压力狂涨。幸存者将化为生骸。"
@@ -57,7 +57,7 @@ msgstr "The curse of Layer 6, the Capital of the Unreturned:\n\nThe will of the 
 
 msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSWHISTLEBLUE.NAME"
 msgid "蓝笛探窟家"
-msgstr "Blue Whistle Delver"
+msgstr "<color=#6BD26B>Blue Whistle Delver</color>"
 
 msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSWHISTLEBLUE.TOOLTIP"
 msgid "已抵达「诱惑之森」的证明。\n\n挖掘 +2。"
@@ -65,7 +65,7 @@ msgstr "Proof of reaching the Forest of Temptation.\n\nDigging +2."
 
 msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSWHISTLEMOON.NAME"
 msgid "苍笛探窟家"
-msgstr "Moon Whistle Delver"
+msgstr "<color=#4AD2C7>Moon Whistle Delver</color>"
 
 msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSWHISTLEMOON.TOOLTIP"
 msgid "已抵达「大断层」的证明。\n\n挖掘 +2，运动 +2。"
@@ -73,7 +73,7 @@ msgstr "Proof of reaching the Great Fault.\n\nDigging +2, Athletics +2."
 
 msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSWHISTLEBLACK.NAME"
 msgid "黑笛探窟家"
-msgstr "Black Whistle Delver"
+msgstr "<color=#A8A8B8>Black Whistle Delver</color>"
 
 msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSWHISTLEBLACK.TOOLTIP"
 msgid "已抵达「巨人之杯」的证明。\n\n挖掘 +3，运动 +3，力量 +2。"
@@ -81,7 +81,7 @@ msgstr "Proof of reaching the Goblets of Giants.\n\nDigging +3, Athletics +3, St
 
 msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSWHISTLEWHITE.NAME"
 msgid "白笛探窟家"
-msgstr "White Whistle Delver"
+msgstr "<color=#FFD24A>White Whistle Delver</color>"
 
 msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSWHISTLEWHITE.TOOLTIP"
 msgid "已抵达「亡骸之海」的传奇证明，深受殖民地敬仰。\n\n挖掘 +5，运动 +5，力量 +3，压力减少。"
@@ -89,7 +89,7 @@ msgstr "A legendary proof of reaching the Sea of Corpses, revered across the col
 
 msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSNAREHATE.NAME"
 msgid "生骸"
-msgstr "Narehate"
+msgstr "<color=#4AF2A8>Narehate</color>"
 
 msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSNAREHATE.TOOLTIP"
 msgid "深渊的诅咒已在其身上留下永恒的印记——但他们不再被深渊排斥。\n\n免疫一切上升负荷。\n运动 +5，挖掘 +5，力量 +3，压力减少；学习 -5。"
