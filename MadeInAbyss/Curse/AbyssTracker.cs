@@ -23,6 +23,10 @@ namespace MadeInAbyss
         [Serialize]
         private int whistleRank;
 
+        /// <summary>本次上升是否已结算过诅咒（避免连续爬升重复触发）。</summary>
+        [Serialize]
+        private bool curseConsumedThisDive;
+
         private Klei.AI.Effects effects;
         private Health health;
 
@@ -84,20 +88,26 @@ namespace MadeInAbyss
 
         private void UpdateCurse(float depth, AbyssConfig config)
         {
+            // 下潜到比之前更深的位置时重置结算标记：一段连续上升只触发一次诅咒。
             if (depth > maxDepthThisDive)
-                maxDepthThisDive = depth;
-
-            // 下潜更深后再次上升：本次上升只结算一次（结算后把锚点重置为当前深度）。
-            bool ascending = depth <= maxDepthThisDive - config.AscentTriggerM;
-            int layerIndex = AbyssStatics.GetLayerIndex(maxDepthThisDive);
-            if (ascending && layerIndex >= 0)
             {
                 maxDepthThisDive = depth;
+                curseConsumedThisDive = false;
+            }
+
+            bool ascending = depth <= maxDepthThisDive - config.AscentTriggerM;
+            int layerIndex = AbyssStatics.GetLayerIndex(maxDepthThisDive);
+            if (ascending && !curseConsumedThisDive && layerIndex >= 0)
+            {
+                curseConsumedThisDive = true;
                 ApplyCurse(layerIndex);
             }
 
             if (depth < config.SurfaceResetM)
+            {
                 maxDepthThisDive = 0f;
+                curseConsumedThisDive = false;
+            }
         }
 
         private void ApplyCurse(int layerIndex)
@@ -173,14 +183,20 @@ namespace MadeInAbyss
             return health.State != Health.HealthState.Dead && !gameObject.HasTag(GameTags.Dead);
         }
 
-        /// <summary>弹药包卡槽上是否装着探窟弹药包。</summary>
+        /// <summary>弹药包卡槽上是否装着探窟弹药包。注意 Equipment 挂在复制人的代理对象上。</summary>
         private bool TryGetEquippedPouch(out Equippable pouch)
         {
             pouch = null;
-            Equipment equipment = GetComponent<Equipment>();
+            MinionIdentity identity = GetComponent<MinionIdentity>();
+            Equipment equipment = identity != null && identity.assignableProxy != null
+                ? identity.assignableProxy.Get().GetComponent<Equipment>()
+                : GetComponent<Equipment>();
             EquipmentSlot pouchSlot = Db.Get().AssignableSlots.TryGet(AmmoPouch.SlotId) as EquipmentSlot;
             if (equipment == null || pouchSlot == null)
+            {
+                Debug.LogWarning("[MadeInAbyss] 查找弹药包失败：Equipment 组件或卡槽不存在");
                 return false;
+            }
 
             AssignableSlotInstance slotInstance = equipment.GetSlot(pouchSlot);
             Equippable equipped = slotInstance != null ? slotInstance.assignable as Equippable : null;
