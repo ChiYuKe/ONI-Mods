@@ -30,8 +30,8 @@ namespace MadeInAbyss
         /// <summary>六层深渊定义，深度阈值取自配置 LayerDepthM。</summary>
         public static readonly LayerDef[] Layers =
         {
-            new LayerDef(0, "浅层", "AbyssCurse1"),
-            new LayerDef(1, "深层", "AbyssCurse2"),
+            new LayerDef(0, "阿比斯之源", "AbyssCurse1"),
+            new LayerDef(1, "诱惑之森", "AbyssCurse2"),
             new LayerDef(2, "大断层", "AbyssCurse3"),
             new LayerDef(3, "巨人之杯", "AbyssCurse4"),
             new LayerDef(4, "亡骸之海", "AbyssCurse5"),

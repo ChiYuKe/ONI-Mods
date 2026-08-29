@@ -24,13 +24,13 @@ namespace MadeInAbyss
                 public class ABYSSCURSE1
                 {
                     public static LocString NAME = UI.FormatAsHotkey("上升负荷·眩晕");
-                    public static LocString TOOLTIP = "第1层「浅层」的诅咒：\n\n从浅层返回时出现轻微的眩晕与恶心，注意力难以集中。\n\n压力增加，运动能力下降。";
+                    public static LocString TOOLTIP = "第1层「阿比斯之源」的诅咒：\n\n从浅层返回时出现轻微的眩晕与恶心，注意力难以集中。\n\n压力增加，运动能力下降。";
                 }
 
                 public class ABYSSCURSE2
                 {
                     public static LocString NAME = UI.FormatAsHotkey("上升负荷·恶心");
-                    public static LocString TOOLTIP = "第2层「深层」的诅咒：\n\n强烈头痛伴随四肢麻木，浑身像被重锤敲打过。\n\n压力增加，运动能力进一步下降，体力恢复减缓。";
+                    public static LocString TOOLTIP = "第2层「诱惑之森」的诅咒：\n\n强烈头痛伴随四肢麻木，浑身像被重锤敲打过。\n\n压力增加，运动能力进一步下降，体力恢复减缓。";
                 }
 
                 public class ABYSSCURSE3
@@ -62,7 +62,7 @@ namespace MadeInAbyss
                 public class ABYSSWHISTLEBLUE
                 {
                     public static LocString NAME = UI.FormatAsBold("蓝笛探窟家");
-                    public static LocString TOOLTIP = "已抵达「深层」的证明。\n\n挖掘 +2。";
+                    public static LocString TOOLTIP = "已抵达「诱惑之森」的证明。\n\n挖掘 +2。";
                 }
 
                 public class ABYSSWHISTLEMOON

@@ -12,7 +12,7 @@ msgid "上升负荷·眩晕"
 msgstr "Curse of the Abyss: Dizziness"
 
 msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSCURSE1.TOOLTIP"
-msgid "第1层「浅层」的诅咒：\n\n从浅层返回时出现轻微的眩晕与恶心，注意力难以集中。\n\n压力增加，运动能力下降。"
+msgid "第1层「阿比斯之源」的诅咒：\n\n从浅层返回时出现轻微的眩晕与恶心，注意力难以集中。\n\n压力增加，运动能力下降。"
 msgstr "The curse of Layer 1, the Edge of the Abyss:\n\nA faint dizziness and nausea linger after ascending from the shallows.\n\nStress increases and Athletics decreases."
 
 msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSCURSE2.NAME"
@@ -20,7 +20,7 @@ msgid "上升负荷·恶心"
 msgstr "Curse of the Abyss: Nausea"
 
 msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSCURSE2.TOOLTIP"
-msgid "第2层「深层」的诅咒：\n\n强烈头痛伴随四肢麻木，浑身像被重锤敲打过。\n\n压力增加，运动能力进一步下降，体力恢复减缓。"
+msgid "第2层「诱惑之森」的诅咒：\n\n强烈头痛伴随四肢麻木，浑身像被重锤敲打过。\n\n压力增加，运动能力进一步下降，体力恢复减缓。"
 msgstr "The curse of Layer 2, the Forest of Temptation:\n\nA pounding headache and numb limbs, as if struck by a hammer.\n\nStress increases, Athletics drops further and Stamina recovers slower."
 
 msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSCURSE3.NAME"
@@ -60,7 +60,7 @@ msgid "蓝笛探窟家"
 msgstr "Blue Whistle Delver"
 
 msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSWHISTLEBLUE.TOOLTIP"
-msgid "已抵达「深层」的证明。\n\n挖掘 +2。"
+msgid "已抵达「诱惑之森」的证明。\n\n挖掘 +2。"
 msgstr "Proof of reaching the Forest of Temptation.\n\nDigging +2."
 
 msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSWHISTLEMOON.NAME"
