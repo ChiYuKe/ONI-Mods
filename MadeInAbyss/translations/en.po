@@ -1,0 +1,136 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: MadeInAbyss\n"
+"Language: en\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Application: Oxygen Not Included\n"
+
+msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSCURSE1.NAME"
+msgid "上升负荷·眩晕"
+msgstr "Curse of the Abyss: Dizziness"
+
+msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSCURSE1.TOOLTIP"
+msgid "第1层「浅层」的诅咒：\n\n从浅层返回时出现轻微的眩晕与恶心，注意力难以集中。\n\n压力增加，运动能力下降。"
+msgstr "The curse of Layer 1, the Edge of the Abyss:\n\nA faint dizziness and nausea linger after ascending from the shallows.\n\nStress increases and Athletics decreases."
+
+msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSCURSE2.NAME"
+msgid "上升负荷·恶心"
+msgstr "Curse of the Abyss: Nausea"
+
+msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSCURSE2.TOOLTIP"
+msgid "第2层「深层」的诅咒：\n\n强烈头痛伴随四肢麻木，浑身像被重锤敲打过。\n\n压力增加，运动能力进一步下降，体力恢复减缓。"
+msgstr "The curse of Layer 2, the Forest of Temptation:\n\nA pounding headache and numb limbs, as if struck by a hammer.\n\nStress increases, Athletics drops further and Stamina recovers slower."
+
+msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSCURSE3.NAME"
+msgid "上升负荷·幻觉"
+msgstr "Curse of the Abyss: Hallucinations"
+
+msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSCURSE3.TOOLTIP"
+msgid "第3层「大断层」的诅咒：\n\n剧烈的眩晕中交织着幻视与幻听，分不清现实与深渊的低语。\n\n压力大幅增加，学习、机械操作与建造能力下降。"
+msgstr "The curse of Layer 3, the Great Fault:\n\nViolent vertigo entwined with visions and whispers, reality blurring with the voice of the Abyss.\n\nStress increases sharply; Learning, Machinery and Construction decrease."
+
+msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSCURSE4.NAME"
+msgid "上升负荷·剧痛"
+msgstr "Curse of the Abyss: Agony"
+
+msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSCURSE4.TOOLTIP"
+msgid "第4层「巨人之杯」的诅咒：\n\n全身如同被撕裂般剧痛，七窍渗血。\n\n持续损失生命，力量与挖掘能力下降。"
+msgstr "The curse of Layer 4, the Goblets of Giants:\n\nA tearing agony throughout the whole body, bleeding from every sense.\n\nContinuously loses Health; Strength and Digging decrease."
+
+msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSCURSE5.NAME"
+msgid "上升负荷·感觉剥夺"
+msgstr "Curse of the Abyss: Sensory Deprivation"
+
+msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSCURSE5.TOOLTIP"
+msgid "第5层「亡骸之海」的诅咒：\n\n感觉被深渊一点点夺走，身体不再听从使唤，开始自残或停止思考。\n\n持续损失生命，压力急剧增加，运动与学习能力严重下降。"
+msgstr "The curse of Layer 5, the Sea of Corpses:\n\nThe Abyss strips away the senses one by one; the body no longer obeys.\n\nContinuously loses Health, stress skyrockets, Athletics and Learning severely decrease."
+
+msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSCURSE6.NAME"
+msgid "上升负荷·失去人性"
+msgstr "Curse of the Abyss: Loss of Humanity"
+
+msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSCURSE6.TOOLTIP"
+msgid "第6层「最终地」的诅咒：\n\n深渊的意志碾过了人类的边界——若能活下来，他们将不再是原来的自己。\n\n持续大量损失生命，压力狂涨。幸存者将化为生骸。"
+msgstr "The curse of Layer 6, the Capital of the Unreturned:\n\nThe will of the Abyss grinds past the boundary of humanity — those who survive will not remain who they were.\n\nMassively loses Health while stress spirals. Survivors become Narehate."
+
+msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSWHISTLEBLUE.NAME"
+msgid "蓝笛探窟家"
+msgstr "Blue Whistle Delver"
+
+msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSWHISTLEBLUE.TOOLTIP"
+msgid "已抵达「深层」的证明。\n\n挖掘 +2。"
+msgstr "Proof of reaching the Forest of Temptation.\n\nDigging +2."
+
+msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSWHISTLEMOON.NAME"
+msgid "苍笛探窟家"
+msgstr "Moon Whistle Delver"
+
+msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSWHISTLEMOON.TOOLTIP"
+msgid "已抵达「大断层」的证明。\n\n挖掘 +2，运动 +2。"
+msgstr "Proof of reaching the Great Fault.\n\nDigging +2, Athletics +2."
+
+msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSWHISTLEBLACK.NAME"
+msgid "黑笛探窟家"
+msgstr "Black Whistle Delver"
+
+msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSWHISTLEBLACK.TOOLTIP"
+msgid "已抵达「巨人之杯」的证明。\n\n挖掘 +3，运动 +3，力量 +2。"
+msgstr "Proof of reaching the Goblets of Giants.\n\nDigging +3, Athletics +3, Strength +2."
+
+msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSWHISTLEWHITE.NAME"
+msgid "白笛探窟家"
+msgstr "White Whistle Delver"
+
+msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSWHISTLEWHITE.TOOLTIP"
+msgid "已抵达「亡骸之海」的传奇证明，深受殖民地敬仰。\n\n挖掘 +5，运动 +5，力量 +3，压力减少。"
+msgstr "A legendary proof of reaching the Sea of Corpses, revered across the colony.\n\nDigging +5, Athletics +5, Strength +3, reduced Stress."
+
+msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSNAREHATE.NAME"
+msgid "生骸"
+msgstr "Narehate"
+
+msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSNAREHATE.TOOLTIP"
+msgid "深渊的诅咒已在其身上留下永恒的印记——但他们不再被深渊排斥。\n\n免疫一切上升负荷。\n运动 +5，挖掘 +5，力量 +3，压力减少；学习 -5。"
+msgstr "The curse has left a permanent mark, but the Abyss no longer rejects them.\n\nImmune to all Curses of the Abyss.\nAthletics +5, Digging +5, Strength +3, reduced Stress; Learning -5."
+
+msgctxt "MadeInAbyss.STRINGS.MISC.NOTIFICATIONS.ABYSS_CURSE.NAME"
+msgid "上升负荷！"
+msgstr "Curse of the Abyss!"
+
+msgctxt "MadeInAbyss.STRINGS.MISC.NOTIFICATIONS.ABYSS_CURSE.TOOLTIP"
+msgid "从深渊上升的复制人正承受着与他们抵达深度相应的诅咒。"
+msgstr "A duplicant ascending from the Abyss suffers a curse matching the depth they reached."
+
+msgctxt "MadeInAbyss.STRINGS.MISC.NOTIFICATIONS.ABYSS_CURSE_FINAL.NAME"
+msgid "深渊凝视着你"
+msgstr "The Abyss Gazes Back"
+
+msgctxt "MadeInAbyss.STRINGS.MISC.NOTIFICATIONS.ABYSS_CURSE_FINAL.TOOLTIP"
+msgid "复制人从「最终地」开始上升——这可能是他们最后一次作为人类返回。"
+msgstr "A duplicant is ascending from the Capital of the Unreturned — this may be the last time they return as a human."
+
+msgctxt "MadeInAbyss.STRINGS.MISC.NOTIFICATIONS.ABYSS_WHISTLE_PROMOTE.NAME"
+msgid "笛级晋升"
+msgstr "Whistle Promotion"
+
+msgctxt "MadeInAbyss.STRINGS.MISC.NOTIFICATIONS.ABYSS_WHISTLE_PROMOTE.TOOLTIP"
+msgid "复制人的探窟深度刷新纪录，晋升为更高阶的探窟家。"
+msgstr "A duplicant's record diving depth earned them a higher delver whistle rank."
+
+msgctxt "MadeInAbyss.STRINGS.MISC.NOTIFICATIONS.ABYSS_RELIC_FOUND.NAME"
+msgid "深渊遗物！"
+msgstr "Relic of the Abyss!"
+
+msgctxt "MadeInAbyss.STRINGS.MISC.NOTIFICATIONS.ABYSS_RELIC_FOUND.TOOLTIP"
+msgid "在深渊中挖掘出了远古的遗物。"
+msgstr "An ancient relic was unearthed deep within the Abyss."
+
+msgctxt "MadeInAbyss.STRINGS.MISC.NOTIFICATIONS.ABYSS_NAREHATE.NAME"
+msgid "化为生骸"
+msgstr "Became a Narehate"
+
+msgctxt "MadeInAbyss.STRINGS.MISC.NOTIFICATIONS.ABYSS_NAREHATE.TOOLTIP"
+msgid "从「最终地」的诅咒中幸存下来的复制人化为了生骸——深渊不再排斥他们。"
+msgstr "A duplicant survived the curse of the Capital of the Unreturned and became a Narehate — the Abyss no longer rejects them."

@@ -76,6 +76,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WASDMinionControl", "WASDMi
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ONIVisualEnhancer", "ONIVisualEnhancer\ONIVisualEnhancer.csproj", "{AA70A606-CC39-4029-AB5B-CAF9EDCA77DF}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MadeInAbyss", "MadeInAbyss\MadeInAbyss.csproj", "{8D74A2E3-ACCF-41AE-8B27-2F7A210097B2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -458,6 +460,18 @@ Global
 		{AA70A606-CC39-4029-AB5B-CAF9EDCA77DF}.Release|x64.Build.0 = Release|Any CPU
 		{AA70A606-CC39-4029-AB5B-CAF9EDCA77DF}.Release|x86.ActiveCfg = Release|Any CPU
 		{AA70A606-CC39-4029-AB5B-CAF9EDCA77DF}.Release|x86.Build.0 = Release|Any CPU
+		{8D74A2E3-ACCF-41AE-8B27-2F7A210097B2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8D74A2E3-ACCF-41AE-8B27-2F7A210097B2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8D74A2E3-ACCF-41AE-8B27-2F7A210097B2}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{8D74A2E3-ACCF-41AE-8B27-2F7A210097B2}.Debug|x64.Build.0 = Debug|Any CPU
+		{8D74A2E3-ACCF-41AE-8B27-2F7A210097B2}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{8D74A2E3-ACCF-41AE-8B27-2F7A210097B2}.Debug|x86.Build.0 = Debug|Any CPU
+		{8D74A2E3-ACCF-41AE-8B27-2F7A210097B2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8D74A2E3-ACCF-41AE-8B27-2F7A210097B2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8D74A2E3-ACCF-41AE-8B27-2F7A210097B2}.Release|x64.ActiveCfg = Release|Any CPU
+		{8D74A2E3-ACCF-41AE-8B27-2F7A210097B2}.Release|x64.Build.0 = Release|Any CPU
+		{8D74A2E3-ACCF-41AE-8B27-2F7A210097B2}.Release|x86.ActiveCfg = Release|Any CPU
+		{8D74A2E3-ACCF-41AE-8B27-2F7A210097B2}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
