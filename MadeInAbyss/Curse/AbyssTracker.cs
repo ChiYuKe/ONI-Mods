@@ -57,9 +57,6 @@ namespace MadeInAbyss
                 if (!string.IsNullOrEmpty(effectId) && !effects.HasEffect(effectId))
                     effects.Add(effectId, true);
             }
-
-            if (isNarehate && !effects.HasEffect(AbyssStatics.NarehateEffectId))
-                effects.Add(AbyssStatics.NarehateEffectId, true);
         }
 
         public void Sim1000ms(float dt)
@@ -123,8 +120,8 @@ namespace MadeInAbyss
             if (curseEffect == null)
                 return;
 
-            // 生骸或已获得免疫的复制人不受诅咒影响。
-            if (isNarehate || effects.HasEffect(AbyssStatics.NarehateEffectId))
+            // 已化为生骸的复制人不受诅咒影响。
+            if (isNarehate)
                 return;
             if (effects.HasImmunityTo(curseEffect))
                 return;
@@ -208,16 +205,62 @@ namespace MadeInAbyss
             if (effects.HasEffect(finalCurse))
                 return;
 
-            // 从最终地诅咒的持续伤害中存活下来了。
+            // 从最终地诅咒的持续影响中存活下来了，但深渊重塑了他们的血肉。
             narehatePending = false;
             isNarehate = true;
-            if (!effects.HasEffect(AbyssStatics.NarehateEffectId))
-                effects.Add(AbyssStatics.NarehateEffectId, true);
+            TransformIntoNarehate();
+        }
+
+        private void TransformIntoNarehate()
+        {
+            string dupeName = gameObject.GetProperName();
+            string critterId = PickNarehateCritter();
+            string critterName = null;
+
+            if (critterId != null)
+            {
+                GameObject prefab = Assets.GetPrefab(critterId);
+                if (prefab != null)
+                {
+                    GameObject critter = GameUtil.KInstantiate(prefab, transform.GetPosition(), Grid.SceneLayer.Creatures, null, 0);
+                    critter.SetActive(true);
+
+                    // 生骸保留复制人的名字。
+                    KSelectable selectable = critter.GetComponent<KSelectable>();
+                    if (selectable != null)
+                    {
+                        critterName = $"生骸·{dupeName}";
+                        selectable.SetName(critterName);
+                    }
+                }
+            }
 
             Notify(
-                NotificationType.Good,
+                NotificationType.Bad,
                 STRINGS.MISC.NOTIFICATIONS.ABYSS_NAREHATE.NAME,
-                string.Format(STRINGS.MISC.NOTIFICATIONS.ABYSS_NAREHATE.TOOLTIP, gameObject.GetProperName()));
+                $"{dupeName} 从「最终地」的诅咒中幸存了下来，但深渊重塑了他们的血肉——化为了一只生骸{(critterName != null ? $"（{critterName}）" : "")}。");
+
+            DeathMonitor.Instance deathSmi = gameObject.GetSMI<DeathMonitor.Instance>();
+            if (deathSmi != null && AbyssDeaths.Narehate != null)
+                deathSmi.Kill(AbyssDeaths.Narehate);
+            else
+                Debug.LogWarning("[MadeInAbyss] 未找到死亡监视器，生骸化只完成了.spawn 部分");
+        }
+
+        private static string PickNarehateCritter()
+        {
+            string[] ids = AbyssStatics.NarehateCritterIds;
+            if (ids == null || ids.Length == 0)
+                return null;
+
+            int start = UnityEngine.Random.Range(0, ids.Length);
+            for (int i = 0; i < ids.Length; i++)
+            {
+                string id = ids[(start + i) % ids.Length];
+                if (Assets.GetPrefab(id) != null)
+                    return id;
+            }
+            return null;
         }
 
         private void Notify(NotificationType type, string title, string body)

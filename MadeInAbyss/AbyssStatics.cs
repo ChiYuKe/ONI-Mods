@@ -47,6 +47,16 @@ namespace MadeInAbyss
         /// <summary>各层诅咒施放时造成的一次性伤害（HP）；前三层不扣血。</summary>
         public static readonly float[] CurseInstantDamageHp = { 0f, 0f, 0f, 20f, 30f, 50f };
 
+        /// <summary>
+        /// 生骸化时随机变成的小动物；当前游戏版本不存在的 prefab 会被自动跳过（兼容 DLC 差异）。
+        /// </summary>
+        public static readonly string[] NarehateCritterIds =
+        {
+            "Hatch", "HatchHard", "HatchVeggie", "HatchMeat", "HatchMetal",
+            "Puft", "PuftOxylite", "PuftBleachstone", "ShoveVole", "Morb",
+            "Pip", "GassyMoo",
+        };
+
         public class WhistleDef
         {
             /// <summary>笛级序号（0 = 无笛级，1 = 红笛 … 5 = 白笛）：笛级 i 需要抵达第 i 层，白笛为最高笛级（含最终地）。</summary>

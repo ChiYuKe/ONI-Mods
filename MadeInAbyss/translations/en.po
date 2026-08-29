@@ -87,14 +87,6 @@ msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSWHISTLEWHITE.TOOLTIP"
 msgid "已抵达「亡骸之海」的传奇证明，深受殖民地敬仰。\n\n挖掘 +5，运动 +5，力量 +3，压力减少。"
 msgstr "A legendary proof of reaching the Sea of Corpses, revered across the colony.\n\nDigging +5, Athletics +5, Strength +3, reduced Stress."
 
-msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSNAREHATE.NAME"
-msgid "生骸"
-msgstr "<color=#4AF2A8>Narehate</color>"
-
-msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSNAREHATE.TOOLTIP"
-msgid "深渊的诅咒已在其身上留下永恒的印记——但他们不再被深渊排斥。\n\n免疫一切上升负荷。\n运动 +5，挖掘 +5，力量 +3，压力减少；学习 -5。"
-msgstr "The curse has left a permanent mark, but the Abyss no longer rejects them.\n\nImmune to all Curses of the Abyss.\nAthletics +5, Digging +5, Strength +3, reduced Stress; Learning -5."
-
 msgctxt "MadeInAbyss.STRINGS.MISC.NOTIFICATIONS.ABYSS_CURSE.NAME"
 msgid "上升负荷！"
 msgstr "Curse of the Abyss!"
@@ -132,8 +124,8 @@ msgid "化为生骸"
 msgstr "Became a Narehate"
 
 msgctxt "MadeInAbyss.STRINGS.MISC.NOTIFICATIONS.ABYSS_NAREHATE.TOOLTIP"
-msgid "从「最终地」的诅咒中幸存下来的复制人化为了生骸——深渊不再排斥他们。"
-msgstr "A duplicant survived the curse of the Capital of the Unreturned and became a Narehate — the Abyss no longer rejects them."
+msgid "从「最终地」的诅咒中幸存下来的复制人被深渊重塑，变成了一只生骸。"
+msgstr "A duplicant survived the curse of the Capital of the Unreturned, but the Abyss remade their flesh into a Narehate."
 
 msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.DEATHS.ABYSSCURSE.NAME"
 msgid "深渊的诅咒"
@@ -164,3 +156,11 @@ Immune to the Curses of the Abyss from the first two layers."
 msgctxt "MadeInAbyss.STRINGS.EQUIPMENT.PREFABS.AMMO_POUCH.RECIPE_DESC"
 msgid "为复制人缝制一个探窟弹药包。"
 msgstr "Sew an ammo pouch for a duplicant."
+
+msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.DEATHS.ABYSSNAREHATE.NAME"
+msgid "化为生骸"
+msgstr "Became a Narehate"
+
+msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.DEATHS.ABYSSNAREHATE.DESCRIPTION"
+msgid "{Target} 的血肉被深渊重塑——他们以另一种形态活了下来。"
+msgstr "{Target}'s flesh was remade by the Abyss — they live on in another form."

@@ -66,16 +66,6 @@ namespace MadeInAbyss
                 .Add(attributes.Athletics.Id, 5f)                   // 运动 +5
                 .Add(attributes.Strength.Id, 3f)                    // 力量 +3
                 .Add(amounts.Stress.deltaAttribute.Id, -5f / 600f)); // 压力 -5%/周期
-
-            // —— 生骸化：永久免疫全部上升负荷 ——
-
-            Add(modifiers, AbyssStatics.NarehateEffectId, 0f, isBad: false, mods => mods
-                .Add(attributes.Athletics.Id, 5f)                   // 运动 +5
-                .Add(attributes.Digging.Id, 5f)                     // 挖掘 +5
-                .Add(attributes.Strength.Id, 3f)                    // 力量 +3
-                .Add(attributes.Learning.Id, -5f)                   // 学习 -5
-                .Add(amounts.Stress.deltaAttribute.Id, -5f / 600f), // 压力 -5%/周期
-                immunityEffects: AbyssStatics.CurseEffectIds);
         }
 
         private class ModifierList

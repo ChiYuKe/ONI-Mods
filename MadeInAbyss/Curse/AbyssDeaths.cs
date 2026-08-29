@@ -11,8 +11,11 @@ namespace MadeInAbyss
     public static class AbyssDeaths
     {
         public const string CurseDeathId = "AbyssCurse";
+        public const string NarehateDeathId = "AbyssNarehate";
 
         public static Death Curse { get; private set; }
+
+        public static Death Narehate { get; private set; }
 
         [HarmonyPatch(typeof(Database.Deaths), MethodType.Constructor)]
         [HarmonyPatch(new Type[] { typeof(ResourceSet) })]
@@ -25,6 +28,14 @@ namespace MadeInAbyss
                     __instance,
                     Strings.Get("STRINGS.DUPLICANTS.DEATHS.ABYSSCURSE.NAME"),
                     Strings.Get("STRINGS.DUPLICANTS.DEATHS.ABYSSCURSE.DESCRIPTION"),
+                    "dead_on_back",
+                    "dead_on_back");
+
+                Narehate = new Death(
+                    NarehateDeathId,
+                    __instance,
+                    Strings.Get("STRINGS.DUPLICANTS.DEATHS.ABYSSNAREHATE.NAME"),
+                    Strings.Get("STRINGS.DUPLICANTS.DEATHS.ABYSSNAREHATE.DESCRIPTION"),
                     "dead_on_back",
                     "dead_on_back");
             }

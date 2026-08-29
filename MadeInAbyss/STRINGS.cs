@@ -87,14 +87,6 @@ namespace MadeInAbyss
                     public static LocString NAME = UI.FormatAsColor("白笛探窟家", "#FFD24A");
                     public static LocString TOOLTIP = "已抵达「亡骸之海」的传奇证明，深受殖民地敬仰。\n\n挖掘 +5，运动 +5，力量 +3，压力减少。";
                 }
-
-                // —— 生骸化 ——
-
-                public class ABYSSNAREHATE
-                {
-                    public static LocString NAME = UI.FormatAsColor("生骸", "#4AF2A8");
-                    public static LocString TOOLTIP = "深渊的诅咒已在其身上留下永恒的印记——但他们不再被深渊排斥。\n\n免疫一切上升负荷。\n运动 +5，挖掘 +5，力量 +3，压力减少；学习 -5。";
-                }
             }
 
             public class DEATHS
@@ -103,6 +95,12 @@ namespace MadeInAbyss
                 {
                     public static LocString NAME = "深渊的诅咒";
                     public static LocString DESCRIPTION = "{Target} 的生命被上升负荷夺走，化作了深渊的一部分。";
+                }
+
+                public class ABYSSNAREHATE
+                {
+                    public static LocString NAME = "化为生骸";
+                    public static LocString DESCRIPTION = "{Target} 的血肉被深渊重塑——他们以另一种形态活了下来。";
                 }
             }
         }
@@ -159,7 +157,7 @@ namespace MadeInAbyss
                 public class ABYSS_NAREHATE
                 {
                     public static LocString NAME = UI.FormatAsBold("化为生骸");
-                    public static LocString TOOLTIP = "从「最终地」的诅咒中幸存下来的复制人化为了生骸——深渊不再排斥他们。";
+                    public static LocString TOOLTIP = "从「最终地」的诅咒中幸存下来的复制人被深渊重塑，变成了一只生骸。";
                 }
             }
         }
