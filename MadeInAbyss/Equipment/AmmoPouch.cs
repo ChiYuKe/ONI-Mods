@@ -204,11 +204,7 @@ namespace MadeInAbyss
         {
             Equippable equippable = go.GetComponent<Equippable>();
             if (equippable != null)
-            {
                 equippable.SetQuality(global::QualityLevel.Good);
-                // 不在用户菜单显示“卸下”按钮（弹药包只能等抵挡后损坏掉落，或在配置页转分给其他复制人）。
-                equippable.unequippable = false;
-            }
 
             KBatchedAnimController anim;
             if (go.TryGetComponent(out anim))
