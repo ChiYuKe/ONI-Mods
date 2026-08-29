@@ -37,6 +37,50 @@ namespace MadeInAbyss
         }
 
         /// <summary>
+        /// 配置页的“装备与设备”面板（OwnablesSidescreen）槽位列表是硬编码的，
+        /// 这里把弹药包槽位追加进“套装”分类，否则注册了也不会显示。
+        /// </summary>
+        [HarmonyPatch(typeof(OwnablesSidescreen), "DefineCategories")]
+        public static class OwnablesSidescreen_DefineCategories_Patch
+        {
+            public static void Postfix(OwnablesSidescreen __instance)
+            {
+                var categories = Traverse.Create(__instance)
+                    .Field<OwnablesSidescreen.Category[]>("categories").Value;
+                if (categories == null || categories.Length == 0)
+                    return;
+
+                EquipmentSlot pouchSlot = Db.Get().AssignableSlots.TryGet(SlotId) as EquipmentSlot;
+                if (pouchSlot == null)
+                    return;
+
+                OwnablesSidescreenCategoryRow.Data suitData = categories[0].data;
+                foreach (AssignableSlot slot in suitData.slots)
+                {
+                    if (slot != null && slot.Id == SlotId)
+                        return; // 已追加过
+                }
+
+                // “套装”分类的槽位回调全部为 Always，重建时保持一致。
+                List<OwnablesSidescreenCategoryRow.AssignableSlotData> slotsData =
+                    new List<OwnablesSidescreenCategoryRow.AssignableSlotData>();
+                foreach (AssignableSlot slot in suitData.slots)
+                {
+                    if (slot != null)
+                        slotsData.Add(new OwnablesSidescreenCategoryRow.AssignableSlotData(slot, _ => true));
+                }
+                slotsData.Add(new OwnablesSidescreenCategoryRow.AssignableSlotData(pouchSlot, _ => true));
+
+                categories[0] = new OwnablesSidescreen.Category(
+                    categories[0].getAssignablesFn,
+                    new OwnablesSidescreenCategoryRow.Data(suitData.name, slotsData.ToArray()));
+
+                Traverse.Create(__instance)
+                    .Field<OwnablesSidescreen.Category[]>("categories").Value = categories;
+            }
+        }
+
+        /// <summary>
         /// 在服装纺织机上注册弹药包配方。
         /// </summary>
         [HarmonyPatch(typeof(Db), "Initialize")]
