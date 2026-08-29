@@ -113,6 +113,7 @@ namespace MadeInAbyss
             if (effects.HasImmunityTo(curseEffect))
             {
                 // 免疫来源若是弹药包，抵挡一次后损坏掉落。
+                Debug.Log($"[MadeInAbyss] {gameObject.GetProperName()} 的 {curseEffect.Name} 被免疫挡下");
                 ConsumeAmmoPouchCharge();
                 return;
             }
@@ -258,14 +259,23 @@ namespace MadeInAbyss
             Equipment equipment = GetComponent<Equipment>();
             EquipmentSlot pouchSlot = Db.Get().AssignableSlots.TryGet(AmmoPouch.SlotId) as EquipmentSlot;
             if (equipment == null || pouchSlot == null)
+            {
+                Debug.LogWarning($"[MadeInAbyss] 无法消耗弹药包：equipment={equipment != null}, slot={pouchSlot != null}");
                 return;
+            }
 
             AssignableSlotInstance slotInstance = equipment.GetSlot(pouchSlot);
             Equippable pouch = slotInstance != null ? slotInstance.assignable as Equippable : null;
             if (pouch == null)
+            {
+                Debug.LogWarning("[MadeInAbyss] 无法消耗弹药包：弹药包卡槽上没有已分配的装备");
                 return;
+            }
             if (pouch.GetComponent<KPrefabID>().PrefabTag.Name != AmmoPouch.ItemId)
+            {
+                Debug.LogWarning($"[MadeInAbyss] 无法消耗弹药包：卡槽上是 {pouch.GetComponent<KPrefabID>().PrefabTag.Name} 而非 {AmmoPouch.ItemId}");
                 return;
+            }
 
             string dupeName = gameObject.GetProperName();
             Vector3 position = transform.GetPosition();
@@ -275,7 +285,14 @@ namespace MadeInAbyss
 
             GameObject prefab = Assets.GetPrefab(AmmoPouchDamagedConfig.ID);
             if (prefab != null)
+            {
                 GameUtil.KInstantiate(prefab, position, Grid.SceneLayer.Ore, null, 0).SetActive(true);
+                Debug.Log($"[MadeInAbyss] 弹药包抵挡诅咒后损坏并掉落（{dupeName}）");
+            }
+            else
+            {
+                Debug.LogWarning("[MadeInAbyss] 未注册的实体 Ammo_Pouch_Damaged，无法生成损坏的弹药包");
+            }
 
             Notify(
                 NotificationType.BadMinor,
