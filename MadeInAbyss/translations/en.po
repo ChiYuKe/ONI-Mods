@@ -192,16 +192,16 @@ msgid "祈愿培养基"
 msgstr "Wishing Culture Medium"
 
 msgctxt "MadeInAbyss.STRINGS.ELEMENTS.TALISMANCONDENSATE.DESC"
-msgid "入口顺滑，矿物质丰富（铁元素含量爆表），带有淡淡的\"爸爸再爱我一次\"的回甘。粘度适中，比水厚重，比悔恨轻盈"
-msgstr "Smooth on the palate, rich in minerals (iron content off the charts), with a faint aftertaste of \"Papa, love me again.\" Moderate viscosity — thicker than water, lighter than regret."
+msgid "入口顺滑，矿物质丰富（铁元素含量爆表），带有淡淡的\"爸爸再爱我一次\"的回甘。粘度适中，比水厚重，比悔恨轻盈\n\n遇热（102°C）沸腾化为祈愿雾气；永不冻结。"
+msgstr "Smooth on the palate, rich in minerals (iron content off the charts), with a faint aftertaste of \"Papa, love me again.\" Moderate viscosity — thicker than water, lighter than regret.\n\nBoils at 102 °C into Wishing Vapor; never freezes."
 
 msgctxt "MadeInAbyss.STRINGS.ELEMENTS.WISHINGVAPOR.NAME"
 msgid "祈愿雾气"
 msgstr "Wishing Vapor"
 
 msgctxt "MadeInAbyss.STRINGS.ELEMENTS.WISHINGVAPOR.DESC"
-msgid "祈愿培养基沸腾时升起的粉色雾气。吸入无害，但那股香气总让人想起没能实现的愿望。"
-msgstr "Pink mist rising from boiling Wishing Culture Medium. Harmless to breathe, but its scent always brings unfulfilled wishes to mind."
+msgid "祈愿培养基沸腾时升起的粉色雾气。吸入无害，但那股香气总让人想起没能实现的愿望。\n\n遇冷（102°C 以下）凝回祈愿培养基。"
+msgstr "Pink mist rising from boiling Wishing Culture Medium. Harmless to breathe, but its scent always brings unfulfilled wishes to mind.\n\nCondenses back into Wishing Culture Medium below 102 °C."
 
 msgctxt "MadeInAbyss.STRINGS.EQUIPMENT.PREFABS.AMMO_POUCH.GENERICNAME"
 msgid "弹药包"

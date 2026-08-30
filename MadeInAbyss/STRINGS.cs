@@ -163,13 +163,13 @@ namespace MadeInAbyss
             public class WISHINGVAPOR
             {
                 public static LocString NAME = "祈愿雾气";
-                public static LocString DESC = "祈愿培养基沸腾时升起的粉色雾气。吸入无害，但那股香气总让人想起没能实现的愿望。";
+                public static LocString DESC = "祈愿培养基沸腾时升起的粉色雾气。吸入无害，但那股香气总让人想起没能实现的愿望。\n\n遇冷（102°C 以下）凝回祈愿培养基。";
             }
 
             public class TALISMANCONDENSATE
             {
                 public static LocString NAME = "祈愿培养基";
-                public static LocString DESC = "入口顺滑，矿物质丰富（铁元素含量爆表），带有淡淡的\"爸爸再爱我一次\"的回甘。粘度适中，比水厚重，比悔恨轻盈";
+                public static LocString DESC = "入口顺滑，矿物质丰富（铁元素含量爆表），带有淡淡的\"爸爸再爱我一次\"的回甘。粘度适中，比水厚重，比悔恨轻盈\n\n遇热（102°C）沸腾化为祈愿雾气；永不冻结。";
             }
         }
 
