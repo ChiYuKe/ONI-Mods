@@ -24,7 +24,7 @@ namespace MadeInAbyss
         {
             public static void Postfix()
             {
-                Color32 pink = new Color32(255, 160, 195, byte.MaxValue);
+                Color32 pink = new Color32(255, 120, 160, byte.MaxValue);
                 // 液体保留一点水纹理细节；雾气用纯粉，保证一眼就是粉红色。
                 HookupSubstance(TalismanCondensate, SimHashes.Water, pink, 0.82f);
                 HookupSubstance(WishingVapor, SimHashes.Steam, pink, 1f);
