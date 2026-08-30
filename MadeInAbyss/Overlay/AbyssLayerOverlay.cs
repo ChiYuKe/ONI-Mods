@@ -1,6 +1,8 @@
 using HarmonyLib;
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Reflection;
 using UnityEngine;
 
 namespace MadeInAbyss
@@ -58,6 +60,21 @@ namespace MadeInAbyss
             {
                 AbyssLayerOverlayLabels.Refresh();
             }
+
+            /// <summary>图例面板：颜色 → 层阶名称（叠加层激活时右上角显示）。</summary>
+            public override List<LegendEntry> GetCustomLegendData()
+            {
+                var entries = new List<LegendEntry>(AbyssStatics.Layers.Length);
+                for (int i = 0; i < LayerColors.Length && i < AbyssStatics.Layers.Length; i++)
+                {
+                    string name = Strings.Get($"STRINGS.OVERLAYS.ABYSS_LAYERS.LAYER{i + 1}.NAME");
+                    string tooltip = $"第 {i + 1} 层 · {AbyssStatics.Layers[i].Name}";
+                    // sprite 传 null → 使用 Assets.instance.LegendColourBox 色块；
+                    // displaySprite=true 显示该颜色的色块，desc 作为悬停提示。
+                    entries.Add(new LegendEntry(name, tooltip, LayerColors[i]));
+                }
+                return entries;
+            }
         }
 
         /// <summary>在概览栏追加「深渊层阶」开关。</summary>
@@ -82,10 +99,51 @@ namespace MadeInAbyss
                     global::Action.NumActions,   // 不绑定快捷键
                     "以颜色显示深渊的六个层阶分布：\n黄·阿比斯之渊 / 橙·诱惑之森 / 紫·大断层 / 红·巨人之杯 / 蓝·亡骸之海 / 品红·最终地",
                     "深渊层阶");
-                list.Add((KIconToggleMenu.ToggleInfo)toggle);
+                KIconToggleMenu.ToggleInfo toggleInfo = (KIconToggleMenu.ToggleInfo)toggle;
+                // 使用 mod 自带图标：getSpriteCB 优先于 icon 名查表，
+                // 加载失败时回退到占位图标（overlay_temperature）。
+                toggleInfo.getSpriteCB = LoadOverlayIcon;
+                list.Add(toggleInfo);
 
                 // 初始化概览层的文字标注。
                 AbyssLayerOverlayLabels.Initialize();
+            }
+        }
+
+        /// <summary>
+        /// 加载 mod 自带的概览层图标（Assets/Sprite/madeInabyss_icon.png）。
+        /// 失败时回退到原版占位图标，避免概览栏出现空白。
+        /// </summary>
+        private static Sprite LoadOverlayIcon()
+        {
+            try
+            {
+                string modDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+                string iconPath = Path.Combine(modDir, "Assets", "Sprite", "madeInabyss_icon.png");
+                if (!File.Exists(iconPath))
+                {
+                    Debug.LogWarning($"[MadeInAbyss] 未找到概览图标：{iconPath}，使用占位图标");
+                    return Assets.GetSprite("overlay_temperature");
+                }
+
+                byte[] bytes = File.ReadAllBytes(iconPath);
+                Texture2D texture = new Texture2D(2, 2);
+                if (!texture.LoadImage(bytes))
+                {
+                    Debug.LogWarning("[MadeInAbyss] 概览图标解析失败，使用占位图标");
+                    return Assets.GetSprite("overlay_temperature");
+                }
+
+                return Sprite.Create(
+                    texture,
+                    new Rect(0f, 0f, texture.width, texture.height),
+                    new Vector2(0.5f, 0.5f),
+                    100f);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[MadeInAbyss] 加载概览图标异常，使用占位图标：{ex.Message}");
+                return Assets.GetSprite("overlay_temperature");
             }
         }
 
@@ -97,6 +155,55 @@ namespace MadeInAbyss
             {
                 AccessTools.Method(typeof(OverlayScreen), "RegisterMode")
                     .Invoke(__instance, new object[] { new ModeInstance() });
+            }
+        }
+
+        /// <summary>注册逐格取色函数（仅在本概览层激活时被调用）。</summary>
+        /// <remarks>
+        /// 色块渲染与模式表注册是两条独立链路：
+        /// OverlayScreen 负责模式切换/退出，SimDebugView 则每帧用当前 mode
+        /// 在 getColourFuncs 里查取色函数，查不到就整幅图渲染成黑色。
+        /// 若不注册，开启「深渊层阶」后只有标签、没有色块。
+        /// </remarks>
+        [HarmonyPatch(typeof(SimDebugView), "OnPrefabInit")]
+        public static class SimDebugView_OnPrefabInit_Patch
+        {
+            public static void Postfix(SimDebugView __instance)
+            {
+                Dictionary<HashedString, Func<SimDebugView, int, Color>> funcs = Traverse.Create(__instance)
+                    .Field<Dictionary<HashedString, Func<SimDebugView, int, Color>>>("getColourFuncs").Value;
+                if (funcs == null)
+                    return;
+                funcs[Mode] = LayerCellColour;
+            }
+        }
+
+        /// <summary>
+        /// 把「深渊层阶」的图例条目注册进 OverlayLegend。
+        /// SetLegend 按 mode 在 overlayInfoList 里查找 OverlayInfo，
+        /// 查不到就会 ClearLegend（面板空白）；isProgrammaticallyPopulated=true
+        /// 会让面板改由 Mode.GetCustomLegendData() 动态生成。
+        /// </summary>
+        [HarmonyPatch(typeof(OverlayLegend), "OnSpawn")]
+        public static class OverlayLegend_OnSpawn_Patch
+        {
+            public static void Postfix(OverlayLegend __instance)
+            {
+                List<OverlayLegend.OverlayInfo> list = Traverse.Create(__instance)
+                    .Field<List<OverlayLegend.OverlayInfo>>("overlayInfoList").Value;
+                if (list == null)
+                    return;
+                if (list.Exists(info => info != null && info.mode == Mode))
+                    return;
+
+                list.Add(new OverlayLegend.OverlayInfo
+                {
+                    name = "深渊层阶",
+                    mode = Mode,
+                    infoUnits = null,
+                    diagrams = null,
+                    isProgrammaticallyPopulated = true,
+                });
             }
         }
 

@@ -39,10 +39,14 @@ namespace MadeInAbyss
                     return;
                 }
 
-                Substance source = Assets.instance.substanceTable.GetSubstance(sourceHash);
-                if (source == null || source.material == null)
+                // 源解析多级回退：元素已挂接的 substance → 物质表 → 水。
+                Substance water = ResolveSubstance(SimHashes.Water);
+                Substance source = ResolveSubstance(sourceHash);
+                if (source == null || source.material == null || source.anim == null)
+                    source = water;
+                if (source == null || source.material == null || source.anim == null)
                 {
-                    Debug.LogWarning($"[MadeInAbyss] {sourceHash} substance 不可用，{targetHash} 回退为默认视觉");
+                    Debug.LogWarning($"[MadeInAbyss] {sourceHash}/{targetHash} 找不到可用 substance 视觉，回退为默认视觉");
                     return;
                 }
 
@@ -60,6 +64,17 @@ namespace MadeInAbyss
                 KAnimFile[] anims = Traverse.Create(source).Field("anims").GetValue<KAnimFile[]>();
                 if (anims != null && anims.Length > 0)
                     Traverse.Create(element.substance).Field("anims").SetValue(anims);
+            }
+
+            /// <summary>解析某元素的视觉 substance：优先元素已挂接的，其次物质表。</summary>
+            private static Substance ResolveSubstance(SimHashes hash)
+            {
+                Element element = ElementLoader.FindElementByHash(hash);
+                if (element != null && element.substance != null && element.substance.material != null && element.substance.anim != null)
+                    return element.substance;
+                if (Assets.instance != null && Assets.instance.substanceTable != null)
+                    return Assets.instance.substanceTable.GetSubstance(hash);
+                return null;
             }
 
             /// <summary>把源贴图向目标色偏移（1.0 = 纯色）；源贴图不可读时生成一张程序化纯色贴图兜底。</summary>

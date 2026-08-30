@@ -258,7 +258,10 @@ namespace MadeInAbyss
 
         public void OnPrefabInit(GameObject inst)
         {
-            inst.SetActive(false);
+            // 注意：不要在 OnPrefabInit 里 SetActive(false)！
+            // prefabInitFn 会在实例激活（KInstantiate(...).SetActive(true)）后触发，
+            // 这里关掉会把生成出来的损坏弹药包残骸再次隐藏，导致"挡下诅咒后没有掉落"。
+            // 模板本身来自 inactive 的 baseEntityTemplate 链，天然是隐藏的，无需在此停用。
             Debug.Log("[MadeInAbyss] 损坏的弹药包实体已注册");
         }
 
