@@ -209,6 +209,7 @@ namespace MadeInAbyss
             // Pickupable 的 [MyCmpAdd] 会在唤醒时补挂 Clearable 并刷一条错误日志，
             // 预先挂好避免报错（也使掉落在地时可被清扫指派）。
             go.AddOrGet<Clearable>();
+            go.AddOrGet<Prioritizable>();
 
             KBatchedAnimController anim;
             if (go.TryGetComponent(out anim))
@@ -251,6 +252,7 @@ namespace MadeInAbyss
                 new List<Tag> { GameTags.IndustrialIngredient });
             go.AddOrGet<DamagedPouchLeaker>();
             go.AddOrGet<Clearable>();
+            go.AddOrGet<Prioritizable>();
             return go;
         }
 
