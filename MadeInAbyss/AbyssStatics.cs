@@ -61,7 +61,7 @@ namespace MadeInAbyss
         {
             "Hatch", "HatchHard", "HatchVeggie", "HatchMeat", "HatchMetal",
             "Puft", "PuftOxylite", "PuftBleachstone", "ShoveVole", "Morb",
-            "Pip", "GassyMoo",
+            "Pip",
         };
 
         public class WhistleDef
