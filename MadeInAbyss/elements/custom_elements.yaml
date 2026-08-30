@@ -11,9 +11,7 @@ elements:
     solidSurfaceAreaMultiplier: 1
     liquidSurfaceAreaMultiplier: 25
     gasSurfaceAreaMultiplier: 1
-    lowTemp: 271.15
     highTemp: 375.15
-    lowTempTransitionTarget: Ice
     highTempTransitionTarget: WishingVapor
     defaultTemperature: 298
     defaultMass: 10
