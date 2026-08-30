@@ -67,7 +67,6 @@ namespace MadeInAbyss
                 labels[i] = label;
             }
 
-            canvasGo.AddComponent<LabelUpdater>();
         }
 
         private static TMP_FontAsset FindCjkFont()
@@ -96,10 +95,9 @@ namespace MadeInAbyss
         }
 
         /// <summary>每帧把标签对齐到各自层带中心的屏幕位置。</summary>
-        private class LabelUpdater : MonoBehaviour
+        
+        public static void Refresh()
         {
-            private void Update()
-            {
                 if (!active || canvas == null)
                     return;
 
@@ -135,7 +133,6 @@ namespace MadeInAbyss
                     if (visible)
                         labels[i].rectTransform.anchoredPosition = new Vector2(12f, screen.y);
                 }
-            }
         }
     }
 }
