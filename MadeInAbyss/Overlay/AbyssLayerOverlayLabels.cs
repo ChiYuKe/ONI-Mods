@@ -6,32 +6,30 @@ namespace MadeInAbyss
     /// <summary>
     /// 「深渊层阶」概览层的文字标注：概览激活时在屏幕左侧绘制每层的名称标签，
     /// 标签随镜头移动对齐各层带的垂直位置，切走概览或离开画面时隐藏。
+    /// 显隐与刷新由 AbyssLayerOverlay.ModeInstance 的生命周期驱动。
     /// </summary>
     public static class AbyssLayerOverlayLabels
     {
-        private static Game subscribedGame;
         private static Canvas canvas;
         private static readonly TextMeshProUGUI[] labels = new TextMeshProUGUI[AbyssStatics.Layers.Length];
-        private static bool overlayActive;
+        private static bool active;
 
-        /// <summary>随概览菜单初始化（每个游戏实例一次）。由 OverlayMenu 补丁调用。</summary>
+        /// <summary>随概览菜单初始化。由 OverlayMenu 补丁调用。</summary>
         public static void Initialize()
         {
-            if (subscribedGame == Game.Instance)
-                return;
-            subscribedGame = Game.Instance;
-            Game.Instance.Subscribe(1798162660, OnOverlayChanged);
-            overlayActive = false;
+            // 画布对象随场景销毁，引用失效时置空以便重建。
+            if (canvas != null && canvas.gameObject == null)
+                canvas = null;
+            SetActive(false);
         }
 
-        private static void OnOverlayChanged(object data)
+        public static void SetActive(bool value)
         {
-            HashedString mode = ((Boxed<HashedString>)data).value;
-            overlayActive = mode == AbyssLayerOverlay.Mode;
-            if (overlayActive)
+            active = value;
+            if (active)
                 EnsureBuilt();
             if (canvas != null)
-                canvas.gameObject.SetActive(overlayActive);
+                canvas.gameObject.SetActive(value);
         }
 
         private static void EnsureBuilt()
@@ -102,7 +100,7 @@ namespace MadeInAbyss
         {
             private void Update()
             {
-                if (!overlayActive || canvas == null)
+                if (!active || canvas == null)
                     return;
 
                 Camera cam = Camera.main;

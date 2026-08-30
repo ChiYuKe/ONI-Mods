@@ -7,7 +7,7 @@ namespace MadeInAbyss
 {
     /// <summary>
     /// 「深渊层阶」概览层：以颜色显示地图上深渊六层的分布，
-    /// 各层颜色与其诅咒名称配色一致，随存档目录配置的层深阈值实时变化。
+    /// 各层颜色与其诅咒名称配色一致，按各世界实际深度的百分比划分。
     /// </summary>
     public static class AbyssLayerOverlay
     {
@@ -16,7 +16,7 @@ namespace MadeInAbyss
         public static readonly HashedString Mode = new HashedString(ModeId);
 
         /// <summary>六层层阶颜色（与各层诅咒名称配色一致）。</summary>
-        private static readonly Color[] LayerColors =
+        public static readonly Color[] LayerColors =
         {
             new Color32(0xC7, 0xC7, 0x4A, 0xFF),   // 第1层 阿比斯之渊
             new Color32(0xF2, 0x91, 0x3D, 0xFF),   // 第2层 诱惑之森
@@ -27,6 +27,38 @@ namespace MadeInAbyss
         };
 
         private static readonly Color Clear = new Color(0f, 0f, 0f, 0f);
+
+        /// <summary>
+        /// 概览模式实例：接入 OverlayScreen 的模式生命周期
+        /// （注册后 GetMode/右键退出/ESC 退出与原版概览行为一致）。
+        /// </summary>
+        public class ModeInstance : OverlayModes.Mode
+        {
+            public override HashedString ViewMode()
+            {
+                return Mode;
+            }
+
+            public override string GetSoundName()
+            {
+                return "";
+            }
+
+            public override void Enable()
+            {
+                AbyssLayerOverlayLabels.SetActive(true);
+            }
+
+            public override void Disable()
+            {
+                AbyssLayerOverlayLabels.SetActive(false);
+            }
+
+            public override void Update()
+            {
+                AbyssLayerOverlayLabels.Refresh();
+            }
+        }
 
         /// <summary>在概览栏追加「深渊层阶」开关。</summary>
         [HarmonyPatch(typeof(OverlayMenu), "InitializeToggles")]
@@ -52,22 +84,19 @@ namespace MadeInAbyss
                     "深渊层阶");
                 list.Add((KIconToggleMenu.ToggleInfo)toggle);
 
-                // 初始化概览层的文字标注（订阅概览切换事件）。
+                // 初始化概览层的文字标注。
                 AbyssLayerOverlayLabels.Initialize();
             }
         }
 
-        /// <summary>注册逐格取色函数（仅在本概览层激活时被调用）。</summary>
-        [HarmonyPatch(typeof(SimDebugView), "OnPrefabInit")]
-        public static class SimDebugView_OnPrefabInit_Patch
+        /// <summary>把自定义模式注册进 OverlayScreen 的模式表。</summary>
+        [HarmonyPatch(typeof(OverlayScreen), "RegisterModes")]
+        public static class OverlayScreen_RegisterModes_Patch
         {
-            public static void Postfix(SimDebugView __instance)
+            public static void Postfix(OverlayScreen __instance)
             {
-                Dictionary<HashedString, Func<SimDebugView, int, Color>> funcs = Traverse.Create(__instance)
-                    .Field<Dictionary<HashedString, Func<SimDebugView, int, Color>>>("getColourFuncs").Value;
-                if (funcs == null)
-                    return;
-                funcs[Mode] = LayerCellColour;
+                AccessTools.Method(typeof(OverlayScreen), "RegisterMode")
+                    .Invoke(__instance, new object[] { new ModeInstance() });
             }
         }
 
