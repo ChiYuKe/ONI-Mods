@@ -14,6 +14,9 @@ namespace MadeInAbyss
         {
             public float surfaceY;
             public float lastRefreshTime;
+
+            /// <summary>锚点是否来自地表扫描（无打印舱的星球）。</summary>
+            public bool scanned;
         }
 
         private static readonly Dictionary<int, AnchorEntry> anchors = new Dictionary<int, AnchorEntry>();
@@ -31,25 +34,33 @@ namespace MadeInAbyss
                 return entry.surfaceY;
             }
 
-            float surfaceY = FindSurfaceY(worldId);
+            float surfaceY = FindSurfaceY(worldId, out bool scanned);
             if (float.IsNaN(surfaceY))
             {
                 anchors.Remove(worldId);
                 return surfaceY;
             }
 
-            anchors[worldId] = new AnchorEntry { surfaceY = surfaceY, lastRefreshTime = Time.time };
+            anchors[worldId] = new AnchorEntry { surfaceY = surfaceY, lastRefreshTime = Time.time, scanned = scanned };
             return surfaceY;
         }
 
-        private static float FindSurfaceY(int worldId)
+        /// <summary>该世界的锚点是否来自地表扫描（无打印舱的星球）。</summary>
+        public static bool IsScannedAnchor(int worldId)
         {
+            return anchors.TryGetValue(worldId, out AnchorEntry entry) && entry.scanned;
+        }
+
+        private static float FindSurfaceY(int worldId, out bool scanned)
+        {
+            scanned = false;
             // 优先使用打印舱。
             List<Telepad> telepads = Components.Telepads.GetWorldItems(worldId);
             if (telepads != null && telepads.Count > 0)
                 return telepads[0].transform.GetPosition().y;
 
             // 无打印舱的星球：从世界顶部向下扫描，最高的非中子岩实心行即为地表。
+            scanned = true;
             WorldContainer world = ClusterManager.Instance.GetWorld(worldId);
             if (world == null)
                 return float.NaN;

@@ -99,6 +99,8 @@ namespace MadeInAbyss
         /// <summary>
         /// 计算指定世界六层深渊的深度阈值（米）：
         /// 以营地表锚点为地表、世界底部（y=0）为基准，按配置百分比等比例划分。
+        /// 无打印舱的星球（扫描锚点）额外留出地表 10% 的浅层缓冲——
+        /// 百分比表压缩到深度区间的 10%~100% 段内，避免一落地就是深渊。
         /// 该世界没有锚点时返回 null。
         /// </summary>
         public static float[] GetLayerThresholds(int worldId)
@@ -108,13 +110,14 @@ namespace MadeInAbyss
                 return null;
 
             float maxDepth = Mathf.Max(1f, surfaceY);
+            float offset = AbyssAnchors.IsScannedAnchor(worldId) ? 0.10f : 0f;
             float[] percents = AbyssConfig.Instance.LayerDepthPercents;
             if (percents == null || percents.Length == 0)
                 percents = new float[] { 20f, 35f, 50f, 65f, 80f, 95f };
 
             float[] thresholds = new float[Mathf.Min(percents.Length, Layers.Length)];
             for (int i = 0; i < thresholds.Length; i++)
-                thresholds[i] = maxDepth * Mathf.Clamp(percents[i], 0f, 100f) / 100f;
+                thresholds[i] = maxDepth * Mathf.Clamp(offset + (1f - offset) * Mathf.Clamp(percents[i], 0f, 100f) / 100f, 0f, 1f);
             return thresholds;
         }
 
