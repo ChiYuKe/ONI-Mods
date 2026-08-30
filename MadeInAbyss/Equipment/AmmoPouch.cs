@@ -206,6 +206,10 @@ namespace MadeInAbyss
             if (equippable != null)
                 equippable.SetQuality(global::QualityLevel.Good);
 
+            // Pickupable 的 [MyCmpAdd] 会在唤醒时补挂 Clearable 并刷一条错误日志，
+            // 预先挂好避免报错（也使掉落在地时可被清扫指派）。
+            go.AddOrGet<Clearable>();
+
             KBatchedAnimController anim;
             if (go.TryGetComponent(out anim))
                 anim.sceneLayer = Grid.SceneLayer.BuildingBack;
@@ -246,6 +250,7 @@ namespace MadeInAbyss
                 // IndustrialIngredient：进入沙盒生成列表的「工业产品」分类，也可作为储存过滤项。
                 new List<Tag> { GameTags.IndustrialIngredient });
             go.AddOrGet<DamagedPouchLeaker>();
+            go.AddOrGet<Clearable>();
             return go;
         }
 
