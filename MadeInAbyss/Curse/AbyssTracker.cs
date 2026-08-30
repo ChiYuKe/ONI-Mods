@@ -15,13 +15,17 @@ namespace MadeInAbyss
         [Serialize]
         private float maxDepthEver;
 
-        /// <summary>当前笛级序号（0 = 无，1 = 红笛 … 5 = 白笛）。</summary>
+        /// <summary>当前笛级序号（0 = 无，1 = 赤笛 … 5 = 白笛）。</summary>
         [Serialize]
         private int whistleRank;
 
         /// <summary>上一秒的深度（米），用于检测层界跨越。</summary>
         [Serialize]
         private float prevDepth = float.NaN;
+
+        /// <summary>生骸化完成，等待完全死亡后销毁尸体（小动物已替代复制人）。</summary>
+        [Serialize]
+        private bool awaitingCorpseRemoval;
 
         private Klei.AI.Effects effects;
         private Health health;
@@ -54,6 +58,17 @@ namespace MadeInAbyss
 
         public void Sim1000ms(float dt)
         {
+            // 生骸化的复制人在完全死亡后销毁尸体。
+            if (awaitingCorpseRemoval)
+            {
+                if (gameObject.HasTag(GameTags.Dead))
+                {
+                    awaitingCorpseRemoval = false;
+                    Util.KDestroyGameObject(gameObject);
+                }
+                return;
+            }
+
             AbyssConfig config = AbyssConfig.Instance;
             if (!config.EnableCurse && !config.EnableWhistle && !config.EnableNarehate)
                 return;
@@ -294,7 +309,10 @@ namespace MadeInAbyss
 
             DeathMonitor.Instance deathSmi = gameObject.GetSMI<DeathMonitor.Instance>();
             if (deathSmi != null && AbyssDeaths.Narehate != null)
+            {
+                awaitingCorpseRemoval = true; // 完全死亡后销毁尸体，不留残骸
                 deathSmi.Kill(AbyssDeaths.Narehate);
+            }
             else
                 Debug.LogWarning("[MadeInAbyss] 未找到死亡监视器，生骸化只完成了 spawn 部分");
         }
