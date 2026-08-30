@@ -109,7 +109,13 @@ namespace MadeInAbyss
             if (float.IsNaN(surfaceY))
                 return null;
 
-            float maxDepth = Mathf.Max(1f, surfaceY);
+            // 群星星球在世界网格中垂直堆叠，地表锚点的全局 Y 可能远大于星球高度；
+            // 世界纵深必须按“锚点到本世界网格底边”的距离计算，否则阈值会落到世界之外。
+            WorldContainer world = ClusterManager.Instance.GetWorld(worldId);
+            if (world == null)
+                return null;
+
+            float maxDepth = Mathf.Max(1f, surfaceY - world.WorldOffset.y);
             float offset = AbyssAnchors.IsScannedAnchor(worldId) ? 0.10f : 0f;
             float[] percents = AbyssConfig.Instance.LayerDepthPercents;
             if (percents == null || percents.Length == 0)
