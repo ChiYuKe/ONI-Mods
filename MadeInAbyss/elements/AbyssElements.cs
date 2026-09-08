@@ -19,6 +19,20 @@ namespace MadeInAbyss
         public static readonly SimHashes WishingVapor =
             (SimHashes)Hash.SDBMLower(WishingVaporId);
 
+        /// <summary>
+        /// 祈愿培养基的 Tag。自定义元素不在 SimHashes 枚举里，CreateTag() 会退化成
+        /// 数字名 Tag、匹配不到实体（按 Tag 消耗的接口会静默扣不到货），必须用
+        /// ElementLoader 注册时的字符串 Tag。
+        /// </summary>
+        public static Tag TalismanCondensateTag
+        {
+            get
+            {
+                Element element = ElementLoader.FindElementByHash(TalismanCondensate);
+                return element != null ? element.tag : new Tag(TalismanCondensateId);
+            }
+        }
+
         [HarmonyPatch(typeof(Assets), "SubstanceListHookup")]
         public static class SubstanceListHookup_Patch
         {

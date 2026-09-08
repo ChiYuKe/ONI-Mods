@@ -66,13 +66,13 @@ namespace MadeInAbyss
 
                 public class ABYSSWHISTLEBLUE
                 {
-                    public static LocString NAME = UI.FormatAsColor("蓝笛探窟家", "#6BD26B");
+                    public static LocString NAME = UI.FormatAsColor("苍笛探窟家", "#6BD26B");
                     public static LocString TOOLTIP = "已抵达「诱惑之森」的证明。\n\n挖掘 +2。";
                 }
 
                 public class ABYSSWHISTLEMOON
                 {
-                    public static LocString NAME = UI.FormatAsColor("苍笛探窟家", "#4AD2C7");
+                    public static LocString NAME = UI.FormatAsColor("月笛探窟家", "#4AD2C7");
                     public static LocString TOOLTIP = "已抵达「大断层」的证明。\n\n挖掘 +2，运动 +2。";
                 }
 
@@ -86,6 +86,57 @@ namespace MadeInAbyss
                 {
                     public static LocString NAME = UI.FormatAsColor("白笛探窟家", "#FFD24A");
                     public static LocString TOOLTIP = "已抵达「亡骸之海」的传奇证明，深受殖民地敬仰。\n\n挖掘 +5，运动 +5，力量 +3，压力减少。";
+                }
+
+                // —— 深渊祝福：6→5 上升被弹药包挡下的诅咒化作馈赠（固定 + 随机两条馈赠） ——
+
+                public class ABYSSBLESSING
+                {
+                    public static LocString NAME = UI.FormatAsColor("深渊祝福", "#7FD4FF");
+                    public static LocString TOOLTIP = "在「最终地」边缘被弹药包挡下的诅咒，化作了深渊的馈赠。\n\n生命恢复 +30/周期，呼吸恢复 +100 克/秒，压力 -45%/周期。\n\n持续 6 周期，祝福存在期间不会重复获得。深渊的馈赠残留着兽性——部分身体部件会临时变成小动物的样子。";
+                }
+
+                public class ABYSSGIFTDIG
+                {
+                    public static LocString NAME = UI.FormatAsColor("深渊馈赠·掘进", "#7FD4FF");
+                    public static LocString TOOLTIP = "深渊的馈赠：挖掘 +3。";
+                }
+
+                public class ABYSSGIFTATHLETICS
+                {
+                    public static LocString NAME = UI.FormatAsColor("深渊馈赠·迅捷", "#7FD4FF");
+                    public static LocString TOOLTIP = "深渊的馈赠：运动 +3。";
+                }
+
+                public class ABYSSGIFTSTRENGTH
+                {
+                    public static LocString NAME = UI.FormatAsColor("深渊馈赠·伟力", "#7FD4FF");
+                    public static LocString TOOLTIP = "深渊的馈赠：力量 +3。";
+                }
+
+                public class ABYSSGIFTLEARNING
+                {
+                    public static LocString NAME = UI.FormatAsColor("深渊馈赠·敏思", "#7FD4FF");
+                    public static LocString TOOLTIP = "深渊的馈赠：学习 +5。";
+                }
+
+                public class ABYSSGIFTCALM
+                {
+                    public static LocString NAME = UI.FormatAsColor("深渊馈赠·抚慰", "#7FD4FF");
+                    public static LocString TOOLTIP = "深渊的馈赠：压力 -10%/周期。";
+                }
+
+                public class ABYSSGIFTSTAMINA
+                {
+                    public static LocString NAME = UI.FormatAsColor("深渊馈赠·充沛", "#7FD4FF");
+                    public static LocString TOOLTIP = "深渊的馈赠：体力 +5%/周期。";
+                }
+
+                // —— 生骸化：永久效果——
+                public class ABYSSNAREHATE
+                {
+                    public static LocString NAME = UI.FormatAsColor("生骸之躯", "#E08BD0");
+                    public static LocString TOOLTIP = "被深渊重塑过的躯体，衰老得极慢，繁殖力旺盛。\n\n年龄增长 -0.9/周期（老化速度只剩一成），繁殖度 +30%/周期。";
                 }
             }
 
@@ -154,7 +205,7 @@ namespace MadeInAbyss
             public class AMMO_POUCH_DAMAGED
             {
                 public static LocString NAME = "损坏的弹药包";
-                public static LocString DESC = "内衬的护符在抵挡诅咒时碎裂了，还在缓缓渗出粉红色的护符凝液。把它和布料一起送到服装纺织机，还能缝补一新。";
+                public static LocString DESC = "内衬的护符在抵挡诅咒时碎裂了。剖开夹层才发现，鼓鼓囊囊塞的哪里是工具和口粮，分明是一坨仍在缓缓搏动的血肉组织——析出的粉红色祈愿培养基还剩 10~15 千克，每 5 秒向外渗漏 1 千克，渗完即止。把它和布料一起送到服装纺织机，还能缝补一新。";
             }
         }
 
@@ -228,10 +279,30 @@ namespace MadeInAbyss
                     public static LocString TOOLTIP = "探窟弹药包抵挡了一次上升负荷后损坏，掉落在地。";
                 }
 
+                public class ABYSS_BLESSING
+                {
+                    public static LocString NAME = UI.FormatAsColor("深渊的祝福", "#7FD4FF");
+                    public static LocString TOOLTIP = "弹药包挡下了「最终地」的诅咒，深渊收回了恶意，转而馈赠祝福。";
+                }
+
                 public class ABYSS_NAREHATE
                 {
                     public static LocString NAME = UI.FormatAsBold("化为生骸");
                     public static LocString TOOLTIP = "从「最终地」的诅咒中幸存下来的复制人被深渊重塑，变成了一只生骸。";
+                }
+            }
+        }
+
+        // —— 原版从未在 UI 显示 AgeDelta 属性，缺省字符串；「生骸之躯」的效果列表会用到 ——
+        // 注意：必须直接挂在 STRINGS 下，键才是游戏查找的 STRINGS.CREATURES.ATTRIBUTES.AGEDELTA.NAME。
+        public class CREATURES
+        {
+            public class ATTRIBUTES
+            {
+                public class AGEDELTA
+                {
+                    public static LocString NAME = "年龄增长";
+                    public static LocString TOOLTIP = "生物每个周期增加的年龄。";
                 }
             }
         }

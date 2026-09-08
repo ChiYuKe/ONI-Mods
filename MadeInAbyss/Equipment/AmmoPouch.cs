@@ -1,4 +1,5 @@
 using HarmonyLib;
+using Klei;
 using KSerialization;
 using Klei.AI;
 using STRINGS;
@@ -253,6 +254,10 @@ namespace MadeInAbyss
             go.AddOrGet<DamagedPouchLeaker>();
             go.AddOrGet<Clearable>();
             go.AddOrGet<Prioritizable>();
+
+            // 包内残存培养基的储存组件：渗漏从这里扣除，容量即单包最大储液量。
+            Storage reserve = go.AddOrGet<Storage>();
+            reserve.capacityKg = 15f;
             return go;
         }
 
@@ -271,18 +276,25 @@ namespace MadeInAbyss
     }
 
     /// <summary>
-    /// 损坏的弹药包会缓缓渗出「祈愿培养基」：每 5 秒 1kg，
-    /// 单包总渗漏量 10~15kg（生成时随机），存入容器后暂停渗漏。
+    /// 损坏的弹药包会缓缓渗出「祈愿培养基」：包内储存组件默认装有 10~15kg
+    /// （生成时随机），每 5 秒向外渗出 1kg，直接从储存中扣除，滴干即止。
+    /// 存入容器后暂停渗漏。
     /// </summary>
     public class DamagedPouchLeaker : KMonoBehaviour, ISim1000ms
     {
-        /// <summary>已渗漏的总质量（kg）。</summary>
+        /// <summary>旧版已渗漏总量（kg）：仅为兼容旧存档保留，迁移时用于折算剩余量。</summary>
         [Serialize]
         private float leakedMass;
 
-        /// <summary>渗漏上限（kg），生成时随机 10~15。</summary>
+        /// <summary>旧版渗漏上限（kg）：仅为兼容旧存档保留；新实体生成时即等于初始储液量。</summary>
         [Serialize]
         private float leakCapacity;
+
+        /// <summary>储存组件是否已注入初始培养基；旧存档首次加载时迁移补装。</summary>
+        [Serialize]
+        private bool reserveSeeded;
+
+        private Storage reserve;
 
         private float cycleTimer;
 
@@ -292,13 +304,26 @@ namespace MadeInAbyss
         protected override void OnSpawn()
         {
             base.OnSpawn();
+            reserve = GetComponent<Storage>();
+            if (reserve == null || reserveSeeded)
+                return;
+
+            // 旧存档迁移：把剩余可渗量（上限 - 已渗漏）装进储存；
+            // 新实体：leakedMass 为 0，即装满随机的 10~15kg。
             if (leakCapacity <= 0f)
                 leakCapacity = UnityEngine.Random.Range(10f, 15f);
+            float remaining = Mathf.Max(0f, leakCapacity - leakedMass);
+            float stored = reserve.GetMassAvailable(AbyssElements.TalismanCondensate);
+            if (remaining > stored)
+                reserve.AddElement(AbyssElements.TalismanCondensate, remaining - stored, LeakTemperatureK, byte.MaxValue, 0);
+            reserveSeeded = true;
         }
 
         public void Sim1000ms(float dt)
         {
-            if (leakedMass >= leakCapacity)
+            if (reserve == null)
+                return;
+            if (reserve.GetMassAvailable(AbyssElements.TalismanCondensate) <= 0f)
                 return;
             if (gameObject.HasTag(GameTags.Stored))
                 return;
@@ -312,22 +337,25 @@ namespace MadeInAbyss
             if (!Grid.IsValidCell(cell))
                 return;
 
-            Element element = ElementLoader.FindElementByHash(AbyssElements.TalismanCondensate);
-            if (element == null || element.substance == null)
+            float mass;
+            SimUtil.DiseaseInfo disease;
+            float temperature;
+            reserve.ConsumeAndGetDisease(
+                AbyssElements.TalismanCondensateTag, 1f,
+                out mass, out disease, out temperature);
+            if (mass <= 0f)
                 return;
 
-            float mass = Mathf.Min(1f, leakCapacity - leakedMass);
             SimMessages.AddRemoveSubstance(
                 cell,
                 AbyssElements.TalismanCondensate,
                 CellEventLogger.Instance.ElementConsumerSimUpdate,
                 mass,
-                LeakTemperatureK,
-                byte.MaxValue,
-                0,
+                temperature,
+                disease.idx,
+                disease.count,
                 true,
                 -1);
-            leakedMass += mass;
         }
     }
 }

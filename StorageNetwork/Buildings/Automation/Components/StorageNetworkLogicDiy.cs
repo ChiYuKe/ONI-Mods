@@ -77,6 +77,7 @@ namespace StorageNetwork.Components
         private int[] compiledDisplayNodeIndices = Array.Empty<int>();
         private int[] compiledCounterNodeIndices = Array.Empty<int>();
         private int[] compiledRemoteNodeIndices = Array.Empty<int>();
+        private readonly HashSet<int> unavailableOutputPortWarnings = new HashSet<int>();
         private int[] compiledForwardingNodeIndices = Array.Empty<int>();
         private float[] timerElapsedByNode = Array.Empty<float>();
         private bool[] timerPulseByNode = Array.Empty<bool>();
@@ -1469,14 +1470,18 @@ namespace StorageNetwork.Components
 
             if (ports.outputPortInfo.Length == 1)
             {
-                int value = Mathf.Max(0, ports.GetOutputValue(ports.outputPortInfo[0].id));
+                int value = TryReadOutputPortValue(target, ports, ports.outputPortInfo[0].id, out int rawValue)
+                    ? Mathf.Max(0, rawValue)
+                    : 0;
                 return value > 0 || !TryReadSwitchLikeOutput(target, out int switchValue) ? value : switchValue;
             }
 
             int signal = 0;
             for (int index = 0; index < ports.outputPortInfo.Length && index < 4; index++)
             {
-                int value = ports.GetOutputValue(ports.outputPortInfo[index].id);
+                int value = TryReadOutputPortValue(target, ports, ports.outputPortInfo[index].id, out int rawValue)
+                    ? rawValue
+                    : 0;
                 if (value > 1)
                 {
                     signal |= Mathf.Clamp(value, 0, 15);
@@ -1490,6 +1495,34 @@ namespace StorageNetwork.Components
             return signal > 0 || !TryReadSwitchLikeOutput(target, out int fallbackValue)
                 ? Mathf.Clamp(signal, 0, 15)
                 : fallbackValue;
+        }
+
+        private bool TryReadOutputPortValue(GameObject target, LogicPorts ports, HashedString portId, out int value)
+        {
+            value = 0;
+            if (ports == null)
+            {
+                return false;
+            }
+
+            try
+            {
+                value = ports.GetOutputValue(portId);
+                return true;
+            }
+            catch (NullReferenceException exception)
+            {
+                int warningKey = target != null ? target.GetInstanceID() : 0;
+                if (unavailableOutputPortWarnings.Add(warningKey))
+                {
+                    string targetName = target != null ? target.name : "<null>";
+                    Debug.LogWarning(
+                        $"StorageNetwork LogicDiy: output port state is unavailable for '{targetName}' " +
+                        $"(port '{portId}'); treating the signal as 0. {exception.Message}");
+                }
+
+                return false;
+            }
         }
 
         private bool TryReadSwitchLikeOutput(GameObject target, out int value)

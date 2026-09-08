@@ -47,6 +47,7 @@ namespace StorageNetwork.Buildings
             buildingDef.ObjectLayer = ObjectLayer.Building;
             buildingDef.Floodable = false;
             buildingDef.Overheatable = false;
+            buildingDef.ContinuouslyCheckFoundation = spec.ParticlePort;
             buildingDef.AudioCategory = "Metal";
             buildingDef.CanMove = false;
             buildingDef.UseStructureTemperature = false;

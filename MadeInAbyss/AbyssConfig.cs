@@ -45,6 +45,15 @@ namespace MadeInAbyss
         /// <summary>诅咒效果持续时间（秒）。</summary>
         public float CurseDurationS = 600f;
 
+        /// <summary>
+        /// 闲逛避让的最浅危险层阶（0 基：2 = 第 3 层「大断层」及更深）。
+        /// 装备探窟弹药包的复制人：闲逛选址不进入该层阶及更深的格子，第 1~2 层可自由闲逛。
+        /// 未装备弹药包的复制人：连第 1~2 层也避让，只在表面对流层闲逛。
+        /// 任务寻路不受影响——玩家明确指派的下潜工作照常执行。
+        /// 设为 -1 关闭闲逛避让。
+        /// </summary>
+        public int IdleAvoidMinLayerIndex = 2;
+
         private static AbyssConfig instance;
 
         public static AbyssConfig Instance

@@ -111,7 +111,9 @@ namespace StorageNetwork.Components
 
         public Storage ResolveSourceStorage()
         {
-            if (SourceStorageInstanceId == KPrefabID.InvalidInstanceID)
+            if (this == null ||
+                gameObject == null ||
+                SourceStorageInstanceId == KPrefabID.InvalidInstanceID)
             {
                 return null;
             }
@@ -288,6 +290,14 @@ namespace StorageNetwork.Components
 
         private float GetAvailableParticles()
         {
+            // ProgressBarSideScreen can refresh once more after this component's
+            // GameObject has been demolished. Do not dereference gameObject during
+            // that cleanup window.
+            if (this == null || gameObject == null)
+            {
+                return 0f;
+            }
+
             if (CurrentSourceMode == StorageNetworkMaterialRequester.RequestMode.SpecificStorage)
             {
                 Storage specificSource = ResolveSourceStorage();

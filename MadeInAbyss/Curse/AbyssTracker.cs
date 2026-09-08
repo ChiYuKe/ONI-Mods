@@ -144,6 +144,25 @@ namespace MadeInAbyss
                 Debug.Log($"[MadeInAbyss] {gameObject.GetProperName()} 从第 {layerIndex + 1} 层上升，诅咒被弹药包挡下（{layerIndex + 1}→{layerIndex}）");
                 ConsumeAmmoPouchCharge(deepPouch);
                 DealCurseDamage(AbyssStatics.FinalLayerPouchBlockedDamage);
+
+                // 6→5（最终地）：被挡下的诅咒化作「深渊祝福」——固定 生命恢复+氧气，再随机两条馈赠。
+                if (layerIndex == AbyssStatics.Layers.Length - 1)
+                {
+                    AbyssEffects.ApplyBlessing(effects);
+
+                    // 兽化外观：祝福期间随机把少量身体部件换成小动物部件，到期还原。
+                    BlessingBeastParts beast = gameObject.GetComponent<BlessingBeastParts>();
+                    if (beast == null)
+                    {
+                        beast = gameObject.AddComponent<BlessingBeastParts>();
+                        beast.RandomizeAndApply();
+                    }
+
+                    Notify(
+                        NotificationType.Good,
+                        STRINGS.MISC.NOTIFICATIONS.ABYSS_BLESSING.NAME,
+                        $"{gameObject.GetProperName()} 的弹药包挡下了「最终地」的诅咒，深渊收回了恶意，转而馈赠祝福。");
+                }
                 return;
             }
 
@@ -286,6 +305,13 @@ namespace MadeInAbyss
                 {
                     GameObject critter = GameUtil.KInstantiate(prefab, transform.GetPosition(), Grid.SceneLayer.Creatures, null, 0);
                     critter.SetActive(true);
+
+                    // 生骸之躯：深渊重塑的躯体老化极慢（年龄增长 -0.9/周期，永久）。
+                    Klei.AI.Effects critterEffects = critter.GetComponent<Klei.AI.Effects>();
+                    if (critterEffects != null)
+                        critterEffects.Add(AbyssStatics.NarehateEffectId, true);
+                    else
+                        Debug.LogWarning("[MadeInAbyss] 生骸动物缺少 Effects 组件，未能附加老化迟缓效果");
 
                     // 生骸保留复制人的名字。
                     KSelectable selectable = critter.GetComponent<KSelectable>();

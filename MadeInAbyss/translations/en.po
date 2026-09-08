@@ -56,7 +56,7 @@ msgid "第6层「最终地」的诅咒：\n\n从最终地上升将受到 80 点�
 msgstr "Ascending from the Capital of the Unreturned deals 80 damage; survivors are at once remade into a Narehate, a random critter. A Delver's Ammo Pouch can ward this off once — taking only 30 damage as the pouch breaks and falls."
 
 msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSWHISTLEBLUE.NAME"
-msgid "蓝笛探窟家"
+msgid "苍笛探窟家"
 msgstr "<color=#6BD26B>Blue Whistle Delver</color>"
 
 msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSWHISTLEBLUE.TOOLTIP"
@@ -64,7 +64,7 @@ msgid "已抵达「诱惑之森」的证明。\n\n挖掘 +2。"
 msgstr "Proof of reaching the Forest of Temptation.\n\nDigging +2."
 
 msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSWHISTLEMOON.NAME"
-msgid "苍笛探窟家"
+msgid "月笛探窟家"
 msgstr "<color=#4AD2C7>Moon Whistle Delver</color>"
 
 msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSWHISTLEMOON.TOOLTIP"
@@ -86,6 +86,78 @@ msgstr "<color=#FFD24A>White Whistle Delver</color>"
 msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSWHISTLEWHITE.TOOLTIP"
 msgid "已抵达「亡骸之海」的传奇证明，深受殖民地敬仰。\n\n挖掘 +5，运动 +5，力量 +3，压力减少。"
 msgstr "A legendary proof of reaching the Sea of Corpses, revered across the colony.\n\nDigging +5, Athletics +5, Strength +3, reduced Stress."
+
+msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSBLESSING.NAME"
+msgid "深渊祝福"
+msgstr "<color=#7FD4FF>Abyssal Blessing</color>"
+
+msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSBLESSING.TOOLTIP"
+msgid "在「最终地」边缘被弹药包挡下的诅咒，化作了深渊的馈赠。\n\n生命恢复 +30/周期，呼吸恢复 +100 克/秒，压力 -45%/周期。\n\n持续 6 周期，祝福存在期间不会重复获得。深渊的馈赠残留着兽性——部分身体部件会临时变成小动物的样子。"
+msgstr "A curse blocked at the edge of the Capital of the Unreturned turns into the Abyss's favor.\n\nHealth +30/cycle, Breath recovery +100 g/s, Stress -45%/cycle.\n\nLasts 6 cycles; a new blessing cannot be gained while it is active. The Abyss's gift carries a trace of bestiality — some body parts temporarily take on the look of small critters."
+
+msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSGIFTDIG.NAME"
+msgid "深渊馈赠·掘进"
+msgstr "<color=#7FD4FF>Abyssal Gift · Digging</color>"
+
+msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSGIFTDIG.TOOLTIP"
+msgid "深渊的馈赠：挖掘 +3。"
+msgstr "An Abyssal gift: Digging +3."
+
+msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSGIFTATHLETICS.NAME"
+msgid "深渊馈赠·迅捷"
+msgstr "<color=#7FD4FF>Abyssal Gift · Athletics</color>"
+
+msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSGIFTATHLETICS.TOOLTIP"
+msgid "深渊的馈赠：运动 +3。"
+msgstr "An Abyssal gift: Athletics +3."
+
+msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSGIFTSTRENGTH.NAME"
+msgid "深渊馈赠·伟力"
+msgstr "<color=#7FD4FF>Abyssal Gift · Strength</color>"
+
+msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSGIFTSTRENGTH.TOOLTIP"
+msgid "深渊的馈赠：力量 +3。"
+msgstr "An Abyssal gift: Strength +3."
+
+msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSGIFTLEARNING.NAME"
+msgid "深渊馈赠·敏思"
+msgstr "<color=#7FD4FF>Abyssal Gift · Learning</color>"
+
+msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSGIFTLEARNING.TOOLTIP"
+msgid "深渊的馈赠：学习 +5。"
+msgstr "An Abyssal gift: Learning +5."
+
+msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSGIFTCALM.NAME"
+msgid "深渊馈赠·抚慰"
+msgstr "<color=#7FD4FF>Abyssal Gift · Soothing</color>"
+
+msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSGIFTCALM.TOOLTIP"
+msgid "深渊的馈赠：压力 -10%/周期。"
+msgstr "An Abyssal gift: Stress -10%/cycle."
+
+msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSGIFTSTAMINA.NAME"
+msgid "深渊馈赠·充沛"
+msgstr "<color=#7FD4FF>Abyssal Gift · Vitality</color>"
+
+msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSGIFTSTAMINA.TOOLTIP"
+msgid "深渊的馈赠：体力 +5%/周期。"
+msgstr "An Abyssal gift: Stamina +5%/cycle."
+
+msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSNAREHATE.NAME"
+msgid "生骸之躯"
+msgstr "<color=#E08BD0>Narehate Body</color>"
+
+msgctxt "MadeInAbyss.STRINGS.DUPLICANTS.MODIFIERS.ABYSSNAREHATE.TOOLTIP"
+msgid "被深渊重塑过的躯体，衰老得极慢，繁殖力旺盛。\n\n年龄增长 -0.9/周期（老化速度只剩一成），繁殖度 +30%/周期。"
+msgstr "A body remade by the Abyss ages extremely slowly and breeds readily.\n\nAge -0.9/cycle (ages at only one tenth the normal rate), Fertility +30%/cycle."
+
+msgctxt "MadeInAbyss.STRINGS.CREATURES.ATTRIBUTES.AGEDELTA.NAME"
+msgid "年龄增长"
+msgstr "Aging"
+
+msgctxt "MadeInAbyss.STRINGS.CREATURES.ATTRIBUTES.AGEDELTA.TOOLTIP"
+msgid "生物每个周期增加的年龄。"
+msgstr "The age this creature gains per cycle."
 
 msgctxt "MadeInAbyss.STRINGS.MISC.NOTIFICATIONS.ABYSS_CURSE.NAME"
 msgid "上升负荷！"
@@ -175,13 +247,21 @@ msgctxt "MadeInAbyss.STRINGS.MISC.NOTIFICATIONS.ABYSS_POUCH_CONSUMED.TOOLTIP"
 msgid "探窟弹药包抵挡了一次上升负荷后损坏，掉落在地。"
 msgstr "The ammo pouch broke after warding off a Curse of the Abyss and dropped to the ground."
 
+msgctxt "MadeInAbyss.STRINGS.MISC.NOTIFICATIONS.ABYSS_BLESSING.NAME"
+msgid "深渊的祝福"
+msgstr "Blessing of the Abyss"
+
+msgctxt "MadeInAbyss.STRINGS.MISC.NOTIFICATIONS.ABYSS_BLESSING.TOOLTIP"
+msgid "弹药包挡下了「最终地」的诅咒，深渊收回了恶意，转而馈赠祝福。"
+msgstr "The ammo pouch warded off the curse of the Capital of the Unreturned; the Abyss withdrew its malice and bestowed a blessing instead."
+
 msgctxt "MadeInAbyss.STRINGS.ITEMS.AMMO_POUCH_DAMAGED.NAME"
 msgid "损坏的弹药包"
 msgstr "Broken Ammo Pouch"
 
 msgctxt "MadeInAbyss.STRINGS.ITEMS.AMMO_POUCH_DAMAGED.DESC"
-msgid "内衬的护符在抵挡诅咒时碎裂了，还在缓缓渗出粉红色的护符凝液。把它和布料一起送到服装纺织机，还能缝补一新。"
-msgstr "The talisman lining shattered while warding off a curse, and pink talisman condensate is slowly seeping out. Take it to the Clothing Fabricator with some fabric to sew it back together."
+msgid "内衬的护符在抵挡诅咒时碎裂了。剖开夹层才发现，鼓鼓囊囊塞的哪里是工具和口粮，分明是一坨仍在缓缓搏动的血肉组织——析出的粉红色祈愿培养基还剩 10~15 千克，每 5 秒向外渗漏 1 千克，渗完即止。把它和布料一起送到服装纺织机，还能缝补一新。"
+msgstr "The talisman lining shattered while warding off a curse. Slit it open and the bulging padding was never tools or rations at all — it is a lump of flesh, still faintly pulsing, weeping out the last 10-15 kg of pink wishing condensate (1 kg every 5 s, until it runs dry). Take it to the Clothing Fabricator with some fabric to sew it back together."
 
 msgctxt "MadeInAbyss.STRINGS.EQUIPMENT.PREFABS.AMMO_POUCH.REPAIR_DESC"
 msgid "将损坏的弹药包缝补一新。"

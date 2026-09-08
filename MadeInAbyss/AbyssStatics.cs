@@ -66,12 +66,12 @@ namespace MadeInAbyss
 
         public class WhistleDef
         {
-            /// <summary>笛级序号（0 = 无笛级，1 = 红笛 … 5 = 白笛）：笛级 i 需要抵达第 i 层，白笛为最高笛级（含最终地）。</summary>
+            /// <summary>笛级序号（0 = 无笛级，1 = 赤笛 … 5 = 白笛）：笛级 i 需要抵达第 i 层，白笛为最高笛级（含最终地）。</summary>
             public readonly int Rank;
 
             public readonly string Name;
 
-            /// <summary>晋升到该笛级时施加的永久效果 ID；红笛为荣誉头衔，无效果。</summary>
+            /// <summary>晋升到该笛级时施加的永久效果 ID；赤笛为荣誉头衔，无效果。</summary>
             public readonly string EffectId;
 
             public WhistleDef(int rank, string name, string effectId)
@@ -86,9 +86,9 @@ namespace MadeInAbyss
         public static readonly WhistleDef[] Whistles =
         {
             new WhistleDef(0, "无", null),
-            new WhistleDef(1, "红笛", null),
-            new WhistleDef(2, "蓝笛", "AbyssWhistleBlue"),
-            new WhistleDef(3, "苍笛", "AbyssWhistleMoon"),
+            new WhistleDef(1, "赤笛", null),
+            new WhistleDef(2, "苍笛", "AbyssWhistleBlue"),
+            new WhistleDef(3, "月笛", "AbyssWhistleMoon"),
             new WhistleDef(4, "黑笛", "AbyssWhistleBlack"),
             new WhistleDef(5, "白笛", "AbyssWhistleWhite"),
         };
@@ -153,7 +153,7 @@ namespace MadeInAbyss
 
         /// <summary>
         /// 计算给定世界、给定历史最深深度（米）对应的笛级序号；未进入第 1 层时返回 0。
-        /// 红笛对应第 1 层、白笛对应第 5 层；抵达第 6 层「最终地」不再晋升更高笛级。
+        /// 赤笛对应第 1 层、白笛对应第 5 层；抵达第 6 层「最终地」不再晋升更高笛级。
         /// </summary>
         public static int GetWhistleRank(int worldId, float deepestDepthM)
         {

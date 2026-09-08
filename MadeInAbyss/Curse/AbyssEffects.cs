@@ -47,7 +47,7 @@ namespace MadeInAbyss
             Add(modifiers, "AbyssCurse6", duration, isBad: true, mods => mods
                 .Add(amounts.Stress.deltaAttribute.Id, 40f / 600f)); // 压力 +40%/周期
 
-            // —— 笛级永久加成（红笛为荣誉头衔，无效果） ——
+            // —— 笛级永久加成（赤笛为荣誉头衔，无效果） ——
 
             Add(modifiers, "AbyssWhistleBlue", 0f, isBad: false, mods => mods
                 .Add(attributes.Digging.Id, 2f));                   // 挖掘 +2
@@ -66,6 +66,65 @@ namespace MadeInAbyss
                 .Add(attributes.Athletics.Id, 5f)                   // 运动 +5
                 .Add(attributes.Strength.Id, 3f)                    // 力量 +3
                 .Add(amounts.Stress.deltaAttribute.Id, -5f / 600f)); // 压力 -5%/周期
+
+            // —— 深渊祝福：6→5 上升被弹药包挡下的诅咒化作馈赠 ——
+
+            // 时长 6 周期；存在期间不会重复获得（见 ApplyBlessing）。
+            float blessingDuration = BlessingDurationCycles * 600f;
+
+            // 固定部分：生命恢复 + 呼吸 + 减压（BreathDelta 为复制人呼吸恢复属性，原版肺病同款）。
+            Add(modifiers, "AbyssBlessing", blessingDuration, isBad: false, mods => mods
+                .Add(amounts.HitPoints.deltaAttribute.Id, 30f / 600f)    // 生命恢复 +30/周期
+                .Add(amounts.Breath.deltaAttribute.Id, 0.1f)             // 呼吸恢复 +100 克/秒
+                .Add(amounts.Stress.deltaAttribute.Id, -45f / 600f));    // 压力 -45%/周期
+
+            // 随机部分：六条馈赠，授予时随机取两条。
+            Add(modifiers, "AbyssGiftDig", blessingDuration, isBad: false, mods => mods
+                .Add(attributes.Digging.Id, 3f));                       // 挖掘 +3
+            Add(modifiers, "AbyssGiftAthletics", blessingDuration, isBad: false, mods => mods
+                .Add(attributes.Athletics.Id, 3f));                     // 运动 +3
+            Add(modifiers, "AbyssGiftStrength", blessingDuration, isBad: false, mods => mods
+                .Add(attributes.Strength.Id, 3f));                      // 力量 +3
+            Add(modifiers, "AbyssGiftLearning", blessingDuration, isBad: false, mods => mods
+                .Add(attributes.Learning.Id, 5f));                      // 学习 +5
+            Add(modifiers, "AbyssGiftCalm", blessingDuration, isBad: false, mods => mods
+                .Add(amounts.Stress.deltaAttribute.Id, -10f / 600f));   // 压力 -10%/周期
+            Add(modifiers, "AbyssGiftStamina", blessingDuration, isBad: false, mods => mods
+                .Add(amounts.Stamina.deltaAttribute.Id, 5f / 600f));    // 体力 +5%/周期
+
+            // —— 生骸化：永久效果——深渊重塑的躯体老化极慢，繁殖力旺盛。
+            Add(modifiers, AbyssStatics.NarehateEffectId, 0f, isBad: false, mods => mods
+                .Add(amounts.Age.deltaAttribute.Id, -0.9f / 600f)      // 年龄增长 -0.9/周期
+                .Add(amounts.Fertility.deltaAttribute.Id, 30f / 600f)); // 繁殖度 +30%/周期
+        }
+
+        /// <summary>深渊祝福持续时间（周期）。</summary>
+        public const float BlessingDurationCycles = 6f;
+
+        /// <summary>
+        /// 6→5（最终地）上升被弹药包挡下时授予：
+        /// 固定的「深渊祝福」（生命恢复 + 氧气）+ 两条互不重复的随机「深渊馈赠」，
+        /// 持续 6 周期；祝福存在期间不会重复获得。
+        /// </summary>
+        public static void ApplyBlessing(Effects effects)
+        {
+            if (effects == null)
+                return;
+            if (effects.Get("AbyssBlessing") != null)
+                return; // 祝福仍在身上，不重复授予
+            effects.Add("AbyssBlessing", true);
+
+            List<string> gifts = new List<string>
+            {
+                "AbyssGiftDig", "AbyssGiftAthletics", "AbyssGiftStrength",
+                "AbyssGiftLearning", "AbyssGiftCalm", "AbyssGiftStamina",
+            };
+            for (int i = 0; i < 2 && gifts.Count > 0; i++)
+            {
+                int idx = UnityEngine.Random.Range(0, gifts.Count);
+                effects.Add(gifts[idx], true);
+                gifts.RemoveAt(idx);
+            }
         }
 
         private class ModifierList
