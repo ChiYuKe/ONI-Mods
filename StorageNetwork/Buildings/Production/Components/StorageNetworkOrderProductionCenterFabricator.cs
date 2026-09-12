@@ -28,6 +28,7 @@ namespace StorageNetwork.Components
         [MyCmpGet]
         private StorageNetworkOrderProductionCenter center = null;
 
+        private HandleVector<int>.Handle structureTemperature;
         private readonly ProgressBar[] worldProgressBars = new ProgressBar[3];
 
         public int ActiveCoreCount => center != null
@@ -99,6 +100,7 @@ namespace StorageNetwork.Components
             }
 
             EnsureCores();
+            structureTemperature = GameComps.StructureTemperatures.GetHandle(gameObject);
             EnsureSafeOutputTemperature();
             SyncVanillaCurrentOrder();
             RefreshWorldProgressBars();
@@ -259,6 +261,7 @@ namespace StorageNetwork.Components
             }
 
             bool completedAny = false;
+            float totalHeatEnergyThisTickKJ = 0f;
             for (int i = 0; i < activeCoreCount; i++)
             {
                 CoreState core = cores[i];
@@ -275,11 +278,27 @@ namespace StorageNetwork.Components
                 }
 
                 core.Progress += ComputeWorkProgress(dt, recipe);
+
+                StorageNetworkRecipeHeatProfile profile = StorageNetworkRecipeHeatProfile.GetProfile(recipe);
+                if (profile != null && profile.HeatKilowatts > 0f)
+                {
+                    totalHeatEnergyThisTickKJ += profile.HeatKilowatts * dt;
+                }
+
                 if (core.Progress >= 1f)
                 {
                     CompleteCore(core, recipe);
                     completedAny = true;
                 }
+            }
+
+            if (totalHeatEnergyThisTickKJ > 0f && structureTemperature.IsValid())
+            {
+                GameComps.StructureTemperatures.ProduceEnergy(
+                    structureTemperature,
+                    totalHeatEnergyThisTickKJ,
+                    StorageNetwork.STRINGS.Get(StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKORDERPRODUCTIONCENTER.NAME),
+                    dt);
             }
 
             if (completedAny)
@@ -402,7 +421,16 @@ namespace StorageNetwork.Components
         private void CompleteCore(CoreState core, ComplexRecipe recipe)
         {
             SanitizeBuildStorageTemperatures(recipe);
-            EnsureSafeOutputTemperature();
+            StorageNetworkRecipeHeatProfile profile = StorageNetworkRecipeHeatProfile.GetProfile(recipe);
+            if (profile?.HeatedTemperature != null)
+            {
+                HeatedTemperatureField?.SetValue(this, profile.HeatedTemperature.Value);
+            }
+            else
+            {
+                EnsureSafeOutputTemperature();
+            }
+
             // The global SpawnOrderProduct postfix routes the produced objects back into
             // the network. Calling the requester here as well scans and transfers the same
             // output list twice for parallel cores.
@@ -560,6 +588,48 @@ namespace StorageNetwork.Components
             if (!IsValidOutputTemperature(heatedTemperature))
             {
                 HeatedTemperatureField.SetValue(this, GetSafeOutputTemperature());
+            }
+        }
+
+        internal void PrepareOutputTemperature(ComplexRecipe recipe, ref float heatedTemperature)
+        {
+            StorageNetworkRecipeHeatProfile profile = StorageNetworkRecipeHeatProfile.GetProfile(recipe);
+            if (profile?.HeatedTemperature != null)
+            {
+                heatedTemperature = profile.HeatedTemperature.Value;
+                HeatedTemperatureField?.SetValue(this, heatedTemperature);
+                return;
+            }
+
+            EnsureSafeOutputTemperature();
+            if (!IsValidOutputTemperature(heatedTemperature))
+            {
+                heatedTemperature = GetSafeOutputTemperature();
+                HeatedTemperatureField?.SetValue(this, heatedTemperature);
+            }
+        }
+
+        internal void ApplyOutputProductTemperatures(ComplexRecipe recipe, List<GameObject> products)
+        {
+            if (recipe == null || products == null || products.Count == 0)
+            {
+                return;
+            }
+
+            StorageNetworkRecipeHeatProfile profile = StorageNetworkRecipeHeatProfile.GetProfile(recipe);
+            if (profile?.ForcedProductTemperature == null)
+            {
+                return;
+            }
+
+            float forcedTemp = profile.ForcedProductTemperature.Value;
+            foreach (GameObject product in products)
+            {
+                PrimaryElement primaryElement = product != null ? product.GetComponent<PrimaryElement>() : null;
+                if (primaryElement != null)
+                {
+                    primaryElement.Temperature = forcedTemp;
+                }
             }
         }
 
