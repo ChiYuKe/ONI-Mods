@@ -63,7 +63,41 @@ namespace StorageNetwork.Components
 
         protected override void OnSpawn()
         {
+            Dictionary<string, int> queueCounts = RecipeQueueCountsField?.GetValue(this) as Dictionary<string, int>;
+            List<string> hundredCountRecipes = null;
+            if (queueCounts != null)
+            {
+                foreach (KeyValuePair<string, int> kvp in queueCounts)
+                {
+                    if (kvp.Value == 100)
+                    {
+                        if (hundredCountRecipes == null)
+                        {
+                            hundredCountRecipes = new List<string>();
+                        }
+                        hundredCountRecipes.Add(kvp.Key);
+                    }
+                }
+
+                if (hundredCountRecipes != null)
+                {
+                    foreach (string key in hundredCountRecipes)
+                    {
+                        queueCounts[key] = 101;
+                    }
+                }
+            }
+
             base.OnSpawn();
+
+            if (hundredCountRecipes != null && queueCounts != null)
+            {
+                foreach (string key in hundredCountRecipes)
+                {
+                    queueCounts[key] = 100;
+                }
+            }
+
             EnsureCores();
             EnsureSafeOutputTemperature();
             SyncVanillaCurrentOrder();
