@@ -12,7 +12,7 @@ namespace StorageNetwork.UI
     public sealed class StorageNetworkOrderProductionCenterSideScreen : SideScreenContent
     {
         private const float BodyWidth = 280f;
-        private const float FallbackBodyHeight = 380f;
+        private const float FallbackBodyHeight = 360f;
 
         private StorageNetworkOrderProductionCenter center;
         private Transform root;
@@ -24,7 +24,6 @@ namespace StorageNetwork.UI
         private readonly GameObject[] prefabProgressRows = new GameObject[3];
         private readonly KImage[] prefabProgressFills = new KImage[3];
         private readonly KImage[] prefabProgressIcons = new KImage[3];
-        private Sprite defaultProgressIconSprite;
         private float refreshTimer;
 
         public StorageNetworkOrderProductionCenterSideScreen()
@@ -184,10 +183,6 @@ namespace StorageNetwork.UI
                 prefabProgressRows[i] = FindPrefabProgressRow(panel, i);
                 prefabProgressFills[i] = FindPrefabProgressFill(prefabProgressRows[i]);
                 prefabProgressIcons[i] = FindPrefabProgressIcon(prefabProgressRows[i]);
-                if (defaultProgressIconSprite == null && prefabProgressIcons[i] != null && prefabProgressIcons[i].sprite != null)
-                {
-                    defaultProgressIconSprite = prefabProgressIcons[i].sprite;
-                }
             }
 
             engraveButton = FindChildComponent<KButton>(panel, "EngraveButton");
@@ -282,6 +277,7 @@ namespace StorageNetwork.UI
             SetChildLabel(panel, "OrderButton", Loc.Get(Loc.UI.STORAGE_NETWORK.ORDER_CENTER_OPEN_BUTTON));
 
             string progressTitle = Loc.Get(Loc.UI.STORAGE_NETWORK.ORDER_CENTER_PROGRESS_SECTION_TITLE);
+            SetChildLabel(panel, "ProgressBarHeader", progressTitle);
             SetChildLabel(panel, "ProgressHeader", progressTitle);
 
             foreach (TextMeshProUGUI tmp in panel.GetComponentsInChildren<TextMeshProUGUI>(true))
@@ -471,7 +467,7 @@ namespace StorageNetwork.UI
                 bool hasRecipe = recipe != null;
                 if (prefabProgressRows[i] != null)
                 {
-                    prefabProgressRows[i].SetActive(true);
+                    prefabProgressRows[i].SetActive(hasRecipe);
                 }
 
                 KImage fill = prefabProgressFills[i];
@@ -485,35 +481,15 @@ namespace StorageNetwork.UI
                 }
 
                 KImage icon = prefabProgressIcons[i];
-                if (icon != null)
+                if (icon != null && hasRecipe)
                 {
-                    if (hasRecipe)
-                    {
-                        ApplyRecipeIcon(icon, recipe);
-                    }
-                    else if (defaultProgressIconSprite != null)
-                    {
-                        ApplyDefaultCoreIcon(icon);
-                    }
+                    ApplyRecipeIcon(icon, recipe);
                     icon.raycastTarget = false;
                 }
             }
         }
 
-        private void ApplyDefaultCoreIcon(KImage icon)
-        {
-            if (icon == null)
-            {
-                return;
-            }
 
-            icon.type = Image.Type.Simple;
-            icon.fillAmount = 1f;
-            icon.preserveAspect = true;
-            icon.sprite = defaultProgressIconSprite;
-            icon.color = Color.white;
-            icon.ColorState = KImage.ColorSelector.Inactive;
-        }
 
         private static void ApplyRecipeIcon(KImage icon, ComplexRecipe recipe)
         {
