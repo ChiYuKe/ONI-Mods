@@ -12,7 +12,7 @@ namespace StorageNetwork.UI
     public sealed class StorageNetworkOrderProductionCenterSideScreen : SideScreenContent
     {
         private const float BodyWidth = 280f;
-        private const float FallbackBodyHeight = 230f;
+        private const float FallbackBodyHeight = 380f;
 
         private StorageNetworkOrderProductionCenter center;
         private Transform root;
@@ -24,6 +24,7 @@ namespace StorageNetwork.UI
         private readonly GameObject[] prefabProgressRows = new GameObject[3];
         private readonly KImage[] prefabProgressFills = new KImage[3];
         private readonly KImage[] prefabProgressIcons = new KImage[3];
+        private Sprite defaultProgressIconSprite;
         private float refreshTimer;
 
         public StorageNetworkOrderProductionCenterSideScreen()
@@ -183,6 +184,10 @@ namespace StorageNetwork.UI
                 prefabProgressRows[i] = FindPrefabProgressRow(panel, i);
                 prefabProgressFills[i] = FindPrefabProgressFill(prefabProgressRows[i]);
                 prefabProgressIcons[i] = FindPrefabProgressIcon(prefabProgressRows[i]);
+                if (defaultProgressIconSprite == null && prefabProgressIcons[i] != null && prefabProgressIcons[i].sprite != null)
+                {
+                    defaultProgressIconSprite = prefabProgressIcons[i].sprite;
+                }
             }
 
             engraveButton = FindChildComponent<KButton>(panel, "EngraveButton");
@@ -278,9 +283,6 @@ namespace StorageNetwork.UI
 
             string progressTitle = Loc.Get(Loc.UI.STORAGE_NETWORK.ORDER_CENTER_PROGRESS_SECTION_TITLE);
             SetChildLabel(panel, "ProgressHeader", progressTitle);
-            SetChildLabel(panel, "ProgressBarHeader", progressTitle);
-            SetChildLabel(panel, "RunningProgressHeader", progressTitle);
-            SetChildLabel(panel, "ProgressSectionHeader", progressTitle);
 
             foreach (TextMeshProUGUI tmp in panel.GetComponentsInChildren<TextMeshProUGUI>(true))
             {
@@ -389,13 +391,19 @@ namespace StorageNetwork.UI
                 return FallbackBodyHeight;
             }
 
+            float preferred = LayoutUtility.GetPreferredHeight(rect);
+            if (preferred > 100f)
+            {
+                return Mathf.Max(preferred, FallbackBodyHeight);
+            }
+
             float rootHeight = rect.rect.height;
             if (rootHeight <= 0.01f)
             {
                 rootHeight = Mathf.Abs(rect.sizeDelta.y);
             }
 
-            return rootHeight > 0.01f ? rootHeight : FallbackBodyHeight;
+            return rootHeight > 100f ? Mathf.Max(rootHeight, FallbackBodyHeight) : FallbackBodyHeight;
         }
 
         private static void ApplyLayoutSize(GameObject target, float height)
@@ -463,11 +471,11 @@ namespace StorageNetwork.UI
                 bool hasRecipe = recipe != null;
                 if (prefabProgressRows[i] != null)
                 {
-                    prefabProgressRows[i].SetActive(hasRecipe);
+                    prefabProgressRows[i].SetActive(true);
                 }
 
                 KImage fill = prefabProgressFills[i];
-                float progress = hasRecipe ? Mathf.Clamp01(core.Progress) : 0f;
+                float progress = hasRecipe && core != null ? Mathf.Clamp01(core.Progress) : 0f;
                 if (fill != null)
                 {
                     fill.type = Image.Type.Filled;
@@ -477,12 +485,34 @@ namespace StorageNetwork.UI
                 }
 
                 KImage icon = prefabProgressIcons[i];
-                if (icon != null && hasRecipe)
+                if (icon != null)
                 {
-                    ApplyRecipeIcon(icon, recipe);
+                    if (hasRecipe)
+                    {
+                        ApplyRecipeIcon(icon, recipe);
+                    }
+                    else if (defaultProgressIconSprite != null)
+                    {
+                        ApplyDefaultCoreIcon(icon);
+                    }
                     icon.raycastTarget = false;
                 }
             }
+        }
+
+        private void ApplyDefaultCoreIcon(KImage icon)
+        {
+            if (icon == null)
+            {
+                return;
+            }
+
+            icon.type = Image.Type.Simple;
+            icon.fillAmount = 1f;
+            icon.preserveAspect = true;
+            icon.sprite = defaultProgressIconSprite;
+            icon.color = Color.white;
+            icon.ColorState = KImage.ColorSelector.Inactive;
         }
 
         private static void ApplyRecipeIcon(KImage icon, ComplexRecipe recipe)
