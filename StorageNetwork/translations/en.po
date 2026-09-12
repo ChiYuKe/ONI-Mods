@@ -3984,3 +3984,72 @@ msgstr "Clear Completed"
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_ACTION_RETRY"
 msgid "重试"
 msgstr "Retry"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_WAITING_MATERIALS"
+msgid "成品设备 {0} 台等待材料，{1} 台设备补产缺口。"
+msgstr "{0} product machines waiting for materials, {1} machines making up shortfall."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_MISSING_MATERIALS_TITLE"
+msgid "缺少材料："
+msgstr "Missing Materials:"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_MISSING_MATERIAL_LINE"
+msgid "• {0}：库存 {1} / 需要 {2}（缺少 {3}）"
+msgstr "• {0}: {1} in storage / {2} needed (missing {3})"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_DETAIL_MISSING_PREFIX"
+msgid "缺少材料：{0}"
+msgstr "Missing: {0}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_MACHINES_RUNNING"
+msgid "{0} 台设备正在以 {1} 核处理该订单。"
+msgstr "{0} machines processing order with {1} cores."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_STATE_CREATED"
+msgid "{0}，创建于 {1} 周期。"
+msgstr "{0}, created cycle {1}."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_SOURCE_KEEP"
+msgid "货物保持"
+msgstr "Maintain Stock"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_SOURCE_MANUAL"
+msgid "手动"
+msgstr "Manual"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_STATE_SUBMITTED"
+msgid "已提交"
+msgstr "Submitted"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_STATE_WAITING"
+msgid "待材料"
+msgstr "Waiting Materials"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_STATE_PRODUCING"
+msgid "生产中"
+msgstr "Producing"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_STATE_COMPLETED"
+msgid "完成"
+msgstr "Completed"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_STATE_ABNORMAL"
+msgid "异常取消"
+msgstr "Abnormal"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_STATE_CANCELLED"
+msgid "已取消"
+msgstr "Cancelled"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_STATE_TRACKING"
+msgid "追踪中"
+msgstr "Tracking"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_ORDER_SOURCE_BATCH"
+msgid "{0}订单 · 批次 x{1}"
+msgstr "{0} Order · Batch x{1}"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CENTER_PROGRESS_SECTION_TITLE"
+msgid "运行进度"
+msgstr "Progress"
+

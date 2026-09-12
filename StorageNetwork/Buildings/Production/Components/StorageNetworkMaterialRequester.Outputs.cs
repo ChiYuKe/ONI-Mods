@@ -121,11 +121,40 @@ namespace StorageNetwork.Components
                 : GetKnownRecipeResultTags();
         }
 
+        public void InvalidateKnownRecipeResultTags()
+        {
+            knownRecipeResultTagsBuilt = false;
+            knownRecipeResultTags.Clear();
+            lastRecipeResultTags.Clear();
+        }
+
         // 只把当前配方 results 里的真实产物入网，避免金属精炼器冷却液这类工艺介质被当作成品搬走。
         private HashSet<Tag> GetCurrentRecipeResultTags()
         {
             HashSet<Tag> tags = currentRecipeResultTagBuffer;
             tags.Clear();
+
+            if (fabricator is StorageNetworkOrderProductionCenterFabricator orderCenter)
+            {
+                foreach (ComplexRecipe orderCenterRecipe in orderCenter.GetRecipes())
+                {
+                    if (orderCenterRecipe?.results == null)
+                    {
+                        continue;
+                    }
+
+                    foreach (ComplexRecipe.RecipeElement result in orderCenterRecipe.results)
+                    {
+                        if (result != null && result.material != Tag.Invalid)
+                        {
+                            tags.Add(result.material);
+                        }
+                    }
+                }
+
+                return tags;
+            }
+
             ComplexRecipe recipe = fabricator != null ? fabricator.CurrentWorkingOrder : null;
             if (recipe == null)
             {

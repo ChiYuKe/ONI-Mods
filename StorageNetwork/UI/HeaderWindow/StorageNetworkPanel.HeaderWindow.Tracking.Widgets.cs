@@ -55,9 +55,15 @@ namespace StorageNetwork.UI
             fillRect.offsetMax = Vector2.zero;
         }
 
-        private void AddTrackingStateBadge(Transform parent, string text, Color color, float minWidth, float maxWidth)
+        private void AddTrackingStateBadge(Transform parent, string text, Color color, float minWidth, float maxWidth, string tooltipText = null)
         {
             GameObject badge = CreateRoundedOrderImage("TrackingStateBadge", parent, color, "UISprite", "Background");
+            if (!string.IsNullOrEmpty(tooltipText))
+            {
+                ToolTip tooltip = badge.AddComponent<ToolTip>();
+                tooltip.SetSimpleTooltip(tooltipText);
+            }
+
             LayoutElement layout = badge.AddComponent<LayoutElement>();
             layout.preferredWidth = Mathf.Clamp(EstimateTextWidth(text, 10) + 18f, minWidth, maxWidth);
             layout.preferredHeight = 24f;

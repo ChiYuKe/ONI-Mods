@@ -197,6 +197,12 @@ namespace StorageNetwork.UI
             engraveButton.ClearOnClick();
             ConfigureButtonVisualFeedback(engraveButton);
             SetButtonTooltip(engraveButton, Loc.Get(Loc.UI.STORAGE_NETWORK.ORDER_CENTER_ENGRAVE_TOOLTIP));
+            TextMeshProUGUI engraveBtnLabel = FindChildComponent<TextMeshProUGUI>(engraveButton.gameObject, "Label") ?? engraveButton.GetComponentInChildren<TextMeshProUGUI>(true);
+            if (engraveBtnLabel != null)
+            {
+                engraveBtnLabel.text = Loc.Get(Loc.UI.STORAGE_NETWORK.ORDER_CENTER_ENGRAVE_BUTTON);
+                engraveBtnLabel.ForceMeshUpdate(true);
+            }
             engraveButton.onClick += () =>
             {
                 center?.BeginEngraving();
@@ -207,6 +213,12 @@ namespace StorageNetwork.UI
             orderButton.ClearOnClick();
             ConfigureButtonVisualFeedback(orderButton);
             SetButtonTooltip(orderButton, Loc.Get(Loc.UI.STORAGE_NETWORK.ORDER_CENTER_OPEN_TOOLTIP));
+            TextMeshProUGUI orderBtnLabel = FindChildComponent<TextMeshProUGUI>(orderButton.gameObject, "Label") ?? orderButton.GetComponentInChildren<TextMeshProUGUI>(true);
+            if (orderBtnLabel != null)
+            {
+                orderBtnLabel.text = Loc.Get(Loc.UI.STORAGE_NETWORK.ORDER_CENTER_OPEN_BUTTON);
+                orderBtnLabel.ForceMeshUpdate(true);
+            }
             orderButton.onClick += () =>
             {
                 if (center != null)
@@ -263,6 +275,42 @@ namespace StorageNetwork.UI
             SetChildLabel(panel, "OrderHeader", Loc.Get(Loc.UI.STORAGE_NETWORK.ORDER_CENTER_ORDER_SECTION_TITLE));
             SetChildLabel(panel, "EngraveButton", Loc.Get(Loc.UI.STORAGE_NETWORK.ORDER_CENTER_ENGRAVE_BUTTON));
             SetChildLabel(panel, "OrderButton", Loc.Get(Loc.UI.STORAGE_NETWORK.ORDER_CENTER_OPEN_BUTTON));
+
+            string progressTitle = Loc.Get(Loc.UI.STORAGE_NETWORK.ORDER_CENTER_PROGRESS_SECTION_TITLE);
+            SetChildLabel(panel, "ProgressHeader", progressTitle);
+            SetChildLabel(panel, "ProgressBarHeader", progressTitle);
+            SetChildLabel(panel, "RunningProgressHeader", progressTitle);
+            SetChildLabel(panel, "ProgressSectionHeader", progressTitle);
+
+            foreach (TextMeshProUGUI tmp in panel.GetComponentsInChildren<TextMeshProUGUI>(true))
+            {
+                if (tmp == null || string.IsNullOrEmpty(tmp.text))
+                {
+                    continue;
+                }
+
+                string trimmed = tmp.text.Trim();
+                if (trimmed == "刻录")
+                {
+                    tmp.text = Loc.Get(Loc.UI.STORAGE_NETWORK.ORDER_CENTER_ENGRAVE_BUTTON);
+                    tmp.ForceMeshUpdate(true);
+                }
+                else if (trimmed == "订单")
+                {
+                    tmp.text = Loc.Get(Loc.UI.STORAGE_NETWORK.ORDER_CENTER_OPEN_BUTTON);
+                    tmp.ForceMeshUpdate(true);
+                }
+                else if (trimmed == "运行进度")
+                {
+                    tmp.text = progressTitle;
+                    tmp.ForceMeshUpdate(true);
+                }
+                else if (trimmed == "刻录盘")
+                {
+                    tmp.text = Loc.Get(Loc.UI.STORAGE_NETWORK.ORDER_CENTER_DISK_CONFIG_TITLE);
+                    tmp.ForceMeshUpdate(true);
+                }
+            }
         }
 
         private GameObject CreateEmbeddedPrefabHolder()
@@ -679,7 +727,15 @@ namespace StorageNetwork.UI
         private static void SetChildLabel(GameObject panel, string parentName, string text)
         {
             GameObject parent = FindChildObject(panel, parentName);
-            TextMeshProUGUI label = parent != null ? FindChildComponent<TextMeshProUGUI>(parent, "TitleLabel") : null;
+            if (parent == null)
+            {
+                return;
+            }
+
+            TextMeshProUGUI label = FindChildComponent<TextMeshProUGUI>(parent, "TitleLabel")
+                ?? FindChildComponent<TextMeshProUGUI>(parent, "Label")
+                ?? FindChildComponent<TextMeshProUGUI>(parent, "Text")
+                ?? parent.GetComponentInChildren<TextMeshProUGUI>(true);
             if (label == null)
             {
                 return;

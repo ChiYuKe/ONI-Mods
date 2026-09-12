@@ -1001,6 +1001,9 @@ namespace StorageNetwork
                 public static LocString TRACKING_FILTER_ABNORMAL = "异常";
                 public static LocString TRACKING_ORDER_SOURCE_BATCH = "{0}订单 · 批次 x{1}";
                 public static LocString TRACKING_WAITING_MATERIALS = "成品设备 {0} 台等待材料，{1} 台设备补产缺口。";
+                public static LocString TRACKING_MISSING_MATERIALS_TITLE = "缺少材料：";
+                public static LocString TRACKING_MISSING_MATERIAL_LINE = "• {0}：库存 {1} / 需要 {2}（缺少 {3}）";
+                public static LocString TRACKING_DETAIL_MISSING_PREFIX = "缺少材料：{0}";
                 public static LocString TRACKING_MACHINES_RUNNING = "{0} 台设备正在以 {1} 核处理该订单。";
                 public static LocString TRACKING_STATE_CREATED = "{0}，创建于 {1} 周期。";
                 public static LocString TRACKING_SOURCE_KEEP = "货物保持";
@@ -1024,6 +1027,7 @@ namespace StorageNetwork
                 public static LocString ORDER_CENTER_ENGRAVE_TOOLTIP = "选择一个或多个带配方的建筑进行刻录";
                 public static LocString ORDER_CENTER_ENGRAVE_TOOLNAME = "刻录工具";
                 public static LocString ORDER_CENTER_ENGRAVE_ACTION = "刻录";
+                public static LocString ORDER_CENTER_PROGRESS_SECTION_TITLE = "运行进度";
                 public static LocString ORDER_CENTER_ENGRAVE_STARTED = "刻录模式：请选择一个带有配方的生产建筑。";
                 public static LocString ORDER_CENTER_ENGRAVE_SUCCESS = "订单生产中心：已刻录 {0} 个新配方。";
                 public static LocString ORDER_CENTER_ENGRAVE_DUPLICATE = "订单生产中心：目标建筑的配方都已经刻录过。";

@@ -82,14 +82,12 @@ namespace StorageNetwork.Core
                 string poPath = Path.Combine(translationsPath, localeCode + ".po");
                 if (!File.Exists(poPath))
                 {
-                    if (localeCode.StartsWith("en", StringComparison.OrdinalIgnoreCase))
-                    {
-                        poPath = Path.Combine(translationsPath, "en.po");
-                    }
-                    else
+                    if (localeCode.StartsWith("zh", StringComparison.OrdinalIgnoreCase))
                     {
                         return;
                     }
+
+                    poPath = Path.Combine(translationsPath, "en.po");
                 }
 
                 if (!File.Exists(poPath))

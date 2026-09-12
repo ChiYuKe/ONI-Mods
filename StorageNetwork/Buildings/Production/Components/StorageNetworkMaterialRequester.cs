@@ -293,12 +293,12 @@ namespace StorageNetwork.Components
 
         private ComplexRecipe GetRecipeToRequest()
         {
-            if (fabricator.CurrentWorkingOrder != null)
+            if (fabricator.CurrentWorkingOrder != null && NeedsAnyIngredient(fabricator.CurrentWorkingOrder))
             {
                 return fabricator.CurrentWorkingOrder;
             }
 
-            if (fabricator.NextOrder != null)
+            if (fabricator.NextOrder != null && NeedsAnyIngredient(fabricator.NextOrder))
             {
                 return fabricator.NextOrder;
             }

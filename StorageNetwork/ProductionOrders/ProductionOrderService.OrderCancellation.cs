@@ -139,8 +139,16 @@ namespace StorageNetwork.ProductionOrders
             QueueCancellationTarget target)
         {
             if (!IsOrderProductionFabricator(target.Fabricator) ||
-                target.Recipe == null ||
-                target.OwnedCount <= 0)
+                target.Recipe == null)
+            {
+                return false;
+            }
+
+            bool isOrderCompleted = order != null &&
+                (order.State == ProductionOrderState.Completed ||
+                 order.ProducedAtSubmit + PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT >= order.RequestedAmount);
+
+            if (!isOrderCompleted && target.OwnedCount <= 0)
             {
                 return false;
             }
@@ -158,10 +166,12 @@ namespace StorageNetwork.ProductionOrders
             int activeOwnedCount = Mathf.Max(0, target.OwnedCount) +
                                    (cancelCurrentWorkingOrder ? 1 : 0);
             int removableQueued = Mathf.Max(0, queued - protectedQueued);
-            int cancelCount = Mathf.Min(
-                removableQueued + (cancelCurrentWorkingOrder ? 1 : 0),
-                activeOwnedCount);
-            if (cancelCount <= 0)
+            int cancelCount = isOrderCompleted
+                ? (removableQueued + (cancelCurrentWorkingOrder ? 1 : 0))
+                : Mathf.Min(
+                    removableQueued + (cancelCurrentWorkingOrder ? 1 : 0),
+                    activeOwnedCount);
+            if (cancelCount <= 0 && !cancelCurrentWorkingOrder)
             {
                 return false;
             }
@@ -202,6 +212,10 @@ namespace StorageNetwork.ProductionOrders
         private static List<QueueCancellationTarget> BuildQueueCancellationTargets(ProductionOrderRecord order)
         {
             Dictionary<string, QueueCancellationTarget> targets = new Dictionary<string, QueueCancellationTarget>();
+            bool isOrderCompleted = order != null &&
+                (order.State == ProductionOrderState.Completed ||
+                 order.ProducedAtSubmit + PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT >= order.RequestedAmount);
+
             foreach (ProductionOrderQueueAssignment assignment in order.QueueAssignments)
             {
                 if (assignment == null || !IsOrderProductionFabricator(assignment.Fabricator) || assignment.Recipe == null)
@@ -216,7 +230,7 @@ namespace StorageNetwork.ProductionOrders
                     targets[key] = target;
                 }
 
-                target.OwnedCount += GetRemainingQueueCount(order, assignment);
+                target.OwnedCount += isOrderCompleted ? assignment.OrderCount : GetRemainingQueueCount(order, assignment);
             }
 
             return targets.Values.ToList();
@@ -225,8 +239,22 @@ namespace StorageNetwork.ProductionOrders
         private static bool ShouldCancelCurrentWorkingOrder(ProductionOrderRecord cancelledOrder, QueueCancellationTarget cancelledTarget)
         {
             if (!IsOrderProductionFabricator(cancelledTarget.Fabricator) ||
-                cancelledTarget.Recipe == null ||
-                cancelledTarget.Fabricator.CurrentWorkingOrder != cancelledTarget.Recipe)
+                cancelledTarget.Recipe == null)
+            {
+                return false;
+            }
+
+            bool isWorkingOnRecipe = false;
+            if (cancelledTarget.Fabricator is StorageNetwork.Components.StorageNetworkOrderProductionCenterFabricator orderCenter)
+            {
+                isWorkingOnRecipe = orderCenter.GetWorkingCountForRecipe(cancelledTarget.Recipe) > 0;
+            }
+            else
+            {
+                isWorkingOnRecipe = cancelledTarget.Fabricator.CurrentWorkingOrder == cancelledTarget.Recipe;
+            }
+
+            if (!isWorkingOnRecipe)
             {
                 return false;
             }
@@ -234,7 +262,6 @@ namespace StorageNetwork.ProductionOrders
             return !ActiveOrders.Values.Any(order =>
                 IsOrderActive(order) &&
                 order.Key != cancelledOrder.Key &&
-                IsOrderAheadOf(order, cancelledOrder) &&
                 order.QueueAssignments.Any(assignment => IsSameQueue(assignment, cancelledTarget) && GetRemainingQueueCount(order, assignment) > 0));
         }
 

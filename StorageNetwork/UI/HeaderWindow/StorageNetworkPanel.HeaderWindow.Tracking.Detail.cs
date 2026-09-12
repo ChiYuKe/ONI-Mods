@@ -131,6 +131,14 @@ namespace StorageNetwork.UI
             title.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
 
             AddPlanLine(card.transform, StorageNetworkOrderTrackingRules.GetOrderStateLabel(record.State), 10, FontStyles.Bold, GetOrderStateColor(record.State), 20f);
+            if (record.State == ProductionOrderState.WaitingMaterials)
+            {
+                string missingSummary = productionOrderService.GetMissingMaterialsSummary(record);
+                if (!string.IsNullOrEmpty(missingSummary))
+                {
+                    AddPlanLine(card.transform, string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_DETAIL_MISSING_PREFIX), missingSummary), 8, FontStyles.Normal, WarningColor(), 16f);
+                }
+            }
             AddPlanLine(card.transform, string.Format("{0} / {1}", GameUtil.GetFormattedMass(record.ProducedAtSubmit), GameUtil.GetFormattedMass(record.RequestedAmount)), 9, FontStyles.Bold, NeutralTextColor(), 18f);
             AddPlanLine(card.transform, string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_CYCLE_VALUE), ProductionOrderFormatting.FormatCycleStamp(record.LastActivityCycle)), 8, FontStyles.Normal, MutedTextColor(), 16f);
         }

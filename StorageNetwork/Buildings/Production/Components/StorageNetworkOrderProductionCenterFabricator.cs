@@ -135,6 +135,7 @@ namespace StorageNetwork.Components
             RefreshWorldProgressBars();
             SyncOperationalActive(HasParallelWorkingOrder);
             ProductionOrderCenterCatalog.InvalidateRecipes();
+            GetComponent<StorageNetworkMaterialRequester>()?.InvalidateKnownRecipeResultTags();
         }
 
         public void SetOrderCenterRecipeQueueCount(ComplexRecipe recipe, int count)
@@ -343,9 +344,10 @@ namespace StorageNetwork.Components
             if (!string.IsNullOrEmpty(activeRecipeId))
             {
                 ComplexRecipe activeRecipe = GetRecipe(activeRecipeId);
-                return activeRecipe != null && GetQueueCount(activeRecipe) != 0 && HasIngredients(activeRecipe, inStorage)
-                    ? activeRecipe
-                    : null;
+                if (activeRecipe != null && GetQueueCount(activeRecipe) != 0 && HasIngredients(activeRecipe, inStorage))
+                {
+                    return activeRecipe;
+                }
             }
 
             int startIndex = Mathf.Clamp(GetIntField(NextOrderIdxField, this, 0), 0, recipes.Length - 1);
