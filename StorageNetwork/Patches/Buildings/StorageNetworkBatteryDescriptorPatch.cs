@@ -12,9 +12,23 @@ namespace StorageNetwork.Patches
         {
             public static bool Prefix(Battery __instance, ref List<Descriptor> __result)
             {
-                if (__instance is StorageNetworkPowerOverlayBattery)
+                if (__instance is StorageNetworkPowerOverlayBattery ||
+                    (__instance != null && __instance.GetComponent<StorageNetworkPowerInputPortConsumer>() != null))
                 {
                     __result = new List<Descriptor>();
+                    return false;
+                }
+
+                return true;
+            }
+        }
+        [HarmonyPatch(typeof(Battery), nameof(Battery.SetConnectionStatus))]
+        public static class BatterySetConnectionStatusPatch
+        {
+            public static bool Prefix(Battery __instance)
+            {
+                if (__instance != null && __instance.GetComponent<StorageNetworkPowerInputPortConsumer>() != null)
+                {
                     return false;
                 }
 

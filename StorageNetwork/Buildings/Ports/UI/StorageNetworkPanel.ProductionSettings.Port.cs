@@ -146,7 +146,7 @@ namespace StorageNetwork.UI
                                     : solidOutput != null
                                         ? solidOutput.OutputRequestEnabled
                                     : powerInput != null
-                                        ? powerInput.GetInputWattsSetting() > 0f
+                                        ? powerInput.InputStoreEnabled
                                             : powerOutput != null
                                                 ? powerOutput.GetOutputWattsSetting() > 0f
                                                 : particleInput != null
@@ -173,7 +173,7 @@ namespace StorageNetwork.UI
                                 : solidOutput != null
                                     ? solidOutput.OutputRequestEnabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STATUS_ENABLED) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STATUS_DISABLED)
                                     : powerInput != null
-                                        ? powerInput.GetInputWattsSetting() > 0f ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STATUS_ENABLED) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STATUS_DISABLED)
+                                        ? powerInput.InputStoreEnabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STATUS_ENABLED) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STATUS_DISABLED)
                                         : powerOutput != null
                                             ? powerOutput.GetOutputWattsSetting() > 0f ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STATUS_ENABLED) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STATUS_DISABLED)
                                             : particleInput != null
@@ -194,7 +194,7 @@ namespace StorageNetwork.UI
                                 : solidOutput != null
                                     ? GetOutputPortSourceModeName(solidOutput)
                                     : powerInput != null
-                                        ? GetPowerInputRateName(powerInput)
+                                        ? GetPowerInputStoreModeName(powerInput)
                                         : powerOutput != null
                                             ? GetPowerOutputRateName(powerOutput)
                                             : particleOutput != null
@@ -656,9 +656,9 @@ namespace StorageNetwork.UI
         private void AddPowerInputPortSettingsCard(Storage storage, StorageNetworkPowerInputPortConsumer input)
         {
             GameObject card = CreateProductionCard("PowerInputPortSettingsCard", Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.POWER_INPUT_PORT_STORE_TITLE), 0f);
-            MakeProductionCardAutoHeight(card, 142f);
+            MakeProductionCardAutoHeight(card, 110f);
             bool online = StorageSceneRegistry.HasOnlineCoreInWorld(GetStorageWorldId(storage));
-            bool enabled = input.GetInputWattsSetting() > 0f;
+            bool enabled = input.InputStoreEnabled;
 
             CreateStatusStrip(
                 card.transform,
@@ -675,7 +675,7 @@ namespace StorageNetwork.UI
                 enabled ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ACTION_CLOSE) : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ON),
                 () =>
                 {
-                    input.SetInputWatts(enabled ? 0f : Mathf.Min(StorageNetworkPowerInputPortConsumer.DefaultInputWatts, StorageNetworkPowerInputPortConsumer.GetMaxInputWatts()));
+                    input.SetInputStoreEnabled(!enabled);
                     UpdateProductionSettingsPanel(true);
                 },
                 enabled);
@@ -684,11 +684,6 @@ namespace StorageNetwork.UI
                 Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_POLICY),
                 GetPowerInputStoreModeName(input),
                 () => ShowPowerInputStorePicker(storage, input));
-            CreateProductionActionRow(
-                card.transform,
-                Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.POWER_PORT_INPUT_RATE),
-                GetPowerInputRateName(input),
-                () => ShowPowerInputRateDialog(input));
             CreateFinePrint(card.transform, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.POWER_INPUT_PORT_STORE_DESC));
         }
 
@@ -1131,11 +1126,6 @@ namespace StorageNetwork.UI
             return string.Format(
                 Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.OUTPUT_PORT_REQUEST_RATE_VALUE),
                 GameUtil.GetFormattedMass(egress.GetRequestRateKgPerSecond()));
-        }
-
-        private static string GetPowerInputRateName(StorageNetworkPowerInputPortConsumer input)
-        {
-            return FormatPowerRate(input.GetInputWattsSetting());
         }
 
         private static string GetPowerInputStoreModeName(StorageNetworkPowerInputPortConsumer input)

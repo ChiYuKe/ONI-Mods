@@ -7,7 +7,7 @@ using Loc = StorageNetwork.STRINGS;
 namespace StorageNetwork.Components
 {
     [SerializationConfig(MemberSerialization.OptIn)]
-    public sealed class StorageNetworkPowerInputPortConsumer : EnergyConsumer, ISingleSliderControl
+    public sealed class StorageNetworkPowerInputPortConsumer : EnergyConsumer
     {
         public const float DefaultInputWatts = 1000f;
         public const float MinInputWatts = 0f;
@@ -15,6 +15,9 @@ namespace StorageNetwork.Components
         private const float SimTickSeconds = 0.2f;
         private const float MinInputBatchJoules = 1f;
         private const float TransientStatusHoldSeconds = 0.8f;
+
+        [Serialize]
+        public bool InputStoreEnabled = true;
 
         [Serialize]
         public float InputWatts = DefaultInputWatts;
@@ -45,6 +48,7 @@ namespace StorageNetwork.Components
         private string lastStatus;
         private float transientStatusRemaining;
         private string cachedStatusText;
+        private float lastTransferWatts;
 
         public float PortJoulesAvailable => battery != null
             ? Mathf.Clamp(battery.JoulesAvailable, 0f, PortCapacityJoules)
@@ -63,26 +67,102 @@ namespace StorageNetwork.Components
         protected override void OnSpawn()
         {
             base.OnSpawn();
-            StorageNetworkPowerOverlayBattery.RegisterWhiteUiBattery(battery);
+            RequireInputs requireInputs = GetComponent<RequireInputs>();
+            if (requireInputs != null)
+            {
+                Destroy(requireInputs);
+            }
+
+            ClearBogusStatusItems();
+
+            if (InputWatts <= 0f)
+            {
+                InputStoreEnabled = false;
+            }
+
+            DetachNativeBatteryUi();
             RefreshPowerInputPortStatus();
             Subscribe((int)GameHashes.CopySettings, OnCopySettingsDelegate);
         }
 
         protected override void OnCleanUp()
         {
-            StorageNetworkPowerOverlayBattery.UnregisterWhiteUiBattery(battery);
             RemovePowerInputPortStatus();
             base.OnCleanUp();
+        }
+
+        private void DetachNativeBatteryUi()
+        {
+            if (battery != null)
+            {
+                global::Components.Batteries.Remove(battery);
+            }
+
+            ClearBogusStatusItems();
+        }
+
+        private void ClearBogusStatusItems()
+        {
+            KSelectable selectable = GetComponent<KSelectable>();
+            if (selectable == null)
+            {
+                return;
+            }
+
+            StatusItemGroup group = selectable.GetStatusItemGroup();
+            if (group == null)
+            {
+                return;
+            }
+
+            Database.BuildingStatusItems buildingStatus = Db.Get()?.BuildingStatusItems;
+            System.Collections.Generic.List<Guid> guidsToRemove = null;
+
+            foreach (StatusItemGroup.Entry entry in group)
+            {
+                if (entry.item == null)
+                {
+                    continue;
+                }
+
+                bool shouldRemove =
+                    (buildingStatus != null && (
+                        entry.item == buildingStatus.NoWireConnected ||
+                        entry.item == buildingStatus.NeedPower ||
+                        entry.item == buildingStatus.BatteryJoulesAvailable
+                    )) ||
+                    entry.item.Id == "NoWireConnected" ||
+                    entry.item.Id == "NeedPower" ||
+                    entry.item.Id == "BatteryJoulesAvailable";
+
+                if (shouldRemove)
+                {
+                    if (guidsToRemove == null)
+                    {
+                        guidsToRemove = new System.Collections.Generic.List<Guid>();
+                    }
+
+                    guidsToRemove.Add(entry.id);
+                }
+            }
+
+            if (guidsToRemove != null)
+            {
+                for (int i = 0; i < guidsToRemove.Count; i++)
+                {
+                    selectable.RemoveStatusItem(guidsToRemove[i]);
+                }
+            }
         }
 
         public override void EnergySim200ms(float dt)
         {
             transientStatusRemaining = Mathf.Max(0f, transientStatusRemaining - Mathf.Max(0f, dt));
+            DetachNativeBatteryUi();
             RefreshPowerInputPortStatus();
             TransferStoredEnergyToNetwork();
             UpdateActiveState();
             base.EnergySim200ms(dt);
-            PullExternalEnergyToNetwork();
             UpdateCachedStatusText();
         }
 
@@ -90,6 +170,13 @@ namespace StorageNetwork.Components
         {
             lastConnectionStatus = connectionStatus;
             IsPowered = connectionStatus == CircuitManager.ConnectionStatus.Powered;
+            if (!InputStoreEnabled)
+            {
+                SetOperationalActive(false);
+                SetStableStatus(Loc.Get(Loc.UI.STORAGE_NETWORK.STATUS_DISABLED), true);
+                return;
+            }
+
             if (connectionStatus != CircuitManager.ConnectionStatus.Powered || !IsPowered)
             {
                 SetOperationalActive(false);
@@ -104,6 +191,13 @@ namespace StorageNetwork.Components
                 return;
             }
 
+            if (GetAvailableInputCapacityJoules() <= 0f)
+            {
+                SetOperationalActive(false);
+                SetStableStatus(Loc.Get(Loc.UI.STORAGE_NETWORK.POWER_STATUS_NO_CAPACITY), true);
+                return;
+            }
+
             float portAvailableCapacity = PortAvailableCapacityJoules;
             if (portAvailableCapacity <= 0f)
             {
@@ -115,160 +209,19 @@ namespace StorageNetwork.Components
             SetStableStatus(Loc.Get(Loc.UI.STORAGE_NETWORK.STATUS_ENABLED), false);
         }
 
-        private float GetInputWatts()
-        {
-            if (PortAvailableCapacityJoules <= 0f)
-            {
-                return 0f;
-            }
-
-            float requestedWatts = Mathf.Max(0f, InputWatts);
-            float inputCapacity = Mathf.Max(0f, GetAvailableInputCapacityJoules() - PortJoulesAvailable);
-            float requestedBatchJoules = requestedWatts * SimTickSeconds;
-            if (inputCapacity <= 0f ||
-                requestedBatchJoules <= 0f ||
-                inputCapacity + MinInputBatchJoules < requestedBatchJoules)
-            {
-                return 0f;
-            }
-
-            return requestedWatts;
-        }
-
         private void UpdateActiveState()
         {
-            bool active = GetInputWatts() > 0f &&
+            bool canAcceptEnergy = InputStoreEnabled &&
                 StorageNetworkPowerService.IsNetworkOnlineForWorld(GetWorldId()) &&
                 GetAvailableInputCapacityJoules() > 0f;
-            SetOperationalActive(active);
-        }
 
-        private void PullExternalEnergyToNetwork()
-        {
             if (battery != null)
             {
-                return;
+                battery.chargeWattage = canAcceptEnergy ? float.PositiveInfinity : 0f;
             }
 
-            if (!IsConnected ||
-                CircuitID == ushort.MaxValue ||
-                !IsPowered ||
-                GetAvailableInputCapacityJoules() <= 0f)
-            {
-                return;
-            }
-
-            float requestedJoules = GetInputWatts() * SimTickSeconds;
-            if (requestedJoules <= 0f)
-            {
-                return;
-            }
-
-            float pulled = PullExternalEnergy(requestedJoules);
-            if (pulled <= 0f)
-            {
-                SetStableStatus(Loc.Get(Loc.UI.STORAGE_NETWORK.POWER_STATUS_WAITING_EXTERNAL), true);
-                return;
-            }
-
-            StoredJoules = Mathf.Min(PortCapacityJoules, PortJoulesAvailable + pulled);
-            SetTransientStatus(string.Format(Loc.Get(Loc.UI.STORAGE_NETWORK.POWER_STATUS_CHARGED), FormatPowerRate(pulled / SimTickSeconds)));
-        }
-
-        private float PullExternalEnergy(float requestedJoules)
-        {
-            CircuitManager circuitManager = Game.Instance?.circuitManager;
-            if (circuitManager == null)
-            {
-                return 0f;
-            }
-
-            float remaining = requestedJoules;
-            System.Collections.Generic.List<Generator> generators = circuitManager.GetGeneratorsOnCircuit(CircuitID);
-            if (generators != null)
-            {
-                foreach (Generator generator in generators)
-                {
-                    if (generator == null || generator is StorageNetworkPowerOutputPortGenerator)
-                    {
-                        continue;
-                    }
-
-                    float available = GetGeneratorAvailableThisTick(generator);
-                    float taken = Mathf.Min(remaining, available);
-                    if (taken > 0f)
-                    {
-                        if (generator.JoulesAvailable > 0f)
-                        {
-                            generator.ApplyDeltaJoules(-Mathf.Min(taken, generator.JoulesAvailable), false);
-                        }
-
-                        remaining -= taken;
-                    }
-
-                    if (remaining <= 0.01f)
-                    {
-                        return requestedJoules - remaining;
-                    }
-                }
-            }
-
-            remaining = PullExternalBatteryEnergy(circuitManager.GetBatteriesOnCircuit(CircuitID), remaining);
-            if (remaining <= 0.01f)
-            {
-                return requestedJoules - remaining;
-            }
-
-            remaining = PullExternalBatteryEnergy(circuitManager.GetTransformersOnCircuit(CircuitID), remaining);
-            return requestedJoules - remaining;
-        }
-
-        private static float GetGeneratorAvailableThisTick(Generator generator)
-        {
-            if (generator == null)
-            {
-                return 0f;
-            }
-
-            float available = Mathf.Max(0f, generator.JoulesAvailable);
-            if (generator.IsProducingPower())
-            {
-                DevGenerator devGenerator = generator as DevGenerator;
-                float watts = devGenerator != null ? devGenerator.wattageRating : generator.WattageRating;
-                available = Mathf.Max(available, Mathf.Max(0f, watts) * SimTickSeconds);
-            }
-
-            return available;
-        }
-
-        private float PullExternalBatteryEnergy(System.Collections.Generic.List<Battery> batteries, float remaining)
-        {
-            if (batteries == null || remaining <= 0f)
-            {
-                return remaining;
-            }
-
-            foreach (Battery battery in batteries)
-            {
-                if (battery == null)
-                {
-                    continue;
-                }
-
-                float taken = Mathf.Min(remaining, battery.JoulesAvailable);
-                if (taken > 0f)
-                {
-                    battery.ConsumeEnergy(taken);
-                    remaining -= taken;
-                }
-
-                if (remaining <= 0.01f)
-                {
-                    break;
-                }
-            }
-
-            return remaining;
+            bool active = canAcceptEnergy && (PortJoulesAvailable > 0f || HasExternalPowerSourceOnCircuit());
+            SetOperationalActive(active);
         }
 
         private float GetAvailableInputCapacityJoules()
@@ -283,55 +236,28 @@ namespace StorageNetwork.Components
             return StorageNetworkPowerService.GetAvailableChargeCapacityJoules(GetWorldId());
         }
 
+        public void SetInputStoreEnabled(bool enabled)
+        {
+            if (InputStoreEnabled == enabled)
+            {
+                return;
+            }
+
+            InputStoreEnabled = enabled;
+            InputWatts = enabled ? DefaultInputWatts : 0f;
+            lastStatus = string.Empty;
+            cachedStatusText = null;
+            UpdateActiveState();
+        }
+
         public float GetInputWattsSetting()
         {
-            return Mathf.Clamp(InputWatts, MinInputWatts, GetMaxInputWatts());
+            return InputStoreEnabled ? 1f : 0f;
         }
 
         public void SetInputWatts(float watts)
         {
-            InputWatts = Mathf.Clamp(watts, MinInputWatts, GetMaxInputWatts());
-        }
-
-        public string SliderTitleKey => "STRINGS.UI.STORAGE_NETWORK.POWER_PORT_INPUT_RATE";
-
-        public string SliderUnits => global::STRINGS.UI.UNITSUFFIXES.ELECTRICAL.WATT;
-
-        public int SliderDecimalPlaces(int index)
-        {
-            return 0;
-        }
-
-        public float GetSliderMin(int index)
-        {
-            return MinInputWatts;
-        }
-
-        public float GetSliderMax(int index)
-        {
-            return GetMaxInputWatts();
-        }
-
-        public float GetSliderValue(int index)
-        {
-            return GetInputWattsSetting();
-        }
-
-        public void SetSliderValue(float value, int index)
-        {
-            SetInputWatts(value);
-        }
-
-        public string GetSliderTooltipKey(int index)
-        {
-            return "STRINGS.UI.STORAGE_NETWORK.POWER_INPUT_PORT_RATE_TOOLTIP";
-        }
-
-        public string GetSliderTooltip(int index)
-        {
-            return string.Format(
-                Loc.Get(Loc.UI.STORAGE_NETWORK.POWER_INPUT_PORT_RATE_TOOLTIP),
-                FormatPowerRate(GetInputWattsSetting()));
+            SetInputStoreEnabled(watts > 0f);
         }
 
         public void SetInputStorage(Storage target)
@@ -379,19 +305,23 @@ namespace StorageNetwork.Components
                 return;
             }
 
+            InputStoreEnabled = source.InputStoreEnabled;
             InputWatts = source.InputWatts;
             InputStoreModeValue = source.InputStoreModeValue;
             InputStorageInstanceId = source.InputStorageInstanceId;
             lastStatus = string.Empty;
             cachedStatusText = null;
+            UpdateActiveState();
         }
 
         private void TransferStoredEnergyToNetwork()
         {
-            if (PortJoulesAvailable <= 0f ||
+            if (!InputStoreEnabled ||
+                PortJoulesAvailable <= 0f ||
                 !StorageNetworkPowerService.IsNetworkOnlineForWorld(GetWorldId()) ||
                 GetAvailableInputCapacityJoules() <= 0f)
             {
+                lastTransferWatts = 0f;
                 return;
             }
 
@@ -400,28 +330,28 @@ namespace StorageNetwork.Components
                 : StorageNetworkPowerService.AddEnergy(GetWorldId(), Mathf.Min(PortJoulesAvailable, StorageNetworkPowerService.GetAvailableChargeCapacityJoules(GetWorldId())));
             if (stored <= 0f)
             {
+                lastTransferWatts = 0f;
                 SetStableStatus(Loc.Get(Loc.UI.STORAGE_NETWORK.POWER_STATUS_NO_CAPACITY), true);
                 return;
             }
 
+            lastTransferWatts = stored / SimTickSeconds;
             StoredJoules = Mathf.Max(0f, PortJoulesAvailable - stored);
             if (battery != null)
             {
                 battery.ConsumeEnergy(stored);
             }
 
-            SetTransientStatus(string.Format(Loc.Get(Loc.UI.STORAGE_NETWORK.POWER_STATUS_STORED), FormatPowerRate(stored / SimTickSeconds)));
+            SetTransientStatus(string.Format(Loc.Get(Loc.UI.STORAGE_NETWORK.POWER_STATUS_STORED), FormatPowerRate(lastTransferWatts)));
         }
 
         private void SetOperationalActive(bool active)
         {
-            if (lastOperationalActive.HasValue && lastOperationalActive.Value == active)
-            {
-                return;
-            }
-
             lastOperationalActive = active;
-            operational?.SetActive(active);
+            if (operational != null && operational.IsActive != active)
+            {
+                operational.SetActive(active);
+            }
         }
 
         private void SetStableStatus(string status, bool force)
@@ -541,10 +471,10 @@ namespace StorageNetwork.Components
                 Loc.Get(Loc.UI.STORAGE_NETWORK.POWER_INPUT_PORT_STATUS_ITEM),
                 GetCurrentStatusText())) + "\n" + string.Format(
                 Loc.Get(Loc.UI.STORAGE_NETWORK.POWER_INPUT_PORT_STATUS_TOOLTIP),
-                ColorizeEnabled(GetInputWattsSetting() > 0f),
+                ColorizeEnabled(InputStoreEnabled),
                 ColorizeNetwork(StorageNetworkPowerService.IsNetworkOnlineForWorld(GetWorldId())),
                 ColorizeInfo(GetInputStoreModeStatusText()),
-                ColorizeAmount(FormatPowerRate(GetInputWattsSetting())),
+                ColorizeAmount(FormatPowerRate(lastTransferWatts)),
                 ColorizeAmount(GameUtil.GetFormattedJoules(PortJoulesAvailable, "F1", GameUtil.TimeSlice.None)),
                 ColorizeAmount(GameUtil.GetFormattedJoules(PortCapacityJoules, "F1", GameUtil.TimeSlice.None)),
                 ColorizeStatus(GetCurrentStatusText()));
@@ -565,7 +495,7 @@ namespace StorageNetwork.Components
 
         private string GetCurrentStatusText()
         {
-            if (GetInputWattsSetting() <= 0f)
+            if (!InputStoreEnabled)
             {
                 return Loc.Get(Loc.UI.STORAGE_NETWORK.STATUS_DISABLED);
             }
@@ -573,6 +503,11 @@ namespace StorageNetwork.Components
             if (!StorageNetworkPowerService.IsNetworkOnlineForWorld(GetWorldId()))
             {
                 return Loc.Get(Loc.UI.STORAGE_NETWORK.PORT_STATUS_SHORT_OFFLINE);
+            }
+
+            if (GetAvailableInputCapacityJoules() <= 0f)
+            {
+                return Loc.Get(Loc.UI.STORAGE_NETWORK.POWER_STATUS_NO_CAPACITY);
             }
 
             return string.IsNullOrEmpty(lastStatus)

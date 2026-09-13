@@ -73,7 +73,7 @@ namespace StorageNetwork.UI
                 solidOutput != null && solidOutput.OutputLimitEnabled ? "solidOutLimit1" : "solidOutLimit0",
                 solidOutput != null ? solidOutput.OutputLimitKg.ToString("0.###") : "0",
                 solidOutput != null ? solidOutput.GetRequestRateKgPerSecond().ToString("0.###") : "0",
-                powerInput != null ? powerInput.GetInputWattsSetting().ToString("0.###") : "powerIn0",
+                powerInput != null && powerInput.InputStoreEnabled ? "powerIn1" : "powerIn0",
                 powerInput != null ? powerInput.InputStoreModeValue.ToString() : "powerInMode0",
                 powerInput != null ? powerInput.InputStorageInstanceId.ToString() : "powerInTarget0",
                 powerOutput != null ? powerOutput.GetOutputWattsSetting().ToString("0.###") : "powerOut0",

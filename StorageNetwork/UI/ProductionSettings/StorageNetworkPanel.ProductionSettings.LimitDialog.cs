@@ -388,18 +388,6 @@ namespace StorageNetwork.UI
 
         private void ShowPowerInputRateDialog(StorageNetworkPowerInputPortConsumer input)
         {
-            if (input == null)
-            {
-                return;
-            }
-
-            ShowPowerPortRateDialog(
-                input.GetInputWattsSetting,
-                input.SetInputWatts,
-                StorageNetworkPowerInputPortConsumer.DefaultInputWatts,
-                StorageNetworkPowerInputPortConsumer.MinInputWatts,
-                StorageNetworkPowerInputPortConsumer.GetMaxInputWatts(),
-                Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.POWER_PORT_INPUT_RATE));
         }
 
         private void ShowPowerOutputLimitDialog(StorageNetworkPowerOutputPortGenerator output)
