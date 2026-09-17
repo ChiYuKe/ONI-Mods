@@ -218,7 +218,15 @@ namespace StorageNetwork.Buildings
             else if (spec.Kind == StorageNetworkPortKind.PowerInput)
             {
                 Battery battery = go.AddOrGet<Battery>();
-                battery.capacity = Mathf.Max(spec.CapacityKg * Config.Instance.PowerPortCapacityMultiplier, 100000f);
+                // Throughput is set by the buffer size, NOT by chargeWattage: the consumer drains the
+                // entire buffer into the network once per energy tick (0.2 s), so the ceiling is
+                // spec.CapacityKg * PowerPortCapacityMultiplier / 0.2 s. The PowerInput spec uses
+                // 100 kJ, which yields ~500 kW. Vanilla only consults Battery.ChargeCapacity for sink
+                // transformers (CircuitManager.ChargeTransformer), so an infinite chargeWattage is a
+                // no-op on a plain battery and must not be used to tune port throughput.
+                // No Mathf.Max floor here: it would silently override PowerPortCapacityMultiplier
+                // for the lower half of its [0.1, 100] range.
+                battery.capacity = spec.CapacityKg * Config.Instance.PowerPortCapacityMultiplier;
                 battery.chargeWattage = float.PositiveInfinity;
                 battery.joulesLostPerSecond = 0f;
                 go.AddOrGet<CopyBuildingSettings>();

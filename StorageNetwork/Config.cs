@@ -249,16 +249,6 @@ namespace StorageNetwork
         public float GasOutputMaxKgPerSecond { get; set; }
 
         [ModConfigOption(
-            "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_POWER_INPUT_MAX_WATTS",
-            "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_POWER_INPUT_MAX_WATTS_DESC",
-            "电力入网最大功率 W",
-            "电力入网端口滑条的最大输入功率。",
-            100f,
-            1000000f)]
-        [JsonProperty]
-        public float PowerInputMaxWatts { get; set; }
-
-        [ModConfigOption(
             "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_POWER_OUTPUT_MAX_WATTS",
             "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_POWER_OUTPUT_MAX_WATTS_DESC",
             "电力出网最大功率 W",
@@ -310,7 +300,6 @@ namespace StorageNetwork
             SolidOutputMaxKgPerSecond = 100f;
             LiquidOutputMaxKgPerSecond = 20f;
             GasOutputMaxKgPerSecond = 5f;
-            PowerInputMaxWatts = 10000f;
             PowerOutputMaxWatts = 100000f;
         }
 
@@ -409,7 +398,6 @@ namespace StorageNetwork
             SolidOutputMaxKgPerSecond = Clamp(SolidOutputMaxKgPerSecond, 1f, 1000f);
             LiquidOutputMaxKgPerSecond = Clamp(LiquidOutputMaxKgPerSecond, 1f, 1000f);
             GasOutputMaxKgPerSecond = Clamp(GasOutputMaxKgPerSecond, 0.1f, 100f);
-            PowerInputMaxWatts = Clamp(PowerInputMaxWatts, 100f, 1000000f);
             PowerOutputMaxWatts = Clamp(PowerOutputMaxWatts, 100f, 1000000f);
             if (MainWorldFilterId < -2)
             {

@@ -2133,14 +2133,6 @@ msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_GAS_OUTPUT_MAX_RATE_DE
 msgid "气体出网端口设置滑条的最大输出速率。"
 msgstr "Maximum output rate available on the gas output port settings slider."
 
-msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_POWER_INPUT_MAX_WATTS"
-msgid "电力入网最大功率 W"
-msgstr "Power Input Maximum Wattage W"
-
-msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_POWER_INPUT_MAX_WATTS_DESC"
-msgid "电力入网端口滑条的最大输入功率。"
-msgstr "Maximum input wattage available on the power input port slider."
-
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_POWER_OUTPUT_MAX_WATTS"
 msgid "电力出网最大功率 W"
 msgstr "Power Output Maximum Wattage W"
@@ -2701,10 +2693,6 @@ msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.POWER_PORT_RATE"
 msgid "电力速率"
 msgstr "Power Rate"
 
-msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.POWER_PORT_INPUT_RATE"
-msgid "输入速率"
-msgstr "Input Rate"
-
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.POWER_PORT_OUTPUT_RATE"
 msgid "输出速率"
 msgstr "Output Rate"
@@ -2717,10 +2705,6 @@ msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.POWER_PORT_SET_RATE"
 msgid "设置电力速率"
 msgstr "Set Power Rate"
 
-msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.POWER_INPUT_PORT_RATE_TOOLTIP"
-msgid "设置电力入网端口从外部电路存入网络的最大速率：{0}"
-msgstr "Set the maximum rate at which the power input port stores power from the external circuit into the network: {0}"
-
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.POWER_OUTPUT_PORT_RATE_TOOLTIP"
 msgid "设置电力出网端口向外部电路输出的最大速率：{0}"
 msgstr "Set the maximum rate at which the power output port sends power to the external circuit: {0}"
@@ -2730,8 +2714,8 @@ msgid "电力入网端口：{0}"
 msgstr "Power Input Port: {0}"
 
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.POWER_INPUT_PORT_STATUS_TOOLTIP"
-msgid "向网络输入：{0}\n网络：{1}\n存放策略：{2}\n输入速率：{3}\n端口缓存：{4} / {5}\n入网状态：{6}"
-msgstr "Input to network: {0}\nNetwork: {1}\nStorage policy: {2}\nInput rate: {3}\nPort buffer: {4} / {5}\nInput status: {6}"
+msgid "向网络输入：{0}\n网络：{1}\n存放策略：{2}\n实际入网速率：{3}\n端口缓存：{4} / {5}\n入网状态：{6}"
+msgstr "Input to network: {0}\nNetwork: {1}\nStorage policy: {2}\nActual input rate: {3}\nPort buffer: {4} / {5}\nInput status: {6}"
 
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.POWER_OUTPUT_PORT_STATUS_ITEM"
 msgid "电力出网端口：{0}"

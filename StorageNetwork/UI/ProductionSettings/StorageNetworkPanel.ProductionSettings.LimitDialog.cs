@@ -386,10 +386,6 @@ namespace StorageNetwork.UI
             }, KleiPinkStyle());
         }
 
-        private void ShowPowerInputRateDialog(StorageNetworkPowerInputPortConsumer input)
-        {
-        }
-
         private void ShowPowerOutputLimitDialog(StorageNetworkPowerOutputPortGenerator output)
         {
             if (output == null)

@@ -10,8 +10,6 @@ namespace StorageNetwork.Components
     public sealed class StorageNetworkPowerInputPortConsumer : EnergyConsumer
     {
         public const float DefaultInputWatts = 1000f;
-        public const float MinInputWatts = 0f;
-        public const float MaxInputWatts = 10000f;
         private const float SimTickSeconds = 0.2f;
         private const float MinInputBatchJoules = 1f;
         private const float TransientStatusHoldSeconds = 0.8f;
@@ -133,7 +131,7 @@ namespace StorageNetwork.Components
                     )) ||
                     entry.item.Id == "NoWireConnected" ||
                     entry.item.Id == "NeedPower" ||
-                    entry.item.Id == "BatteryJoulesAvailable";
+                    entry.item.Id == "JoulesAvailable";
 
                 if (shouldRemove)
                 {
@@ -248,16 +246,6 @@ namespace StorageNetwork.Components
             lastStatus = string.Empty;
             cachedStatusText = null;
             UpdateActiveState();
-        }
-
-        public float GetInputWattsSetting()
-        {
-            return InputStoreEnabled ? 1f : 0f;
-        }
-
-        public void SetInputWatts(float watts)
-        {
-            SetInputStoreEnabled(watts > 0f);
         }
 
         public void SetInputStorage(Storage target)
@@ -518,11 +506,6 @@ namespace StorageNetwork.Components
         private static string FormatPowerRate(float watts)
         {
             return GameUtil.GetFormattedWattage(watts, GameUtil.WattageFormatterUnit.Automatic, true);
-        }
-
-        public static float GetMaxInputWatts()
-        {
-            return Mathf.Max(MinInputWatts, Config.Instance.PowerInputMaxWatts);
         }
 
         private static string GetOnOffText(bool enabled)

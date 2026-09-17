@@ -690,14 +690,12 @@ namespace StorageNetwork
                 public static LocString POWER_OUTPUT_PORT_SET_LIMIT = "设置输出限额";
                 public static LocString POWER_OUTPUT_PORT_LIMIT_LABEL = "电力限额";
                 public static LocString POWER_PORT_RATE = "电力速率";
-                public static LocString POWER_PORT_INPUT_RATE = "输入速率";
                 public static LocString POWER_PORT_OUTPUT_RATE = "输出速率";
                 public static LocString POWER_PORT_RATE_VALUE = "{0:0.#} W";
                 public static LocString POWER_PORT_SET_RATE = "设置电力速率";
-                public static LocString POWER_INPUT_PORT_RATE_TOOLTIP = "设置电力入网端口从外部电路存入网络的最大速率：{0}";
                 public static LocString POWER_OUTPUT_PORT_RATE_TOOLTIP = "设置电力出网端口向外部电路输出的最大速率：{0}";
                 public static LocString POWER_INPUT_PORT_STATUS_ITEM = "电力入网端口：{0}";
-                public static LocString POWER_INPUT_PORT_STATUS_TOOLTIP = "向网络输入：{0}\n网络：{1}\n存放策略：{2}\n输入速率：{3}\n端口缓存：{4} / {5}\n入网状态：{6}";
+                public static LocString POWER_INPUT_PORT_STATUS_TOOLTIP = "向网络输入：{0}\n网络：{1}\n存放策略：{2}\n实际入网速率：{3}\n端口缓存：{4} / {5}\n入网状态：{6}";
                 public static LocString POWER_OUTPUT_PORT_STATUS_ITEM = "电力出网端口：{0}";
                 public static LocString POWER_OUTPUT_PORT_STATUS_TOOLTIP = "向电路输出：{0}\n网络：{1}\n来源策略：{2}\n输出限额：{3}\n输出速率：{4}\n端口缓存：{5} / {6}\n出网状态：{7}";
                 public static LocString PARTICLE_PORT_STORAGE_TITLE = "网络粒子储存";
@@ -871,8 +869,6 @@ namespace StorageNetwork
                 public static LocString CONFIG_LIQUID_OUTPUT_MAX_RATE_DESC = "液体出网端口设置滑条的最大输出速率。";
                 public static LocString CONFIG_GAS_OUTPUT_MAX_RATE = "气体出网最大速率 kg/s";
                 public static LocString CONFIG_GAS_OUTPUT_MAX_RATE_DESC = "气体出网端口设置滑条的最大输出速率。";
-                public static LocString CONFIG_POWER_INPUT_MAX_WATTS = "电力入网最大功率 W";
-                public static LocString CONFIG_POWER_INPUT_MAX_WATTS_DESC = "电力入网端口滑条的最大输入功率。";
                 public static LocString CONFIG_POWER_OUTPUT_MAX_WATTS = "电力出网最大功率 W";
                 public static LocString CONFIG_POWER_OUTPUT_MAX_WATTS_DESC = "电力出网端口滑条的最大输出功率。";
 
