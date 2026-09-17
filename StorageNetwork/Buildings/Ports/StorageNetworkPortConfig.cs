@@ -146,6 +146,10 @@ namespace StorageNetwork.Buildings
             {
                 Object.DestroyImmediate(go.GetComponent<RequireOutputs>());
             }
+            if (Spec.Kind == StorageNetworkPortKind.PowerInput || (Spec.PowerPort && Spec.Direction == StorageNetworkPortDirection.Input))
+            {
+                Object.DestroyImmediate(go.GetComponent<RequireInputs>());
+            }
 
             Prioritizable.AddRef(go);
         }
@@ -214,8 +218,8 @@ namespace StorageNetwork.Buildings
             else if (spec.Kind == StorageNetworkPortKind.PowerInput)
             {
                 Battery battery = go.AddOrGet<Battery>();
-                battery.capacity = spec.CapacityKg * Config.Instance.PowerPortCapacityMultiplier;
-                battery.chargeWattage = Config.Instance.PowerInputMaxWatts;
+                battery.capacity = Mathf.Max(spec.CapacityKg * Config.Instance.PowerPortCapacityMultiplier, 100000f);
+                battery.chargeWattage = float.PositiveInfinity;
                 battery.joulesLostPerSecond = 0f;
                 go.AddOrGet<CopyBuildingSettings>();
                 go.AddOrGet<StorageNetworkPowerInputPortConsumer>();
@@ -451,7 +455,7 @@ namespace StorageNetwork.Buildings
         private const string PowerOutputPortAnimFile = "StorageNetworkPowerOutputPort_kanim";
         private const string ParticleInputPortAnimFile = "StorageNetworkParticleInputPort_kanim";
         private const string ParticleOutputPortAnimFile = "StorageNetworkParticleOutputPort_kanim";
-        private const float PowerInputPortCapacityJoules = 10000f;
+        private const float PowerInputPortCapacityJoules = 100000f;
         private const float PowerOutputPortCapacityJoules = 10000f;
 
         public static readonly StorageNetworkPortSpec SolidInput = Create(
