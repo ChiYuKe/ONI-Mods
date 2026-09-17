@@ -402,12 +402,24 @@ namespace StorageNetwork.UI
             TextMeshProUGUI summary = AddPlanLine(titleColumn.transform, StorageNetworkOrderTrackingRules.GetSummaryLine(record), 9, FontStyles.Normal, MutedTextColor(), 18f);
             summary.gameObject.name = "TrackingSummary";
 
+            string missingSummary = record.State == ProductionOrderState.WaitingMaterials
+                ? productionOrderService.GetMissingMaterialsSummary(record)
+                : null;
+            string missingTooltip = record.State == ProductionOrderState.WaitingMaterials
+                ? productionOrderService.GetMissingMaterialsTooltip(record)
+                : null;
+
             GameObject detailArea = CreatePlainImage("TrackingDetailArea", main.transform, new Color(0.78f, 0.78f, 0.71f, 0.42f));
             detailArea.AddComponent<LayoutElement>().preferredHeight = 54f;
             AddVerticalContainer(detailArea, 4f, 6, 6, 4, 4);
             AddTrackingProgressRow(detailArea.transform, record, stateColor);
-            TextMeshProUGUI detail = AddWrappedPlanLine(detailArea.transform, StorageNetworkOrderTrackingRules.GetDetailLine(record), 10, abnormal ? FontStyles.Bold : FontStyles.Normal, abnormal ? DangerColor() : NeutralTextColor(), 17f, 2, 24);
+            TextMeshProUGUI detail = AddWrappedPlanLine(detailArea.transform, StorageNetworkOrderTrackingRules.GetDetailLine(record, missingSummary), 10, abnormal ? FontStyles.Bold : FontStyles.Normal, (abnormal || record.State == ProductionOrderState.WaitingMaterials) ? DangerColor() : NeutralTextColor(), 17f, 2, 24);
             detail.gameObject.name = "TrackingDetail";
+            if (!string.IsNullOrEmpty(missingTooltip))
+            {
+                ToolTip tip = detail.gameObject.AddComponent<ToolTip>();
+                tip.SetSimpleTooltip(missingTooltip);
+            }
 
             AddTrackingSeparator(card.transform, 1f);
 
@@ -423,7 +435,7 @@ namespace StorageNetwork.UI
                 sideLayout.childAlignment = TextAnchor.UpperRight;
             }
 
-            AddTrackingStateBadge(side.transform, StorageNetworkOrderTrackingRules.GetOrderStateLabel(record.State), stateColor, 52f, 94f);
+            AddTrackingStateBadge(side.transform, StorageNetworkOrderTrackingRules.GetOrderStateLabel(record.State), stateColor, 52f, 94f, missingTooltip);
             AddTrackingDottedLine(side.transform);
             AddTrackingCyclePair(
                 side.transform,
@@ -821,7 +833,7 @@ namespace StorageNetwork.UI
                 : (record?.DisplayId ?? 0).ToString();
         }
 
-        private static void UpdateTrackingCardLive(TrackingCardLiveView view, ProductionOrderRecord record)
+        private void UpdateTrackingCardLive(TrackingCardLiveView view, ProductionOrderRecord record)
         {
             if (view == null || view.Root == null || record == null)
             {
@@ -829,7 +841,7 @@ namespace StorageNetwork.UI
             }
 
             view.CurrentRecord = record;
-            int liveFingerprint = GetTrackingCardLiveFingerprint(record);
+            int liveFingerprint = GetTrackingCardLiveFingerprint(record, productionOrderService);
             if (view.LastLiveFingerprint == liveFingerprint)
             {
                 return;
@@ -854,7 +866,53 @@ namespace StorageNetwork.UI
                     GameUtil.GetFormattedMass(record.ProducedAtSubmit),
                     GameUtil.GetFormattedMass(record.RequestedAmount)));
             SetTextIfChanged(view.Summary, StorageNetworkOrderTrackingRules.GetSummaryLine(record));
-            SetTextIfChanged(view.Detail, StorageNetworkOrderTrackingRules.GetDetailLine(record));
+
+            string missingSummary = record.State == ProductionOrderState.WaitingMaterials
+                ? productionOrderService.GetMissingMaterialsSummary(record)
+                : null;
+            string missingTooltip = record.State == ProductionOrderState.WaitingMaterials
+                ? productionOrderService.GetMissingMaterialsTooltip(record)
+                : null;
+
+            SetTextIfChanged(view.Detail, StorageNetworkOrderTrackingRules.GetDetailLine(record, missingSummary));
+            if (view.Detail != null)
+            {
+                view.Detail.color = (record.State == ProductionOrderState.Abnormal || record.State == ProductionOrderState.WaitingMaterials)
+                    ? DangerColor()
+                    : NeutralTextColor();
+
+                ToolTip detailTip = view.Detail.GetComponent<ToolTip>();
+                if (!string.IsNullOrEmpty(missingTooltip))
+                {
+                    if (detailTip == null)
+                    {
+                        detailTip = view.Detail.gameObject.AddComponent<ToolTip>();
+                    }
+                    detailTip.SetSimpleTooltip(missingTooltip);
+                }
+                else if (detailTip != null)
+                {
+                    detailTip.SetSimpleTooltip(string.Empty);
+                }
+            }
+
+            if (view.StateBadge != null)
+            {
+                ToolTip badgeTip = view.StateBadge.GetComponent<ToolTip>();
+                if (!string.IsNullOrEmpty(missingTooltip))
+                {
+                    if (badgeTip == null)
+                    {
+                        badgeTip = view.StateBadge.AddComponent<ToolTip>();
+                    }
+                    badgeTip.SetSimpleTooltip(missingTooltip);
+                }
+                else if (badgeTip != null)
+                {
+                    badgeTip.SetSimpleTooltip(string.Empty);
+                }
+            }
+
             SetTextIfChanged(
                 view.EstimatedFinish,
                 string.Format(
@@ -872,7 +930,8 @@ namespace StorageNetwork.UI
         }
 
         private static int GetTrackingCardLiveFingerprint(
-            ProductionOrderRecord record)
+            ProductionOrderRecord record,
+            ProductionOrderService service)
         {
             unchecked
             {
@@ -888,6 +947,17 @@ namespace StorageNetwork.UI
                               (record.AbnormalReason != null
                                   ? System.StringComparer.Ordinal.GetHashCode(record.AbnormalReason)
                                   : 0);
+
+                if (record.State == ProductionOrderState.WaitingMaterials && record.ReservedMaterials != null && service != null)
+                {
+                    foreach (KeyValuePair<Tag, float> pair in record.ReservedMaterials)
+                    {
+                        fingerprint = (fingerprint * 397) ^ pair.Key.GetHashCode();
+                        fingerprint = (fingerprint * 397) ^ Mathf.RoundToInt(pair.Value * 10f);
+                        fingerprint = (fingerprint * 397) ^ Mathf.RoundToInt(service.GetNetworkRawAmount(pair.Key) * 10f);
+                    }
+                }
+
                 if (record.QueueAssignments == null)
                 {
                     return fingerprint;
@@ -949,6 +1019,7 @@ namespace StorageNetwork.UI
             public TextMeshProUGUI Amount { get; private set; }
             public TextMeshProUGUI Summary { get; private set; }
             public TextMeshProUGUI Detail { get; private set; }
+            public GameObject StateBadge { get; private set; }
             public TextMeshProUGUI EstimatedFinish { get; private set; }
             public TextMeshProUGUI MergedActivity { get; private set; }
             public ProductionOrderState StructuralState { get; set; }
@@ -968,6 +1039,7 @@ namespace StorageNetwork.UI
                     Amount = progressRow?.Find("TrackingAmount")?.GetComponent<TextMeshProUGUI>(),
                     Summary = root?.transform.Find("TrackingMain/TrackingTop/TrackingTitleColumn/TrackingSummary")?.GetComponent<TextMeshProUGUI>(),
                     Detail = root?.transform.Find("TrackingMain/TrackingDetailArea/TrackingDetail")?.GetComponent<TextMeshProUGUI>(),
+                    StateBadge = root?.transform.Find("TrackingSide/TrackingStateBadge")?.gameObject,
                     EstimatedFinish = root?.transform.Find("TrackingSide/TrackingEstimatedFinish")?.GetComponent<TextMeshProUGUI>(),
                     MergedActivity = root?.transform.Find("TrackingMain/TrackingMergedActivity")?.GetComponent<TextMeshProUGUI>()
                 };

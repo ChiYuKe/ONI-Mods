@@ -51,7 +51,9 @@ namespace StorageNetwork.Buildings
             fabricator.sideScreenStyle = ComplexFabricatorSideScreen.StyleSetting.ListQueueHybrid;
             fabricator.storeProduced = true;
             BuildingTemplates.CreateComplexFabricatorStorage(go, fabricator);
-            go.AddOrGet<StorageNetworkMaterialRequester>();
+            StorageNetworkMaterialRequester requester = go.AddOrGet<StorageNetworkMaterialRequester>();
+            requester.OutputStoreEnabled = true;
+            requester.RequestEnabled = true;
             Storage diskInstallStorage = go.AddComponent<Storage>();
             diskInstallStorage.capacityKg = 3f;
             diskInstallStorage.showInUI = false;

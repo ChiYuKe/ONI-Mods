@@ -34,6 +34,26 @@ namespace StorageNetwork.ProductionOrders
                 {
                     if (!IsOrderActive(order))
                     {
+                        if (order.QueueAssignments != null && order.QueueAssignments.Count > 0)
+                        {
+                            bool hasLeftoverQueue = false;
+                            for (int i = 0; i < order.QueueAssignments.Count; i++)
+                            {
+                                ProductionOrderQueueAssignment qa = order.QueueAssignments[i];
+                                if (qa?.Fabricator != null && qa.Recipe != null &&
+                                    (StorageNetworkFabricatorProgress.GetRecipeQueueCountSafe(qa.Fabricator, qa.Recipe) > 0 ||
+                                     StorageNetworkFabricatorProgress.GetWorkingCountForRecipe(qa.Fabricator, qa.Recipe) > 0))
+                                {
+                                    hasLeftoverQueue = true;
+                                    break;
+                                }
+                            }
+
+                            if (hasLeftoverQueue)
+                            {
+                                CancelOrderQueues(order);
+                            }
+                        }
                         continue;
                     }
 

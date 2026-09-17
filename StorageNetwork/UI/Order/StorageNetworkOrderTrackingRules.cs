@@ -88,9 +88,19 @@ namespace StorageNetwork.UI
 
         public static string GetDetailLine(ProductionOrderRecord record)
         {
+            return GetDetailLine(record, null);
+        }
+
+        public static string GetDetailLine(ProductionOrderRecord record, string missingMaterialsSummary)
+        {
             if (record.State == ProductionOrderState.Abnormal && !string.IsNullOrEmpty(record.AbnormalReason))
             {
                 return record.AbnormalReason;
+            }
+
+            if (record.State == ProductionOrderState.WaitingMaterials && !string.IsNullOrEmpty(missingMaterialsSummary))
+            {
+                return string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_DETAIL_MISSING_PREFIX), missingMaterialsSummary);
             }
 
             int runningCores = ProductionOrderRuntimeAllocation.GetRunningCountForOrder(record);

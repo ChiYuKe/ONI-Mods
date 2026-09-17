@@ -94,7 +94,7 @@ namespace StorageNetwork.Components
                 return StorageNetwork.STRINGS.Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CENTER_DISK_SLOT_BLANK);
             }
 
-            string summary = string.Join("、", names.Take(maxNames));
+            string summary = string.Join(", ", names.Take(maxNames));
             if (names.Count > maxNames)
             {
                 summary = string.Format(Loc.Get(Loc.UI.STORAGE_NETWORK.ORDER_CENTER_DISK_SUMMARY_MORE), summary, names.Count);

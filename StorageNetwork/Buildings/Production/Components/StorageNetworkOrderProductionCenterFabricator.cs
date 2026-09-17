@@ -63,7 +63,41 @@ namespace StorageNetwork.Components
 
         protected override void OnSpawn()
         {
+            Dictionary<string, int> queueCounts = RecipeQueueCountsField?.GetValue(this) as Dictionary<string, int>;
+            List<string> hundredCountRecipes = null;
+            if (queueCounts != null)
+            {
+                foreach (KeyValuePair<string, int> kvp in queueCounts)
+                {
+                    if (kvp.Value == 100)
+                    {
+                        if (hundredCountRecipes == null)
+                        {
+                            hundredCountRecipes = new List<string>();
+                        }
+                        hundredCountRecipes.Add(kvp.Key);
+                    }
+                }
+
+                if (hundredCountRecipes != null)
+                {
+                    foreach (string key in hundredCountRecipes)
+                    {
+                        queueCounts[key] = 101;
+                    }
+                }
+            }
+
             base.OnSpawn();
+
+            if (hundredCountRecipes != null && queueCounts != null)
+            {
+                foreach (string key in hundredCountRecipes)
+                {
+                    queueCounts[key] = 100;
+                }
+            }
+
             EnsureCores();
             EnsureSafeOutputTemperature();
             SyncVanillaCurrentOrder();
@@ -135,6 +169,7 @@ namespace StorageNetwork.Components
             RefreshWorldProgressBars();
             SyncOperationalActive(HasParallelWorkingOrder);
             ProductionOrderCenterCatalog.InvalidateRecipes();
+            GetComponent<StorageNetworkMaterialRequester>()?.InvalidateKnownRecipeResultTags();
         }
 
         public void SetOrderCenterRecipeQueueCount(ComplexRecipe recipe, int count)
@@ -343,9 +378,10 @@ namespace StorageNetwork.Components
             if (!string.IsNullOrEmpty(activeRecipeId))
             {
                 ComplexRecipe activeRecipe = GetRecipe(activeRecipeId);
-                return activeRecipe != null && GetQueueCount(activeRecipe) != 0 && HasIngredients(activeRecipe, inStorage)
-                    ? activeRecipe
-                    : null;
+                if (activeRecipe != null && GetQueueCount(activeRecipe) != 0 && HasIngredients(activeRecipe, inStorage))
+                {
+                    return activeRecipe;
+                }
             }
 
             int startIndex = Mathf.Clamp(GetIntField(NextOrderIdxField, this, 0), 0, recipes.Length - 1);

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using StorageNetwork.Components;
 using UnityEngine;
 
@@ -7,6 +8,81 @@ namespace StorageNetwork.ProductionOrders
 {
     internal sealed partial class ProductionOrderService
     {
+        public struct MissingMaterialEntry
+        {
+            public Tag Tag;
+            public string Name;
+            public float Required;
+            public float Available;
+            public float Missing;
+        }
+
+        public List<MissingMaterialEntry> GetMissingMaterials(ProductionOrderRecord order)
+        {
+            List<MissingMaterialEntry> list = new List<MissingMaterialEntry>();
+            if (order == null || order.ReservedMaterials == null)
+            {
+                return list;
+            }
+
+            foreach (KeyValuePair<Tag, float> pair in order.ReservedMaterials)
+            {
+                float available = GetNetworkRawAmount(pair.Key);
+                if (available + PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT < pair.Value)
+                {
+                    list.Add(new MissingMaterialEntry
+                    {
+                        Tag = pair.Key,
+                        Name = ProductionOrderFormatting.GetTagDisplayName(pair.Key),
+                        Required = pair.Value,
+                        Available = Mathf.Max(0f, available),
+                        Missing = pair.Value - available
+                    });
+                }
+            }
+
+            return list;
+        }
+
+        public string GetMissingMaterialsSummary(ProductionOrderRecord order)
+        {
+            List<MissingMaterialEntry> missing = GetMissingMaterials(order);
+            if (missing.Count == 0)
+            {
+                return null;
+            }
+
+            return string.Join(", ", missing.Select(m =>
+                string.Format("{0} ({1} / {2})",
+                    m.Name,
+                    GameUtil.GetFormattedMass(m.Available),
+                    GameUtil.GetFormattedMass(m.Required))
+            ));
+        }
+
+        public string GetMissingMaterialsTooltip(ProductionOrderRecord order)
+        {
+            List<MissingMaterialEntry> missing = GetMissingMaterials(order);
+            if (missing.Count == 0)
+            {
+                return null;
+            }
+
+            StringBuilder sb = new StringBuilder();
+            sb.AppendLine(StorageNetwork.STRINGS.Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_MISSING_MATERIALS_TITLE));
+            foreach (MissingMaterialEntry m in missing)
+            {
+                sb.AppendLine(string.Format(
+                    StorageNetwork.STRINGS.Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.TRACKING_MISSING_MATERIAL_LINE),
+                    m.Name,
+                    GameUtil.GetFormattedMass(m.Available),
+                    GameUtil.GetFormattedMass(m.Required),
+                    GameUtil.GetFormattedMass(m.Missing)));
+            }
+
+            return sb.ToString().TrimEnd();
+        }
+
         public IReadOnlyList<RecipeDisplayInfo> GetCraftableRecipes()
         {
             return craftableRecipes;

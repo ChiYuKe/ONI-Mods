@@ -50,6 +50,13 @@ namespace StorageNetwork.Components
             RefreshFabricatorRecipes();
             RefreshDiskMeter();
             RefreshPowerDemand();
+            StorageNetworkMaterialRequester requester = GetComponent<StorageNetworkMaterialRequester>();
+            if (requester != null)
+            {
+                requester.OutputStoreEnabled = true;
+                requester.RequestEnabled = true;
+                requester.InvalidateKnownRecipeResultTags();
+            }
         }
 
         protected override void OnCleanUp()
@@ -412,6 +419,12 @@ namespace StorageNetwork.Components
             if (fabricator != null)
             {
                 fabricator.SetEngravedRecipeIds(EngravedRecipeIds);
+            }
+
+            StorageNetworkMaterialRequester requester = GetComponent<StorageNetworkMaterialRequester>();
+            if (requester != null)
+            {
+                requester.InvalidateKnownRecipeResultTags();
             }
         }
 
