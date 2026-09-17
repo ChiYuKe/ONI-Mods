@@ -59,7 +59,7 @@ namespace StorageNetwork.Components
 
             storage.capacityKg = FabricatorStorageCapacityKg;
             storage.showInUI = true;
-            storage.SetDefaultStoredItemModifiers(Storage.StandardFabricatorStorage);
+            storage.SetDefaultStoredItemModifiers(Storage.StandardInsulatedStorage);
         }
     }
 }
