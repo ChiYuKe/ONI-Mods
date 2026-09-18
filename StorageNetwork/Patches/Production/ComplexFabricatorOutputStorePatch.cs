@@ -24,11 +24,6 @@ namespace StorageNetwork.Patches
 
             public static void Postfix(ComplexFabricator __instance, ComplexRecipe recipe, List<GameObject> __result)
             {
-                if (__instance is StorageNetworkOrderProductionCenterFabricator orderCenter)
-                {
-                    orderCenter.ApplyOutputProductTemperatures(recipe, __result);
-                }
-
                 // LiquidCooledRefinery calls base.SpawnOrderProduct first and only
                 // heats its coolant after that call returns. The base postfix would
                 // therefore run too early and interfere with the refinery's coolant

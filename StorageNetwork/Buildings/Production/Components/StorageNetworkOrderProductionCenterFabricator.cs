@@ -261,7 +261,8 @@ namespace StorageNetwork.Components
             }
 
             bool completedAny = false;
-            float totalHeatEnergyThisTickKJ = 0f;
+            float workingSelfHeatKW = 0f;
+            float workingExhaustKW = 0f;
             for (int i = 0; i < activeCoreCount; i++)
             {
                 CoreState core = cores[i];
@@ -280,9 +281,10 @@ namespace StorageNetwork.Components
                 core.Progress += ComputeWorkProgress(dt, recipe);
 
                 StorageNetworkRecipeHeatProfile profile = StorageNetworkRecipeHeatProfile.GetProfile(recipe);
-                if (profile != null && profile.HeatKilowatts > 0f)
+                if (profile != null)
                 {
-                    totalHeatEnergyThisTickKJ += profile.HeatKilowatts * dt;
+                    workingSelfHeatKW += profile.SelfHeatKilowatts;
+                    workingExhaustKW += profile.ExhaustKilowatts;
                 }
 
                 if (core.Progress >= 1f)
@@ -292,13 +294,22 @@ namespace StorageNetwork.Components
                 }
             }
 
-            if (totalHeatEnergyThisTickKJ > 0f && structureTemperature.IsValid())
+            Building building = GetComponent<Building>();
+            float defSelfHeatKW = building?.Def != null ? building.Def.SelfHeatKilowattsWhenActive : 0f;
+            float deltaSelfHeatKW = Mathf.Max(0f, workingSelfHeatKW - defSelfHeatKW);
+
+            if (deltaSelfHeatKW > 0f && structureTemperature.IsValid())
             {
                 GameComps.StructureTemperatures.ProduceEnergy(
                     structureTemperature,
-                    totalHeatEnergyThisTickKJ,
+                    deltaSelfHeatKW * dt,
                     StorageNetwork.STRINGS.Get(StorageNetwork.STRINGS.BUILDINGS.PREFABS.STORAGENETWORKORDERPRODUCTIONCENTER.NAME),
                     dt);
+            }
+
+            if (workingExhaustKW > 0f && building != null)
+            {
+                StructureTemperatureComponents.ExhaustHeat(building.GetExtents(), workingExhaustKW, 10000f, dt);
             }
 
             if (completedAny)
@@ -606,30 +617,6 @@ namespace StorageNetwork.Components
             {
                 heatedTemperature = GetSafeOutputTemperature();
                 HeatedTemperatureField?.SetValue(this, heatedTemperature);
-            }
-        }
-
-        internal void ApplyOutputProductTemperatures(ComplexRecipe recipe, List<GameObject> products)
-        {
-            if (recipe == null || products == null || products.Count == 0)
-            {
-                return;
-            }
-
-            StorageNetworkRecipeHeatProfile profile = StorageNetworkRecipeHeatProfile.GetProfile(recipe);
-            if (profile?.ForcedProductTemperature == null)
-            {
-                return;
-            }
-
-            float forcedTemp = profile.ForcedProductTemperature.Value;
-            foreach (GameObject product in products)
-            {
-                PrimaryElement primaryElement = product != null ? product.GetComponent<PrimaryElement>() : null;
-                if (primaryElement != null)
-                {
-                    primaryElement.Temperature = forcedTemp;
-                }
             }
         }
 

@@ -6,22 +6,21 @@ namespace StorageNetwork.Components
 {
     public sealed class StorageNetworkRecipeHeatProfile
     {
-        private const float DefaultCoolantFudge = 0.8f;
-        public const float MetalRefineryOutputTemperature = 313.15f; // 40 °C
-
         private static readonly Dictionary<string, StorageNetworkRecipeHeatProfile> ProfileCache =
             new Dictionary<string, StorageNetworkRecipeHeatProfile>();
 
-        public float HeatKilowatts { get; private set; }
-        public float TotalHeatEnergyKJ { get; private set; }
-        public float CoolantHeatEnergyKJ { get; private set; }
-        public float OperationalHeatEnergyKJ { get; private set; }
+        public float SelfHeatKilowatts { get; private set; }
+        public float ExhaustKilowatts { get; private set; }
         public float? HeatedTemperature { get; private set; }
-        public float? ForcedProductTemperature { get; private set; }
 
         public static void ClearCache()
         {
             ProfileCache.Clear();
+        }
+
+        public static void ResetRuntimeState()
+        {
+            ClearCache();
         }
 
         public static StorageNetworkRecipeHeatProfile GetProfile(ComplexRecipe recipe)
@@ -43,9 +42,7 @@ namespace StorageNetwork.Components
 
         private static StorageNetworkRecipeHeatProfile ComputeProfile(ComplexRecipe recipe)
         {
-            float recipeTime = Mathf.Max(1f, recipe.time);
             Tag primaryFabTag = Tag.Invalid;
-            bool isMetalRefinery = false;
 
             if (recipe.fabricators != null && recipe.fabricators.Count > 0)
             {
@@ -53,7 +50,6 @@ namespace StorageNetwork.Components
                 {
                     if (tag.Name == "MetalRefinery")
                     {
-                        isMetalRefinery = true;
                         primaryFabTag = tag;
                         break;
                     }
@@ -68,49 +64,16 @@ namespace StorageNetwork.Components
             BuildingDef sourceDef = primaryFabTag.IsValid ? Assets.GetBuildingDef(primaryFabTag.Name) : null;
             GameObject sourcePrefab = primaryFabTag.IsValid ? Assets.GetPrefab(primaryFabTag) : null;
 
-            if (!isMetalRefinery && sourcePrefab != null && sourcePrefab.GetComponent<LiquidCooledRefinery>() != null)
-            {
-                isMetalRefinery = true;
-            }
-
-            // Fallback: If not explicitly flagged as MetalRefinery, check if it refines metal from metal ore
-            if (!isMetalRefinery && IsMetalSmeltingRecipe(recipe))
-            {
-                isMetalRefinery = true;
-            }
-
-            // 1. Calculate operational machine heat rate
-            float operationalHeatKW = 0f;
+            // 1. Calculate operational machine heat rates
+            float selfHeatKW = 0f;
+            float exhaustKW = 0f;
             if (sourceDef != null)
             {
-                operationalHeatKW = Mathf.Max(0f, sourceDef.SelfHeatKilowattsWhenActive) +
-                                    Mathf.Max(0f, sourceDef.ExhaustKilowattsWhenActive);
-            }
-            float operationalHeatKJ = operationalHeatKW * recipeTime;
-
-            // 2. Calculate coolant heat for metal smelting recipes
-            float coolantHeatKJ = 0f;
-            float? forcedProductTemp = null;
-
-            if (isMetalRefinery)
-            {
-                forcedProductTemp = MetalRefineryOutputTemperature;
-                if (recipe.results != null)
-                {
-                    foreach (ComplexRecipe.RecipeElement result in recipe.results)
-                    {
-                        Element elem = ElementLoader.GetElement(result.material);
-                        if (elem != null && elem.highTemp > MetalRefineryOutputTemperature)
-                        {
-                            float deltaTemp = elem.highTemp - MetalRefineryOutputTemperature;
-                            float heatKJ = deltaTemp * elem.specificHeatCapacity * result.amount * DefaultCoolantFudge;
-                            coolantHeatKJ += Mathf.Max(0f, heatKJ);
-                        }
-                    }
-                }
+                selfHeatKW = Mathf.Max(0f, sourceDef.SelfHeatKilowattsWhenActive);
+                exhaustKW = Mathf.Max(0f, sourceDef.ExhaustKilowattsWhenActive);
             }
 
-            // 3. Determine HeatedTemperature for recipes with TemperatureOperation.Heated
+            // 2. Determine HeatedTemperature for recipes with TemperatureOperation.Heated
             float? heatedTemp = null;
             bool hasHeatedResult = recipe.results != null &&
                                   recipe.results.Any(r => r.temperatureOperation == ComplexRecipe.RecipeElement.TemperatureOperation.Heated);
@@ -143,37 +106,12 @@ namespace StorageNetwork.Components
                 }
             }
 
-            float totalHeatKJ = operationalHeatKJ + coolantHeatKJ;
-            float totalHeatKW = totalHeatKJ / recipeTime;
-
             return new StorageNetworkRecipeHeatProfile
             {
-                HeatKilowatts = totalHeatKW,
-                TotalHeatEnergyKJ = totalHeatKJ,
-                OperationalHeatEnergyKJ = operationalHeatKJ,
-                CoolantHeatEnergyKJ = coolantHeatKJ,
-                HeatedTemperature = heatedTemp,
-                ForcedProductTemperature = forcedProductTemp
+                SelfHeatKilowatts = selfHeatKW,
+                ExhaustKilowatts = exhaustKW,
+                HeatedTemperature = heatedTemp
             };
-        }
-
-        private static bool IsMetalSmeltingRecipe(ComplexRecipe recipe)
-        {
-            if (recipe?.results == null)
-            {
-                return false;
-            }
-
-            foreach (ComplexRecipe.RecipeElement result in recipe.results)
-            {
-                Element elem = ElementLoader.GetElement(result.material);
-                if (elem != null && elem.IsSolid && elem.HasTag(GameTags.RefinedMetal))
-                {
-                    return true;
-                }
-            }
-
-            return false;
         }
     }
 }
