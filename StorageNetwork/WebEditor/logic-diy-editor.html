@@ -123,27 +123,52 @@
         .header {
             background-color: var(--panel-dark);
             color: var(--text-light);
-            padding: 10px 20px;
+            padding: 0 16px;
+            height: 50px;
+            min-height: 50px;
+            max-height: 50px;
+            box-sizing: border-box;
             display: flex;
             justify-content: space-between;
             align-items: center;
             font-size: 14px;
             font-weight: bold;
             letter-spacing: 1px;
+            flex-shrink: 0;
+            user-select: none;
         }
 
         .title-group {
             display: flex;
             align-items: center;
-            gap: 18px;
+            gap: 14px;
+            min-width: 0;
+            flex-shrink: 1;
+        }
+
+        #editorTitle {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .header-actions {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
             font-size: 12px;
             letter-spacing: 0;
+            flex-shrink: 0;
+        }
+
+        #status {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-width: 80px;
+            text-align: right;
+            line-height: 1;
+            flex-shrink: 0;
         }
 
         .save-btn,
@@ -1265,9 +1290,9 @@ const uiText = {
         unsaved: '未保存',
         save: '保存到游戏',
         saving: '保存中...',
-        saved: '已保存到游戏',
+        saved: '已保存',
         autoSaving: '自动保存中...',
-        autoSaved: '已自动保存到游戏',
+        autoSaved: '已自动保存',
         saveFailed: '保存失败',
         globalRefresh: '全局更新',
         globalRefreshing: '正在全局更新...',
@@ -1362,9 +1387,9 @@ const uiText = {
         unsaved: 'Unsaved',
         save: 'Save to Game',
         saving: 'Saving...',
-        saved: 'Saved to game',
+        saved: 'Saved',
         autoSaving: 'Auto-saving...',
-        autoSaved: 'Auto-saved to game',
+        autoSaved: 'Auto-saved',
         saveFailed: 'Save failed',
         globalRefresh: 'Refresh All',
         globalRefreshing: 'Refreshing all...',
