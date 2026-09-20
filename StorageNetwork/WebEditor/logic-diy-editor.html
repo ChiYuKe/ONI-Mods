@@ -876,16 +876,17 @@
         .material-picker {
             position: absolute;
             z-index: 50;
-            width: 260px;
-            max-height: 320px;
-            overflow-y: auto;
+            width: 280px;
+            max-height: 360px;
             background: var(--bg-sidebar);
             border: 2px solid var(--node-border);
             box-shadow: 0 8px 18px rgba(0,0,0,0.18);
             padding: 8px;
             display: none;
+            flex-direction: column;
+            box-sizing: border-box;
         }
-        .material-picker.visible { display: block; }
+        .material-picker.visible { display: flex; }
         .material-picker-title {
             font-size: 12px;
             font-weight: bold;
@@ -894,8 +895,30 @@
             border-bottom: 1px solid rgba(0,0,0,0.12);
             margin-bottom: 6px;
         }
+        .material-picker-search {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 6px 8px;
+            margin-bottom: 8px;
+            border: 1px solid var(--node-border);
+            background: var(--panel-bg);
+            color: var(--text-dark);
+            font-size: 12px;
+            border-radius: 2px;
+            outline: none;
+        }
+        .material-picker-search:focus {
+            border-color: var(--panel-accent);
+        }
+        .material-picker-list {
+            flex: 1;
+            overflow-y: auto;
+            min-height: 0;
+            max-height: 270px;
+        }
         .material-option {
             width: 100%;
+            box-sizing: border-box;
             border: 2px solid var(--node-border);
             background: var(--panel-bg);
             color: var(--text-dark);
@@ -920,6 +943,7 @@
             color: var(--text-muted);
             font-size: 12px;
             padding: 12px 8px;
+            text-align: center;
         }
 
         .node-menu {
@@ -1061,6 +1085,7 @@
         .sidebar,
         .music-rows-scroll,
         .material-picker,
+        .material-picker-list,
         .node-menu-list,
         .docs-nav,
         .docs-content {
@@ -1070,6 +1095,7 @@
         .sidebar::-webkit-scrollbar,
         .music-rows-scroll::-webkit-scrollbar,
         .material-picker::-webkit-scrollbar,
+        .material-picker-list::-webkit-scrollbar,
         .node-menu-list::-webkit-scrollbar,
         .docs-nav::-webkit-scrollbar,
         .docs-content::-webkit-scrollbar {
@@ -1079,6 +1105,7 @@
         .sidebar::-webkit-scrollbar-track,
         .music-rows-scroll::-webkit-scrollbar-track,
         .material-picker::-webkit-scrollbar-track,
+        .material-picker-list::-webkit-scrollbar-track,
         .node-menu-list::-webkit-scrollbar-track,
         .docs-nav::-webkit-scrollbar-track,
         .docs-content::-webkit-scrollbar-track {
@@ -1087,6 +1114,7 @@
         .sidebar::-webkit-scrollbar-thumb,
         .music-rows-scroll::-webkit-scrollbar-thumb,
         .material-picker::-webkit-scrollbar-thumb,
+        .material-picker-list::-webkit-scrollbar-thumb,
         .node-menu-list::-webkit-scrollbar-thumb,
         .docs-nav::-webkit-scrollbar-thumb,
         .docs-content::-webkit-scrollbar-thumb {
@@ -1099,6 +1127,7 @@
         .sidebar::-webkit-scrollbar-thumb:hover,
         .music-rows-scroll::-webkit-scrollbar-thumb:hover,
         .material-picker::-webkit-scrollbar-thumb:hover,
+        .material-picker-list::-webkit-scrollbar-thumb:hover,
         .node-menu-list::-webkit-scrollbar-thumb:hover,
         .docs-nav::-webkit-scrollbar-thumb:hover,
         .docs-content::-webkit-scrollbar-thumb:hover {
@@ -1108,6 +1137,7 @@
         .sidebar::-webkit-scrollbar-button,
         .music-rows-scroll::-webkit-scrollbar-button,
         .material-picker::-webkit-scrollbar-button,
+        .material-picker-list::-webkit-scrollbar-button,
         .node-menu-list::-webkit-scrollbar-button,
         .docs-nav::-webkit-scrollbar-button,
         .docs-content::-webkit-scrollbar-button {
@@ -1288,6 +1318,8 @@ const uiText = {
         truthy: '非 0 为真',
         chooseMaterial: '选择材料',
         chooseBuilding: '选择建筑',
+        searchMaterial: '搜索材料...',
+        noMaterialResults: '没有找到匹配的材料',
         addNode: '添加节点',
         searchNode: '搜索节点...',
         noNodeResults: '没有找到节点',
@@ -1383,6 +1415,8 @@ const uiText = {
         truthy: 'Non-zero is true',
         chooseMaterial: 'Choose material',
         chooseBuilding: 'Choose building',
+        searchMaterial: 'Search materials...',
+        noMaterialResults: 'No matching materials found',
         addNode: 'Add Node',
         searchNode: 'Search nodes...',
         noNodeResults: 'No nodes found',
@@ -1815,7 +1849,7 @@ function cardCycle4(id, meta) {
 }
 
 function cardSignalMonitor(id, meta) {
-    return cardTitle(meta, id) + `<div class="signal-monitor"><div class="signal-state">${t('signalRed')}</div><div class="signal-value">0</div><div class="signal-details"><span>来源</span><span class="signal-source">未连接</span></div></div>`;
+    return cardTitle(meta, id) + `<div class="signal-monitor"><div class="signal-state">${t('signalRed')}</div><div class="signal-value">0</div><div class="signal-details"><span>${currentLanguage === 'en' ? 'Source' : '来源'}</span><span class="signal-source">${t('disconnected')}</span></div></div>`;
 }
 
 function cardPortRows(id, meta) {
@@ -1825,7 +1859,7 @@ function cardPortRows(id, meta) {
 
 function cardGroup(id, meta) {
     const text = nodesData[id]?.text || t('groupDefault');
-    return `<div class="node-title"><span ondblclick="editGroupTitle('${id}', this)" title="双击命名">${escapeHtml(text)}</span><span class="node-delete" onclick="deleteNode('${id}')">✕</span></div><div class="group-box"></div>`;
+    return `<div class="node-title"><span ondblclick="editGroupTitle('${id}', this)" title="${currentLanguage === 'en' ? 'Double-click to rename' : '双击命名'}">${escapeHtml(text)}</span><span class="node-delete" onclick="deleteNode('${id}')">✕</span></div><div class="group-box"></div>`;
 }
 
 function cardDynamicRows(id, meta) {
@@ -1856,9 +1890,10 @@ function cardMusicSequencer(id, meta) {
     const node = nodesData[id] || {};
     const notes = Array.isArray(node.values) && node.values.length ? node.values : [1, 3, 5, 0];
     const durations = Array.isArray(node.durations) ? node.durations : notes.map(() => 1);
-    const names = ['休止', 'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-    const rows = notes.map((note, index) => `<div class="music-step"><select onchange="setMusicNote('${id}',${index},this.value)">${names.map((name,value)=>`<option value="${value}" ${Number(note)===value?'selected':''}>${name}</option>`).join('')}</select><input type="number" min="0.125" step="0.125" value="${Number(durations[index] || 1)}" onchange="setMusicDuration('${id}',${index},this.value)" title="拍数"><button onclick="removeMusicStep('${id}',${index})">×</button></div>`).join('');
-    const sequenceText = notes.map((note, index) => `${names[Math.max(0, Math.min(12, Number(note) || 0))] === '休止' ? 'R' : names[Math.max(0, Math.min(12, Number(note) || 0))]}:${Number(durations[index] || 1)}`).join(' ');
+    const restName = currentLanguage === 'en' ? 'Rest' : '休止';
+    const names = [restName, 'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+    const rows = notes.map((note, index) => `<div class="music-step"><select onchange="setMusicNote('${id}',${index},this.value)">${names.map((name,value)=>`<option value="${value}" ${Number(note)===value?'selected':''}>${name}</option>`).join('')}</select><input type="number" min="0.125" step="0.125" value="${Number(durations[index] || 1)}" onchange="setMusicDuration('${id}',${index},this.value)" title="${currentLanguage === 'en' ? 'Beats' : '拍数'}"><button onclick="removeMusicStep('${id}',${index})">×</button></div>`).join('');
+    const sequenceText = notes.map((note, index) => `${(Number(note) || 0) === 0 ? 'R' : names[Math.max(0, Math.min(12, Number(note) || 0))]}:${Number(durations[index] || 1)}`).join(' ');
     const view = node._musicView || (notes.length > 12 ? 'compact' : 'rows');
     const maxRows = 15;
     const rowLimited = view === 'rows' && notes.length > maxRows;
@@ -1918,9 +1953,14 @@ function getSelectedMaterialKey(nodeId = null) {
 function getSelectedMaterial(nodeId = null) {
     const materials = serverState.materials || serverState.Materials || [];
     const key = getSelectedMaterialKey(nodeId);
-    return materials.find(item => (item.Key || item.key) === key) ||
-        materials.find(item => item.Selected || item.selected) ||
-        materials[0];
+    if (key) {
+        const found = materials.find(item => (item.Key || item.key) === key);
+        if (found) return found;
+        return { Key: key, Name: key, MassKg: 0 };
+    }
+    return materials.find(item => item.Selected || item.selected) ||
+        materials[0] ||
+        { Key: '', Name: '---', MassKg: 0 };
 }
 
 function getBuildings() {
@@ -1968,24 +2008,77 @@ function showMaterialPicker(node) {
     const selectedKey = getSelectedMaterialKey(node?.id);
     const nodeRect = node.getBoundingClientRect();
     const canvasRect = canvas.getBoundingClientRect();
-    materialPicker.style.left = `${Math.max(8, nodeRect.left - canvasRect.left)}px`;
-    materialPicker.style.top = `${Math.max(8, nodeRect.bottom - canvasRect.top + 8)}px`;
-    materialPicker.innerHTML = `<div class="material-picker-title">${t('chooseMaterial')}</div>`;
-    if (!materials.length) {
-        materialPicker.innerHTML += `<div class="material-empty">${t('noMaterials')}</div>`;
-    } else {
-        materials.forEach(item => {
+    const pickerWidth = 280;
+    const pickerMaxHeight = 360;
+    const left = Math.min(Math.max(8, nodeRect.left - canvasRect.left), Math.max(8, canvasRect.width - pickerWidth - 16));
+    let top = nodeRect.bottom - canvasRect.top + 8;
+    if (top + pickerMaxHeight > canvasRect.height && nodeRect.top - canvasRect.top - pickerMaxHeight - 8 > 0) {
+        top = nodeRect.top - canvasRect.top - pickerMaxHeight - 8;
+    }
+    materialPicker.style.left = `${left}px`;
+    materialPicker.style.top = `${Math.max(8, top)}px`;
+    materialPicker.innerHTML = `
+        <div class="material-picker-title">${t('chooseMaterial')}</div>
+        <input type="text" class="material-picker-search" placeholder="${t('searchMaterial')}" autocomplete="off" spellcheck="false">
+        <div class="material-picker-list"></div>
+    `;
+
+    const searchInput = materialPicker.querySelector('.material-picker-search');
+    const listContainer = materialPicker.querySelector('.material-picker-list');
+
+    function renderList(filterText = '') {
+        listContainer.innerHTML = '';
+        const query = filterText.trim().toLowerCase();
+        const filtered = materials.filter(item => {
+            if (!query) return true;
+            const key = String(item.Key || item.key || '').toLowerCase();
+            const name = stripGameRichText(item.Name || item.name || key).toLowerCase();
+            return name.includes(query) || key.includes(query);
+        });
+
+        if (!filtered.length) {
+            listContainer.innerHTML = `<div class="material-empty">${query ? t('noMaterialResults') : t('noMaterials')}</div>`;
+            return;
+        }
+
+        filtered.forEach(item => {
             const key = item.Key || item.key || '';
             const name = stripGameRichText(item.Name || item.name || key);
             const mass = item.MassKg ?? item.massKg ?? 0;
             const option = document.createElement('button');
+            option.type = 'button';
             option.className = `material-option ${key === selectedKey ? 'active' : ''}`;
             option.innerHTML = `<span>${escapeHtml(name)}</span><span>${formatTons(mass)}</span>`;
             option.addEventListener('click', () => selectMaterial(node?.id, key));
-            materialPicker.appendChild(option);
+            listContainer.appendChild(option);
         });
     }
+
+    renderList();
+
+    searchInput.addEventListener('input', () => {
+        renderList(searchInput.value);
+    });
+
+    searchInput.addEventListener('keydown', e => {
+        if (e.key === 'Escape') {
+            materialPicker.classList.remove('visible');
+            e.stopPropagation();
+        } else if (e.key === 'Enter') {
+            const firstOption = listContainer.querySelector('.material-option');
+            if (firstOption) {
+                firstOption.click();
+            }
+            e.preventDefault();
+            e.stopPropagation();
+        }
+    });
+
     materialPicker.classList.add('visible');
+    setTimeout(() => {
+        searchInput.focus();
+        searchInput.select();
+    }, 50);
 }
 
 function showBuildingPicker(node) {
@@ -1993,12 +2086,23 @@ function showBuildingPicker(node) {
     const selectedId = Number(nodesData[node.id]?.buildingInstanceId || 0);
     const nodeRect = node.getBoundingClientRect();
     const canvasRect = canvas.getBoundingClientRect();
-    materialPicker.style.left = `${Math.max(8, nodeRect.left - canvasRect.left)}px`;
-    materialPicker.style.top = `${Math.max(8, nodeRect.bottom - canvasRect.top + 8)}px`;
-    materialPicker.innerHTML = `<div class="material-picker-title">${t('chooseBuilding')}</div>`;
+    const pickerWidth = 280;
+    const pickerMaxHeight = 360;
+    const left = Math.min(Math.max(8, nodeRect.left - canvasRect.left), Math.max(8, canvasRect.width - pickerWidth - 16));
+    let top = nodeRect.bottom - canvasRect.top + 8;
+    if (top + pickerMaxHeight > canvasRect.height && nodeRect.top - canvasRect.top - pickerMaxHeight - 8 > 0) {
+        top = nodeRect.top - canvasRect.top - pickerMaxHeight - 8;
+    }
+    materialPicker.style.left = `${left}px`;
+    materialPicker.style.top = `${Math.max(8, top)}px`;
+    materialPicker.innerHTML = `
+        <div class="material-picker-title">${t('chooseBuilding')}</div>
+        <div class="material-picker-list"></div>
+    `;
+    const listContainer = materialPicker.querySelector('.material-picker-list');
     if (!buildings.length) {
         const emptyText = ['building-signal', 'network-signal-output'].includes(nodesData[node.id]?.type) ? t('noSignalBuildings') : t('noBuildings');
-        materialPicker.innerHTML += `<div class="material-empty">${emptyText}</div>`;
+        listContainer.innerHTML = `<div class="material-empty">${emptyText}</div>`;
     } else {
         buildings.forEach(item => {
             const instanceId = getBuildingId(item);
@@ -2013,10 +2117,11 @@ function showBuildingPicker(node) {
                 ? `${worldId >= 0 ? `W${worldId} · ` : ''}${t('signalValue')} ${getBuildingSignalValue(item)}`
                 : (operational ? t('available') : t('unavailable'));
             const option = document.createElement('button');
+            option.type = 'button';
             option.className = `material-option ${instanceId === selectedId ? 'active' : ''}`;
             option.innerHTML = `<span>${escapeHtml(name)}</span><span>${escapeHtml(rightText)}</span>`;
             option.addEventListener('click', () => selectBuilding(node.id, instanceId));
-            materialPicker.appendChild(option);
+            listContainer.appendChild(option);
         });
     }
     materialPicker.classList.add('visible');
@@ -2957,7 +3062,7 @@ function applyNodeTranslations() {
             'bool-and': 'All true', 'bool-nand': 'Invert AND', 'bool-or': 'Any true', 'bool-nor': 'Invert OR', 'bool-xor': 'Different', 'bool-not': 'Invert signal', 'bool-selector': 'Choose value', 'bool-true': 'Constant signal', 'bool-false': 'Constant signal',
             latch: 'SR Latch', counter: 'Pulse count', 'edge-pulse': 'Rising edge', random: 'Chance', hysteresis: 'Hysteresis', toggle: 'Toggle', 'pulse-shaper': 'Min pulse', 'map-range': 'Map range', 'inventory-percent': 'Usage %', 'inventory-stored': 'Stored', 'inventory-remaining': 'Remaining', 'inventory-capacity': 'Total capacity',
             'power-percent': 'Power %', 'power-stored': 'Stored power', 'power-remaining': 'Remaining', 'power-capacity': 'Battery capacity',
-            sequence: 'Step sequencer', split4: 'Bit splitter'
+            sequence: 'Step sequencer', split4: 'Bit splitter', select: 'Select'
         }
         : {
             'logic-gt': '条件成立', 'logic-lt': '条件成立', 'logic-eq': '条件成立', 'logic-range': '范围内',
@@ -2966,12 +3071,16 @@ function applyNodeTranslations() {
             latch: 'SR锁存器', counter: '脉冲计数', 'edge-pulse': '上升沿检测', random: '概率输出', hysteresis: '迟滞比较', toggle: '翻转输出', 'pulse-shaper': '脉冲展宽', 'map-range': '数值映射', 'inventory-percent': '输出占用率', 'inventory-stored': '已储存', 'inventory-remaining': '剩余容量', 'inventory-capacity': '总容量',
             'power-percent': '储能占比', 'power-stored': '当前电量', 'power-remaining': '剩余容量', 'power-capacity': '电池容量',
             sequence: '步进序列', split4: '位拆分',
-        select: '多选一'
+            select: '多选一'
         };
     Object.entries(labels).forEach(([type, label]) => {
         if (nodeMeta[type]) nodeMeta[type].label = label;
     });
     if (nodeMeta.output) nodeMeta.output.title = currentLanguage === 'en' ? 'Output' : '输出模块';
+    if (nodeMeta.select?.card) {
+        nodeMeta.select.card.rowLabel = currentLanguage === 'en' ? 'In ' : '输入';
+        nodeMeta.select.card.addLabel = pc => (currentLanguage === 'en' ? `+ Add (${pc})` : `+ 添加 (${pc})`);
+    }
 
     // Port label translations (inputLabels / outputLabels)
     const portLabelEn = {
@@ -2996,11 +3105,21 @@ function applyNodeTranslations() {
         'pulse-shaper':  { in:  ['Input signal'], out: ['Shaped output'] },
         'map-range':     { in:  ['Input value'], out: ['Mapped result'] },
         'material-change':{ out: ['Change pulse'] },
+        'inventory-percent':   { out: ['Usage % (0-100)'] },
+        'inventory-stored':    { out: ['Stored capacity (kg)'] },
+        'inventory-remaining': { out: ['Remaining capacity (kg)'] },
+        'inventory-capacity':  { out: ['Total capacity (kg)'] },
+        'power-percent':       { out: ['Power % (0-100)'] },
+        'power-stored':        { out: ['Stored power (J)'] },
+        'power-remaining':     { out: ['Remaining capacity (J)'] },
+        'power-capacity':      { out: ['Total capacity (J)'] },
         output:          { in:  ['Port0 (val 1)', 'Port1 (val 2)', 'Port2 (val 4)', 'Port3 (val 8)'] },
         sequence:        { in:  ['Advance', 'Reset'], out: ['Signal value (0-15)', 'Current step'] },
         split4:          { in:  ['Composite signal (0-15)'] },
         merge4:          { in:  ['Port0 (1)', 'Port1 (2)', 'Port2 (4)', 'Port3 (8)'], out: ['Composite signal (0-15)'] },
-        select:          { in:  ['Select (Sel)'], out: ['Selected input value'] },
+        select:          { in:  ['Select (Sel)', 'In 0', 'In 1', 'In 2', 'In 3', 'In 4', 'In 5', 'In 6', 'In 7', 'In 8', 'In 9', 'In 10', 'In 11'], out: ['Selected input value'] },
+        'pixel-screen':  { in:  ['4-bit signal (0-15)'] },
+        'music-sequencer':{ in: ['Play / Pause', 'Restart'], out: ['Note value (0-12)'] },
         'building-status':{ out: ['1=Operational, 0=Not operational'] },
         'building-signal':{ out: ['Building output signal'] },
         'network-signal-output':{ out: ['Storage Network signal value'] },
@@ -3032,6 +3151,9 @@ Object.keys(nodeMeta).forEach(type => {
     if (nodeMeta[type].inputLabels) _inputLabelsZh[type] = [...nodeMeta[type].inputLabels];
     if (nodeMeta[type].outputLabels) _outputLabelsZh[type] = [...nodeMeta[type].outputLabels];
 });
+if (_inputLabelsZh.select) {
+    _inputLabelsZh.select = ['选择 (Sel)', '输入0', '输入1', '输入2', '输入3', '输入4', '输入5', '输入6', '输入7', '输入8', '输入9', '输入10', '输入11'];
+}
 
 const SIDEBAR_FOLD_STORAGE_KEY = 'storage-network-logic-diy-sidebar-fold';
 let sidebarFolded = new Set();
@@ -4011,6 +4133,7 @@ function toBin4(n) {
 
 function formatTons(kg) {
     const amount = Math.max(0, Number(kg || 0));
+    if (amount === 0) return '0kg';
     if (amount < 1000) {
         if (amount > 0 && amount < 0.1) return '<0.1kg';
         const digits = amount < 10 ? 1 : 0;
