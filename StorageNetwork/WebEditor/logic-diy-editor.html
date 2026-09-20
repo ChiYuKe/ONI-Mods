@@ -1246,6 +1246,22 @@ const uiText = {
 
         exportBlueprint: '导出蓝图',
         importBlueprint: '导入蓝图',
+        blueprintInvalid: '无效的蓝图文件',
+        blueprintConfirm: '导入蓝图将覆盖当前电路图，是否继续？',
+        blueprintImported: '已导入蓝图',
+        blueprintParseFailed: '解析蓝图失败：',
+        themeLight: '日间模式',
+        themeDark: '夜间模式',
+        liveSignalTitle: '信号可视化',
+        signalBadgeLabel: '信号',
+        langBtnLabel: '🌐 EN',
+        langBtnTitle: '切换为英文',
+        rerouteAria: '连线重路由点：拖动移动，Alt+点击删除',
+        rerouteTitle: '拖动移动；右侧小端点拖出分支；Alt+点击删除',
+        rerouteInputTitle: '重路由输入端：可接回断开的线段',
+        rerouteBranchTitle: '从此端点拖出分支',
+        disconnected: '未连接',
+        portLabel: '端口',
         legendTitle: '端口图例',
         legendContinuousOut: '蓝色方形：持续信号输出',
         legendContinuousIn: '青色圆形：持续信号输入',
@@ -1325,6 +1341,22 @@ const uiText = {
 
         exportBlueprint: 'Export Blueprint',
         importBlueprint: 'Import Blueprint',
+        blueprintInvalid: 'Invalid blueprint file',
+        blueprintConfirm: 'Importing will replace the current graph. Continue?',
+        blueprintImported: 'Blueprint imported',
+        blueprintParseFailed: 'Failed to parse blueprint file: ',
+        themeLight: 'Light mode',
+        themeDark: 'Dark mode',
+        liveSignalTitle: 'Live Signal Visualization',
+        signalBadgeLabel: 'Signal',
+        langBtnLabel: '🌐 中文',
+        langBtnTitle: 'Switch to Chinese / 切换为中文',
+        rerouteAria: 'Reroute point: drag to move, Alt+click to delete',
+        rerouteTitle: 'Drag to move; drag right endpoint to branch; Alt+click to delete',
+        rerouteInputTitle: 'Reroute input port: connect incoming wire',
+        rerouteBranchTitle: 'Drag out a branch from this endpoint',
+        disconnected: 'Disconnected',
+        portLabel: 'Port',
         legendTitle: 'Port Legend',
         legendContinuousOut: 'Blue square: continuous signal output',
         legendContinuousIn: 'Teal circle: continuous signal input',
@@ -2614,6 +2646,10 @@ const fitViewBtn = document.getElementById('fitViewBtn');
 const statusEl = document.getElementById('status');
 const saveBtn = document.getElementById('saveBtn');
 const globalRefreshBtn = document.getElementById('globalRefreshBtn');
+const exportBlueprintBtn = document.getElementById('exportBlueprintBtn');
+const importBlueprintBtn = document.getElementById('importBlueprintBtn');
+const importBlueprintFile = document.getElementById('importBlueprintFile');
+const themeBtn = document.getElementById('themeBtn');
 
 const sidebarToggleBtn = document.getElementById('sidebarToggleBtn');
 const docsBtn = document.getElementById('docsBtn');
@@ -2792,7 +2828,7 @@ let simTick = 0;
 const signalBadge = document.createElement('span');
 signalBadge.style.cssText = 'margin-left:8px;padding:1px 6px;background:var(--panel-dark);border-radius:3px;font-size:10px;font-family:monospace;color:var(--text-light)';
 statusEl.parentNode.appendChild(signalBadge);
-setInterval(() => { gameOutputSignal = serverState?.OutputSignalValue ?? serverState?.outputSignalValue ?? 0; signalBadge.textContent = '信号 ' + gameOutputSignal; simTick++; }, 200);
+setInterval(() => { gameOutputSignal = serverState?.OutputSignalValue ?? serverState?.outputSignalValue ?? 0; signalBadge.textContent = `${t('signalBadgeLabel')} ${gameOutputSignal}`; simTick++; }, 200);
 
 function closeDuplicateEditorPage() {
     if (duplicatePageClosing) return;
@@ -3563,9 +3599,13 @@ function localizePage(refreshNodes) {
     docsBtn.textContent = docsPage.classList.contains('visible') ? t('backToEdit') : t('docs');
     saveBtn.textContent = t('save');
     globalRefreshBtn.textContent = t('globalRefresh');
-    if (typeof exportBlueprintBtn !== 'undefined' && exportBlueprintBtn) exportBlueprintBtn.textContent = t('exportBlueprint');
-    if (typeof importBlueprintBtn !== 'undefined' && importBlueprintBtn) importBlueprintBtn.textContent = t('importBlueprint');
-    langBtn.textContent = currentLanguage === 'zh' ? 'EN' : '中文';
+    if (exportBlueprintBtn) exportBlueprintBtn.textContent = t('exportBlueprint');
+    if (importBlueprintBtn) importBlueprintBtn.textContent = t('importBlueprint');
+    langBtn.textContent = t('langBtnLabel');
+    langBtn.title = t('langBtnTitle');
+    if (liveSignalBtn) liveSignalBtn.title = t('liveSignalTitle');
+    if (themeBtn) themeBtn.title = document.body.classList.contains('dark') ? t('themeLight') : t('themeDark');
+    if (typeof signalBadge !== 'undefined' && signalBadge) signalBadge.textContent = `${t('signalBadgeLabel')} ${gameOutputSignal}`;
     applySidebarCollapsedState();
     if (!statusEl.textContent || ['未保存', 'Unsaved'].includes(statusEl.textContent)) {
         statusEl.textContent = t('unsaved');
@@ -4663,8 +4703,8 @@ function renderConnections() {
                 circle.setAttribute('data-wp-index', wi);
                 const rerouteKey = waypointKey(conn.id, wi);
                 if (selectedWaypointKeys.has(rerouteKey)) circle.classList.add('reroute-selected');
-                circle.setAttribute('aria-label', '连线重路由点：拖动移动，Alt+点击删除');
-                circle.setAttribute('title', '拖动移动；右侧小端点拖出分支；Alt+点击删除');
+                circle.setAttribute('aria-label', t('rerouteAria'));
+                circle.setAttribute('title', t('rerouteTitle'));
                 circle.style.cursor = 'move';
                 // The handle works like an Unreal reroute pin: drag to reposition;
                 // click-release once, then drag to an input to create a branch.
@@ -4702,7 +4742,7 @@ function renderConnections() {
                 inputPort.setAttribute('stroke-width', '1.5');
                 inputPort.setAttribute('data-connection-id', conn.id);
                 inputPort.setAttribute('data-waypoint-index', wi);
-                inputPort.setAttribute('title', '重路由输入端：可接回断开的线段');
+                inputPort.setAttribute('title', t('rerouteInputTitle'));
                 appendWireHandle(inputPort);
                 const branchPort = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
                 branchPort.classList.add('reroute-branch-port');
@@ -4714,7 +4754,7 @@ function renderConnections() {
                 branchPort.setAttribute('stroke-width', '1.5');
                 branchPort.setAttribute('data-connection-id', conn.id);
                 branchPort.setAttribute('data-waypoint-index', wi);
-                branchPort.setAttribute('title', '从此端点拖出分支');
+                branchPort.setAttribute('title', t('rerouteBranchTitle'));
                 const beginRerouteConnection = (e2, side) => {
                     if (e2.button !== 0) return;
                     e2.stopPropagation(); e2.preventDefault();
@@ -5078,9 +5118,9 @@ function updateSignalMonitors() {
         const details = nodeEl?.querySelector('.signal-details');
         if (details) {
             const sourceEl = details.querySelector('.signal-source');
-            const sourceName = conn ? (nodeMeta[srcType]?.title || srcType || conn.fromNode) : '未连接';
+            const sourceName = conn ? (nodeMeta[srcType]?.title || srcType || conn.fromNode) : t('disconnected');
             const sourcePort = conn ? parsePortIndex(conn.fromPort) : 0;
-            if (sourceEl) sourceEl.textContent = conn ? `${sourceName} · 端口 ${sourcePort}` : sourceName;
+            if (sourceEl) sourceEl.textContent = conn ? `${sourceName} · ${t('portLabel')} ${sourcePort}` : sourceName;
         }
     });
     // Pixel screen display (re-render from cached eval)
@@ -5640,10 +5680,6 @@ globalRefreshBtn.addEventListener('click', async () => {
 });
 
 // —— Blueprint export / import ——
-var exportBlueprintBtn = document.getElementById('exportBlueprintBtn');
-var importBlueprintBtn = document.getElementById('importBlueprintBtn');
-var importBlueprintFile = document.getElementById('importBlueprintFile');
-
 if (exportBlueprintBtn && importBlueprintBtn && importBlueprintFile) {
     exportBlueprintBtn.addEventListener('click', () => {
         const cleanNodes = {};
@@ -5681,10 +5717,10 @@ if (exportBlueprintBtn && importBlueprintBtn && importBlueprintFile) {
             try {
                 const blueprint = JSON.parse(reader.result);
                 if (!blueprint.nodesData || !blueprint.connections) {
-                    alert('Invalid blueprint file');
+                    alert(t('blueprintInvalid'));
                     return;
                 }
-                if (!confirm('Importing will replace the current graph. Continue?')) return;
+                if (!confirm(t('blueprintConfirm'))) return;
                 const ok = loadLayoutState({
                     version: blueprint.version,
                     nodesData: blueprint.nodesData,
@@ -5695,8 +5731,8 @@ if (exportBlueprintBtn && importBlueprintBtn && importBlueprintFile) {
                     canvasPanX: blueprint.canvasPanX || 0,
                     canvasPanY: blueprint.canvasPanY || 0
                 }, true);
-                if (ok) { setStatus('Imported'); markCircuitDirty(); fitAllNodesToView(); }
-            } catch(e) { alert('Failed to parse blueprint file: ' + e.message); }
+                if (ok) { setStatus(t('blueprintImported')); markCircuitDirty(); fitAllNodesToView(); }
+            } catch(e) { alert(t('blueprintParseFailed') + e.message); }
         };
         reader.readAsText(file);
         importBlueprintFile.value = '';
@@ -5711,10 +5747,9 @@ docsBtn.addEventListener('click', () => toggleDocsPage());
 fitViewBtn.addEventListener('click', fitAllNodesToView);
 // Theme toggle
 const THEME_STORAGE_KEY = 'storage-network-logic-diy-theme';
-const themeBtn = document.getElementById('themeBtn');
 function applyTheme(dark) {
     document.body.classList.toggle('dark', dark);
-    themeBtn.title = dark ? '日间模式' : '夜间模式';
+    if (themeBtn) themeBtn.title = dark ? t('themeLight') : t('themeDark');
     localStorage.setItem(THEME_STORAGE_KEY, dark ? 'dark' : 'light');
 }
 themeBtn.addEventListener('click', () => applyTheme(!document.body.classList.contains('dark')));
