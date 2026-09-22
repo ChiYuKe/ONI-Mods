@@ -1975,13 +1975,40 @@ function getSelectedMaterialKey(nodeId = null) {
         : selectedMaterialKey;
 }
 
+// The material option list only contains what is stored right now (see
+// StorageNetworkLogicDiy.GetWebEditorMaterialOptions), so a saved key can be
+// missing from it. Keep every name we have seen for a key, and fall back to a
+// readable form of the prefab id, instead of showing the raw key.
+const materialNameCache = new Map();
+let materialNameCacheSource = null;
+
+function humanizeMaterialKey(key) {
+    return String(key || '')
+        .replace(/[_-]+/g, ' ')
+        .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function rememberMaterialNames(materials) {
+    if (!Array.isArray(materials) || materials.length === 0 || materials === materialNameCacheSource) return;
+    materialNameCacheSource = materials;
+    materials.forEach(item => {
+        const key = item?.Key || item?.key;
+        if (!key) return;
+        const name = stripGameRichText(item.Name || item.name || '');
+        if (name) materialNameCache.set(key, name);
+    });
+}
+
 function getSelectedMaterial(nodeId = null) {
     const materials = serverState.materials || serverState.Materials || [];
+    rememberMaterialNames(materials);
     const key = getSelectedMaterialKey(nodeId);
     if (key) {
         const found = materials.find(item => (item.Key || item.key) === key);
         if (found) return found;
-        return { Key: key, Name: key, MassKg: 0 };
+        return { Key: key, Name: materialNameCache.get(key) || humanizeMaterialKey(key), MassKg: 0 };
     }
     return materials.find(item => item.Selected || item.selected) ||
         materials[0] ||
@@ -6011,8 +6038,12 @@ function alignSelectedItemsToEdge(edge) {
     return true;
 }
 
+function isTypingTarget(target) {
+    return !!(target && target.closest && (target.closest('input') || target.closest('textarea') || target.isContentEditable));
+}
+
 document.addEventListener('keydown', e => {
-    if (e.key.toLowerCase() === 'r' && activeDrawingLine && sourcePortEl) {
+    if (e.key.toLowerCase() === 'r' && activeDrawingLine && sourcePortEl && !isTypingTarget(e.target)) {
         const point = lastMouseCanvasPoint;
         const sourcePin = GraphSchema.pin(
             sourcePortEl.dataset.nodeId || sourcePortEl.parentElement?.id,
@@ -6033,7 +6064,7 @@ document.addEventListener('keydown', e => {
         return;
     }
     if (e.key.toLowerCase() === 'r' && !activeDrawingLine) {
-        if (docsPage.classList.contains('visible') || e.target.closest('input') || e.target.closest('textarea') || e.target.isContentEditable) return;
+        if (docsPage.classList.contains('visible') || isTypingTarget(e.target)) return;
         reroutePlacementHeld = true;
         canvas.classList.add('reroute-placement');
         e.preventDefault();
