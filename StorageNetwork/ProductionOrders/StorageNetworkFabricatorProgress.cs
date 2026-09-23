@@ -79,7 +79,17 @@ namespace StorageNetwork.ProductionOrders
                 total += Mathf.Max(0, count);
             }
 
-            if (fabricator.CurrentWorkingOrder != null)
+            if (fabricator is StorageNetworkOrderProductionCenterFabricator orderCenter)
+            {
+                foreach (var core in orderCenter.ActiveCores)
+                {
+                    if (core.IsWorking)
+                    {
+                        total++;
+                    }
+                }
+            }
+            else if (fabricator.CurrentWorkingOrder != null)
             {
                 total++;
             }

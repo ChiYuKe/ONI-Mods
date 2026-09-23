@@ -34,16 +34,16 @@ namespace StorageNetwork.Patches
                     return;
                 }
 
-                StorageNetworkProductionOutputHandler.ForceStoreProducedOutputs(__instance, __result);
+                StorageNetworkProductionOutputHandler.ForceStoreProducedOutputs(__instance, recipe, __result);
             }
         }
 
         [HarmonyPatch(typeof(LiquidCooledRefinery), "SpawnOrderProduct")]
         public static class LiquidCooledRefinerySpawnOrderProductPatch
         {
-            public static void Postfix(LiquidCooledRefinery __instance, List<GameObject> __result)
+            public static void Postfix(LiquidCooledRefinery __instance, ComplexRecipe recipe, List<GameObject> __result)
             {
-                StorageNetworkProductionOutputHandler.ForceStoreProducedOutputs(__instance, __result);
+                StorageNetworkProductionOutputHandler.ForceStoreProducedOutputs(__instance, recipe, __result);
             }
         }
     }

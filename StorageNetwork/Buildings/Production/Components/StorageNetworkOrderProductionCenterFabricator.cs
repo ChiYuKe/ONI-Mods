@@ -125,9 +125,15 @@ namespace StorageNetwork.Components
             ClampOrderIndex(NextOrderIdxField, recipes.Length);
             ClampOrderIndex(WorkingOrderIdxField, recipes.Length);
             QueueDirtyField?.SetValue(this, false);
-            HasOpenOrdersField?.SetValue(this, HasAnyQueuedRecipe());
+            bool hasOpen = HasAnyQueuedRecipe();
+            bool hadOpen = (bool)(HasOpenOrdersField?.GetValue(this) ?? false);
+            HasOpenOrdersField?.SetValue(this, hasOpen);
             SyncVanillaCurrentOrder();
             RefreshWorldProgressBars();
+            if (hadOpen != hasOpen || (!hasOpen && !HasParallelWorkingOrder))
+            {
+                Trigger(1721324763, this);
+            }
         }
 
         public void SetEngravedRecipeIds(IEnumerable<string> recipeIds)
@@ -291,6 +297,7 @@ namespace StorageNetwork.Components
                 {
                     CompleteCore(core, recipe);
                     completedAny = true;
+                    TryStartCore(core);
                 }
             }
 
@@ -315,6 +322,8 @@ namespace StorageNetwork.Components
             if (completedAny)
             {
                 QueueDirtyField?.SetValue(this, true);
+                HasOpenOrdersField?.SetValue(this, HasAnyQueuedRecipe());
+                Trigger(1721324763, this);
             }
 
             SyncVanillaCurrentOrder();
@@ -641,6 +650,7 @@ namespace StorageNetwork.Components
             queueCounts[recipe.id] = Mathf.Max(0, count - 1);
             HasOpenOrdersField?.SetValue(this, queueCounts.Values.Any(value => value != 0));
             QueueDirtyField?.SetValue(this, true);
+            Trigger(1721324763, this);
         }
 
         private int GetQueueCount(ComplexRecipe recipe)
