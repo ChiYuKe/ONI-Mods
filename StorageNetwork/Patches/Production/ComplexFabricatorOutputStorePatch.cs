@@ -11,7 +11,7 @@ namespace StorageNetwork.Patches
         [HarmonyPatch(typeof(ComplexFabricator), "SpawnOrderProduct")]
         public static class SpawnOrderProductPatch
         {
-            public static void Prefix(ComplexFabricator __instance, ref float ___heatedTemperature)
+            public static void Prefix(ComplexFabricator __instance, ComplexRecipe recipe, ref float ___heatedTemperature)
             {
                 StorageNetworkOrderProductionCenterFabricator orderCenter = __instance as StorageNetworkOrderProductionCenterFabricator;
                 if (orderCenter == null)
@@ -19,14 +19,10 @@ namespace StorageNetwork.Patches
                     return;
                 }
 
-                orderCenter.EnsureSafeOutputTemperature();
-                if (!StorageNetworkOrderProductionCenterFabricator.IsValidOutputTemperature(___heatedTemperature))
-                {
-                    ___heatedTemperature = orderCenter.GetSafeOutputTemperature();
-                }
+                orderCenter.PrepareOutputTemperature(recipe, ref ___heatedTemperature);
             }
 
-            public static void Postfix(ComplexFabricator __instance, List<GameObject> __result)
+            public static void Postfix(ComplexFabricator __instance, ComplexRecipe recipe, List<GameObject> __result)
             {
                 // LiquidCooledRefinery calls base.SpawnOrderProduct first and only
                 // heats its coolant after that call returns. The base postfix would
@@ -38,16 +34,16 @@ namespace StorageNetwork.Patches
                     return;
                 }
 
-                StorageNetworkProductionOutputHandler.ForceStoreProducedOutputs(__instance, __result);
+                StorageNetworkProductionOutputHandler.ForceStoreProducedOutputs(__instance, recipe, __result);
             }
         }
 
         [HarmonyPatch(typeof(LiquidCooledRefinery), "SpawnOrderProduct")]
         public static class LiquidCooledRefinerySpawnOrderProductPatch
         {
-            public static void Postfix(LiquidCooledRefinery __instance, List<GameObject> __result)
+            public static void Postfix(LiquidCooledRefinery __instance, ComplexRecipe recipe, List<GameObject> __result)
             {
-                StorageNetworkProductionOutputHandler.ForceStoreProducedOutputs(__instance, __result);
+                StorageNetworkProductionOutputHandler.ForceStoreProducedOutputs(__instance, recipe, __result);
             }
         }
     }

@@ -33,6 +33,7 @@ namespace StorageNetwork.Core
             StorageTargetSelector.ResetRuntimeState();
             StorageNetworkPerformanceCounters.ResetRuntimeState();
             StorageNetworkFrameProfileTool.ResetRuntimeState();
+            StorageNetworkRecipeHeatProfile.ResetRuntimeState();
         }
     }
 }

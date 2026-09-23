@@ -56,7 +56,6 @@ namespace StorageNetwork.ProductionOrders
                 reservedMaterials);
             bool obsoleteQueuesCancelled =
                 CancelOrderQueuesOutsidePlan(order, queueAssignments);
-            bool queued = EnsureProductionPlanQueued(plan, order, materialLeases);
             bool refreshed = order.RefreshPlan(
                 plan.OrderCount,
                 reservedMaterials,
@@ -67,6 +66,7 @@ namespace StorageNetwork.ProductionOrders
             {
                 ProductionOrderRuntimeAllocation.NotifyOrderAssignmentsChanged(order);
             }
+            bool queued = EnsureProductionPlanQueued(plan, order, materialLeases);
             bool changed = obsoleteQueuesCancelled || queued || refreshed;
             if (changed)
             {
@@ -144,6 +144,19 @@ namespace StorageNetwork.ProductionOrders
                 {
                     EnsureOrderAutomationEnabled(assignment.Fabricator, order.Key);
                     continue;
+                }
+
+                if (node.ProductTag == order.ProductTag)
+                {
+                    int maxRemainingForAssignment = Mathf.CeilToInt(
+                        Mathf.Max(0f, order.RequestedAmount - order.ProducedAtSubmit) /
+                        Mathf.Max(0.001f, node.OutputAmount));
+                    deficit = Mathf.Min(deficit, Mathf.Max(0, maxRemainingForAssignment - activeCount));
+                    if (deficit <= 0)
+                    {
+                        EnsureOrderAutomationEnabled(assignment.Fabricator, order.Key);
+                        continue;
+                    }
                 }
 
                 int queued = GetFiniteRecipeQueueCount(assignment.Fabricator, node.Recipe);
