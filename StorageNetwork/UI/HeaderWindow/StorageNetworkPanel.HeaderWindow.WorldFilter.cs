@@ -318,7 +318,7 @@ namespace StorageNetwork.UI
 
             int activeWorldId = GetActiveWorldFilterId();
             return orderWorldFilterId != AllEnrollableWorldsFilterId &&
-                   orderWorldFilterId != activeWorldId &&
+                   !StorageNetworkWorldUtility.AreWorldsSameOrLanded(orderWorldFilterId, activeWorldId) &&
                    !StorageSceneRegistry.IsCrossPlanetRelayOnline();
         }
     }

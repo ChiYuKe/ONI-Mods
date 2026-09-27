@@ -30,7 +30,7 @@ namespace StorageNetwork.UI
                 worldId = activeWorldId;
             }
 
-            if (!relayOnline && worldId != activeWorldId)
+            if (!relayOnline && !StorageNetworkWorldUtility.AreWorldsSameOrLanded(worldId, activeWorldId))
             {
                 return new StorageSceneSnapshot(new List<StorageInfo>(), 0f, 0f, false);
             }

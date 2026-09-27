@@ -19,6 +19,7 @@ namespace StorageNetwork.ProductionOrders
 
         public void Sim1000ms(float dt)
         {
+            StorageNetwork.Core.StorageNetworkWorldUtility.EnsureCacheFresh();
             inventoryElapsed += dt;
             recipeCatalogElapsed += dt;
             if (inventoryElapsed < InventoryRefreshIntervalSeconds)

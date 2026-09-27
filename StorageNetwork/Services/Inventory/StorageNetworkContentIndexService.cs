@@ -454,9 +454,33 @@ namespace StorageNetwork.Services
                         amount += GetFilteredAmount(world, tag, forbiddenTags);
                     }
                 }
-                else if (Worlds.TryGetValue(worldId, out WorldContentState world))
+                else
                 {
-                    amount = GetFilteredAmount(world, tag, forbiddenTags);
+                    if (Worlds.TryGetValue(worldId, out WorldContentState world))
+                    {
+                        amount += GetFilteredAmount(world, tag, forbiddenTags);
+                    }
+
+                    if (worldId >= 0 && StorageNetworkWorldUtility.HasLandedRocketsOrIsLandedRocket(worldId))
+                    {
+                        int parentWorldId = StorageNetworkWorldUtility.GetParentWorldId(worldId);
+                        if (parentWorldId != worldId &&
+                            Worlds.TryGetValue(parentWorldId, out WorldContentState parentWorld))
+                        {
+                            amount += GetFilteredAmount(parentWorld, tag, forbiddenTags);
+                        }
+
+                        IReadOnlyList<int> rockets = StorageNetworkWorldUtility.GetLandedRocketWorldIds(parentWorldId);
+                        for (int i = 0; i < rockets.Count; i++)
+                        {
+                            int rWorldId = rockets[i];
+                            if (rWorldId != worldId &&
+                                Worlds.TryGetValue(rWorldId, out WorldContentState rocketWorld))
+                            {
+                                amount += GetFilteredAmount(rocketWorld, tag, forbiddenTags);
+                            }
+                        }
+                    }
                 }
             }
 
@@ -490,10 +514,36 @@ namespace StorageNetwork.Services
                     capacityKg += world.TotalCapacityKg;
                 }
             }
-            else if (Worlds.TryGetValue(worldId, out WorldContentState world))
+            else
             {
-                storedKg = world.TotalStoredKg;
-                capacityKg = world.TotalCapacityKg;
+                if (Worlds.TryGetValue(worldId, out WorldContentState world))
+                {
+                    storedKg += world.TotalStoredKg;
+                    capacityKg += world.TotalCapacityKg;
+                }
+
+                if (worldId >= 0 && StorageNetworkWorldUtility.HasLandedRocketsOrIsLandedRocket(worldId))
+                {
+                    int parentWorldId = StorageNetworkWorldUtility.GetParentWorldId(worldId);
+                    if (parentWorldId != worldId &&
+                        Worlds.TryGetValue(parentWorldId, out WorldContentState parentWorld))
+                    {
+                        storedKg += parentWorld.TotalStoredKg;
+                        capacityKg += parentWorld.TotalCapacityKg;
+                    }
+
+                    IReadOnlyList<int> rockets = StorageNetworkWorldUtility.GetLandedRocketWorldIds(parentWorldId);
+                    for (int i = 0; i < rockets.Count; i++)
+                    {
+                        int rWorldId = rockets[i];
+                        if (rWorldId != worldId &&
+                            Worlds.TryGetValue(rWorldId, out WorldContentState rocketWorld))
+                        {
+                            storedKg += rocketWorld.TotalStoredKg;
+                            capacityKg += rocketWorld.TotalCapacityKg;
+                        }
+                    }
+                }
             }
 
             TransferTransactionContext transaction = transferTransaction;
@@ -574,9 +624,33 @@ namespace StorageNetwork.Services
                     count += GetCountWithAdditionalTag(world, tag, additionalTag);
                 }
             }
-            else if (Worlds.TryGetValue(worldId, out WorldContentState world))
+            else
             {
-                count = GetCountWithAdditionalTag(world, tag, additionalTag);
+                if (Worlds.TryGetValue(worldId, out WorldContentState world))
+                {
+                    count += GetCountWithAdditionalTag(world, tag, additionalTag);
+                }
+
+                if (worldId >= 0 && StorageNetworkWorldUtility.HasLandedRocketsOrIsLandedRocket(worldId))
+                {
+                    int parentWorldId = StorageNetworkWorldUtility.GetParentWorldId(worldId);
+                    if (parentWorldId != worldId &&
+                        Worlds.TryGetValue(parentWorldId, out WorldContentState parentWorld))
+                    {
+                        count += GetCountWithAdditionalTag(parentWorld, tag, additionalTag);
+                    }
+
+                    IReadOnlyList<int> rockets = StorageNetworkWorldUtility.GetLandedRocketWorldIds(parentWorldId);
+                    for (int i = 0; i < rockets.Count; i++)
+                    {
+                        int rWorldId = rockets[i];
+                        if (rWorldId != worldId &&
+                            Worlds.TryGetValue(rWorldId, out WorldContentState rocketWorld))
+                        {
+                            count += GetCountWithAdditionalTag(rocketWorld, tag, additionalTag);
+                        }
+                    }
+                }
             }
 
             return count;
@@ -608,8 +682,36 @@ namespace StorageNetwork.Services
                 return false;
             }
 
-            return Worlds.TryGetValue(worldId, out WorldContentState localWorld) &&
-                   WorldHasPlantableSeed(localWorld, seedTag, additionalTag);
+            if (Worlds.TryGetValue(worldId, out WorldContentState localWorld) &&
+                WorldHasPlantableSeed(localWorld, seedTag, additionalTag))
+            {
+                return true;
+            }
+
+            if (worldId >= 0 && StorageNetworkWorldUtility.HasLandedRocketsOrIsLandedRocket(worldId))
+            {
+                int parentWorldId = StorageNetworkWorldUtility.GetParentWorldId(worldId);
+                if (parentWorldId != worldId &&
+                    Worlds.TryGetValue(parentWorldId, out WorldContentState parentWorld) &&
+                    WorldHasPlantableSeed(parentWorld, seedTag, additionalTag))
+                {
+                    return true;
+                }
+
+                IReadOnlyList<int> rockets = StorageNetworkWorldUtility.GetLandedRocketWorldIds(parentWorldId);
+                for (int i = 0; i < rockets.Count; i++)
+                {
+                    int rWorldId = rockets[i];
+                    if (rWorldId != worldId &&
+                        Worlds.TryGetValue(rWorldId, out WorldContentState rocketWorld) &&
+                        WorldHasPlantableSeed(rocketWorld, seedTag, additionalTag))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
         }
 
         public static float GetEdibleCalories(
@@ -633,9 +735,33 @@ namespace StorageNetwork.Services
                     calories += GetEdibleCalories(world, foodId, unitsById);
                 }
             }
-            else if (Worlds.TryGetValue(worldId, out WorldContentState world))
+            else
             {
-                calories = GetEdibleCalories(world, foodId, unitsById);
+                if (Worlds.TryGetValue(worldId, out WorldContentState world))
+                {
+                    calories += GetEdibleCalories(world, foodId, unitsById);
+                }
+
+                if (worldId >= 0 && StorageNetworkWorldUtility.HasLandedRocketsOrIsLandedRocket(worldId))
+                {
+                    int parentWorldId = StorageNetworkWorldUtility.GetParentWorldId(worldId);
+                    if (parentWorldId != worldId &&
+                        Worlds.TryGetValue(parentWorldId, out WorldContentState parentWorld))
+                    {
+                        calories += GetEdibleCalories(parentWorld, foodId, unitsById);
+                    }
+
+                    IReadOnlyList<int> rockets = StorageNetworkWorldUtility.GetLandedRocketWorldIds(parentWorldId);
+                    for (int i = 0; i < rockets.Count; i++)
+                    {
+                        int rWorldId = rockets[i];
+                        if (rWorldId != worldId &&
+                            Worlds.TryGetValue(rWorldId, out WorldContentState rocketWorld))
+                        {
+                            calories += GetEdibleCalories(rocketWorld, foodId, unitsById);
+                        }
+                    }
+                }
             }
 
             return calories;
@@ -720,7 +846,7 @@ namespace StorageNetwork.Services
                 return;
             }
 
-            if (!multipleTags && !IncludesAllWorlds(includeRelatedWorlds))
+            if (!multipleTags && !IncludesAllWorlds(includeRelatedWorlds) && !StorageNetworkWorldUtility.HasLandedRocketsOrIsLandedRocket(worldId))
             {
                 if (Worlds.TryGetValue(worldId, out WorldContentState world) &&
                     world.SourceBuckets.TryGetValue(singleTag, out SourceBucket bucket))
@@ -1001,9 +1127,33 @@ namespace StorageNetwork.Services
                     MergeAmounts(world.AmountsByTag, destination);
                 }
             }
-            else if (Worlds.TryGetValue(worldId, out WorldContentState world))
+            else
             {
-                MergeAmounts(world.AmountsByTag, destination);
+                if (Worlds.TryGetValue(worldId, out WorldContentState world))
+                {
+                    MergeAmounts(world.AmountsByTag, destination);
+                }
+
+                if (worldId >= 0 && StorageNetworkWorldUtility.HasLandedRocketsOrIsLandedRocket(worldId))
+                {
+                    int parentWorldId = StorageNetworkWorldUtility.GetParentWorldId(worldId);
+                    if (parentWorldId != worldId &&
+                        Worlds.TryGetValue(parentWorldId, out WorldContentState parentWorld))
+                    {
+                        MergeAmounts(parentWorld.AmountsByTag, destination);
+                    }
+
+                    IReadOnlyList<int> rockets = StorageNetworkWorldUtility.GetLandedRocketWorldIds(parentWorldId);
+                    for (int i = 0; i < rockets.Count; i++)
+                    {
+                        int rWorldId = rockets[i];
+                        if (rWorldId != worldId &&
+                            Worlds.TryGetValue(rWorldId, out WorldContentState rocketWorld))
+                        {
+                            MergeAmounts(rocketWorld.AmountsByTag, destination);
+                        }
+                    }
+                }
             }
 
             TransferTransactionContext transaction = transferTransaction;
@@ -1217,9 +1367,33 @@ namespace StorageNetwork.Services
                     }
                 }
             }
-            else if (Worlds.TryGetValue(worldId, out WorldContentState world))
+            else
             {
-                AddProductionSourceWorld(world, massByTag, sourceStorages);
+                if (Worlds.TryGetValue(worldId, out WorldContentState world))
+                {
+                    AddProductionSourceWorld(world, massByTag, sourceStorages);
+                }
+
+                if (worldId >= 0 && StorageNetworkWorldUtility.HasLandedRocketsOrIsLandedRocket(worldId))
+                {
+                    int parentWorldId = StorageNetworkWorldUtility.GetParentWorldId(worldId);
+                    if (parentWorldId != worldId &&
+                        Worlds.TryGetValue(parentWorldId, out WorldContentState parentWorld))
+                    {
+                        AddProductionSourceWorld(parentWorld, massByTag, sourceStorages);
+                    }
+
+                    IReadOnlyList<int> rockets = StorageNetworkWorldUtility.GetLandedRocketWorldIds(parentWorldId);
+                    for (int i = 0; i < rockets.Count; i++)
+                    {
+                        int rWorldId = rockets[i];
+                        if (rWorldId != worldId &&
+                            Worlds.TryGetValue(rWorldId, out WorldContentState rocketWorld))
+                        {
+                            AddProductionSourceWorld(rocketWorld, massByTag, sourceStorages);
+                        }
+                    }
+                }
             }
 
             sourceStorages.Sort(ProductionSourceComparer);
@@ -1690,7 +1864,7 @@ namespace StorageNetwork.Services
             bool allWorlds = IncludesAllWorlds(includeRelatedWorlds);
             foreach (StorageContentRecord record in ItemDetailDirtyRecords)
             {
-                if (allWorlds || record.WorldId == worldId)
+                if (allWorlds || StorageNetworkWorldUtility.AreWorldsSameOrLanded(record.WorldId, worldId))
                 {
                     ItemDetailWorkspace.Add(record);
                 }
@@ -2004,10 +2178,36 @@ namespace StorageNetwork.Services
                     }
                 }
             }
-            else if (Worlds.TryGetValue(worldId, out WorldContentState world) &&
-                     world.AmountsByTag.TryGetValue(tag, out float worldAmount))
+            else
             {
-                amount = worldAmount;
+                if (Worlds.TryGetValue(worldId, out WorldContentState world) &&
+                    world.AmountsByTag.TryGetValue(tag, out float worldAmount))
+                {
+                    amount += worldAmount;
+                }
+
+                if (worldId >= 0 && StorageNetworkWorldUtility.HasLandedRocketsOrIsLandedRocket(worldId))
+                {
+                    int parentWorldId = StorageNetworkWorldUtility.GetParentWorldId(worldId);
+                    if (parentWorldId != worldId &&
+                        Worlds.TryGetValue(parentWorldId, out WorldContentState parentWorld) &&
+                        parentWorld.AmountsByTag.TryGetValue(tag, out float parentAmount))
+                    {
+                        amount += parentAmount;
+                    }
+
+                    IReadOnlyList<int> rockets = StorageNetworkWorldUtility.GetLandedRocketWorldIds(parentWorldId);
+                    for (int i = 0; i < rockets.Count; i++)
+                    {
+                        int rWorldId = rockets[i];
+                        if (rWorldId != worldId &&
+                            Worlds.TryGetValue(rWorldId, out WorldContentState rocketWorld) &&
+                            rocketWorld.AmountsByTag.TryGetValue(tag, out float rocketAmount))
+                        {
+                            amount += rocketAmount;
+                        }
+                    }
+                }
             }
 
             return amount;
@@ -2132,7 +2332,7 @@ namespace StorageNetwork.Services
                 !Records.TryGetValue(storage, out StorageContentRecord record) ||
                 !record.SourceEligible ||
                 !StorageSceneRegistry.IsLive(storage) ||
-                !IncludesAllWorlds(includeRelatedWorlds) && record.WorldId != destinationWorldId)
+                !IncludesAllWorlds(includeRelatedWorlds) && !StorageNetworkWorldUtility.AreWorldsSameOrLanded(record.WorldId, destinationWorldId))
             {
                 return false;
             }
@@ -2203,14 +2403,48 @@ namespace StorageNetwork.Services
                         excludedStorages);
                 }
             }
-            else if (Worlds.TryGetValue(worldId, out WorldContentState world))
+            else
             {
-                AddPendingTransferSources(
-                    world,
-                    worldId,
-                    includeRelatedWorlds,
-                    PendingSourceTags,
-                    excludedStorages);
+                if (Worlds.TryGetValue(worldId, out WorldContentState world))
+                {
+                    AddPendingTransferSources(
+                        world,
+                        worldId,
+                        includeRelatedWorlds,
+                        PendingSourceTags,
+                        excludedStorages);
+                }
+
+                if (worldId >= 0 && StorageNetworkWorldUtility.HasLandedRocketsOrIsLandedRocket(worldId))
+                {
+                    int parentWorldId = StorageNetworkWorldUtility.GetParentWorldId(worldId);
+                    if (parentWorldId != worldId &&
+                        Worlds.TryGetValue(parentWorldId, out WorldContentState parentWorld))
+                    {
+                        AddPendingTransferSources(
+                            parentWorld,
+                            worldId,
+                            includeRelatedWorlds,
+                            PendingSourceTags,
+                            excludedStorages);
+                    }
+
+                    IReadOnlyList<int> rockets = StorageNetworkWorldUtility.GetLandedRocketWorldIds(parentWorldId);
+                    for (int i = 0; i < rockets.Count; i++)
+                    {
+                        int rWorldId = rockets[i];
+                        if (rWorldId != worldId &&
+                            Worlds.TryGetValue(rWorldId, out WorldContentState rocketWorld))
+                        {
+                            AddPendingTransferSources(
+                                rocketWorld,
+                                worldId,
+                                includeRelatedWorlds,
+                                PendingSourceTags,
+                                excludedStorages);
+                        }
+                    }
+                }
             }
 
             SourceMergeWorkspace.Sort(CompareSources);
@@ -2259,9 +2493,33 @@ namespace StorageNetwork.Services
                     MergeWorldSources(world, tags, excludedStorages);
                 }
             }
-            else if (Worlds.TryGetValue(worldId, out WorldContentState world))
+            else
             {
-                MergeWorldSources(world, tags, excludedStorages);
+                if (Worlds.TryGetValue(worldId, out WorldContentState world))
+                {
+                    MergeWorldSources(world, tags, excludedStorages);
+                }
+
+                if (worldId >= 0 && StorageNetworkWorldUtility.HasLandedRocketsOrIsLandedRocket(worldId))
+                {
+                    int parentWorldId = StorageNetworkWorldUtility.GetParentWorldId(worldId);
+                    if (parentWorldId != worldId &&
+                        Worlds.TryGetValue(parentWorldId, out WorldContentState parentWorld))
+                    {
+                        MergeWorldSources(parentWorld, tags, excludedStorages);
+                    }
+
+                    IReadOnlyList<int> rockets = StorageNetworkWorldUtility.GetLandedRocketWorldIds(parentWorldId);
+                    for (int i = 0; i < rockets.Count; i++)
+                    {
+                        int rWorldId = rockets[i];
+                        if (rWorldId != worldId &&
+                            Worlds.TryGetValue(rWorldId, out WorldContentState rocketWorld))
+                        {
+                            MergeWorldSources(rocketWorld, tags, excludedStorages);
+                        }
+                    }
+                }
             }
         }
 
