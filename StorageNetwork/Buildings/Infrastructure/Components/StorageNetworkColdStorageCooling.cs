@@ -28,6 +28,7 @@ namespace StorageNetwork.Components
         private bool energySaving;
         private float appliedWattage = float.NaN;
         private System.Action<SimTemperatureTransfer> applyToItemOnRegistered;
+        private readonly HashSet<SimTemperatureTransfer> registeredTransfers = new HashSet<SimTemperatureTransfer>();
 
         [MyCmpGet]
         private EnergyConsumer energyConsumer = null;
@@ -80,6 +81,11 @@ namespace StorageNetwork.Components
         protected override void OnCleanUp()
         {
             Unsubscribe((int)GameHashes.OnStorageChange, OnStorageChanged);
+            foreach (SimTemperatureTransfer transfer in registeredTransfers)
+            {
+                RemoveItemRegistration(transfer);
+            }
+            registeredTransfers.Clear();
             base.OnCleanUp();
         }
 
@@ -87,11 +93,15 @@ namespace StorageNetwork.Components
         {
             if (data is GameObject item)
             {
-                if (storage?.items != null &&
-                    storage.items.Contains(item) &&
-                    operational?.IsActive == true)
+                if (storage?.items != null && storage.items.Contains(item))
                 {
-                    ApplyToItem(EnsureItemCanExchangeTemperature(item));
+                    RefreshStoredItem(item);
+                }
+                else
+                {
+                    SimTemperatureTransfer transfer = item.GetComponent<SimTemperatureTransfer>();
+                    RemoveItemRegistration(transfer);
+                    registeredTransfers.Remove(transfer);
                 }
 
                 return;
@@ -122,13 +132,33 @@ namespace StorageNetwork.Components
 
         public void ApplyToItem(SimTemperatureTransfer transfer)
         {
-            if (transfer == null || !Sim.IsValidHandle(transfer.SimHandle))
+            if (transfer == null || operational?.IsActive != true ||
+                storage?.items == null || !storage.items.Contains(transfer.gameObject) ||
+                !Sim.IsValidHandle(transfer.SimHandle))
             {
                 return;
             }
 
             float targetTemperature = GetItemCoolingTargetTemperature(transfer);
             SimMessages.ModifyElementChunkTemperatureAdjuster(transfer.SimHandle, targetTemperature, HeatCapacity, ThermalConductivity);
+        }
+
+        internal void RefreshStoredItem(GameObject item)
+        {
+            if (item != null && operational?.IsActive == true &&
+                storage?.items != null && storage.items.Contains(item))
+            {
+                ApplyToItem(EnsureItemCanExchangeTemperature(item));
+            }
+        }
+
+        private void RemoveItemRegistration(SimTemperatureTransfer transfer)
+        {
+            if (transfer != null)
+            {
+                transfer.onSimRegistered = (System.Action<SimTemperatureTransfer>)System.Delegate.Remove(
+                    transfer.onSimRegistered, applyToItemOnRegistered);
+            }
         }
 
         private float GetItemCoolingTargetTemperature(SimTemperatureTransfer transfer)
@@ -263,6 +293,7 @@ namespace StorageNetwork.Components
             transfer.onSimRegistered = (System.Action<SimTemperatureTransfer>)System.Delegate.Combine(
                 transfer.onSimRegistered,
                 applyToItemOnRegistered);
+            registeredTransfers.Add(transfer);
             transfer.enabled = true;
             return transfer;
         }
