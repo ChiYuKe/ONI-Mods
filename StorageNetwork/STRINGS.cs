@@ -871,6 +871,8 @@ namespace StorageNetwork
                 public static LocString CONFIG_GAS_OUTPUT_MAX_RATE_DESC = "气体出网端口设置滑条的最大输出速率。";
                 public static LocString CONFIG_POWER_OUTPUT_MAX_WATTS = "电力出网最大功率 W";
                 public static LocString CONFIG_POWER_OUTPUT_MAX_WATTS_DESC = "电力出网端口滑条的最大输出功率。";
+                public static LocString CONFIG_ORDER_CENTER_CONSERVE_HEAT = "订单生产中心冶炼热量回收";
+                public static LocString CONFIG_ORDER_CENTER_CONSERVE_HEAT_DESC = "开启后，金属冶炼等高发热配方将消耗 3 倍制作时间，并将 100% 的相变热量释放到建筑结构中供蒸汽机回收；关闭时按原速运行且仅产生机器运行热量。";
 
                 public static LocString ORDER_CENTER_TITLE = "生产订单中心";
                 public static LocString ORDER_CENTER_SUBTITLE = "库存承诺 / 补产链路 / 多设备调度 / 异常追踪";

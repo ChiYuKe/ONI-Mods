@@ -284,9 +284,10 @@ namespace StorageNetwork.Components
                     continue;
                 }
 
-                core.Progress += ComputeWorkProgress(dt, recipe);
-
                 StorageNetworkRecipeHeatProfile profile = StorageNetworkRecipeHeatProfile.GetProfile(recipe);
+                float timeMultiplier = profile != null ? profile.TimeMultiplier : 1f;
+                core.Progress += ComputeWorkProgress(dt, recipe) / Mathf.Max(0.1f, timeMultiplier);
+
                 if (profile != null)
                 {
                     workingSelfHeatKW += profile.SelfHeatKilowatts;
@@ -626,6 +627,30 @@ namespace StorageNetwork.Components
             {
                 heatedTemperature = GetSafeOutputTemperature();
                 HeatedTemperatureField?.SetValue(this, heatedTemperature);
+            }
+        }
+
+        internal void ApplyOutputProductTemperatures(ComplexRecipe recipe, List<GameObject> products)
+        {
+            if (recipe == null || products == null || products.Count == 0)
+            {
+                return;
+            }
+
+            StorageNetworkRecipeHeatProfile profile = StorageNetworkRecipeHeatProfile.GetProfile(recipe);
+            if (profile?.ForcedProductTemperature == null)
+            {
+                return;
+            }
+
+            float forcedTemp = profile.ForcedProductTemperature.Value;
+            foreach (GameObject product in products)
+            {
+                PrimaryElement primaryElement = product != null ? product.GetComponent<PrimaryElement>() : null;
+                if (primaryElement != null)
+                {
+                    primaryElement.Temperature = forcedTemp;
+                }
             }
         }
 

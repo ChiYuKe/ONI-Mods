@@ -258,6 +258,16 @@ namespace StorageNetwork
         [JsonProperty]
         public float PowerOutputMaxWatts { get; set; }
 
+        [ModConfigOption(
+            "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_ORDER_CENTER_CONSERVE_HEAT",
+            "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_ORDER_CENTER_CONSERVE_HEAT_DESC",
+            "订单生产中心冶炼热量回收",
+            "开启后，金属冶炼等高发热配方将消耗 3 倍制作时间，并将 100% 的相变热量释放到建筑结构中供蒸汽机回收；关闭时按原速运行且仅产生机器运行热量。",
+            0f,
+            1f)]
+        [JsonProperty]
+        public bool OrderProductionCenterConserveSmeltingHeat { get; set; }
+
         private static ModConfigController<Config> controller;
         private static string modPath;
 
@@ -301,6 +311,7 @@ namespace StorageNetwork
             LiquidOutputMaxKgPerSecond = 20f;
             GasOutputMaxKgPerSecond = 5f;
             PowerOutputMaxWatts = 100000f;
+            OrderProductionCenterConserveSmeltingHeat = false;
         }
 
         public static void SetModPath(string path)
