@@ -139,7 +139,7 @@ namespace StorageNetwork.UI
         {
             string structuralSignature = StorageNetworkPanelListSignature.BuildStorageListSignature(
                 storages,
-                string.Empty,
+                mainSearchText ?? string.Empty,
                 StorageNetworkStorageDisplay.GetTypeKey,
                 StorageItemUtility.GetStoredItemKey);
             string stateSignature = string.Join(",", storages
@@ -149,26 +149,31 @@ namespace StorageNetwork.UI
                     Storage storage = info?.Storage;
                     int instanceId = storage != null ? storage.GetInstanceID() : 0;
                     bool expanded = storage != null &&
-                                    expandedStorages.TryGetValue(storage, out bool storageExpanded) &&
-                                    storageExpanded;
+                                    (expandedStorages.TryGetValue(storage, out bool storageExpanded)
+                                        ? storageExpanded
+                                        : !string.IsNullOrEmpty(mainSearchText));
                     bool geyserExpanded = info?.Geyser != null &&
-                                          expandedGeysers.TryGetValue(info.Geyser, out bool isGeyserExpanded) &&
-                                          isGeyserExpanded;
+                                          (expandedGeysers.TryGetValue(info.Geyser, out bool isGeyserExpanded)
+                                              ? isGeyserExpanded
+                                              : !string.IsNullOrEmpty(mainSearchText));
                     bool selected = storage != null && selectedItemStorage == storage;
+                    bool nonMatchingExpanded = storage != null && expandedNonMatchingStorages.Contains(storage);
                     return string.Format(
-                        "{0}:{1}:{2}:{3}:{4}:{5}",
+                        "{0}:{1}:{2}:{3}:{4}:{5}:{6}",
                         instanceId,
                         info?.Name ?? string.Empty,
                         expanded,
                         geyserExpanded,
                         selected,
-                        selected ? selectedItemKey ?? string.Empty : string.Empty);
+                        selected ? selectedItemKey ?? string.Empty : string.Empty,
+                        nonMatchingExpanded);
                 }));
             string typeKey = storages.Count > 0
                 ? StorageNetworkStorageDisplay.GetTypeKey(storages[0])
                 : string.Empty;
-            bool typeExpanded = expandedStorageTypes.TryGetValue(typeKey, out bool isTypeExpanded) &&
-                                isTypeExpanded;
+            bool typeExpanded = expandedStorageTypes.TryGetValue(typeKey, out bool isTypeExpanded)
+                ? isTypeExpanded
+                : !string.IsNullOrEmpty(mainSearchText);
             return string.Format("{0}|{1}|{2}", structuralSignature, typeExpanded, stateSignature);
         }
 

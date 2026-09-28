@@ -186,9 +186,11 @@ namespace StorageNetwork.UI
             if (valuesDirty)
             {
                 RebuildCategorySummaryValues(storages, totals);
-                // Stable key order prevents live mass changes from moving siblings.
                 totals.Sort((left, right) =>
-                    string.Compare(left.Key, right.Key, System.StringComparison.Ordinal));
+                {
+                    int comparison = string.Compare(left.Name, right.Name, System.StringComparison.CurrentCultureIgnoreCase);
+                    return comparison != 0 ? comparison : string.Compare(left.Key, right.Key, System.StringComparison.Ordinal);
+                });
                 int titleFingerprint = CombineCategorySummaryFingerprint(
                     storages.Count,
                     categorySummaryStoredKg);

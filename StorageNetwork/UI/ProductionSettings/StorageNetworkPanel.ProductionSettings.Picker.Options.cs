@@ -379,11 +379,14 @@ namespace StorageNetwork.UI
                     })
             };
 
-            foreach (SimHashes elementHash in NetworkStorageTransferService.GetAvailableLiquidElementsInNetwork(ownerStorage, specificSource))
+            List<SimHashes> availableElements = NetworkStorageTransferService.GetAvailableLiquidElementsInNetwork(ownerStorage, specificSource);
+            availableElements.Sort(StorageNetworkTextFormatting.CompareElementDisplayNames);
+            foreach (SimHashes elementHash in availableElements)
             {
                 SimHashes captured = elementHash;
                 Element element = ElementLoader.FindElementByHash(captured);
                 string elementName = element != null ? element.name : captured.ToString();
+                elementName = StorageNetworkTextFormatting.CleanDisplayName(elementName);
                 float available = GetAvailableElementAmount(ownerStorage, captured, specificSource);
                 options.Add(new ProductionPickerOption(
                     elementName,
@@ -440,11 +443,14 @@ namespace StorageNetwork.UI
                     })
             };
 
-            foreach (SimHashes elementHash in NetworkStorageTransferService.GetAvailableGasElementsInNetwork(ownerStorage, specificSource))
+            List<SimHashes> availableElements = NetworkStorageTransferService.GetAvailableGasElementsInNetwork(ownerStorage, specificSource);
+            availableElements.Sort(StorageNetworkTextFormatting.CompareElementDisplayNames);
+            foreach (SimHashes elementHash in availableElements)
             {
                 SimHashes captured = elementHash;
                 Element element = ElementLoader.FindElementByHash(captured);
                 string elementName = element != null ? element.name : captured.ToString();
+                elementName = StorageNetworkTextFormatting.CleanDisplayName(elementName);
                 float available = GetAvailableElementAmount(ownerStorage, captured, specificSource);
                 options.Add(new ProductionPickerOption(
                     elementName,
@@ -502,12 +508,15 @@ namespace StorageNetwork.UI
                     })
             };
 
-            foreach (Tag tag in NetworkStorageTransferService.GetAvailableSolidItemTagsInNetwork(ownerStorage, specificSource))
+            List<Tag> availableTags = NetworkStorageTransferService.GetAvailableSolidItemTagsInNetwork(ownerStorage, specificSource);
+            availableTags.Sort(StorageNetworkTextFormatting.CompareTagDisplayNames);
+            foreach (Tag tag in availableTags)
             {
                 Tag captured = tag;
                 float available = GetAvailableItemAmount(ownerStorage, captured, specificSource);
+                string displayName = StorageNetworkTextFormatting.CleanDisplayName(StorageItemUtility.GetTagDisplayName(captured));
                 options.Add(new ProductionPickerOption(
-                    StorageItemUtility.GetTagDisplayName(captured),
+                    displayName,
                     GameUtil.GetFormattedMass(available),
                     selected.HasValue && selected.Value == captured,
                     () =>
@@ -683,9 +692,10 @@ namespace StorageNetwork.UI
             return StorageNetworkStorageRules.GetNetworkStorageTargets(ownerStorage);
         }
 
-        private static IEnumerable<Storage> GetPowerStorageTargets(Storage ownerStorage)
+        private static List<Storage> GetPowerStorageTargets(Storage ownerStorage)
         {
             int worldId = StorageTargetSelector.GetObjectWorldId(ownerStorage?.gameObject);
+            List<Storage> targets = new List<Storage>();
             foreach (Storage storage in StorageSceneCollector.CollectLightweightForWorld(worldId).Storages)
             {
                 if (storage == null || storage == ownerStorage || storage.GetComponent<StorageNetworkPowerStorage>() == null)
@@ -695,14 +705,18 @@ namespace StorageNetwork.UI
 
                 if (StorageNetworkStorageRules.IsConnectedNetworkStorage(storage))
                 {
-                    yield return storage;
+                    targets.Add(storage);
                 }
             }
+
+            targets.Sort(StorageNetworkTextFormatting.CompareStorageDisplayNames);
+            return targets;
         }
 
-        private static IEnumerable<Storage> GetParticleStorageTargets(Storage ownerStorage)
+        private static List<Storage> GetParticleStorageTargets(Storage ownerStorage)
         {
             int worldId = StorageTargetSelector.GetObjectWorldId(ownerStorage?.gameObject);
+            List<Storage> targets = new List<Storage>();
             foreach (Storage storage in StorageSceneCollector.CollectLightweightForWorld(worldId).Storages)
             {
                 if (storage == null ||
@@ -715,9 +729,12 @@ namespace StorageNetwork.UI
 
                 if (StorageNetworkStorageRules.IsConnectedNetworkStorage(storage))
                 {
-                    yield return storage;
+                    targets.Add(storage);
                 }
             }
+
+            targets.Sort(StorageNetworkTextFormatting.CompareStorageDisplayNames);
+            return targets;
         }
 
         private static string FormatPowerStorageOptionDetails(Storage storage)

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using StorageNetwork.Buildings;
 using StorageNetwork.Components;
 using StorageNetwork.Core;
@@ -35,7 +36,12 @@ namespace StorageNetwork.UI
                     null)
             };
 
-            foreach (StorageNetworkEngravingDisk disk in StorageNetworkOrderProductionCenter.FindAvailableDisks())
+            List<StorageNetworkEngravingDisk> disks = StorageNetworkOrderProductionCenter.FindAvailableDisks().ToList();
+            disks.Sort((left, right) => StorageNetworkTextFormatting.CompareDisplayNames(
+                left != null ? left.GetProperName() : string.Empty,
+                right != null ? right.GetProperName() : string.Empty));
+
+            foreach (StorageNetworkEngravingDisk disk in disks)
             {
                 StorageNetworkEngravingDisk capturedDisk = disk;
                 options.Add(new ProductionPickerOption(

@@ -198,9 +198,186 @@ namespace StorageNetwork.UI
             return empty.gameObject;
         }
 
+        private static string GetStoredItemDisplayName(string itemKey, StoredItemAggregate aggregate)
+        {
+            if (aggregate.Representative != null)
+            {
+                string name = StorageNetworkStorageDisplay.GetStoredItemName(aggregate.Representative);
+                if (!string.IsNullOrEmpty(name))
+                {
+                    return name;
+                }
+            }
+
+            if (!string.IsNullOrEmpty(itemKey))
+            {
+                Tag tag = new Tag(itemKey);
+                string properName = tag.ProperName();
+                if (!string.IsNullOrEmpty(properName))
+                {
+                    return properName;
+                }
+            }
+
+            return itemKey ?? string.Empty;
+        }
+
+        private static bool DoesStoredItemMatchQuery(string itemKey, string displayName, string query)
+        {
+            if (string.IsNullOrEmpty(query))
+            {
+                return true;
+            }
+
+            return StorageNetworkTextFormatting.ContainsSearchText(displayName, query) ||
+                   StorageNetworkTextFormatting.ContainsSearchText(itemKey, query);
+        }
+
+        private const string NonMatchingToggleRowKey = "\0non_matching_toggle";
+
+        private GameObject UseNonMatchingToggleRow(
+            Storage storage,
+            StoredItemSectionLiveView section,
+            bool isExpanded,
+            int nonMatchingCount)
+        {
+            string text = isExpanded
+                ? string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.HIDE_OTHER_ITEMS), nonMatchingCount)
+                : string.Format(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SHOW_OTHER_ITEMS), nonMatchingCount);
+            string tooltipText = isExpanded
+                ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.HIDE_OTHER_ITEMS_TOOLTIP)
+                : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SHOW_OTHER_ITEMS_TOOLTIP);
+
+            GameObject row = section.Rows.Use(NonMatchingToggleRowKey, () =>
+            {
+                GameObject createdRow = new GameObject("ToggleNonMatchingRow");
+                createdRow.transform.SetParent(section.Parent, false);
+                createdRow.AddComponent<RectTransform>();
+                createdRow.AddComponent<LayoutElement>().preferredHeight = 24f;
+
+                HorizontalLayoutGroup layout = createdRow.AddComponent<HorizontalLayoutGroup>();
+                layout.spacing = 0f;
+                layout.childAlignment = TextAnchor.MiddleCenter;
+                layout.childControlWidth = true;
+                layout.childControlHeight = true;
+                layout.childForceExpandWidth = true;
+                layout.childForceExpandHeight = false;
+
+                GameObject button = CreateStyledButton(
+                    "ToggleButton",
+                    createdRow.transform,
+                    text,
+                    () =>
+                    {
+                        if (expandedNonMatchingStorages.Contains(storage))
+                        {
+                            expandedNonMatchingStorages.Remove(storage);
+                        }
+                        else
+                        {
+                            expandedNonMatchingStorages.Add(storage);
+                        }
+                        RefreshStoragePanel(StoragePanelRefreshMode.Structure);
+                    },
+                    KleiBlueStyle());
+
+                LayoutElement btnLayout = button.AddComponent<LayoutElement>();
+                btnLayout.preferredHeight = 22f;
+
+                button.AddComponent<ToolTip>();
+                return createdRow;
+            });
+
+            if (row != null)
+            {
+                Transform btnTransform = row.transform.Find("ToggleButton");
+                if (btnTransform != null)
+                {
+                    TextMeshProUGUI label = btnTransform.Find("Label")?.GetComponent<TextMeshProUGUI>();
+                    if (label != null)
+                    {
+                        label.text = text;
+                    }
+
+                    ToolTip tooltip = btnTransform.GetComponent<ToolTip>();
+                    if (tooltip != null)
+                    {
+                        tooltip.toolTip = tooltipText;
+                    }
+                }
+            }
+
+            return row;
+        }
+
+        private void RenderStoredItemRow(
+            Storage storage,
+            StoredItemSectionLiveView section,
+            string itemKey,
+            float alpha)
+        {
+            if (!section.Aggregates.TryGetValue(itemKey, out StoredItemAggregate aggregate))
+            {
+                return;
+            }
+
+            string displayName = GetStoredItemDisplayName(itemKey, aggregate);
+            string rowKey = StoredItemSectionLiveView.GetRowKey(itemKey);
+
+            if (!section.Rows.TryUse(rowKey, out GameObject row))
+            {
+                row = section.Rows.Use(
+                    rowKey,
+                    () => CreateStoredItemRow(
+                        storage,
+                        section.Parent,
+                        itemKey,
+                        displayName,
+                        string.Empty,
+                        string.Empty,
+                        aggregate.Representative));
+                if (liveStoredItemRows.TryGetValue(
+                        new StorageItemLiveKey(storage, itemKey),
+                        out StoredItemLiveView createdView))
+                {
+                    section.Rows.SetMetadata(rowKey, createdView);
+                }
+            }
+
+            if (row != null)
+            {
+                CanvasGroup canvasGroup = row.GetComponent<CanvasGroup>() ?? row.AddComponent<CanvasGroup>();
+                canvasGroup.alpha = alpha;
+                canvasGroup.blocksRaycasts = true;
+                canvasGroup.interactable = true;
+            }
+
+            if (section.Rows.TryGetMetadata(rowKey, out StoredItemLiveView view))
+            {
+                UpdateStoredItemRowLive(view, aggregate);
+            }
+        }
+
         private void ReconcileStoredItemSection(Storage storage, StoredItemSectionLiveView section)
         {
-            section.ActiveKeys.Sort(StringComparer.Ordinal);
+            string query = StorageNetworkTextFormatting.NormalizeSearchText(mainSearchText);
+
+            int CompareItemKeys(string leftKey, string rightKey)
+            {
+                section.Aggregates.TryGetValue(leftKey, out StoredItemAggregate leftAgg);
+                section.Aggregates.TryGetValue(rightKey, out StoredItemAggregate rightAgg);
+                string leftName = GetStoredItemDisplayName(leftKey, leftAgg);
+                string rightName = GetStoredItemDisplayName(rightKey, rightAgg);
+
+                int nameComp = string.Compare(leftName, rightName, System.StringComparison.CurrentCultureIgnoreCase);
+                if (nameComp != 0)
+                {
+                    return nameComp;
+                }
+
+                return string.Compare(leftKey, rightKey, System.StringComparison.Ordinal);
+            }
+
             section.Rows.Begin();
             if (section.ActiveKeys.Count == 0 && section.ShowEmptyWhenNoItems)
             {
@@ -210,64 +387,92 @@ namespace StorageNetwork.UI
                         StoredItemSectionLiveView.EmptyRowKey,
                         () => CreateStoredItemEmptyRow(section.Parent));
                 }
+                section.Rows.Commit();
+                section.StructureKeys.Clear();
+                return;
             }
 
-            GetStoredItemVisibleRange(
-                section,
-                out int firstVisible,
-                out int lastVisibleExclusive);
-            if (firstVisible > 0)
-            {
-                UseStoredItemSpacer(
-                    section,
-                    "\0virtual-top",
-                    firstVisible * StoredItemRowHeight);
-            }
+            List<string> matchingKeys = new List<string>();
+            List<string> nonMatchingKeys = new List<string>();
 
-            for (int index = firstVisible; index < lastVisibleExclusive; index++)
+            if (!string.IsNullOrEmpty(query))
             {
-                string itemKey = section.ActiveKeys[index];
-                StoredItemAggregate aggregate = section.Aggregates[itemKey];
-                string rowKey = StoredItemSectionLiveView.GetRowKey(itemKey);
-                if (!section.Rows.TryUse(rowKey, out _))
+                for (int i = 0; i < section.ActiveKeys.Count; i++)
                 {
-                    section.Rows.Use(
-                        rowKey,
-                        () => CreateStoredItemRow(
-                            storage,
-                            section.Parent,
-                            itemKey,
-                            StorageNetworkStorageDisplay.GetStoredItemName(
-                                aggregate.Representative),
-                            string.Empty,
-                            string.Empty,
-                            aggregate.Representative));
-                    if (liveStoredItemRows.TryGetValue(
-                            new StorageItemLiveKey(storage, itemKey),
-                            out StoredItemLiveView createdView))
+                    string key = section.ActiveKeys[i];
+                    if (section.Aggregates.TryGetValue(key, out StoredItemAggregate agg))
                     {
-                        section.Rows.SetMetadata(rowKey, createdView);
+                        string name = GetStoredItemDisplayName(key, agg);
+                        if (DoesStoredItemMatchQuery(key, name, query))
+                        {
+                            matchingKeys.Add(key);
+                        }
+                        else
+                        {
+                            nonMatchingKeys.Add(key);
+                        }
                     }
                 }
-
-                if (section.Rows.TryGetMetadata(rowKey, out StoredItemLiveView view))
-                {
-                    UpdateStoredItemRowLive(view, aggregate);
-                }
             }
 
-            int hiddenAfter = section.ActiveKeys.Count - lastVisibleExclusive;
-            if (hiddenAfter > 0)
+            if (!string.IsNullOrEmpty(query) && matchingKeys.Count > 0)
             {
-                UseStoredItemSpacer(
+                matchingKeys.Sort(CompareItemKeys);
+                nonMatchingKeys.Sort(CompareItemKeys);
+
+                for (int i = 0; i < matchingKeys.Count; i++)
+                {
+                    RenderStoredItemRow(storage, section, matchingKeys[i], 1.0f);
+                }
+
+                if (nonMatchingKeys.Count > 0)
+                {
+                    bool isNonMatchingExpanded = expandedNonMatchingStorages.Contains(storage);
+                    UseNonMatchingToggleRow(storage, section, isNonMatchingExpanded, nonMatchingKeys.Count);
+
+                    if (isNonMatchingExpanded)
+                    {
+                        for (int i = 0; i < nonMatchingKeys.Count; i++)
+                        {
+                            RenderStoredItemRow(storage, section, nonMatchingKeys[i], 0.45f);
+                        }
+                    }
+                }
+            }
+            else
+            {
+                section.ActiveKeys.Sort(CompareItemKeys);
+
+                GetStoredItemVisibleRange(
                     section,
-                    "\0virtual-bottom",
-                    hiddenAfter * StoredItemRowHeight);
+                    out int firstVisible,
+                    out int lastVisibleExclusive);
+                if (firstVisible > 0)
+                {
+                    UseStoredItemSpacer(
+                        section,
+                        "\0virtual-top",
+                        firstVisible * StoredItemRowHeight);
+                }
+
+                for (int index = firstVisible; index < lastVisibleExclusive; index++)
+                {
+                    RenderStoredItemRow(storage, section, section.ActiveKeys[index], 1.0f);
+                }
+
+                int hiddenAfter = section.ActiveKeys.Count - lastVisibleExclusive;
+                if (hiddenAfter > 0)
+                {
+                    UseStoredItemSpacer(
+                        section,
+                        "\0virtual-bottom",
+                        hiddenAfter * StoredItemRowHeight);
+                }
             }
 
             section.Rows.Commit();
             section.StructureKeys.Clear();
-            section.StructureKeys.AddRange(section.ActiveKeys);
+            section.StructureKeys.AddRange(section.Aggregates.Keys);
         }
 
         private void GetStoredItemVisibleRange(

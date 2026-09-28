@@ -1084,7 +1084,8 @@ namespace StorageNetwork.UI
             }
 
             Element element = ElementLoader.FindElementByHash(selected.Value);
-            return element != null ? element.name : selected.Value.ToString();
+            string elementName = element != null ? element.name : selected.Value.ToString();
+            return StorageNetworkTextFormatting.CleanDisplayName(elementName);
         }
 
         private static string GetOutputPortFilterName(StorageNetworkGasOutputPortEgress egress)
@@ -1096,14 +1097,15 @@ namespace StorageNetwork.UI
             }
 
             Element element = ElementLoader.FindElementByHash(selected.Value);
-            return element != null ? element.name : selected.Value.ToString();
+            string elementName = element != null ? element.name : selected.Value.ToString();
+            return StorageNetworkTextFormatting.CleanDisplayName(elementName);
         }
 
         private static string GetOutputPortFilterName(StorageNetworkSolidOutputPortEgress egress)
         {
             Tag? selected = egress.GetSelectedOutputTag();
             return selected.HasValue && selected.Value != Tag.Invalid
-                ? StorageItemUtility.GetTagDisplayName(selected.Value)
+                ? StorageNetworkTextFormatting.CleanDisplayName(StorageItemUtility.GetTagDisplayName(selected.Value))
                 : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_OUTPUT_PORT_FILTER_ANY);
         }
 

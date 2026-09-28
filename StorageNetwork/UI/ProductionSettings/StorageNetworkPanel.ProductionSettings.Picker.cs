@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using StorageNetwork.Components;
 using StorageNetwork.Core;
+using StorageNetwork.Services;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -11,7 +12,12 @@ namespace StorageNetwork.UI
 {
     public sealed partial class StorageNetworkPanel
     {
-        private void ShowProductionPicker(string title, List<ProductionPickerOption> options)
+        private void ShowProductionPicker(
+            string title,
+            List<ProductionPickerOption> options,
+            bool showSearch = true,
+            string footerTitle = null,
+            string footerHint = null)
         {
             CloseProductionPicker();
             GameObject pickerParent = productionSettingsRoot != null && productionSettingsRoot.activeSelf
@@ -44,7 +50,10 @@ namespace StorageNetwork.UI
             headerText.fontStyle = FontStyles.Bold;
             headerText.textWrappingMode = TextWrappingModes.NoWrap;
             headerText.overflowMode = TextOverflowModes.Ellipsis;
+            headerText.raycastTarget = false;
             headerText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+
+            KInputTextField searchInput = showSearch ? CreateStandalonePickerSearchInput(header.transform) : null;
 
             GameObject closeButton = CreateCloseIconButton("PickerClose", header.transform, CloseProductionPicker);
             LayoutElement closeLayout = closeButton.AddComponent<LayoutElement>();
@@ -79,12 +88,20 @@ namespace StorageNetwork.UI
             ConfigureSmoothVerticalScroll(scrollRect, 24f);
             viewport.AddComponent<ScrollWheelBlocker>();
 
-            foreach (ProductionPickerOption option in options)
+            if (searchInput != null)
             {
-                CreateStorageOptionRow(content.transform, option.Title, option.Details, option.Selected, option.OnClick, option.IconTag);
+                DebouncedPickerRefresh debounce = searchInput.gameObject.AddComponent<DebouncedPickerRefresh>();
+                debounce.Configure(() =>
+                    RefreshStandalonePickerOptions(
+                        content.transform,
+                        options,
+                        searchInput.text,
+                        footerTitle,
+                        footerHint));
+                searchInput.onValueChanged.AddListener(_ => debounce.Request());
             }
 
-            CreateProductionPickerFooter(content.transform, options.Count);
+            RefreshStandalonePickerOptions(content.transform, options, string.Empty, footerTitle, footerHint);
         }
 
         private static void ShowStandaloneOutputFilterPicker(
@@ -266,6 +283,8 @@ namespace StorageNetwork.UI
 
             EnsureInputFieldDragReferences(input, 248f, 24f);
             input.gameObject.AddComponent<StorageNetworkTextInputGuard>().Configure(input, input.gameObject.GetComponent<Image>());
+            ToolTip tooltip = input.gameObject.AddComponent<ToolTip>();
+            tooltip.SetSimpleTooltip(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MAIN_SEARCH_TOOLTIP));
             return input;
         }
 
@@ -305,9 +324,27 @@ namespace StorageNetwork.UI
                 return true;
             }
 
-            return option != null &&
-                (StorageNetworkTextFormatting.ContainsSearchText(option.Title, query) ||
-                 StorageNetworkTextFormatting.ContainsSearchText(option.Details, query));
+            if (option == null)
+            {
+                return false;
+            }
+
+            if (StorageNetworkTextFormatting.ContainsSearchText(option.Title, query) ||
+                StorageNetworkTextFormatting.ContainsSearchText(option.Details, query))
+            {
+                return true;
+            }
+
+            if (option.IconTag.HasValue && !string.IsNullOrEmpty(option.IconTag.Value.Name))
+            {
+                if (StorageNetworkTextFormatting.ContainsSearchText(option.IconTag.Value.Name, query) ||
+                    StorageNetworkTextFormatting.ContainsSearchText(StorageItemUtility.GetTagDisplayName(option.IconTag.Value), query))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private void CloseProductionPicker()

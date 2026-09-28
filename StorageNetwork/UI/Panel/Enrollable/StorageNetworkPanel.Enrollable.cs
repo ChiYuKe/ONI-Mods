@@ -62,9 +62,10 @@ namespace StorageNetwork.UI
                     .OrderBy(group => StorageNetworkPlanCategoryOrder.GetSortOrder(group.Key))
                     .ThenBy(group => StorageNetworkPlanCategoryOrder.GetDisplayName(group.Key)))
                 {
-                    List<StorageNetworkEnrollment> categoryEnrollments = categoryGroup
-                        .OrderBy(enrollment => enrollment.gameObject.GetProperName())
-                        .ToList();
+                    List<StorageNetworkEnrollment> categoryEnrollments = categoryGroup.ToList();
+                    categoryEnrollments.Sort((left, right) => StorageNetworkTextFormatting.CompareDisplayNames(
+                        left?.gameObject?.GetProperName(),
+                        right?.gameObject?.GetProperName()));
                     enrollableListEntries.Add(EnrollableListEntry.Category(
                         categoryGroup.Key,
                         categoryEnrollments.Count));

@@ -25,7 +25,7 @@ namespace StorageNetwork.UI
             AddParticleDirectionOption(options, output, EightDirection.DownLeft);
             AddParticleDirectionOption(options, output, EightDirection.Left);
             AddParticleDirectionOption(options, output, EightDirection.UpLeft);
-            ShowProductionPicker(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PARTICLE_OUTPUT_PORT_SELECT_DIRECTION), options);
+            ShowProductionPicker(Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.PARTICLE_OUTPUT_PORT_SELECT_DIRECTION), options, showSearch: false);
         }
 
         private void AddParticleDirectionOption(List<ProductionPickerOption> options, StorageNetworkParticleOutputPortEgress output, EightDirection direction)

@@ -82,6 +82,7 @@ namespace StorageNetwork.UI
         private readonly Dictionary<string, bool> expandedStorageTypes = new Dictionary<string, bool>();
         private readonly Dictionary<Storage, bool> expandedStorages = new Dictionary<Storage, bool>();
         private readonly Dictionary<Geyser, bool> expandedGeysers = new Dictionary<Geyser, bool>();
+        private readonly HashSet<Storage> expandedNonMatchingStorages = new HashSet<Storage>();
         private float refreshElapsed;
         private RectTransform deferredMainLayoutRoot;
         private int deferredMainLayoutFrame = -1;
@@ -212,6 +213,10 @@ namespace StorageNetwork.UI
                 selectedItemStorage = null;
                 selectedItemKey = null;
                 lastListSignature = null;
+                expandedStorageTypes.Clear();
+                expandedStorages.Clear();
+                expandedGeysers.Clear();
+                expandedNonMatchingStorages.Clear();
                 RefreshStoragePanel(StoragePanelRefreshMode.Structure);
             }
 

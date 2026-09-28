@@ -45,8 +45,8 @@ namespace StorageNetwork.UI
 
             List<Storage> targets = StorageNetworkStorageRules.GetNetworkStorageTargets(source)
                 .Where(storage => storage.RemainingCapacity() > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
-                .OrderBy(storage => storage.GetProperName())
                 .ToList();
+            targets.Sort(StorageNetworkTextFormatting.CompareStorageDisplayNames);
 
             if (targets.Count == 0)
             {

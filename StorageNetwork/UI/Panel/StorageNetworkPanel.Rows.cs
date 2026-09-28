@@ -29,7 +29,9 @@ namespace StorageNetwork.UI
             string typeKey = StorageNetworkStorageDisplay.GetTypeKey(storages[0]);
             string typeName = StorageNetworkStorageDisplay.GetTypeName(storages[0]);
             Sprite typeIcon = StorageNetworkStorageDisplay.GetTypeIcon(storages[0], out Color typeIconTint);
-            bool expanded = expandedStorageTypes.TryGetValue(typeKey, out bool isExpanded) && isExpanded;
+            bool expanded = expandedStorageTypes.TryGetValue(typeKey, out bool isExpanded)
+                ? isExpanded
+                : !string.IsNullOrEmpty(mainSearchText);
             bool isGeyserGroup = storages[0].Geyser != null;
             bool isPowerPortGroup = storages.All(storage => storage?.Storage != null &&
                 (StorageNetworkStorageRules.IsPowerInputPort(storage.Storage) ||
@@ -154,7 +156,9 @@ namespace StorageNetwork.UI
                 return;
             }
 
-            bool expanded = expandedStorages.TryGetValue(storage, out bool isExpanded) && isExpanded;
+            bool expanded = expandedStorages.TryGetValue(storage, out bool isExpanded)
+                ? isExpanded
+                : !string.IsNullOrEmpty(mainSearchText);
             bool selected = selectedItemStorage == storage && string.IsNullOrEmpty(selectedItemKey);
             float percent = storageInfo.CapacityKg > 0f ? storageInfo.StoredKg / storageInfo.CapacityKg : 0f;
             StorageNetworkEnrollment enrollment = storage.GetComponent<StorageNetworkEnrollment>();
@@ -226,6 +230,8 @@ namespace StorageNetwork.UI
                     order: -100));
             }
 
+            Sprite storageIcon = StorageNetworkStorageDisplay.GetTypeIcon(storageInfo, out Color storageIconTint);
+
             GameObject storageHeader = CreateFoldoutHeader(
                 row.transform,
                 expanded,
@@ -245,8 +251,8 @@ namespace StorageNetwork.UI
                 showSettingsButton ? Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STORAGE_SETTINGS) : null,
                 showSettingsButton ? () => ShowStorageSettingsDialog(storage) : null,
                 serverOffline ? new Color(0.62f, 0.24f, 0.24f, 1f) : (Color?)null,
-                null,
-                null,
+                storageIcon,
+                storageIconTint,
                 extraButtons,
                 storage,
                 extraButtonsBeforeAction: true);
