@@ -17,12 +17,15 @@ namespace StorageNetwork.UI
                 return;
             }
 
-            bool expanded = expandedGeysers.TryGetValue(geyser, out bool isExpanded) && isExpanded;
+            bool expanded = expandedGeysers.TryGetValue(geyser, out bool isExpanded)
+                ? isExpanded
+                : !string.IsNullOrEmpty(mainSearchText);
             GameObject row = CreateBox("GeyserRow", parent, new Color(0.88f, 0.87f, 0.82f, 1f));
             AddVerticalContainer(row, 0f, 0, 0, 0, 0);
 
             string details = StorageNetworkGeyserText.GetStorageListDetails(geyser);
             bool erupting = IsGeyserErupting(geyser);
+            Sprite geyserIcon = StorageNetworkStorageDisplay.GetTypeIcon(storageInfo, out Color geyserIconTint);
             GameObject header = CreateFoldoutHeader(
                 row.transform,
                 expanded,
@@ -41,7 +44,9 @@ namespace StorageNetwork.UI
                     : Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_NOT_ERUPTING),
                 Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.STORAGE_SETTINGS),
                 () => ShowGeyserSettingsDialog(geyser),
-                erupting ? new Color(0.28f, 0.48f, 0.34f, 1f) : new Color(0.62f, 0.24f, 0.24f, 1f));
+                erupting ? new Color(0.28f, 0.48f, 0.34f, 1f) : new Color(0.62f, 0.24f, 0.24f, 1f),
+                geyserIcon,
+                geyserIconTint);
             RegisterGeyserLiveView(
                 geyser,
                 header.transform.Find("Amount")?.GetComponent<TextMeshProUGUI>(),

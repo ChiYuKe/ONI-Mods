@@ -1845,6 +1845,23 @@ msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MAIN_SEARCH_TOOLTIP"
 msgid "搜索建筑、分类、储存物或泉输出。"
 msgstr "Search buildings, categories, stored items, or geyser outputs."
 
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SHOW_OTHER_ITEMS"
+msgid "显示其他物品（+{0}）"
+msgstr "Show other items (+{0})"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.HIDE_OTHER_ITEMS"
+msgid "隐藏其他物品（-{0}）"
+msgstr "Hide other items (-{0})"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.SHOW_OTHER_ITEMS_TOOLTIP"
+msgid "展开显示此储存建筑中与当前搜索词不匹配的其他物品。"
+msgstr "Expand to show other items in this storage that do not match the current search."
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.HIDE_OTHER_ITEMS_TOOLTIP"
+msgid "收起并隐藏与当前搜索词不匹配的物品。"
+msgstr "Collapse to hide items that do not match the current search."
+
+
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_STATUS_NO_QUEUE"
 msgid "没有可请求材料的排队配方"
 msgstr "No queued recipe has requestable materials"

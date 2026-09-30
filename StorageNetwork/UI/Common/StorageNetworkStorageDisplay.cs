@@ -1,3 +1,4 @@
+using StorageNetwork.Buildings;
 using StorageNetwork.Core;
 using UnityEngine;
 using UnityEngine.UI;
@@ -47,8 +48,22 @@ namespace StorageNetwork.UI
 
         public static string GetPrefabKey(Storage storage, string fallback = null)
         {
-            KPrefabID prefabId = storage?.GetComponent<KPrefabID>();
-            return prefabId != null ? prefabId.PrefabID().ToString() : (fallback ?? string.Empty);
+            if (storage != null)
+            {
+                KPrefabID prefabId = storage.GetComponent<KPrefabID>() ?? storage.GetComponentInParent<KPrefabID>();
+                if (prefabId != null)
+                {
+                    return prefabId.PrefabID().ToString();
+                }
+
+                Building building = storage.GetComponent<Building>() ?? storage.GetComponentInParent<Building>();
+                if (building != null && building.Def != null)
+                {
+                    return building.Def.PrefabID;
+                }
+            }
+
+            return fallback ?? string.Empty;
         }
 
         public static string GetTypeName(StorageInfo storageInfo)
@@ -66,7 +81,36 @@ namespace StorageNetwork.UI
             }
 
             GameObject gameObject = storageInfo?.GameObject;
-            return gameObject != null ? gameObject.GetProperName() : storageInfo.Name;
+            if (gameObject != null)
+            {
+                Building building = gameObject.GetComponent<Building>() ?? gameObject.GetComponentInParent<Building>();
+                if (building != null && building.Def != null && !string.IsNullOrEmpty(building.Def.Name))
+                {
+                    return StorageNetworkTextFormatting.StripKleiLinkFormatting(building.Def.Name);
+                }
+
+                KPrefabID prefabId = gameObject.GetComponent<KPrefabID>() ?? gameObject.GetComponentInParent<KPrefabID>();
+                if (prefabId != null)
+                {
+                    BuildingDef buildingDef = Assets.GetBuildingDef(prefabId.PrefabID().Name);
+                    if (buildingDef != null && !string.IsNullOrEmpty(buildingDef.Name))
+                    {
+                        return StorageNetworkTextFormatting.StripKleiLinkFormatting(buildingDef.Name);
+                    }
+
+                    GameObject prefab = Assets.GetPrefab(prefabId.PrefabID());
+                    if (prefab != null)
+                    {
+                        string properName = prefab.GetProperName();
+                        if (!string.IsNullOrEmpty(properName))
+                        {
+                            return StorageNetworkTextFormatting.StripKleiLinkFormatting(properName);
+                        }
+                    }
+                }
+            }
+
+            return gameObject != null ? gameObject.GetProperName() : storageInfo?.Name ?? string.Empty;
         }
 
         public static string GetRowName(StorageInfo storageInfo)
@@ -93,14 +137,98 @@ namespace StorageNetwork.UI
             }
 
             GameObject gameObject = storageInfo?.GameObject;
-            KPrefabID prefabId = gameObject != null ? gameObject.GetComponent<KPrefabID>() : null;
+            Building building = gameObject != null
+                ? (gameObject.GetComponent<Building>() ?? gameObject.GetComponentInParent<Building>())
+                : null;
+            BuildingDef buildingDef = building?.Def;
+
+            KPrefabID prefabId = gameObject != null
+                ? (gameObject.GetComponent<KPrefabID>() ?? gameObject.GetComponentInParent<KPrefabID>())
+                : null;
+
+            if (buildingDef == null && prefabId != null)
+            {
+                buildingDef = Assets.GetBuildingDef(prefabId.PrefabID().Name);
+            }
+
+            if (buildingDef == null && storageInfo?.Storage != null)
+            {
+                string prefabKey = GetPrefabKey(storageInfo.Storage);
+                if (!string.IsNullOrEmpty(prefabKey))
+                {
+                    buildingDef = Assets.GetBuildingDef(prefabKey);
+                }
+            }
+
+            if (buildingDef != null)
+            {
+                Sprite buildingSprite = buildingDef.GetUISprite("ui", false);
+                if (buildingSprite != null && buildingSprite != Assets.GetSprite("unknown"))
+                {
+                    tint = Color.white;
+                    return buildingSprite;
+                }
+            }
+
+            if (gameObject != null)
+            {
+                var goSprite = Def.GetUISprite(gameObject, "ui", false);
+                if (goSprite?.first != null && goSprite.first != Assets.GetSprite("unknown"))
+                {
+                    tint = goSprite.second;
+                    return goSprite.first;
+                }
+            }
+
             if (prefabId != null)
             {
-                var uiSprite = Def.GetUISprite(prefabId.PrefabID(), "ui", false);
-                tint = uiSprite.second;
-                if (uiSprite.first != null)
+                var tagSprite = Def.GetUISprite(prefabId.PrefabID(), "ui", false);
+                if (tagSprite?.first != null && tagSprite.first != Assets.GetSprite("unknown"))
                 {
-                    return uiSprite.first;
+                    tint = tagSprite.second;
+                    return tagSprite.first;
+                }
+            }
+
+            if (storageInfo?.Geyser != null)
+            {
+                var geyserSprite = Def.GetUISprite(storageInfo.Geyser.gameObject, "ui", false);
+                if (geyserSprite?.first != null && geyserSprite.first != Assets.GetSprite("unknown"))
+                {
+                    tint = geyserSprite.second;
+                    return geyserSprite.first;
+                }
+            }
+
+            if (storageInfo?.Storage != null)
+            {
+                if (StorageNetworkStorageRules.IsPowerStorageServer(storageInfo.Storage))
+                {
+                    string prefabKey = GetPrefabKey(storageInfo.Storage);
+                    BuildingDef fallbackDef = (!string.IsNullOrEmpty(prefabKey) ? Assets.GetBuildingDef(prefabKey) : null) ??
+                                              Assets.GetBuildingDef(LargeBatteryServerConfig.ID) ??
+                                              Assets.GetBuildingDef(MediumBatteryServerConfig.ID) ??
+                                              Assets.GetBuildingDef(SmallBatteryServerConfig.ID);
+                    Sprite fallbackSprite = fallbackDef?.GetUISprite("ui", false);
+                    if (fallbackSprite != null && fallbackSprite != Assets.GetSprite("unknown"))
+                    {
+                        tint = Color.white;
+                        return fallbackSprite;
+                    }
+                }
+                else if (StorageNetworkStorageRules.IsParticleStorageServer(storageInfo.Storage))
+                {
+                    string prefabKey = GetPrefabKey(storageInfo.Storage);
+                    BuildingDef fallbackDef = (!string.IsNullOrEmpty(prefabKey) ? Assets.GetBuildingDef(prefabKey) : null) ??
+                                              Assets.GetBuildingDef(LargeParticleServerConfig.ID) ??
+                                              Assets.GetBuildingDef(MediumParticleServerConfig.ID) ??
+                                              Assets.GetBuildingDef(SmallParticleServerConfig.ID);
+                    Sprite fallbackSprite = fallbackDef?.GetUISprite("ui", false);
+                    if (fallbackSprite != null && fallbackSprite != Assets.GetSprite("unknown"))
+                    {
+                        tint = Color.white;
+                        return fallbackSprite;
+                    }
                 }
             }
 

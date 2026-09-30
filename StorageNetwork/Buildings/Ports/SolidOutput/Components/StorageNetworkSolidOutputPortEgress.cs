@@ -635,7 +635,7 @@ namespace StorageNetwork.Components
         {
             Tag? selected = GetSelectedOutputTag();
             return selected.HasValue && selected.Value != Tag.Invalid
-                ? StorageItemUtility.GetTagDisplayName(selected.Value)
+                ? StorageNetworkTextFormatting.CleanDisplayName(StorageItemUtility.GetTagDisplayName(selected.Value))
                 : Loc.Get(Loc.UI.STORAGE_NETWORK.MATERIAL_OUTPUT_PORT_FILTER_ANY);
         }
 

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using StorageNetwork.Core;
+using StorageNetwork.UI;
 using UnityEngine;
 using static StorageNetwork.STRINGS;
 
@@ -814,7 +815,7 @@ namespace StorageNetwork.Services
                 }
             }
 
-            elements.Sort((left, right) => string.Compare(GetElementName(left), GetElementName(right), System.StringComparison.CurrentCulture));
+            elements.Sort(StorageNetworkTextFormatting.CompareElementDisplayNames);
             return elements;
         }
 
@@ -853,7 +854,7 @@ namespace StorageNetwork.Services
                 }
             }
 
-            elements.Sort((left, right) => string.Compare(GetElementName(left), GetElementName(right), System.StringComparison.CurrentCulture));
+            elements.Sort(StorageNetworkTextFormatting.CompareElementDisplayNames);
             return elements;
         }
 
@@ -893,7 +894,7 @@ namespace StorageNetwork.Services
                 }
             }
 
-            tags.Sort((left, right) => string.Compare(StorageItemUtility.GetTagDisplayName(left), StorageItemUtility.GetTagDisplayName(right), System.StringComparison.CurrentCulture));
+            tags.Sort(StorageNetworkTextFormatting.CompareTagDisplayNames);
             return tags;
         }
 

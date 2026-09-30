@@ -1147,6 +1147,10 @@ namespace StorageNetwork
                 public static LocString LIQUID_OUTPUT_SIDE_SCREEN_CURRENT = "当前输出：{0}";
                 public static LocString LIQUID_OUTPUT_SIDE_SCREEN_HINT = "快速选择液体出网端口要输出的液体。列表来自当前网络服务器中已有的液体，切换后会替换端口缓存并立即尝试输出。";
                 public static LocString MAIN_SEARCH_TOOLTIP = "搜索建筑、分类、储存物或泉输出。";
+                public static LocString SHOW_OTHER_ITEMS = "显示其他物品（+{0}）";
+                public static LocString HIDE_OTHER_ITEMS = "隐藏其他物品（-{0}）";
+                public static LocString SHOW_OTHER_ITEMS_TOOLTIP = "展开显示此储存建筑中与当前搜索词不匹配的其他物品。";
+                public static LocString HIDE_OTHER_ITEMS_TOOLTIP = "收起并隐藏与当前搜索词不匹配的物品。";
 
                 public static LocString MATERIAL_STATUS_NO_QUEUE = "没有可请求材料的排队配方";
                 public static LocString MATERIAL_STATUS_LIMIT_REACHED = "已达到请求限额";

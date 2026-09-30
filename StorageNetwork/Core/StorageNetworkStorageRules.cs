@@ -3,6 +3,7 @@ using System.Linq;
 using StorageNetwork.API;
 using StorageNetwork.Buildings;
 using StorageNetwork.Components;
+using StorageNetwork.UI;
 
 namespace StorageNetwork.Core
 {
@@ -446,10 +447,7 @@ namespace StorageNetwork.Core
                 }
             }
 
-            targets.Sort((left, right) => string.Compare(
-                left != null ? left.GetProperName() : string.Empty,
-                right != null ? right.GetProperName() : string.Empty,
-                System.StringComparison.CurrentCulture));
+            targets.Sort(StorageNetworkTextFormatting.CompareStorageDisplayNames);
             return targets;
         }
 

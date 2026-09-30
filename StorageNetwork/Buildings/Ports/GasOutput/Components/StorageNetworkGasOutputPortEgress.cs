@@ -538,7 +538,8 @@ namespace StorageNetwork.Components
             }
 
             Element element = ElementLoader.FindElementByHash(selected.Value);
-            return element != null ? element.name : selected.Value.ToString();
+            string elementName = element != null ? element.name : selected.Value.ToString();
+            return StorageNetworkTextFormatting.CleanDisplayName(elementName);
         }
 
         private string GetOutputLimitStatusText()
