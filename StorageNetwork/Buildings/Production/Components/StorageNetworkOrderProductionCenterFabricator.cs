@@ -117,15 +117,26 @@ namespace StorageNetwork.Components
             {
                 QueueDirtyField?.SetValue(this, false);
                 HasOpenOrdersField?.SetValue(this, false);
+                SyncVanillaCurrentOrder();
+                RefreshWorldProgressBars();
+                Trigger(1721324763, this);
+                ReturnUnneededMaterialsToNetwork();
                 return;
             }
 
             ClampOrderIndex(NextOrderIdxField, recipes.Length);
             ClampOrderIndex(WorkingOrderIdxField, recipes.Length);
             QueueDirtyField?.SetValue(this, false);
-            HasOpenOrdersField?.SetValue(this, HasAnyQueuedRecipe());
+            bool hasOpen = HasAnyQueuedRecipe();
+            bool hadOpen = (bool)(HasOpenOrdersField?.GetValue(this) ?? false);
+            HasOpenOrdersField?.SetValue(this, hasOpen);
             SyncVanillaCurrentOrder();
             RefreshWorldProgressBars();
+            if (hadOpen != hasOpen || (!hasOpen && !HasParallelWorkingOrder))
+            {
+                Trigger(1721324763, this);
+            }
+            ReturnUnneededMaterialsToNetwork();
         }
 
         public void SetEngravedRecipeIds(IEnumerable<string> recipeIds)
@@ -184,6 +195,10 @@ namespace StorageNetwork.Components
             EnsureOpenOrderCountsMatchRecipes();
             HasOpenOrdersField?.SetValue(this, queueCounts.Values.Any(value => value != 0));
             QueueDirtyField?.SetValue(this, true);
+            if (count == 0)
+            {
+                ReturnUnneededMaterialsToNetwork();
+            }
             SyncVanillaCurrentOrder();
             Trigger(1721324763, this);
         }
@@ -213,6 +228,7 @@ namespace StorageNetwork.Components
             RefreshWorldProgressBars();
             SyncOperationalActive(HasParallelWorkingOrder);
             Trigger(1721324763, this);
+            ReturnUnneededMaterialsToNetwork();
         }
 
         public void CancelOrderCenterRecipe(ComplexRecipe recipe, int finalQueued, bool cancelWorkingCores)
@@ -226,12 +242,14 @@ namespace StorageNetwork.Components
             if (cancelWorkingCores)
             {
                 StopCoresForRecipe(recipe);
-                ReturnRecipeMaterialsToNetwork(recipe);
             }
 
+            HasOpenOrdersField?.SetValue(this, HasAnyQueuedRecipe());
             SyncVanillaCurrentOrder();
             RefreshWorldProgressBars();
             SyncOperationalActive(HasParallelWorkingOrder);
+            Trigger(1721324763, this);
+            ReturnUnneededMaterialsToNetwork();
         }
 
         public void TickParallelCores(float dt)
@@ -285,6 +303,9 @@ namespace StorageNetwork.Components
             if (completedAny)
             {
                 QueueDirtyField?.SetValue(this, true);
+                HasOpenOrdersField?.SetValue(this, HasAnyQueuedRecipe());
+                Trigger(1721324763, this);
+                ReturnUnneededMaterialsToNetwork();
             }
 
             SyncVanillaCurrentOrder();
@@ -349,6 +370,22 @@ namespace StorageNetwork.Components
 
             EnsureCores();
             return ActiveCores.Count(core => core.IsWorking && core.RecipeId == recipe.id);
+        }
+
+        public int GetTargetBatchCountForRecipe(ComplexRecipe recipe)
+        {
+            if (recipe == null)
+            {
+                return 0;
+            }
+
+            int queueCount = StorageNetworkFabricatorProgress.GetRecipeQueueCountSafe(this, recipe);
+            if (queueCount == ComplexFabricator.QUEUE_INFINITE)
+            {
+                return ActiveCoreCount;
+            }
+
+            return Mathf.Clamp(queueCount, 0, ActiveCoreCount);
         }
 
         private void TryStartCore(CoreState core)
@@ -491,28 +528,111 @@ namespace StorageNetwork.Components
 
         private void ReturnRecipeMaterialsToNetwork(ComplexRecipe recipe)
         {
-            if (recipe?.ingredients == null)
+            ReturnUnneededMaterialsToNetwork();
+        }
+
+        private void ReturnUnneededMaterialsToNetwork()
+        {
+            bool hasInItems = inStorage?.items != null && inStorage.items.Count > 0;
+            bool hasBuildItems = buildStorage?.items != null && buildStorage.items.Count > 0;
+            if (!hasInItems && !hasBuildItems)
             {
                 return;
             }
 
-            HashSet<Tag> ingredientTags = new HashSet<Tag>();
-            foreach (ComplexRecipe.RecipeElement ingredient in recipe.ingredients)
+            HashSet<Tag> neededInputTags = new HashSet<Tag>();
+            ComplexRecipe[] recipes = RecipeListField?.GetValue(this) as ComplexRecipe[];
+            if (recipes != null)
             {
-                if (ingredient.material != Tag.Invalid)
+                foreach (ComplexRecipe recipe in recipes)
                 {
-                    ingredientTags.Add(ingredient.material);
+                    if (recipe != null && GetQueueCount(recipe) != 0 && recipe.ingredients != null)
+                    {
+                        foreach (ComplexRecipe.RecipeElement ingredient in recipe.ingredients)
+                        {
+                            if (ingredient.material != Tag.Invalid)
+                            {
+                                neededInputTags.Add(ingredient.material);
+                            }
+                        }
+                    }
                 }
             }
 
-            if (ingredientTags.Count == 0)
+            HashSet<Tag> activeWorkingTags = new HashSet<Tag>();
+            EnsureCores();
+            foreach (CoreState core in cores)
+            {
+                if (core.IsWorking && !string.IsNullOrEmpty(core.RecipeId))
+                {
+                    ComplexRecipe workingRecipe = GetRecipe(core.RecipeId);
+                    if (workingRecipe?.ingredients != null)
+                    {
+                        foreach (ComplexRecipe.RecipeElement ingredient in workingRecipe.ingredients)
+                        {
+                            if (ingredient.material != Tag.Invalid)
+                            {
+                                neededInputTags.Add(ingredient.material);
+                                activeWorkingTags.Add(ingredient.material);
+                            }
+                        }
+                    }
+                }
+            }
+
+            Storage[] excluded = gameObject.GetComponents<Storage>();
+
+            if (hasInItems)
+            {
+                ReturnUnneededStorageItems(inStorage, neededInputTags, excluded);
+            }
+
+            if (hasBuildItems)
+            {
+                ReturnUnneededStorageItems(buildStorage, activeWorkingTags, excluded);
+            }
+        }
+
+        private void ReturnUnneededStorageItems(Storage storage, HashSet<Tag> neededTags, Storage[] excluded)
+        {
+            if (storage?.items == null || storage.items.Count == 0)
             {
                 return;
             }
 
-            Storage[] excluded = { inStorage, buildStorage, outStorage };
-            NetworkStorageTransferService.TransferStoredItemsToNetwork(inStorage, excluded, null, ingredientTags, false, true);
-            NetworkStorageTransferService.TransferStoredItemsToNetwork(buildStorage, excluded, null, ingredientTags, false, true);
+            List<GameObject> items = new List<GameObject>(storage.items);
+            foreach (GameObject item in items)
+            {
+                if (item == null || storage.items == null || !storage.items.Contains(item))
+                {
+                    continue;
+                }
+
+                if (IsItemNeeded(item, neededTags))
+                {
+                    continue;
+                }
+
+                NetworkStorageTransferService.TransferStoredItemToNetwork(storage, item, excluded, null, false);
+            }
+        }
+
+        private static bool IsItemNeeded(GameObject item, HashSet<Tag> neededTags)
+        {
+            if (item == null || neededTags == null || neededTags.Count == 0)
+            {
+                return false;
+            }
+
+            foreach (Tag tag in neededTags)
+            {
+                if (StorageItemUtility.MatchesStorageTag(item, tag))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private void SanitizeBuildStorageTemperatures(ComplexRecipe recipe)
@@ -584,6 +704,7 @@ namespace StorageNetwork.Components
             queueCounts[recipe.id] = Mathf.Max(0, count - 1);
             HasOpenOrdersField?.SetValue(this, queueCounts.Values.Any(value => value != 0));
             QueueDirtyField?.SetValue(this, true);
+            Trigger(1721324763, this);
         }
 
         private int GetQueueCount(ComplexRecipe recipe)

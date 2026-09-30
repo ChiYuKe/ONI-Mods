@@ -116,18 +116,19 @@ namespace StorageNetwork.Components
                 return;
             }
 
-            RefreshMaterialRequestStatus();
-            if (requestCooldown > 0f)
-            {
-                requestCooldown -= dt;
-                return;
-            }
-
             ComplexRecipe recipe = GetRecipeToRequest();
             if (recipe == null || recipe.ingredients == null)
             {
                 lastStatus = Loc.Get(Loc.UI.STORAGE_NETWORK.MATERIAL_STATUS_NO_QUEUE);
                 requestCooldown = Config.Instance.MaterialRequestRetryCooldownSeconds;
+                RemoveMaterialRequestStatus();
+                return;
+            }
+
+            RefreshMaterialRequestStatus();
+            if (requestCooldown > 0f)
+            {
+                requestCooldown -= dt;
                 return;
             }
 
@@ -335,6 +336,12 @@ namespace StorageNetwork.Components
                 return false;
             }
 
+            int targetOrderCount = GetRequestOrderCount(recipe);
+            if (targetOrderCount <= 0)
+            {
+                return false;
+            }
+
             foreach (ComplexRecipe.RecipeElement ingredient in recipe.ingredients)
             {
                 if (GetTargetIngredientAmount(recipe, ingredient) - GetAmountAvailableInFabricator(ingredient.material) > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
@@ -356,6 +363,11 @@ namespace StorageNetwork.Components
             if (recipe == null || fabricator == null)
             {
                 return 1;
+            }
+
+            if (fabricator is StorageNetworkOrderProductionCenterFabricator orderCenter)
+            {
+                return orderCenter.GetTargetBatchCountForRecipe(recipe);
             }
 
             int count = 0;
@@ -493,6 +505,11 @@ namespace StorageNetwork.Components
 
         private float GetAmountAvailableInFabricator(Tag tag)
         {
+            if (fabricator is StorageNetworkOrderProductionCenterFabricator)
+            {
+                return GetMatchingAmountAvailable(fabricator.inStorage, tag);
+            }
+
             return GetMatchingAmountAvailable(fabricator.inStorage, tag) +
                    GetMatchingAmountAvailable(fabricator.buildStorage, tag);
         }

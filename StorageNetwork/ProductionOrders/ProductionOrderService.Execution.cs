@@ -229,9 +229,15 @@ namespace StorageNetwork.ProductionOrders
                 return;
             }
 
+            int orderCount = assignment.OrderCount;
+            if (assignment.Fabricator is StorageNetworkOrderProductionCenterFabricator opc)
+            {
+                orderCount = Mathf.Clamp(orderCount, 1, opc.ActiveCoreCount);
+            }
+
             foreach (ProductionPlanRequirement requirement in node.Requirements)
             {
-                float required = requirement.RequiredAmount * assignment.OrderCount / Mathf.Max(1, node.OrderCount);
+                float required = requirement.RequiredAmount * orderCount / Mathf.Max(1, node.OrderCount);
                 float needed = Mathf.Max(0f, required - target.GetAmountAvailable(requirement.Material));
                 TransferMaterialToStorage(requirement.Material, target, needed, materialLeases);
             }
