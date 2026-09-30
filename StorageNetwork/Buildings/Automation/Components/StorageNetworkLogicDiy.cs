@@ -1452,7 +1452,7 @@ namespace StorageNetwork.Components
 
             int sourceWorldId = gameObject != null ? gameObject.GetMyWorldId() : -1;
             int targetWorldId = target.GetMyWorldId();
-            if (sourceWorldId >= 0 && targetWorldId >= 0 && sourceWorldId != targetWorldId && !StorageSceneRegistry.IsCrossPlanetRelayOnline())
+            if (sourceWorldId >= 0 && targetWorldId >= 0 && !StorageNetworkWorldUtility.AreWorldsSameOrLanded(sourceWorldId, targetWorldId) && !StorageSceneRegistry.IsCrossPlanetRelayOnline())
             {
                 return 0f;
             }
@@ -1784,7 +1784,7 @@ namespace StorageNetwork.Components
             }
 
             int sourceWorldId = gameObject != null ? gameObject.GetMyWorldId() : -1;
-            if (sourceWorldId >= 0 && target.GetMyWorldId() != sourceWorldId && !StorageSceneRegistry.IsCrossPlanetRelayOnline())
+            if (sourceWorldId >= 0 && !StorageNetworkWorldUtility.AreWorldsSameOrLanded(sourceWorldId, target.GetMyWorldId()) && !StorageSceneRegistry.IsCrossPlanetRelayOnline())
             {
                 return;
             }

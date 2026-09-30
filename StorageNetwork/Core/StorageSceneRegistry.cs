@@ -331,7 +331,7 @@ namespace StorageNetwork.Core
                 return false;
             }
 
-            if (worldId < 0 || storage.gameObject.GetMyWorldId() == worldId || IsCrossPlanetRelayOnline())
+            if (worldId < 0 || StorageNetworkWorldUtility.AreWorldsSameOrLanded(StorageNetworkWorldUtility.GetObjectWorldId(storage.gameObject), worldId) || IsCrossPlanetRelayOnline())
             {
                 return true;
             }
@@ -418,6 +418,35 @@ namespace StorageNetwork.Core
                 return cached.Online;
             }
 
+            bool online = CheckDirectCoreOnlineInWorld(worldId);
+            if (!online && worldId >= 0 && StorageNetworkWorldUtility.HasLandedRocketsOrIsLandedRocket(worldId))
+            {
+                int parentWorldId = StorageNetworkWorldUtility.GetParentWorldId(worldId);
+                if (parentWorldId != worldId && CheckDirectCoreOnlineInWorld(parentWorldId))
+                {
+                    online = true;
+                }
+                else
+                {
+                    IReadOnlyList<int> rockets = StorageNetworkWorldUtility.GetLandedRocketWorldIds(parentWorldId);
+                    for (int i = 0; i < rockets.Count; i++)
+                    {
+                        int rWorldId = rockets[i];
+                        if (rWorldId != worldId && CheckDirectCoreOnlineInWorld(rWorldId))
+                        {
+                            online = true;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            OnlineCoreCache[worldId] = new CoreOnlineCacheEntry(online, frame, connectivityVersion);
+            return online;
+        }
+
+        private static bool CheckDirectCoreOnlineInWorld(int worldId)
+        {
             IReadOnlyCollection<StorageNetworkCore> cores = worldId < 0
                 ? Cores
                 : CoresByWorld.TryGetValue(worldId, out HashSet<StorageNetworkCore> worldCores)
@@ -432,12 +461,10 @@ namespace StorageNetwork.Core
 
                 if (core.IsNetworkOnline)
                 {
-                    OnlineCoreCache[worldId] = new CoreOnlineCacheEntry(true, frame, connectivityVersion);
                     return true;
                 }
             }
 
-            OnlineCoreCache[worldId] = new CoreOnlineCacheEntry(false, frame, connectivityVersion);
             return false;
         }
 

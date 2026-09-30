@@ -115,7 +115,7 @@ namespace StorageNetwork.Services
                     continue;
                 }
 
-                if (worldId < 0 || target.GetMyWorldId() == worldId)
+                if (worldId < 0 || StorageNetwork.Core.StorageNetworkWorldUtility.AreWorldsSameOrLanded(target.GetMyWorldId(), worldId))
                 {
                     results.Add(target);
                 }
