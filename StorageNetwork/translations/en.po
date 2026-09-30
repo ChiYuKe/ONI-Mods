@@ -2158,6 +2158,14 @@ msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_POWER_OUTPUT_MAX_WATTS
 msgid "电力出网端口滑条的最大输出功率。"
 msgstr "Maximum output wattage available on the power output port slider."
 
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_ORDER_CENTER_CONSERVE_HEAT"
+msgid "订单生产中心冶炼热量回收"
+msgstr "Conserve Order Production Center Smelting Heat"
+
+msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.CONFIG_ORDER_CENTER_CONSERVE_HEAT_DESC"
+msgid "开启后，金属冶炼等高发热配方将消耗 3 倍制作时间，并将 100% 的相变热量释放到建筑结构中供蒸汽机回收；关闭时按原速运行且仅产生机器运行热量。"
+msgstr "When enabled, metal smelting recipes take 3x longer to craft and emit 100% of their phase-change heat into the building structure for heat harvesting. When disabled (default), recipes craft at normal speed with only standard operational heat."
+
 msgctxt "StorageNetwork.STRINGS.UI.STORAGE_NETWORK.GEYSER_SETTINGS_TITLE"
 msgid "泉设置"
 msgstr "Geyser Settings"

@@ -37,6 +37,7 @@ namespace StorageNetwork.Patches
             }
         }
 
+
         [HarmonyPatch(typeof(ComplexFabricator), "OnSpawn")]
         public static class OnSpawnPatch
         {

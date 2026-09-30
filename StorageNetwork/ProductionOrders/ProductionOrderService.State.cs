@@ -73,12 +73,7 @@ namespace StorageNetwork.ProductionOrders
                     }
                     if (order.ProducedAtSubmit + PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT >= order.RequestedAmount)
                     {
-                        order.State = ProductionOrderState.Completed;
-                        order.CompletedCycle = currentCycle;
-                        CancelOrderQueues(order);
-                        ReleaseOrderAutomation(order.Key);
-                        MarkOrdersChanged();
-                        ProductionOrderRuntimeAllocation.NotifyOrderAssignmentsChanged(order);
+                        CompleteOrder(order, currentCycle);
                     }
                     else if (currentCycle - order.LastActivityCycle >= Config.Instance.AbnormalOrderTimeoutCycles)
                     {
@@ -386,6 +381,127 @@ namespace StorageNetwork.ProductionOrders
 
             observedOrderAccountingConnectivityVersion = connectivityVersion;
             return changed;
+        }
+
+        private static void CompleteOrder(ProductionOrderRecord order, float currentCycle)
+        {
+            if (order == null || order.State == ProductionOrderState.Completed)
+            {
+                return;
+            }
+
+            order.State = ProductionOrderState.Completed;
+            order.CompletedCycle = currentCycle;
+            CancelOrderQueues(order);
+            ReleaseOrderAutomation(order.Key);
+            MarkOrdersChanged();
+            ProductionOrderRuntimeAllocation.NotifyOrderAssignmentsChanged(order);
+        }
+
+        public static void NotifyProductFinished(ComplexFabricator fabricator, ComplexRecipe recipe, IList<GameObject> products)
+        {
+            if (fabricator == null || recipe == null)
+            {
+                return;
+            }
+
+            NotifyFabricatorOutputChanged(fabricator);
+
+            EnsureOrdersLoaded();
+            if (ActiveOrders.Count == 0)
+            {
+                return;
+            }
+
+            float currentCycle = GameClock.Instance != null ? GameClock.Instance.GetCycle() : 0f;
+
+            if (recipe.results != null)
+            {
+                foreach (ComplexRecipe.RecipeElement result in recipe.results)
+                {
+                    if (result == null || result.material == Tag.Invalid || result.amount <= 0f)
+                    {
+                        continue;
+                    }
+
+                    CreditProducedProduct(fabricator, recipe, result.material, result.amount, currentCycle);
+                }
+            }
+        }
+
+        private static void CreditProducedProduct(
+            ComplexFabricator fabricator,
+            ComplexRecipe recipe,
+            Tag productTag,
+            float amount,
+            float currentCycle)
+        {
+            ProductionOrderRecord matchingOrder = null;
+            bool matchingHasAssignment = false;
+            foreach (ProductionOrderRecord order in ActiveOrders.Values)
+            {
+                if (!IsOrderActive(order) || order.ProductTag != productTag)
+                {
+                    continue;
+                }
+
+                if (order.ProducedAtSubmit + PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT >= order.RequestedAmount)
+                {
+                    continue;
+                }
+
+                bool matchesAssignment = false;
+                if (order.QueueAssignments != null)
+                {
+                    for (int i = 0; i < order.QueueAssignments.Count; i++)
+                    {
+                        ProductionOrderQueueAssignment qa = order.QueueAssignments[i];
+                        if (qa != null && qa.Fabricator == fabricator && qa.Recipe == recipe)
+                        {
+                            matchesAssignment = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (matchingOrder == null)
+                {
+                    matchingOrder = order;
+                    matchingHasAssignment = matchesAssignment;
+                }
+                else if (matchesAssignment && !matchingHasAssignment)
+                {
+                    matchingOrder = order;
+                    matchingHasAssignment = true;
+                }
+                else if (matchesAssignment == matchingHasAssignment && order.DisplayId < matchingOrder.DisplayId)
+                {
+                    matchingOrder = order;
+                }
+            }
+
+            if (matchingOrder == null)
+            {
+                return;
+            }
+
+            matchingOrder.RegisterProducedAmount(amount);
+            matchingOrder.ObserveActivity(
+                currentCycle,
+                matchingOrder.ProducedAtSubmit,
+                matchingOrder.LastObservedQueueLoad,
+                true);
+
+            StorageNetworkFabricatorProgress.Invalidate(fabricator);
+
+            if (matchingOrder.ProducedAtSubmit + PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT >= matchingOrder.RequestedAmount)
+            {
+                CompleteOrder(matchingOrder, currentCycle);
+            }
+            else
+            {
+                MarkOrdersChanged();
+            }
         }
 
         private readonly struct OrderAccountingKey : System.IEquatable<OrderAccountingKey>

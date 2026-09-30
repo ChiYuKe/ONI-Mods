@@ -238,6 +238,16 @@ namespace StorageNetwork.ProductionOrders
             return true;
         }
 
+        public bool RegisterProducedAmount(float amount)
+        {
+            if (amount <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+            {
+                return false;
+            }
+
+            return SetProducedAmount(ProducedAtSubmit + amount);
+        }
+
         internal void RebaseProductionThreshold(float stockThreshold)
         {
             StockAtSubmit = Mathf.Max(0f, stockThreshold);
