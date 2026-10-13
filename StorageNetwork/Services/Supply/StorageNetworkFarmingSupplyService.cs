@@ -13,7 +13,7 @@ namespace StorageNetwork.Services
         private static readonly Dictionary<int, float> NextTryByPort = new Dictionary<int, float>();
         private static readonly Dictionary<int, PlantingDemandSnapshot> PlantingDemandSnapshotsByWorld = new Dictionary<int, PlantingDemandSnapshot>();
         private static readonly Dictionary<int, FarmingReservationSnapshot> ReservationSnapshotsByWorld = new Dictionary<int, FarmingReservationSnapshot>();
-        private static readonly List<GameObject> MatchingItems = new List<GameObject>();
+        private static readonly Stack<FarmingWorkspace> Workspaces = new Stack<FarmingWorkspace>();
 
         public static StorageTransferResult SupplyNextPlanting(Storage portStorage, Storage specificSource, IEnumerable<Tag> allowedTags)
         {
@@ -36,39 +36,48 @@ namespace StorageNetwork.Services
                 return StorageTransferResult.Offline;
             }
 
-            HashSet<Tag> allowed = BuildAllowedTagSet(allowedTags);
-            PlantingDemandSnapshot demandSnapshot = GetPlantingDemandSnapshot(worldId);
-            FarmingReservationSnapshot reservationSnapshot = GetReservationSnapshot(worldId);
-            ReconcileFarmingReservations(portStorage, allowed, demandSnapshot, reservationSnapshot);
-
-            Dictionary<Tag, float> demandByTag = GetPlantingDemandByTag(demandSnapshot, allowed);
-            if (demandByTag.Count == 0)
+            FarmingWorkspace workspace = RentWorkspace();
+            try
             {
+                HashSet<Tag> allowed = BuildAllowedTagSet(allowedTags, workspace.Allowed);
+                PlantingDemandSnapshot demandSnapshot = GetPlantingDemandSnapshot(worldId);
+                FarmingReservationSnapshot reservationSnapshot = GetReservationSnapshot(worldId);
+                ReconcileFarmingReservations(portStorage, allowed, demandSnapshot, reservationSnapshot, workspace);
+
+                Dictionary<Tag, float> demandByTag = demandSnapshot.DemandByTag;
+                if (demandByTag.Count == 0)
+                {
+                    SetRetry(portId);
+                    return StorageTransferResult.Idle;
+                }
+
+                foreach (KeyValuePair<Tag, float> demand in demandByTag)
+                {
+                    Tag tag = demand.Key;
+                    if (!IsAllowed(tag, allowed)) continue;
+                    float alreadyReserved = reservationSnapshot.Prefix.GetEarlierAmount(portId, tag) + GetReservedAmount(portStorage, tag);
+                    float remaining = demand.Value - alreadyReserved;
+                    if (remaining <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+                    {
+                        continue;
+                    }
+
+                    float transferred = TransferSeedToPort(tag, remaining, portStorage, specificSource);
+                    if (transferred > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+                    {
+                        return new StorageTransferResult(transferred, null);
+                    }
+                }
+
                 SetRetry(portId);
                 return StorageTransferResult.Idle;
             }
-
-            Dictionary<Tag, float> earlierReservedByTag = GetEarlierPortReservedByTag(portStorage, allowed, reservationSnapshot);
-            foreach (KeyValuePair<Tag, float> demand in demandByTag)
+            finally
             {
-                Tag tag = demand.Key;
-                float alreadyReserved = GetDictionaryValue(earlierReservedByTag, tag) + GetReservedAmount(portStorage, tag);
-                float remaining = demand.Value - alreadyReserved;
-                if (remaining <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
-                {
-                    continue;
-                }
-
-                float transferred = TransferSeedToPort(tag, remaining, portStorage, specificSource);
-                if (transferred > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
-                {
-                    return new StorageTransferResult(transferred, null);
-                }
+                ReturnWorkspace(workspace);
             }
-
-            SetRetry(portId);
-            return StorageTransferResult.Idle;
         }
+
 
         private static void SetRetry(int portId)
         {
@@ -119,30 +128,6 @@ namespace StorageNetwork.Services
             return snapshot;
         }
 
-        private static Dictionary<Tag, float> GetPlantingDemandByTag(PlantingDemandSnapshot snapshot, HashSet<Tag> allowedTags)
-        {
-            if (snapshot == null || snapshot.DemandByTag == null)
-            {
-                return new Dictionary<Tag, float>();
-            }
-
-            if (allowedTags == null || allowedTags.Count == 0)
-            {
-                return snapshot.DemandByTag;
-            }
-
-            Dictionary<Tag, float> demandByTag = new Dictionary<Tag, float>();
-            foreach (KeyValuePair<Tag, float> pair in snapshot.DemandByTag)
-            {
-                if (IsAllowed(pair.Key, allowedTags))
-                {
-                    demandByTag[pair.Key] = pair.Value;
-                }
-            }
-
-            return demandByTag;
-        }
-
         private static float TransferSeedToPort(Tag seedTag, float amount, Storage portStorage, Storage specificSource)
         {
             if (seedTag == Tag.Invalid ||
@@ -190,64 +175,72 @@ namespace StorageNetwork.Services
                 return null;
             }
 
-            MatchingItems.Clear();
-            foreach (GameObject item in source.items)
+            FarmingWorkspace workspace = RentWorkspace();
+            try
             {
-                if (item != null && StorageItemUtility.MatchesStorageTag(item, tag))
+                workspace.Items.Clear();
+                foreach (GameObject item in source.items)
                 {
-                    MatchingItems.Add(item);
+                    if (item != null && StorageItemUtility.MatchesStorageTag(item, tag))
+                    {
+                        workspace.Items.Add(item);
+                    }
                 }
+
+                foreach (GameObject item in workspace.Items)
+                {
+                    if (item == null || !source.items.Contains(item))
+                    {
+                        continue;
+                    }
+
+                    float itemMass = StorageItemUtility.GetMass(item);
+                    if (itemMass <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+                    {
+                        continue;
+                    }
+
+                    if (amount + PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT >= itemMass)
+                    {
+                        return source.Transfer(item, destination, block_events: false, hide_popups: true) ? item : null;
+                    }
+
+                    Pickupable pickupable = item.GetComponent<Pickupable>();
+                    Pickupable taken = pickupable != null ? pickupable.Take(amount) : null;
+                    if (taken == null)
+                    {
+                        continue;
+                    }
+
+                    destination.Store(taken.gameObject, hide_popups: true, block_events: false, do_disease_transfer: true, is_deserializing: false);
+                    source.Trigger(-1697596308, item);
+                    source.OnStorageChange?.Invoke(item);
+                    return taken.gameObject;
+                }
+
+                return null;
             }
-
-            foreach (GameObject item in MatchingItems)
-            {
-                if (item == null || !source.items.Contains(item))
-                {
-                    continue;
-                }
-
-                float itemMass = StorageItemUtility.GetMass(item);
-                if (itemMass <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
-                {
-                    continue;
-                }
-
-                if (amount + PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT >= itemMass)
-                {
-                    return source.Transfer(item, destination, block_events: false, hide_popups: true) ? item : null;
-                }
-
-                Pickupable pickupable = item.GetComponent<Pickupable>();
-                Pickupable taken = pickupable != null ? pickupable.Take(amount) : null;
-                if (taken == null)
-                {
-                    continue;
-                }
-
-                destination.Store(taken.gameObject, hide_popups: true, block_events: false, do_disease_transfer: true, is_deserializing: false);
-                source.Trigger(-1697596308, item);
-                source.OnStorageChange?.Invoke(item);
-                return taken.gameObject;
-            }
-
-            return null;
+            finally { ReturnWorkspace(workspace); }
         }
+
 
         private static void ReconcileFarmingReservations(
             Storage portStorage,
             HashSet<Tag> allowedTags,
             PlantingDemandSnapshot demandSnapshot,
-            FarmingReservationSnapshot reservationSnapshot)
+            FarmingReservationSnapshot reservationSnapshot,
+            FarmingWorkspace workspace)
         {
             if (portStorage?.items == null)
             {
                 return;
             }
 
-            Dictionary<Tag, float> demandByTag = GetPlantingDemandByTag(demandSnapshot, allowedTags);
-            Dictionary<Tag, float> earlierReservedByTag = GetEarlierPortReservedByTag(portStorage, allowedTags, reservationSnapshot);
-            Dictionary<Tag, float> keptByTag = new Dictionary<Tag, float>();
-            List<GameObject> reservedItems = GetReservedItems(portStorage);
+            Dictionary<Tag, float> demandByTag = demandSnapshot.DemandByTag;
+            int portId = StorageItemUtility.GetStorageInstanceId(portStorage);
+            Dictionary<Tag, float> keptByTag = workspace.Kept;
+            List<GameObject> reservedItems = workspace.Items;
+            FillReservedItems(portStorage, reservedItems);
 
             foreach (GameObject item in reservedItems)
             {
@@ -259,7 +252,7 @@ namespace StorageNetwork.Services
                 }
 
                 float remainingDemand = GetDictionaryValue(demandByTag, tag) -
-                    GetDictionaryValue(earlierReservedByTag, tag) -
+                    reservationSnapshot.Prefix.GetEarlierAmount(portId, tag) -
                     GetDictionaryValue(keptByTag, tag);
                 if (remainingDemand <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
                 {
@@ -270,36 +263,6 @@ namespace StorageNetwork.Services
                 float mass = StorageItemUtility.GetMass(item);
                 AddDictionaryValue(keptByTag, tag, Mathf.Min(mass, remainingDemand));
             }
-        }
-
-        private static Dictionary<Tag, float> GetEarlierPortReservedByTag(Storage currentPortStorage, HashSet<Tag> allowedTags, FarmingReservationSnapshot snapshot)
-        {
-            if (currentPortStorage == null || snapshot == null)
-            {
-                return new Dictionary<Tag, float>();
-            }
-
-            int currentId = StorageItemUtility.GetStorageInstanceId(currentPortStorage);
-            if (!snapshot.EarlierReservedByPortId.TryGetValue(currentId, out Dictionary<Tag, float> reservedByTag))
-            {
-                return new Dictionary<Tag, float>();
-            }
-
-            if (allowedTags == null || allowedTags.Count == 0)
-            {
-                return reservedByTag;
-            }
-
-            Dictionary<Tag, float> filtered = new Dictionary<Tag, float>();
-            foreach (KeyValuePair<Tag, float> pair in reservedByTag)
-            {
-                if (IsAllowed(pair.Key, allowedTags))
-                {
-                    filtered[pair.Key] = pair.Value;
-                }
-            }
-
-            return filtered;
         }
 
         private static FarmingReservationSnapshot GetReservationSnapshot(int worldId)
@@ -340,15 +303,12 @@ namespace StorageNetwork.Services
 
             reservations.Sort((left, right) => left.PortId.CompareTo(right.PortId));
             FarmingReservationSnapshot snapshot = new FarmingReservationSnapshot(Time.time);
-            Dictionary<Tag, float> prefix = new Dictionary<Tag, float>();
             foreach (FarmingPortReservation reservation in reservations)
             {
-                snapshot.EarlierReservedByPortId[reservation.PortId] = CopyDictionary(prefix);
-                foreach (KeyValuePair<Tag, float> pair in reservation.ReservedByTag)
-                {
-                    AddDictionaryValue(prefix, pair.Key, pair.Value);
-                }
+                snapshot.Prefix.AddPort(reservation.PortId, reservation.ReservedByTag,
+                    PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT);
             }
+            StorageNetworkPerformanceCounters.RecordFarmingSnapshotEntries(snapshot.Prefix.EntryCount);
 
             return snapshot;
         }
@@ -378,33 +338,17 @@ namespace StorageNetwork.Services
             return reservedByTag;
         }
 
-        private static Dictionary<Tag, float> CopyDictionary(Dictionary<Tag, float> source)
-        {
-            Dictionary<Tag, float> copy = new Dictionary<Tag, float>();
-            if (source == null)
-            {
-                return copy;
-            }
-
-            foreach (KeyValuePair<Tag, float> pair in source)
-            {
-                copy[pair.Key] = pair.Value;
-            }
-
-            return copy;
-        }
-
         private static void InvalidateReservationSnapshots()
         {
             ReservationSnapshotsByWorld.Clear();
         }
 
-        private static List<GameObject> GetReservedItems(Storage storage)
+        private static void FillReservedItems(Storage storage, List<GameObject> items)
         {
-            List<GameObject> items = new List<GameObject>();
+            items.Clear();
             if (storage?.items == null)
             {
-                return items;
+                return;
             }
 
             foreach (GameObject item in storage.items)
@@ -415,7 +359,6 @@ namespace StorageNetwork.Services
                 }
             }
 
-            return items;
         }
 
         private static float GetReservedAmount(Storage storage, Tag tag)
@@ -467,7 +410,7 @@ namespace StorageNetwork.Services
             return allowedTags == null || allowedTags.Count == 0 || allowedTags.Contains(tag);
         }
 
-        private static HashSet<Tag> BuildAllowedTagSet(IEnumerable<Tag> tags)
+        private static HashSet<Tag> BuildAllowedTagSet(IEnumerable<Tag> tags, HashSet<Tag> workspace)
         {
             if (tags == null)
             {
@@ -480,7 +423,8 @@ namespace StorageNetwork.Services
                 return allowed;
             }
 
-            allowed = new HashSet<Tag>();
+            allowed = workspace;
+            allowed.Clear();
             foreach (Tag tag in tags)
             {
                 if (tag != Tag.Invalid)
@@ -506,6 +450,37 @@ namespace StorageNetwork.Services
         private static float GetDictionaryValue(Dictionary<Tag, float> values, Tag tag)
         {
             return values != null && values.TryGetValue(tag, out float value) ? value : 0f;
+        }
+
+        internal static void ResetRuntimeState()
+        {
+            NextTryByPort.Clear();
+            PlantingDemandSnapshotsByWorld.Clear();
+            ReservationSnapshotsByWorld.Clear();
+            Workspaces.Clear();
+        }
+
+        private static FarmingWorkspace RentWorkspace()
+        {
+            return Workspaces.Count == 0 ? new FarmingWorkspace() : Workspaces.Pop();
+        }
+
+        private static void ReturnWorkspace(FarmingWorkspace workspace)
+        {
+            workspace.Items.Clear();
+            workspace.Kept.Clear();
+            workspace.Allowed.Clear();
+            // Bound retained memory even after deeply nested native callbacks.
+            if (Workspaces.Count < 4 && workspace.Items.Capacity <= 4096 &&
+                workspace.Kept.EnsureCapacity(0) <= 4096 && workspace.Allowed.EnsureCapacity(0) <= 4096)
+                Workspaces.Push(workspace);
+        }
+
+        private sealed class FarmingWorkspace
+        {
+            public readonly List<GameObject> Items = new List<GameObject>();
+            public readonly Dictionary<Tag, float> Kept = new Dictionary<Tag, float>();
+            public readonly HashSet<Tag> Allowed = new HashSet<Tag>();
         }
 
         private sealed class PlantingDemandSnapshot
@@ -543,8 +518,8 @@ namespace StorageNetwork.Services
 
             public float CreatedAt { get; }
 
-            public Dictionary<int, Dictionary<Tag, float>> EarlierReservedByPortId { get; } =
-                new Dictionary<int, Dictionary<Tag, float>>();
+            public StorageNetworkSparsePrefixIndex<Tag> Prefix { get; } =
+                new StorageNetworkSparsePrefixIndex<Tag>();
         }
     }
 }

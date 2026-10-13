@@ -104,6 +104,7 @@ namespace UnityEngine
     {
         public static float unscaledTime { get; set; }
         public static int frameCount { get; set; }
+        public static float time { get; set; }
     }
 
     internal static class Mathf
@@ -113,6 +114,7 @@ namespace UnityEngine
         public static int CeilToInt(float value) => (int)Math.Ceiling(value);
 
         public static float Max(float left, float right) => Math.Max(left, right);
+        public static float Min(float left, float right) => Math.Min(left, right);
     }
 
     internal static class Debug

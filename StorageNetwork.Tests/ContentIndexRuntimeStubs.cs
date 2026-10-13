@@ -35,10 +35,10 @@ internal static class ElementLoader
         new Element { IsLiquid = hash == SimHashes.Water, IsGas = hash == SimHashes.Oxygen };
 }
 internal sealed class PrimaryElement { public float Mass, Temperature = 300f; public SimHashes ElementID; }
-internal sealed class Pickupable { public float TotalAmount; }
+internal sealed partial class Pickupable { public float TotalAmount; public GameObject gameObject; }
 internal sealed class Edible { public string FoodID; public float Calories, Units; }
 internal sealed class PlantableSeed { }
-internal sealed class KPrefabID
+internal sealed partial class KPrefabID
 {
     public const int InvalidInstanceID = -1;
     public int InstanceID;
@@ -115,13 +115,13 @@ namespace StorageNetwork.Core
 }
 namespace StorageNetwork.Services
 {
-    internal static class StorageTargetSelector
+    internal static partial class StorageTargetSelector
     {
         public static int GetObjectWorldId(GameObject obj) => obj.WorldId;
         public static void InvalidateOutputTargetCache() { }
         public static void NotifyTransferMutation(Storage s, StorageItemUtility.StorageMatchTags tags, float amount, float mass) { }
     }
-    internal static class StorageItemUtility
+    internal static partial class StorageItemUtility
     {
         public static int GetStorageInstanceId(Storage storage) => storage.InstanceId;
         public static StorageMatchTags GetStorageMatchTagsNonAlloc(GameObject item) => item.MatchTags;

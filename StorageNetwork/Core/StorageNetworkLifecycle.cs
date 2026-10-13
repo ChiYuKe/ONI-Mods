@@ -25,6 +25,7 @@ namespace StorageNetwork.Core
             StorageNetworkModInfoResolver.ResetRuntimeState();
             StorageNetworkInterfaceResolver.ResetRuntimeState();
             StorageNetworkInputTargetReservationService.ResetRuntimeState();
+            StorageNetworkFarmingSupplyService.ResetRuntimeState();
             StorageNetworkRocketRelayService.ResetRuntimeState();
             StorageNetworkPowerService.InvalidateAggregate();
             StorageNetworkPowerOverlayBattery.ResetRuntimeState();
