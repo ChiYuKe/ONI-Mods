@@ -102,4 +102,3 @@ $manifestPath = Join-Path $destinationRoot ($destinationBaseName + '.benchmark.j
 $manifest | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $manifestPath -Encoding utf8
 
 $manifest
-

@@ -27,6 +27,9 @@ function Read-Reports([string[]] $paths) {
         if ($report.SchemaVersion -ne 1 -or $report.SkipWindows -lt 2 -or @($report.Windows).Count -lt 5) {
             throw "Insufficient warmup/windows or incompatible report: $path"
         }
+        if ($null -ne $report.SessionErrorCount -and $report.SessionErrorCount -gt 0) {
+            throw "Profiler session contains mod errors/shadow mismatches: $path"
+        }
         foreach ($window in $report.Windows) {
             if ($null -eq $window.ModP95Ms -or $null -eq $window.ModP99Ms -or $null -eq $window.ActivePorts -or $window.ActivePorts -lt 0) {
                 throw "Missing CPU/workload metrics: $path"

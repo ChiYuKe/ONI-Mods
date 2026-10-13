@@ -39,3 +39,27 @@ pwsh -NoProfile -File .\StorageNetwork.Tests\AnalyzeFrameProfile.ps1 `
 For a visible main/category panel run, also pass `-RequireMainPanel`,
 `-RequireCategorySummary`, `-MaxLayoutCalls 0`, and
 `-MaxWorldSnapshotRebuilds 0`.
+
+Algorithm optimization results and pending game benchmarks are recorded in
+`ALGORITHM_OPTIMIZATION.md`. The full gate intentionally still reports the
+pre-existing global Sprite compatibility scan; its rule has not been relaxed.
+
+Run production-linked runtime tests independently of source contracts:
+
+```powershell
+dotnet run --project .\StorageNetwork.Tests\StorageNetwork.Tests.csproj -c Release -- --runtime-only
+```
+
+Run all deterministic/runtime/source-contract checks without the static scan gate:
+
+```powershell
+dotnet run --project .\StorageNetwork.Tests\StorageNetwork.Tests.csproj -c Release
+```
+
+`AnalyzeFrameProfile.ps1 -OutputJson <path>` exports selected CPU, allocation,
+GC and algorithm operation metrics. Use `CompareFrameProfiles.ps1` with three
+independent reports per version to check the relative performance targets.
+`VerifyProfileComparison.ps1` tests this pipeline with explicitly synthetic logs.
+`VerifyLogicMaterialSerialization.ps1` verifies the actual compiled mod against a
+JSON fixture exported from the pre-optimization DLL; do not regenerate the fixture
+merely to hide a serialization mismatch.

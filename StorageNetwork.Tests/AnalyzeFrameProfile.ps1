@@ -208,6 +208,21 @@ if ($sessionErrors.Count -gt 0) {
     $failures.Add("Latest profiler session contains $($sessionErrors.Count) StorageNetwork error/mismatch lines.")
 }
 
+if (-not [string]::IsNullOrWhiteSpace($OutputJson)) {
+    [pscustomobject]@{
+        SchemaVersion = 1
+        AcceptancePassed = $failures.Count -eq 0
+        AcceptanceFailures = @($failures)
+        SessionErrorCount = $sessionErrors.Count
+        LogPath = $resolvedLog
+        SkipWindows = $SkipWindows
+        MinimumWindows = $MinimumWindows
+        RequireMainPanel = [bool]$RequireMainPanel
+        RequireCategorySummary = [bool]$RequireCategorySummary
+        Windows = $selected
+    } | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $OutputJson -Encoding utf8
+}
+
 $selected | Select-Object Timestamp,ModP95Ms,ModP99Ms,ModMaxMs,ActivePorts,WorldSnapshotRebuilds,LayoutCalls | Format-Table -AutoSize
 if ($failures.Count -gt 0) {
     foreach ($failure in $failures) {
@@ -217,15 +232,3 @@ if ($failures.Count -gt 0) {
 }
 
 Write-Output "Frame-profile acceptance passed for $($selected.Count) windows."
-
-if (-not [string]::IsNullOrWhiteSpace($OutputJson)) {
-    [pscustomobject]@{
-        SchemaVersion = 1
-        LogPath = $resolvedLog
-        SkipWindows = $SkipWindows
-        MinimumWindows = $MinimumWindows
-        RequireMainPanel = [bool]$RequireMainPanel
-        RequireCategorySummary = [bool]$RequireCategorySummary
-        Windows = $selected
-    } | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $OutputJson -Encoding utf8
-}

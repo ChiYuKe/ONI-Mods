@@ -36,4 +36,15 @@ $rejected = $false
 try { & $compare -BaselineReports @($baseline[0], $baseline[0], $baseline[0]) -CandidateReports $candidate | Out-Null }
 catch { $rejected = $_.Exception.Message -match 'independent run' }
 if (-not $rejected) { throw 'Duplicate reports were not rejected.' }
+$highLog = Join-Path $testDirectory 'over-limit.synthetic.log'
+$highJson = Join-Path $testDirectory 'over-limit.synthetic.json'
+(Get-Content -Raw -LiteralPath (Join-Path $testDirectory 'baseline-0.synthetic.log')).Replace('p95=1.000ms', 'p95=5.000ms') |
+    Set-Content -LiteralPath $highLog -Encoding utf8
+$rejected = $false
+try { & (Join-Path $PSScriptRoot 'AnalyzeFrameProfile.ps1') -LogPath $highLog -OutputJson $highJson 2>$null | Out-Null }
+catch { $rejected = $_.Exception.Message -match 'frame-profile acceptance failures' }
+$highReport = Get-Content -Raw -LiteralPath $highJson | ConvertFrom-Json
+if (-not $rejected -or $highReport.AcceptancePassed -or $highReport.Windows.Count -ne 5) {
+    throw 'Over-limit measurements must be exported while retaining a failed acceptance result.'
+}
 Write-Output 'Profile parser/comparison tests passed using synthetic data; this is not a game benchmark.'
