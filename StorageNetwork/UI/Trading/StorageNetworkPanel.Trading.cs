@@ -457,7 +457,7 @@ namespace StorageNetwork.UI
             SetTradingLineHeight(name, 22);
             TextMeshProUGUI inventory = TradingLabel(textColumn.transform, "", 0);
             inventory.color = StorageNetworkPanelPalette.MutedText;
-            SetTradingLineHeight(inventory, 34);
+            SetTradingLineHeight(inventory, 38);
             inventory.maxVisibleLines = 2;
             inventory.fontSize = 11;
             TextMeshProUGUI prices = TradingLabel(row.transform, "", 150);
@@ -544,8 +544,8 @@ namespace StorageNetwork.UI
         private GameObject CreateTradingReceiptRow(TradingReceipt receipt)
         {
             GameObject row = CreateBox("Receipt" + receipt.Id, tradingHistoryContent, StorageNetworkPanelPalette.CardBackground);
-            row.AddComponent<LayoutElement>().minHeight = 132;
-            row.GetComponent<LayoutElement>().preferredHeight = 132;
+            row.AddComponent<LayoutElement>().minHeight = 144;
+            row.GetComponent<LayoutElement>().preferredHeight = 144;
             row.AddComponent<RectMask2D>();
             Color amountColor = receipt.Buy ? StorageNetworkPanelPalette.DangerStatus : StorageNetworkPanelPalette.PositiveStatus;
             GameObject accent = CreatePlainImage("DirectionAccent", row.transform, amountColor);
@@ -567,11 +567,11 @@ namespace StorageNetwork.UI
             icon.rectTransform().pivot = new Vector2(0, 1);
             icon.rectTransform().anchoredPosition = new Vector2(10, -8);
             icon.rectTransform().sizeDelta = new Vector2(36, 36);
-            ReceiptLine(row.transform, "Name", ColoredTradingText(receipt.Buy ? "买入" : "卖出", amountColor) + "  <b>" + receipt.GoodName + "</b>", 54, 8, 20, 13, StorageNetworkPanelPalette.HeadingText);
-            ReceiptLine(row.transform, "Quantity", $"{receipt.Amount:#,0.###} {(receipt.ByUnit ? "件" : "kg")} · 单价 ¥{receipt.UnitPrice:0.00}", 54, 30, 18, 10, StorageNetworkPanelPalette.MetricAccent);
-            ReceiptLine(row.transform, "Total", $"<b>{(receipt.Buy ? "−" : "+")}¥{receipt.Total:#,0.#####}</b>", 10, 52, 24, 16, amountColor);
-            ReceiptLine(row.transform, "Balance", $"成交后余额 ¥{receipt.BalanceAfter:#,0.#####}", 10, 78, 16, 10, StorageNetworkPanelPalette.NeutralStatus);
-            ReceiptLine(row.transform, "Context", $"#{receipt.Id:0000} · 第 {receipt.Cycle + 1:0.00} 周期\n{StorageNetworkTradingState.SpecialtyName(receipt.Specialty)} #{receipt.SupplierId} · {StorageNetworkWorldDisplay.GetWorldName(receipt.WorldId)}", 10, 98, 28, 10, StorageNetworkPanelPalette.MutedText);
+            ReceiptLine(row.transform, "Name", ColoredTradingText(receipt.Buy ? "买入" : "卖出", amountColor) + "  <b>" + receipt.GoodName + "</b>", 54, 8, 22, 13, StorageNetworkPanelPalette.HeadingText);
+            ReceiptLine(row.transform, "Quantity", $"{receipt.Amount:#,0.###} {(receipt.ByUnit ? "件" : "kg")} · 单价 ¥{receipt.UnitPrice:0.00}", 54, 32, 18, 10, StorageNetworkPanelPalette.MetricAccent);
+            ReceiptLine(row.transform, "Total", $"<b>{(receipt.Buy ? "−" : "+")}¥{receipt.Total:#,0.#####}</b>", 10, 54, 26, 16, amountColor);
+            ReceiptLine(row.transform, "Balance", $"成交后余额 ¥{receipt.BalanceAfter:#,0.#####}", 10, 82, 18, 10, StorageNetworkPanelPalette.NeutralStatus);
+            ReceiptLine(row.transform, "Context", $"#{receipt.Id:0000} · 第 {receipt.Cycle + 1:0.00} 周期\n{StorageNetworkTradingState.SpecialtyName(receipt.Specialty)} #{receipt.SupplierId} · {StorageNetworkWorldDisplay.GetWorldName(receipt.WorldId)}", 10, 102, 34, 10, StorageNetworkPanelPalette.MutedText);
             return row;
         }
 
