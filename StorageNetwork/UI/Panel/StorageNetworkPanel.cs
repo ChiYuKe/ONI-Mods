@@ -147,6 +147,7 @@ namespace StorageNetwork.UI
 
             UpdatePanelDrag();
             RunDeferredMainLayout();
+            RunDeferredOrderLayout();
             float deltaTime = Time.unscaledDeltaTime;
             ProcessSearchDebounces(deltaTime);
             UpdateOrderPanelAutoRefresh(deltaTime);

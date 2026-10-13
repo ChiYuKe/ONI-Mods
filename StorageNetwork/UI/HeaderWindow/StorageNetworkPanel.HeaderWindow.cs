@@ -106,6 +106,8 @@ namespace StorageNetwork.UI
                 CloseOrderTrackingDetail();
                 CloseOrderWorldDropdown();
                 headerWindowRoot.SetActive(false);
+                deferredOrderLayoutRoot = null;
+                deferredOrderLayoutFrame = -1;
                 boundOrderProductionCenter = null;
                 productionOrderService.SetOrderCenterScope(null);
 

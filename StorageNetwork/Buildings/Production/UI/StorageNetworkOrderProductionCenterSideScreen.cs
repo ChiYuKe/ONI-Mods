@@ -1,6 +1,7 @@
 using System.Linq;
 using StorageNetwork.Components;
 using StorageNetwork.Core;
+using StorageNetwork.Services;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -25,6 +26,17 @@ namespace StorageNetwork.UI
         private readonly KImage[] prefabProgressFills = new KImage[3];
         private readonly KImage[] prefabProgressIcons = new KImage[3];
         private float refreshTimer;
+        private bool forceLiveRefresh = true;
+        private string lastLocaleCode;
+        private readonly string[] slotTooltipTexts = new string[3];
+        private readonly ComplexRecipe[] progressRecipes = new ComplexRecipe[3];
+
+        protected override void OnCmpEnable()
+        {
+            base.OnCmpEnable();
+            forceLiveRefresh = true;
+            refreshTimer = 0.5f;
+        }
 
         public StorageNetworkOrderProductionCenterSideScreen()
         {
@@ -46,6 +58,7 @@ namespace StorageNetwork.UI
         public override void SetTarget(GameObject target)
         {
             base.SetTarget(target);
+            forceLiveRefresh = true;
             center = target != null ? target.GetComponent<StorageNetworkOrderProductionCenter>() : null;
             EnsureBuilt();
             Refresh();
@@ -54,6 +67,9 @@ namespace StorageNetwork.UI
         public override void ClearTarget()
         {
             center = null;
+            forceLiveRefresh = true;
+            System.Array.Clear(slotTooltipTexts, 0, slotTooltipTexts.Length);
+            System.Array.Clear(progressRecipes, 0, progressRecipes.Length);
             base.ClearTarget();
         }
 
@@ -431,25 +447,46 @@ namespace StorageNetwork.UI
                 return;
             }
 
+            string localeCode = Localization.GetLocale()?.Code ?? "en";
+            if (lastLocaleCode != localeCode)
+            {
+                forceLiveRefresh = true;
+                lastLocaleCode = localeCode;
+            }
             SetButtonInteractable(engraveButton, center.HasBlankDiskSlot);
             SetButtonInteractable(orderButton, true);
             for (int i = 0; i < slotLabels.Length; i++)
             {
                 StorageNetworkOrderProductionCenter.EngravingDiskSlot slot = i < center.DiskSlots.Count ? center.DiskSlots[i] : null;
                 bool waitingDelivery = center.IsSlotWaitingForDiskDelivery(i);
-                slotLabels[i].text = string.Format("{0}. {1}", i + 1, GetSlotLabel(slot, waitingDelivery));
-                slotLabels[i].ForceMeshUpdate(true);
-                slotLabels[i].gameObject.GetComponent<ToolTip>()?.SetSimpleTooltip(GetSlotTooltip(slot, waitingDelivery));
-                slotButtonLabels[i].text = waitingDelivery
+                SetLiveText(slotLabels[i], string.Format("{0}. {1}", i + 1, GetSlotLabel(slot, waitingDelivery)));
+                string tooltip = GetSlotTooltip(slot, waitingDelivery);
+                if (forceLiveRefresh || slotTooltipTexts[i] != tooltip)
+                {
+                    slotLabels[i].gameObject.GetComponent<ToolTip>()?.SetSimpleTooltip(tooltip);
+                    slotTooltipTexts[i] = tooltip;
+                }
+                string buttonText = waitingDelivery
                     ? Loc.Get(Loc.UI.STORAGE_NETWORK.ORDER_CENTER_DISK_CANCEL_DELIVERY)
                     : slot != null && slot.HasDisk
                     ? Loc.Get(Loc.UI.STORAGE_NETWORK.ORDER_CENTER_DISK_EJECT)
                     : Loc.Get(Loc.UI.STORAGE_NETWORK.ORDER_CENTER_DISK_INSERT);
-                slotButtonLabels[i].ForceMeshUpdate(true);
+                SetLiveText(slotButtonLabels[i], buttonText);
                 SetButtonInteractable(slotButtons[i], true);
             }
 
             RefreshPrefabProgressBars();
+            forceLiveRefresh = false;
+        }
+
+        private void SetLiveText(TextMeshProUGUI label, string text)
+        {
+            if (label != null && (forceLiveRefresh || label.text != text))
+            {
+                label.text = text;
+                label.ForceMeshUpdate(true);
+                StorageNetworkPerformanceCounters.RecordTextMeshRebuilds();
+            }
         }
 
         private void RefreshPrefabProgressBars()
@@ -465,14 +502,14 @@ namespace StorageNetwork.UI
                     : null;
                 ComplexRecipe recipe = GetCoreRecipe(core);
                 bool hasRecipe = recipe != null;
-                if (prefabProgressRows[i] != null)
+                if (prefabProgressRows[i] != null && (forceLiveRefresh || prefabProgressRows[i].activeSelf != hasRecipe))
                 {
                     prefabProgressRows[i].SetActive(hasRecipe);
                 }
 
                 KImage fill = prefabProgressFills[i];
                 float progress = hasRecipe && core != null ? Mathf.Clamp01(core.Progress) : 0f;
-                if (fill != null)
+                if (fill != null && (forceLiveRefresh || fill.fillAmount != progress))
                 {
                     fill.type = Image.Type.Filled;
                     fill.fillMethod = Image.FillMethod.Horizontal;
@@ -481,11 +518,12 @@ namespace StorageNetwork.UI
                 }
 
                 KImage icon = prefabProgressIcons[i];
-                if (icon != null && hasRecipe)
+                if (icon != null && hasRecipe && (forceLiveRefresh || progressRecipes[i] != recipe))
                 {
                     ApplyRecipeIcon(icon, recipe);
                     icon.raycastTarget = false;
                 }
+                progressRecipes[i] = recipe;
             }
         }
 
@@ -513,19 +551,21 @@ namespace StorageNetwork.UI
                 : null;
         }
 
-        private static void SetButtonInteractable(KButton button, bool interactable)
+        private void SetButtonInteractable(KButton button, bool interactable)
         {
             if (button == null)
             {
                 return;
             }
 
+            if (!forceLiveRefresh && button.isInteractable == interactable) return;
             button.isInteractable = interactable;
             KImage image = button.bgImage ?? button.GetComponent<KImage>();
             if (image != null)
             {
-                image.raycastTarget = true;
-                image.ColorState = interactable ? KImage.ColorSelector.Inactive : KImage.ColorSelector.Disabled;
+                if (!image.raycastTarget) image.raycastTarget = true;
+                KImage.ColorSelector state = interactable ? KImage.ColorSelector.Inactive : KImage.ColorSelector.Disabled;
+                image.ColorState = state;
             }
         }
 

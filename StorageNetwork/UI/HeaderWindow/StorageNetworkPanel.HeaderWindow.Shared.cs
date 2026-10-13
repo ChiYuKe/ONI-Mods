@@ -199,22 +199,31 @@ namespace StorageNetwork.UI
             }
         }
 
-        private static void ForceOrderLayout(RectTransform content)
+        private RectTransform deferredOrderLayoutRoot;
+        private int deferredOrderLayoutFrame = -1;
+
+        private void ForceOrderLayout(RectTransform content)
         {
-            if (content == null)
-            {
-                return;
-            }
+            if (content == null) return;
+            RectTransform root = headerWindowRoot != null
+                ? headerWindowRoot.GetComponent<RectTransform>()
+                : content.parent as RectTransform ?? content;
+            // Native canvas scheduling handles late same-frame geometry. The
+            // explicit pass on the next update coalesces both child structures.
+            LayoutRebuilder.MarkLayoutForRebuild(root);
+            deferredOrderLayoutRoot = root;
+            if (deferredOrderLayoutFrame < 0) deferredOrderLayoutFrame = Time.frameCount + 1;
+        }
 
-            Canvas.ForceUpdateCanvases();
-            LayoutRebuilder.ForceRebuildLayoutImmediate(content);
-            RectTransform parent = content.parent as RectTransform;
-            if (parent != null)
-            {
-                LayoutRebuilder.ForceRebuildLayoutImmediate(parent);
-            }
-
-            Canvas.ForceUpdateCanvases();
+        private void RunDeferredOrderLayout()
+        {
+            if (deferredOrderLayoutFrame < 0 || Time.frameCount < deferredOrderLayoutFrame) return;
+            RectTransform root = deferredOrderLayoutRoot;
+            deferredOrderLayoutRoot = null;
+            deferredOrderLayoutFrame = -1;
+            if (root == null || !root.gameObject.activeInHierarchy) return;
+            using var scope = StorageNetworkFrameProfileTool.BeginWork(StorageNetworkPerformanceArea.Layout);
+            LayoutRebuilder.ForceRebuildLayoutImmediate(root);
         }
 
         private static void AddIcon(Transform parent, Sprite sprite, float size)
