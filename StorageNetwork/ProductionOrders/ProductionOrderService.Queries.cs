@@ -98,6 +98,32 @@ namespace StorageNetwork.ProductionOrders
             return Mathf.Max(0f, GetNetworkRawAmount(tag) - GetReservedAmount(tag, ignoredReservationOrderKey));
         }
 
+        internal static float GetTradingReservedAmount(Tag tag, IReadOnlyList<Storage> sources)
+        {
+            EnsureOrdersLoaded();
+            float reserved = 0f;
+            foreach (ProductionOrderRecord order in ActiveOrders.Values)
+            {
+                if (!IsOrderActive(order)) continue;
+                if (order.MaterialLeases.Count == 0)
+                {
+                    reserved += order.GetReservedAmount(tag);
+                    continue;
+                }
+                foreach (ProductionOrderMaterialLease lease in order.MaterialLeases)
+                {
+                    if (lease.Material != tag) continue;
+                    foreach (Storage source in sources)
+                        if (ProductionOrderCenterCatalog.GetInstanceId(source) == lease.SourceStorageInstanceId)
+                        {
+                            reserved += lease.Amount;
+                            break;
+                        }
+                }
+            }
+            return reserved;
+        }
+
         public float GetNetworkRawAmount(Tag tag)
         {
             return networkInventory.GetRawAmount(tag);
