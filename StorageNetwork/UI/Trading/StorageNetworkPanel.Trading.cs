@@ -78,7 +78,6 @@ namespace StorageNetwork.UI
             tradingRoot = CreateBox("TradingMarket", transform, StorageNetworkPanelPalette.WindowBackground);
             tradingRoot.SetActive(false);
             ApplyThinBoxSprite(tradingRoot.GetComponent<Image>());
-            tradingRoot.AddComponent<RectMask2D>();
             // Match the main window: web_box, an 8px inset light content plate, then the inner surface.
             GameObject contentPlate = CreateBox("Content", tradingRoot.transform, StorageNetworkPanelPalette.ContentBackground);
             SetStretch(contentPlate.GetComponent<RectTransform>(), 8, 8, 8, 54);
@@ -180,7 +179,37 @@ namespace StorageNetwork.UI
             tradingStatus.maxVisibleLines = 2;
             Stretch(tradingStatus.rectTransform(), 10, 3);
 
+            AddTradingWindowBorder(scale);
             tradingRoot.SetActive(false);
+        }
+
+        private void AddTradingWindowBorder(float canvasScale)
+        {
+            // Draw inside the window bounds, after its contents, so neither a sprite's
+            // transparent edge nor viewport clipping can hide the outer black line.
+            float thickness = 1f / canvasScale;
+            AddTradingBorderEdge("BorderLeft", Vector2.zero, new Vector2(0, 1),
+                Vector2.zero, new Vector2(thickness, 0));
+            AddTradingBorderEdge("BorderRight", new Vector2(1, 0), Vector2.one,
+                new Vector2(-thickness, 0), Vector2.zero);
+            AddTradingBorderEdge("BorderBottom", Vector2.zero, new Vector2(1, 0),
+                Vector2.zero, new Vector2(0, thickness));
+            AddTradingBorderEdge("BorderTop", new Vector2(0, 1), Vector2.one,
+                new Vector2(0, -thickness), Vector2.zero);
+        }
+
+        private void AddTradingBorderEdge(string name, Vector2 anchorMin, Vector2 anchorMax,
+            Vector2 offsetMin, Vector2 offsetMax)
+        {
+            GameObject edge = CreatePlainImage(name, tradingRoot.transform, Color.black);
+            Image image = edge.GetComponent<Image>();
+            image.type = Image.Type.Simple;
+            image.raycastTarget = false;
+            RectTransform rect = edge.GetComponent<RectTransform>();
+            rect.anchorMin = anchorMin;
+            rect.anchorMax = anchorMax;
+            rect.offsetMin = offsetMin;
+            rect.offsetMax = offsetMax;
         }
 
         private void ShowTradingAmountDialog()
