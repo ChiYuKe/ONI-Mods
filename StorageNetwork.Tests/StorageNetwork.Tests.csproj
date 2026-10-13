@@ -6,6 +6,7 @@
     <Nullable>disable</Nullable>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="..\StorageNetwork\Trading\TradingMarket.cs" Link="TradingMarket.cs" />
     <Compile Include="..\StorageNetwork\Services\Supply\StorageNetworkFarmingSupplyService.cs" Link="StorageNetworkFarmingSupplyService.cs" />
     <Compile Include="..\StorageNetwork\Services\Inventory\StorageNetworkContentIndexService.cs" Link="StorageNetworkContentIndexService.cs" />
     <Compile Include="..\StorageNetwork\Services\Inventory\StorageNetworkAmountDelta.cs" Link="StorageNetworkAmountDelta.cs" />

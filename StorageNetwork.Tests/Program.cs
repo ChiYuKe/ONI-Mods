@@ -17,6 +17,7 @@ internal static class Program
         AlgorithmOptimizationChecks.Verify(Check);
         ContentIndexRuntimeChecks.Verify(Check);
         FarmingRuntimeChecks.Verify(Check);
+        TradingMarketChecks.Verify(Check);
         VerifyDebounceCoalescesRequests();
         VerifyDebounceCancellation();
         VerifyRingBufferKeepsNewestValues();
