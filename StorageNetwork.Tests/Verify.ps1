@@ -32,6 +32,7 @@ try {
     }
 
     & (Join-Path $PSScriptRoot 'VerifyProfileComparison.ps1')
+    & (Join-Path $PSScriptRoot 'VerifyLogicMaterialSerialization.ps1') -GameManagedDir $GameManagedDir
 
     & (Join-Path $PSScriptRoot 'VerifyStaticPerformance.ps1') `
         -RepositoryRoot $repositoryRoot

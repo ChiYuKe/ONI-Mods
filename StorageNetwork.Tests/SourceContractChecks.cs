@@ -687,6 +687,24 @@ internal static class SourceContractChecks
               evaluateRuntimeNumber.Contains("GetNetworkItemAmountKg()", StringComparison.Ordinal) &&
               !evaluateRuntimeNumber.Contains("ConditionItemKey", StringComparison.Ordinal),
             "Logic DIY compiles the selected material Tag outside the integer-node tick evaluator");
+        string nodeMaterialQuery = ExtractMethod(logicDiy,
+            "private float GetNetworkItemAmountKg(RuntimeBlueprintNode node)");
+        string nodeMaterialSetter = ExtractMethod(logicDiy, "public string SelectedMaterialKey");
+        check(nodeMaterialQuery.Contains("node.SelectedMaterialTag", StringComparison.Ordinal) &&
+              !nodeMaterialQuery.Contains("new Tag", StringComparison.Ordinal) &&
+              nodeMaterialSetter.Contains("new Tag(value)", StringComparison.Ordinal),
+            "per-node material selections compile on assignment, including edits to an existing blueprint node");
+        string sideScreen = Read(repositoryRoot,
+            "StorageNetwork/Buildings/Production/UI/StorageNetworkOrderProductionCenterSideScreen.cs");
+        string sideEnable = ExtractMethod(sideScreen, "protected override void OnCmpEnable()");
+        string liveSideRefresh = ExtractMethod(sideScreen, "private void RefreshPrefabPanel()");
+        string liveSideText = ExtractMethod(sideScreen, "private void SetLiveText(");
+        check(sideEnable.Contains("base.OnCmpEnable()", StringComparison.Ordinal) &&
+              sideEnable.Contains("forceLiveRefresh = true", StringComparison.Ordinal) &&
+              liveSideRefresh.Contains("lastLocaleCode != localeCode", StringComparison.Ordinal) &&
+              !liveSideRefresh.Contains("ForceMeshUpdate", StringComparison.Ordinal) &&
+              liveSideText.Contains("label.text != text", StringComparison.Ordinal),
+            "side screen refresh preserves engine lifecycle and locale sync while skipping unchanged text meshes");
         string enrollableStructure = ExtractMethod(enrollableSignature,
             "public static string Build(");
         check(!ContainsAny(enrollableStructure,

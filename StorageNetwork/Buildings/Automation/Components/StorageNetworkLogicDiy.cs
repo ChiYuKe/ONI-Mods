@@ -121,6 +121,7 @@ namespace StorageNetwork.Components
         private readonly Dictionary<int, Guid> signalForwardStatusHandleByTarget = new Dictionary<int, Guid>();
         private float runtimeEvalDt;
         private Tag compiledConditionItemTag = Tag.Invalid;
+        private string compiledConditionItemKey;
         private bool compiledConditionItemTagValid;
         private readonly LogicDiyBlueprintCodec blueprintCodec = new LogicDiyBlueprintCodec();
         private RuntimeBlueprint compiledBlueprint;
@@ -1676,25 +1677,19 @@ namespace StorageNetwork.Components
 
         private float GetNetworkItemAmountKg()
         {
-            return GetNetworkItemAmountKg(null);
+            if (!compiledConditionItemTagValid) return 0f;
+            int worldId = gameObject != null ? gameObject.GetMyWorldId() : -1;
+            return StorageNetworkInventoryIndexService.GetMass(
+                worldId, true, compiledConditionItemTag, allowStaleContent: true);
         }
 
         private float GetNetworkItemAmountKg(RuntimeBlueprintNode node)
         {
-            string itemKey = !string.IsNullOrEmpty(node?.SelectedMaterialKey)
-                ? node.SelectedMaterialKey
-                : ConditionItemKey;
-            if (string.IsNullOrEmpty(itemKey))
-            {
-                return 0f;
-            }
-
+            if (node == null || !node.SelectedMaterialTag.IsValid)
+                return GetNetworkItemAmountKg();
             int worldId = gameObject != null ? gameObject.GetMyWorldId() : -1;
             return StorageNetworkInventoryIndexService.GetMass(
-                worldId,
-                true,
-                new Tag(itemKey),
-                allowStaleContent: true);
+                worldId, true, node.SelectedMaterialTag, allowStaleContent: true);
         }
 
         private bool HasMaterialSelection(RuntimeBlueprintNode node)
@@ -1707,6 +1702,7 @@ namespace StorageNetwork.Components
 
         private void CompileConditionItemTag()
         {
+            compiledConditionItemKey = ConditionItemKey;
             compiledConditionItemTagValid = !string.IsNullOrEmpty(ConditionItemKey);
             compiledConditionItemTag = compiledConditionItemTagValid
                 ? new Tag(ConditionItemKey)
@@ -2360,6 +2356,9 @@ namespace StorageNetwork.Components
 
         private void BeginRuntimeEvaluationPass()
         {
+            // Preserve direct writes to the serialized public field. Compile only
+            // on a value change, before any integer-node evaluation takes place.
+            if (compiledConditionItemKey != ConditionItemKey) CompileConditionItemTag();
             if (runtimeEvalGeneration == int.MaxValue)
             {
                 Array.Clear(runtimeEvalGenerationByOutput, 0, runtimeEvalGenerationByOutput.Length);
@@ -2873,7 +2872,19 @@ namespace StorageNetwork.Components
 
             public string Module { get; set; }
 
-            public string SelectedMaterialKey { get; set; }
+            private string selectedMaterialKey;
+            internal Tag SelectedMaterialTag { get; private set; } = Tag.Invalid;
+
+            public string SelectedMaterialKey
+            {
+                get => selectedMaterialKey;
+                set
+                {
+                    if (selectedMaterialKey == value) return;
+                    selectedMaterialKey = value;
+                    SelectedMaterialTag = string.IsNullOrEmpty(value) ? Tag.Invalid : new Tag(value);
+                }
+            }
 
             public float IntervalSeconds { get; set; }
 
