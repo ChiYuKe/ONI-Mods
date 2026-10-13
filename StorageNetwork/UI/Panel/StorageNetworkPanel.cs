@@ -151,6 +151,7 @@ namespace StorageNetwork.UI
             float deltaTime = Time.unscaledDeltaTime;
             ProcessSearchDebounces(deltaTime);
             UpdateOrderPanelAutoRefresh(deltaTime);
+            UpdateTradingWindow(deltaTime);
 
             if (windowRect == null || !windowRect.gameObject.activeInHierarchy)
             {

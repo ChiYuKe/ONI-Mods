@@ -180,6 +180,10 @@ namespace StorageNetwork.UI
             {
                 instance.CloseEnrollableWindow();
             }
+            else if (instance.tradingRoot != null && instance.tradingRoot.activeSelf)
+            {
+                instance.CloseTradingWindow();
+            }
             else if (instance.headerWindowRoot != null && instance.headerWindowRoot.activeSelf)
             {
                 instance.CloseHeaderWindow();
@@ -302,6 +306,7 @@ namespace StorageNetwork.UI
                 ContainsScreenPoint(categorySummaryRoot, mousePosition) ||
                 ContainsScreenPoint(enrollableWindowRoot, mousePosition) ||
                 ContainsScreenPoint(headerWindowRoot, mousePosition) ||
+                ContainsScreenPoint(tradingRoot, mousePosition) ||
                 ContainsScreenPoint(modalRoot, mousePosition);
         }
 
@@ -330,6 +335,7 @@ namespace StorageNetwork.UI
 
         private void Close()
         {
+            CloseTradingWindow();
             CloseModal();
             CloseCategorySummaryPanel();
             CloseProductionSettingsPanel();
@@ -372,6 +378,11 @@ namespace StorageNetwork.UI
 
             if (e.TryConsume(global::Action.Escape))
             {
+                if (tradingRoot != null && tradingRoot.activeSelf)
+                {
+                    CloseTradingWindow();
+                    return;
+                }
                 if (enrollableWindowRoot != null && enrollableWindowRoot.activeSelf)
                 {
                     CloseEnrollableWindow();

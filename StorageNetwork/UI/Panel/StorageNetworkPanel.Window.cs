@@ -51,6 +51,13 @@ namespace StorageNetwork.UI
             ToolTip orderTooltip = orderButton.AddComponent<ToolTip>();
             orderTooltip.toolTip = Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CENTER_OPEN_TOOLTIP);
 
+            GameObject tradeButton = CreateGameButton("TradingButton", header.transform, "交易", ToggleTradingWindow);
+            RectTransform tradeRect = tradeButton.GetComponent<RectTransform>();
+            tradeRect.anchorMin = tradeRect.anchorMax = tradeRect.pivot = new Vector2(0f, 0.5f);
+            tradeRect.anchoredPosition = new Vector2(248f, 0f);
+            tradeRect.sizeDelta = new Vector2(72f, 22f);
+            tradeButton.AddComponent<ToolTip>().toolTip = "使用网络材料与供货商交易，赚取货币并购买材料和物品。";
+
             CreateHeaderAddonButtonPanel(window, header.transform);
 
             GameObject closeButton = CreateCloseIconButton("CloseButton", header.transform, Close);
@@ -168,8 +175,8 @@ namespace StorageNetwork.UI
             panelRect.anchorMin = new Vector2(0f, 0.5f);
             panelRect.anchorMax = new Vector2(1f, 0.5f);
             panelRect.pivot = new Vector2(0f, 0.5f);
-            panelRect.anchoredPosition = new Vector2(248f, 0f);
-            panelRect.offsetMin = new Vector2(248f, -11f);
+            panelRect.anchoredPosition = new Vector2(326f, 0f);
+            panelRect.offsetMin = new Vector2(326f, -11f);
             panelRect.offsetMax = new Vector2(-36f, 11f);
 
             HorizontalLayoutGroup layout = panel.AddComponent<HorizontalLayoutGroup>();
