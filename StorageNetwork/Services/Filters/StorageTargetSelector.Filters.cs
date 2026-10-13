@@ -479,7 +479,11 @@ namespace StorageNetwork.Services
 
         private static bool IsDiscoveredCategoryAccepting(Tag categoryTag, Tag itemTag)
         {
+            // Physical storage categories also cover materials the colony has not
+            // discovered yet (for example, a first delivery from a trader).
+            Element element = ElementLoader.FindElementByHash((SimHashes)itemTag.GetHash());
             return categoryTag == itemTag ||
+                   (element != null && element.HasTag(categoryTag)) ||
                    DiscoveredResources.Instance != null &&
                    DiscoveredResources.Instance.GetDiscoveredResourcesFromTag(categoryTag).Contains(itemTag);
         }
