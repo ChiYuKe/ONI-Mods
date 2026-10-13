@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\StorageNetwork\Services\Inventory\StorageNetworkContentIndexService.cs" Link="StorageNetworkContentIndexService.cs" />
+    <Compile Include="..\StorageNetwork\Services\Inventory\StorageNetworkAmountDelta.cs" Link="StorageNetworkAmountDelta.cs" />
+    <Compile Include="..\StorageNetwork\Services\Supply\StorageNetworkSparsePrefixIndex.cs" Link="StorageNetworkSparsePrefixIndex.cs" />
+    <Compile Include="..\StorageNetwork\Services\Diagnostics\StorageNetworkPerformanceCounters.cs" Link="StorageNetworkPerformanceCounters.cs" />
+    <Compile Include="..\StorageNetwork\Services\Diagnostics\StorageNetworkShadowValidationService.cs" Link="StorageNetworkShadowValidationService.cs" />
+    <Compile Include="..\StorageNetwork\UI\Common\StorageNetworkDebounceGate.cs" Link="StorageNetworkDebounceGate.cs" />
+    <Compile Include="..\StorageNetwork\UI\Common\StorageNetworkFixedRingBuffer.cs" Link="StorageNetworkFixedRingBuffer.cs" />
+    <Compile Include="..\StorageNetwork\UI\Common\StorageNetworkVirtualizedRange.cs" Link="StorageNetworkVirtualizedRange.cs" />
+    <Compile Include="..\StorageNetwork\UI\Panel\StorageNetworkPanelListSignature.cs" Link="StorageNetworkPanelListSignature.cs" />
+    <Compile Include="..\StorageNetwork\UI\Panel\CategorySummary\StorageNetworkCategorySummaryItemTotal.cs" Link="StorageNetworkCategorySummaryItemTotal.cs" />
+    <Compile Include="..\StorageNetwork\UI\Panel\CategorySummary\StorageNetworkCategorySummarySignature.cs" Link="StorageNetworkCategorySummarySignature.cs" />
+    <Compile Include="..\StorageNetwork\UI\Panel\CategorySummary\StorageNetworkCategorySummaryTrendSampler.cs" Link="StorageNetworkCategorySummaryTrendSampler.cs" />
+    <Compile Include="..\StorageNetwork\UI\Panel\Enrollable\StorageNetworkEnrollableWindowSignature.cs" Link="StorageNetworkEnrollableWindowSignature.cs" />
+  </ItemGroup>
+</Project>

@@ -275,7 +275,7 @@ namespace StorageNetwork.Services
                 }
             }
 
-            DirtyRecords.Remove(record);
+            RemoveDirtyRecord(record);
             ItemDetailDirtyRecords.Remove(record);
             Records.Remove(storage);
             unchecked
@@ -374,7 +374,9 @@ namespace StorageNetwork.Services
 
             StorageTargetSelector.InvalidateOutputTargetCache();
 
-            foreach (StorageContentRecord record in world.Records)
+            // MarkDirty can rehome a moved Storage and remove it from this world.
+            // World invalidation is a topology/fallback path, not a transfer hot path.
+            foreach (StorageContentRecord record in new List<StorageContentRecord>(world.Records))
             {
                 MarkDirty(record);
             }
@@ -424,7 +426,7 @@ namespace StorageNetwork.Services
                 return 0f;
             }
 
-            EnsureFresh(allowStaleContent);
+            EnsureFresh(allowStaleContent, worldId, includeRelatedWorlds);
             EnsureTransactionNativeBaseline(worldId, includeRelatedWorlds);
             float amount;
             if (forbiddenTags == null || forbiddenTags.Length == 0)
@@ -502,7 +504,7 @@ namespace StorageNetwork.Services
                 return default;
             }
 
-            EnsureFresh(allowStaleContent);
+            EnsureFresh(allowStaleContent, worldId, includeRelatedWorlds);
             EnsureTransactionNativeBaseline(worldId, includeRelatedWorlds);
             float storedKg = 0f;
             float capacityKg = 0f;
@@ -573,7 +575,7 @@ namespace StorageNetwork.Services
                 return false;
             }
 
-            EnsureFresh(false);
+            EnsureFresh(false, worldId, includeRelatedWorlds);
             EnsureTransactionNativeBaseline(worldId, includeRelatedWorlds);
             foreach (Tag tag in tags)
             {
@@ -614,7 +616,7 @@ namespace StorageNetwork.Services
                 return 0;
             }
 
-            EnsureFresh(false);
+            EnsureFresh(false, worldId, includeRelatedWorlds);
             EnsureItemDetailsFresh(worldId, includeRelatedWorlds);
             int count = 0;
             if (IncludesAllWorlds(includeRelatedWorlds))
@@ -667,7 +669,7 @@ namespace StorageNetwork.Services
                 return false;
             }
 
-            EnsureFresh(false);
+            EnsureFresh(false, worldId, includeRelatedWorlds);
             EnsureItemDetailsFresh(worldId, includeRelatedWorlds);
             if (IncludesAllWorlds(includeRelatedWorlds))
             {
@@ -725,7 +727,7 @@ namespace StorageNetwork.Services
                 return 0f;
             }
 
-            EnsureFresh(false);
+            EnsureFresh(false, worldId, includeRelatedWorlds);
             EnsureItemDetailsFresh(worldId, includeRelatedWorlds);
             float calories = 0f;
             if (IncludesAllWorlds(includeRelatedWorlds))
@@ -787,7 +789,7 @@ namespace StorageNetwork.Services
                 return;
             }
 
-            EnsureFresh(allowStaleContent);
+            EnsureFresh(allowStaleContent, worldId, includeRelatedWorlds);
             if (specificSource != null)
             {
                 if (TryGetUsableSource(
@@ -894,7 +896,7 @@ namespace StorageNetwork.Services
                 return 0f;
             }
 
-            EnsureFresh(allowStaleContent);
+            EnsureStorageFresh(storage, allowStaleContent);
             TransferTransactionContext transaction = transferTransaction;
             bool usePendingTransferView = !StorageNetworkPerformanceMode.LegacyFullScanEnabled;
             if (usePendingTransferView &&
@@ -908,7 +910,7 @@ namespace StorageNetwork.Services
             if (!Records.TryGetValue(storage, out StorageContentRecord record))
             {
                 Register(storage);
-                EnsureFresh(false);
+                EnsureStorageFresh(storage, false);
                 Records.TryGetValue(storage, out record);
             }
 
@@ -980,11 +982,11 @@ namespace StorageNetwork.Services
                 return false;
             }
 
-            EnsureFresh(allowStaleContent);
+            EnsureStorageFresh(storage, allowStaleContent);
             if (!Records.TryGetValue(storage, out StorageContentRecord record))
             {
                 Register(storage);
-                EnsureFresh(false);
+                EnsureStorageFresh(storage, false);
                 Records.TryGetValue(storage, out record);
             }
 
@@ -1028,7 +1030,7 @@ namespace StorageNetwork.Services
                 return 0f;
             }
 
-            EnsureFresh(allowStaleContent);
+            EnsureStorageFresh(storage, allowStaleContent);
             TransferTransactionContext transaction = transferTransaction;
             bool usePendingTransferView = !StorageNetworkPerformanceMode.LegacyFullScanEnabled;
             if (usePendingTransferView &&
@@ -1042,7 +1044,7 @@ namespace StorageNetwork.Services
             if (!Records.TryGetValue(storage, out StorageContentRecord record))
             {
                 Register(storage);
-                EnsureFresh(false);
+                EnsureStorageFresh(storage, false);
                 Records.TryGetValue(storage, out record);
             }
 
@@ -1118,7 +1120,7 @@ namespace StorageNetwork.Services
                 return;
             }
 
-            EnsureFresh(allowStaleContent);
+            EnsureFresh(allowStaleContent, worldId, includeRelatedWorlds);
             EnsureTransactionNativeBaseline(worldId, includeRelatedWorlds);
             if (IncludesAllWorlds(includeRelatedWorlds))
             {
@@ -1192,7 +1194,7 @@ namespace StorageNetwork.Services
                 return true;
             }
 
-            EnsureFresh(allowStaleContent);
+            EnsureRegistrySynchronized();
             int frame = Time.frameCount;
             for (int storageIndex = 0; storageIndex < storages.Count; storageIndex++)
             {
@@ -1202,10 +1204,11 @@ namespace StorageNetwork.Services
                     continue;
                 }
 
+                EnsureStorageFresh(storage, allowStaleContent);
                 if (!Records.TryGetValue(storage, out StorageContentRecord record))
                 {
                     Register(storage);
-                    EnsureFresh(false);
+                    EnsureStorageFresh(storage, false);
                     Records.TryGetValue(storage, out record);
                 }
 
@@ -1226,8 +1229,7 @@ namespace StorageNetwork.Services
                 if (record.ItemDetailsDirty &&
                     (!allowStaleContent || record.DirtyFrame != frame))
                 {
-                    DirtyRecords.Remove(record);
-                    RefreshRecord(record);
+                    RefreshItemDetails(record);
                 }
 
                 storedKg += record.StoredKg;
@@ -1265,8 +1267,8 @@ namespace StorageNetwork.Services
             }
 
             destination.Clear();
-            EnsureFresh(false);
-            EnsureItemDetailsFresh(worldId, includeRelatedWorlds: false);
+            EnsureFresh(false, worldId, false);
+            EnsureElementMassesFresh(worldId);
             if (!Worlds.TryGetValue(worldId, out WorldContentState world))
             {
                 return;
@@ -1295,11 +1297,11 @@ namespace StorageNetwork.Services
                 return true;
             }
 
-            EnsureFresh(false);
+            EnsureStorageFresh(storage, false);
             if (!Records.TryGetValue(storage, out StorageContentRecord record))
             {
                 Register(storage);
-                EnsureFresh(false);
+                EnsureStorageFresh(storage, false);
                 Records.TryGetValue(storage, out record);
             }
 
@@ -1308,10 +1310,9 @@ namespace StorageNetwork.Services
                 return false;
             }
 
-            if (record.ItemDetailsDirty)
+            if (record.ElementMassesDirty)
             {
-                DirtyRecords.Remove(record);
-                RefreshRecord(record);
+                RefreshElementMasses(record);
             }
 
             CopyLiquidMasses(record.ElementMasses, destination);
@@ -1354,7 +1355,7 @@ namespace StorageNetwork.Services
                 return;
             }
 
-            EnsureFresh(allowStaleContent);
+            EnsureFresh(allowStaleContent, worldId, includeRelatedWorlds);
             EnsureTransactionNativeBaseline(worldId, includeRelatedWorlds);
             bool allWorlds = IncludesAllWorlds(includeRelatedWorlds);
             if (allWorlds)
@@ -1407,7 +1408,7 @@ namespace StorageNetwork.Services
             }
         }
 
-        private static void EnsureFresh(bool allowStaleContent)
+        private static void EnsureFresh(bool allowStaleContent, int worldId = -1, bool includeRelatedWorlds = true, Storage specificStorage = null)
         {
             EnsureRegistrySynchronized();
             if (StorageNetworkPerformanceMode.LegacyFullScanEnabled)
@@ -1430,11 +1431,28 @@ namespace StorageNetwork.Services
             {
                 DirtyWorkspace.Clear();
                 int frame = Time.frameCount;
-                foreach (StorageContentRecord record in DirtyRecords)
+                if (StorageNetworkPerformanceMode.LegacyFullScanEnabled ||
+                    (specificStorage == null && (worldId < 0 || IncludesAllWorlds(includeRelatedWorlds))))
                 {
-                    if (!allowStaleContent || !record.HasSnapshot || record.DirtyFrame != frame)
+                    AppendDirtyRecords(DirtyRecords, allowStaleContent, frame);
+                }
+                else if (specificStorage != null)
+                {
+                    if (Records.TryGetValue(specificStorage, out StorageContentRecord selected) &&
+                        DirtyRecords.Contains(selected) &&
+                        (!allowStaleContent || !selected.HasSnapshot || selected.DirtyFrame != frame))
+                        DirtyWorkspace.Add(selected);
+                }
+                else
+                {
+                    AppendWorldDirtyRecords(worldId, allowStaleContent, frame);
+                    if (StorageNetworkWorldUtility.HasLandedRocketsOrIsLandedRocket(worldId))
                     {
-                        DirtyWorkspace.Add(record);
+                        int parentId = StorageNetworkWorldUtility.GetParentWorldId(worldId);
+                        if (parentId != worldId) AppendWorldDirtyRecords(parentId, allowStaleContent, frame);
+                        IReadOnlyList<int> rockets = StorageNetworkWorldUtility.GetLandedRocketWorldIds(parentId);
+                        for (int i = 0; i < rockets.Count; i++)
+                            if (rockets[i] != worldId) AppendWorldDirtyRecords(rockets[i], allowStaleContent, frame);
                     }
                 }
 
@@ -1445,7 +1463,7 @@ namespace StorageNetwork.Services
 
                 foreach (StorageContentRecord record in DirtyWorkspace)
                 {
-                    DirtyRecords.Remove(record);
+                    RemoveDirtyRecord(record);
                 }
 
                 using (StorageNetworkFrameProfileTool.BeginWork(
@@ -1464,6 +1482,24 @@ namespace StorageNetwork.Services
                 DirtyWorkspace.Clear();
                 flushingDirtyRecords = false;
             }
+        }
+
+        private static void EnsureStorageFresh(Storage storage, bool allowStaleContent)
+        {
+            EnsureFresh(allowStaleContent, specificStorage: storage);
+        }
+
+        private static void AppendWorldDirtyRecords(int worldId, bool allowStaleContent, int frame)
+        {
+            if (Worlds.TryGetValue(worldId, out WorldContentState world))
+                AppendDirtyRecords(world.DirtyRecords, allowStaleContent, frame);
+        }
+
+        private static void AppendDirtyRecords(HashSet<StorageContentRecord> records, bool allowStaleContent, int frame)
+        {
+            foreach (StorageContentRecord record in records)
+                if (!allowStaleContent || !record.HasSnapshot || record.DirtyFrame != frame)
+                    DirtyWorkspace.Add(record);
         }
 
         private static void EnsureRegistrySynchronized()
@@ -1510,6 +1546,13 @@ namespace StorageNetwork.Services
                     Register(storage);
                     if (Records.TryGetValue(storage, out StorageContentRecord record))
                     {
+                        int currentWorld = StorageTargetSelector.GetObjectWorldId(storage.gameObject);
+                        if (record.WorldId != currentWorld)
+                        {
+                            // Migration changes both worlds' aggregate ownership immediately.
+                            RemoveDirtyRecord(record);
+                            RefreshRecord(record);
+                        }
                         MarkDirty(record);
                     }
                 }
@@ -1714,8 +1757,106 @@ namespace StorageNetwork.Services
             }
         }
 
+        private static bool CanApplyKnownDelta(StorageContentRecord record)
+        {
+            Storage storage = record.Storage;
+            return record.HasSnapshot && StorageSceneRegistry.IsLive(storage) &&
+                StorageNetworkMembership.IsCollectableStorage(storage) &&
+                StorageNetworkStorageRules.IsServerStorage(storage) &&
+                StorageNetworkStorageRules.IsConnectedNetworkStorage(storage) &&
+                record.WorldId == StorageTargetSelector.GetObjectWorldId(storage.gameObject) &&
+                record.CountsTowardCapacity == StorageNetworkStorageRules.CountsTowardNetworkCapacity(storage) &&
+                record.SourceEligible == (!StorageNetworkStorageRules.IsMinionStorage(storage) &&
+                    !StorageNetworkStorageRules.IsProductionStorage(storage));
+        }
+
+        private static float ApplyAmountDelta(Dictionary<Tag, float> amounts, Tag tag, float delta)
+        {
+            return tag == Tag.Invalid ? 0f : StorageNetworkAmountDelta.Apply(
+                amounts, tag, delta, PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT);
+        }
+
+        // A known transfer invalidates object identities (split/merge), but not
+        // the committed amount/source aggregates. Rebuild only native details.
+        private static void EnsureElementMassesFresh(int worldId)
+        {
+            EnsureTransactionNativeBaseline(worldId, false, forceTouchedRecords: true);
+            ItemDetailWorkspace.Clear();
+            foreach (StorageContentRecord record in ItemDetailDirtyRecords)
+                if (record.WorldId == worldId && record.ElementMassesDirty)
+                    ItemDetailWorkspace.Add(record);
+            foreach (StorageContentRecord record in ItemDetailWorkspace)
+                RefreshElementMasses(record);
+            ItemDetailWorkspace.Clear();
+        }
+
+        private static void RefreshElementMasses(StorageContentRecord record)
+        {
+            if (DirtyRecords.Contains(record) || !CanApplyKnownDelta(record))
+            {
+                RemoveDirtyRecord(record);
+                RefreshRecord(record);
+                return;
+            }
+            WorldContentState world = GetOrCreateWorld(record.WorldId);
+            foreach (KeyValuePair<SimHashes, float> pair in record.ElementMasses)
+                AddAmount(world.ElementMasses, pair.Key, -pair.Value);
+            record.ElementMasses.Clear();
+            // Transfer tag deltas do not identify native element hashes or item
+            // threshold crossings. Refresh this field from native mass rather
+            // than guessing it, without constructing food/display/component views.
+            if (record.Storage.items != null)
+            {
+                foreach (GameObject item in record.Storage.items)
+                {
+                    StorageNetworkPerformanceCounters.RecordScannedItems();
+                    if (item == null) continue;
+                    PrimaryElement element = item.GetComponent<PrimaryElement>();
+                    if (element == null || element.Mass <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT) continue;
+                    Pickupable pickupable = item.GetComponent<Pickupable>();
+                    if (pickupable != null && pickupable.TotalAmount <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT) continue;
+                    AddAmount(record.ElementMasses, element.ElementID, element.Mass);
+                }
+            }
+            foreach (KeyValuePair<SimHashes, float> pair in record.ElementMasses)
+                AddAmount(world.ElementMasses, pair.Key, pair.Value);
+            record.ElementMassesDirty = false;
+            unchecked { contentVersion++; }
+        }
+
+        private static void RefreshItemDetails(StorageContentRecord record)
+        {
+            if (DirtyRecords.Contains(record) || !CanApplyKnownDelta(record))
+            {
+                RemoveDirtyRecord(record);
+                RefreshRecord(record);
+                return;
+            }
+            WorldContentState world = GetOrCreateWorld(record.WorldId);
+            foreach (KeyValuePair<SimHashes, float> pair in record.ElementMasses)
+                AddAmount(world.ElementMasses, pair.Key, -pair.Value);
+            record.Items.Clear();
+            record.ItemTotals.Clear();
+            record.ItemTotalIndexes.Clear();
+            record.ElementMasses.Clear();
+            record.HasUnindexedDisplayItems = false;
+            if (record.Storage.items != null)
+            {
+                foreach (GameObject item in record.Storage.items)
+                    AddItem(record, item, detailsOnly: true);
+            }
+            foreach (KeyValuePair<SimHashes, float> pair in record.ElementMasses)
+                AddAmount(world.ElementMasses, pair.Key, pair.Value);
+            record.ItemDetailsDirty = false;
+            record.ElementMassesDirty = false;
+            ItemDetailDirtyRecords.Remove(record);
+            StorageNetworkPerformanceCounters.RecordDetailRefreshes();
+            unchecked { record.DisplayVersion++; contentVersion++; }
+        }
+
         private static void RefreshRecord(StorageContentRecord record)
         {
+            StorageNetworkPerformanceCounters.RecordRefreshedStorages();
             Storage storage = record.Storage;
             if (!StorageSceneRegistry.IsLive(storage) ||
                 !StorageNetworkMembership.IsCollectableStorage(storage) ||
@@ -1733,6 +1874,7 @@ namespace StorageNetwork.Services
                 if (Worlds.TryGetValue(record.WorldId, out WorldContentState oldWorld))
                 {
                     oldWorld.Records.Remove(record);
+                    if (oldWorld.Records.Count == 0) Worlds.Remove(record.WorldId);
                 }
 
                 record.WorldId = worldId;
@@ -1772,6 +1914,7 @@ namespace StorageNetwork.Services
 
             record.HasSnapshot = true;
             record.ItemDetailsDirty = false;
+            record.ElementMassesDirty = false;
             ItemDetailDirtyRecords.Remove(record);
             AddRecordContributions(record);
             unchecked
@@ -1819,7 +1962,7 @@ namespace StorageNetwork.Services
                     // transfer entry point. Its native contents now include every
                     // completed operation in this transaction, so one refresh is
                     // both sufficient and authoritative.
-                    DirtyRecords.Remove(record);
+                    RemoveDirtyRecord(record);
                     if (transaction.RequiresNativeRead(storage))
                     {
                         RefreshRecord(record);
@@ -1874,7 +2017,7 @@ namespace StorageNetwork.Services
             {
                 if (record != null)
                 {
-                    RefreshRecord(record);
+                    RefreshItemDetails(record);
                 }
             }
 
@@ -1904,7 +2047,7 @@ namespace StorageNetwork.Services
                     continue;
                 }
 
-                DirtyRecords.Remove(record);
+                RemoveDirtyRecord(record);
                 RefreshRecord(record);
             }
         }
@@ -1930,8 +2073,9 @@ namespace StorageNetwork.Services
             Invalidate(storage);
         }
 
-        private static void AddItem(StorageContentRecord record, GameObject itemObject)
+        private static void AddItem(StorageContentRecord record, GameObject itemObject, bool detailsOnly = false)
         {
+            StorageNetworkPerformanceCounters.RecordScannedItems();
             if (itemObject == null)
             {
                 return;
@@ -1958,6 +2102,8 @@ namespace StorageNetwork.Services
             {
                 AddAmount(record.ElementMasses, primaryElement.ElementID, massKg);
             }
+
+            if (detailsOnly) return;
 
             AddUniqueTag(record.Amounts, matchTags.PrefabIdTag, amount);
             AddUniqueTag(record.Amounts, matchTags.PrefabTag, amount, matchTags.PrefabIdTag);
@@ -2125,6 +2271,13 @@ namespace StorageNetwork.Services
             }
         }
 
+        private static void RemoveDirtyRecord(StorageContentRecord record)
+        {
+            DirtyRecords.Remove(record);
+            if (Worlds.TryGetValue(record.WorldId, out WorldContentState world))
+                world.DirtyRecords.Remove(record);
+        }
+
         private static void MarkDirty(StorageContentRecord record)
         {
             if (record == null)
@@ -2139,8 +2292,32 @@ namespace StorageNetwork.Services
                 return;
             }
 
+            if (StorageSceneRegistry.IsLive(record.Storage))
+            {
+                int currentWorld = StorageTargetSelector.GetObjectWorldId(record.Storage.gameObject);
+                if (currentWorld != record.WorldId)
+                {
+                    // Preserve the original dirty generation while moving the
+                    // per-world queue; a repeated event must not defer catch-up.
+                    if (Worlds.TryGetValue(record.WorldId, out WorldContentState oldDirtyWorld))
+                        oldDirtyWorld.DirtyRecords.Remove(record);
+                    RemoveRecordContributions(record);
+                    if (Worlds.TryGetValue(record.WorldId, out WorldContentState previous))
+                    {
+                        previous.Records.Remove(record);
+                        if (previous.Records.Count == 0) Worlds.Remove(record.WorldId);
+                    }
+                    record.WorldId = currentWorld;
+                    WorldContentState current = GetOrCreateWorld(currentWorld);
+                    current.Records.Add(record);
+                    if (DirtyRecords.Contains(record)) current.DirtyRecords.Add(record);
+                    if (record.HasSnapshot) AddRecordContributions(record);
+                }
+            }
+
             if (DirtyRecords.Add(record))
             {
+                GetOrCreateWorld(record.WorldId).DirtyRecords.Add(record);
                 record.DirtyFrame = Time.frameCount;
             }
 
@@ -2908,41 +3085,59 @@ namespace StorageNetwork.Services
                     return;
                 }
 
-                RemoveRecordContributions(record);
+                Storage storage = record.Storage;
+                if (!CanApplyKnownDelta(record))
+                {
+                    RefreshRecord(record);
+                    return;
+                }
 
+                WorldContentState world = GetOrCreateWorld(record.WorldId);
                 foreach (KeyValuePair<Tag, float> pair in deltas.InventoryAmounts)
                 {
-                    AddAmount(record.Amounts, pair.Key, pair.Value);
+                    float actual = ApplyAmountDelta(record.Amounts, pair.Key, pair.Value);
+                    AddAmount(world.AmountsByTag, pair.Key, actual);
+                    StorageNetworkPerformanceCounters.RecordUpdatedTags();
                 }
-
                 foreach (KeyValuePair<Tag, float> pair in deltas.SourceAmounts)
                 {
-                    AddAmount(record.SourceAmounts, pair.Key, pair.Value);
+                    float actual = ApplyAmountDelta(record.SourceAmounts, pair.Key, pair.Value);
+                    if (record.SourceEligible && actual != 0f)
+                    {
+                        record.SourceAmounts.TryGetValue(pair.Key, out float amount);
+                        world.GetOrCreateSourceBucket(pair.Key).Set(record, amount);
+                    }
+                    StorageNetworkPerformanceCounters.RecordUpdatedTags();
                 }
-
                 foreach (KeyValuePair<Tag, float> pair in deltas.SourceMasses)
                 {
-                    AddAmount(record.SourceMasses, pair.Key, pair.Value);
+                    float actual = ApplyAmountDelta(record.SourceMasses, pair.Key, pair.Value);
+                    if (record.SourceEligible)
+                    {
+                        AddAmount(world.SourceMassesByTag, pair.Key, actual);
+                    }
+                    StorageNetworkPerformanceCounters.RecordUpdatedTags();
                 }
 
+                float oldMass = record.StoredKg;
+                float oldCapacity = record.CapacityKg;
                 if (Mathf.Abs(deltas.MassKg) > float.Epsilon)
                 {
-                    record.StoredKg = Mathf.Max(
-                        0f,
+                    record.StoredKg = Mathf.Max(0f,
                         Mathf.Round((record.StoredKg + deltas.MassKg) * 1000f) / 1000f);
                 }
-
-                Storage storage = record.Storage;
-                if (!ReferenceEquals(storage, null))
+                record.CapacityKg = storage.Capacity();
+                if (record.CountsTowardCapacity)
                 {
-                    record.CapacityKg = storage.Capacity();
+                    world.TotalStoredKg = Mathf.Max(0f, world.TotalStoredKg + (record.StoredKg - oldMass));
+                    world.TotalCapacityKg = Mathf.Max(0f, world.TotalCapacityKg + (record.CapacityKg - oldCapacity));
                 }
 
                 record.HasSnapshot = true;
                 record.ItemDetailsDirty = true;
+                record.ElementMassesDirty = true;
                 record.DirtyFrame = Time.frameCount;
                 ItemDetailDirtyRecords.Add(record);
-                AddRecordContributions(record);
                 unchecked
                 {
                     record.DisplayVersion++;
@@ -3182,6 +3377,7 @@ namespace StorageNetwork.Services
             public bool CountsTowardCapacity { get; set; }
             public bool SourceEligible { get; set; }
             public bool ItemDetailsDirty { get; set; }
+            public bool ElementMassesDirty { get; set; }
             public int DirtyFrame { get; set; }
             public int DisplayVersion { get; set; }
             public float StoredKg { get; set; }
@@ -3201,6 +3397,7 @@ namespace StorageNetwork.Services
 
         private sealed class WorldContentState
         {
+            public HashSet<StorageContentRecord> DirtyRecords { get; } = new HashSet<StorageContentRecord>();
             public HashSet<StorageContentRecord> Records { get; } =
                 new HashSet<StorageContentRecord>();
             public Dictionary<Tag, float> AmountsByTag { get; } =
@@ -3243,6 +3440,10 @@ namespace StorageNetwork.Services
                     return;
                 }
 
+                if (Amounts.TryGetValue(record, out float existing) && existing == amount)
+                {
+                    return;
+                }
                 Amounts[record] = amount;
                 sortedDirty = true;
             }
@@ -3282,6 +3483,7 @@ namespace StorageNetwork.Services
                     sorted.Add(pair);
                 }
 
+                StorageNetworkPerformanceCounters.RecordSourceBucketSorts();
                 sorted.Sort(CompareSources);
                 sortedDirty = false;
             }

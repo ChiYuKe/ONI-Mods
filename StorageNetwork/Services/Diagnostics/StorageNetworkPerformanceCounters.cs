@@ -6,6 +6,14 @@ namespace StorageNetwork.Services
     internal static class StorageNetworkPerformanceCounters
     {
         private static int enabled;
+        private static long scannedItems;
+        private static long refreshedStorages;
+        private static long detailRefreshes;
+        private static long updatedTags;
+        private static long sourceBucketSorts;
+        private static long farmingSnapshotEntries;
+        private static long textMeshRebuilds;
+
         private static long inventoryIndexRebuilds;
         private static long collectForWorldRebuilds;
         private static long lightweightSceneRebuilds;
@@ -19,6 +27,48 @@ namespace StorageNetwork.Services
         private static long inputReservationIndexRebuilds;
         private static readonly HashSet<int> activePortIds = new HashSet<int>(32);
         private static readonly object activePortLock = new object();
+
+        public static void RecordScannedItems(int count = 1)
+        {
+            if (Volatile.Read(ref enabled) == 0) return;
+            Interlocked.Add(ref scannedItems, count);
+        }
+
+        public static void RecordRefreshedStorages(int count = 1)
+        {
+            if (Volatile.Read(ref enabled) == 0) return;
+            Interlocked.Add(ref refreshedStorages, count);
+        }
+
+        public static void RecordDetailRefreshes(int count = 1)
+        {
+            if (Volatile.Read(ref enabled) == 0) return;
+            Interlocked.Add(ref detailRefreshes, count);
+        }
+
+        public static void RecordUpdatedTags(int count = 1)
+        {
+            if (Volatile.Read(ref enabled) == 0) return;
+            Interlocked.Add(ref updatedTags, count);
+        }
+
+        public static void RecordSourceBucketSorts(int count = 1)
+        {
+            if (Volatile.Read(ref enabled) == 0) return;
+            Interlocked.Add(ref sourceBucketSorts, count);
+        }
+
+        public static void RecordFarmingSnapshotEntries(int count = 1)
+        {
+            if (Volatile.Read(ref enabled) == 0) return;
+            Interlocked.Add(ref farmingSnapshotEntries, count);
+        }
+
+        public static void RecordTextMeshRebuilds(int count = 1)
+        {
+            if (Volatile.Read(ref enabled) == 0) return;
+            Interlocked.Add(ref textMeshRebuilds, count);
+        }
 
         public static void RecordInventoryIndexRebuild()
         {
@@ -125,7 +175,14 @@ namespace StorageNetwork.Services
                 Interlocked.Exchange(ref portNavigationChecks, 0L),
                 Interlocked.Exchange(ref bufferReturnAttempts, 0L),
                 Interlocked.Exchange(ref inputReservationIndexRebuilds, 0L),
-                activePortCount);
+                activePortCount,
+                Interlocked.Exchange(ref scannedItems, 0L),
+                Interlocked.Exchange(ref refreshedStorages, 0L),
+                Interlocked.Exchange(ref detailRefreshes, 0L),
+                Interlocked.Exchange(ref updatedTags, 0L),
+                Interlocked.Exchange(ref sourceBucketSorts, 0L),
+                Interlocked.Exchange(ref farmingSnapshotEntries, 0L),
+                Interlocked.Exchange(ref textMeshRebuilds, 0L));
         }
 
         public static void ResetRuntimeState()
@@ -149,7 +206,14 @@ namespace StorageNetwork.Services
             long portNavigationChecks,
             long bufferReturnAttempts,
             long inputReservationIndexRebuilds,
-            int activePortCount)
+            int activePortCount,
+            long scannedItems = 0,
+            long refreshedStorages = 0,
+            long detailRefreshes = 0,
+            long updatedTags = 0,
+            long sourceBucketSorts = 0,
+            long farmingSnapshotEntries = 0,
+            long textMeshRebuilds = 0)
         {
             InventoryIndexRebuilds = inventoryIndexRebuilds;
             CollectForWorldRebuilds = collectForWorldRebuilds;
@@ -163,6 +227,14 @@ namespace StorageNetwork.Services
             BufferReturnAttempts = bufferReturnAttempts;
             InputReservationIndexRebuilds = inputReservationIndexRebuilds;
             ActivePortCount = activePortCount;
+            ScannedItems = scannedItems;
+            RefreshedStorages = refreshedStorages;
+            DetailRefreshes = detailRefreshes;
+            UpdatedTags = updatedTags;
+            SourceBucketSorts = sourceBucketSorts;
+            FarmingSnapshotEntries = farmingSnapshotEntries;
+            TextMeshRebuilds = textMeshRebuilds;
+
         }
 
         public long InventoryIndexRebuilds { get; }
@@ -177,5 +249,13 @@ namespace StorageNetwork.Services
         public long BufferReturnAttempts { get; }
         public long InputReservationIndexRebuilds { get; }
         public int ActivePortCount { get; }
+        public long ScannedItems { get; }
+        public long RefreshedStorages { get; }
+        public long DetailRefreshes { get; }
+        public long UpdatedTags { get; }
+        public long SourceBucketSorts { get; }
+        public long FarmingSnapshotEntries { get; }
+        public long TextMeshRebuilds { get; }
+
     }
 }

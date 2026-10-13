@@ -600,6 +600,7 @@ namespace StorageNetwork.Core
                     counters.PortNavigationChecks,
                     counters.BufferReturnAttempts,
                     counters.InputReservationIndexRebuilds));
+                Debug.Log($"[StorageNetwork][FrameProfile] algorithms scannedItems={counters.ScannedItems} refreshedStorages={counters.RefreshedStorages} detailRefreshes={counters.DetailRefreshes} updatedTags={counters.UpdatedTags} sourceBucketSorts={counters.SourceBucketSorts} farmingSnapshotEntries={counters.FarmingSnapshotEntries} textMeshRebuilds={counters.TextMeshRebuilds}");
             }
 
             private float GetPercentile(float percentile)

@@ -1,0 +1,281 @@
+# Locked public surface from f5183008 (before the performance refactor).
+# Exact comparison intentionally rejects removals, changes, and accidental additions.
+C StorageNetwork.API.StorageNetworkCategoryDescriptor(System.String key,System.String name,System.Int32 order=0)
+C StorageNetwork.API.StorageNetworkDisplayInfo()
+C StorageNetwork.API.StorageNetworkPanelHeaderButton(System.String id,System.String label,System.Action onClick,System.String tooltip=null,System.String iconName=null,System.String fallbackIconText=null,System.Single width=72,System.Int32 order=100)
+C StorageNetwork.API.StorageNetworkPanelHeaderButton(System.String id,System.String label,System.Action<StorageNetwork.API.StorageNetworkPanelHeaderButtonContext> onClick,System.String tooltip=null,System.String iconName=null,System.String fallbackIconText=null,System.Single width=72,System.Int32 order=100)
+C StorageNetwork.API.StorageNetworkSettingsButtonState(System.Boolean isVisible,System.Boolean isEnabled,System.String tooltip=null)
+C StorageNetwork.API.StorageNetworkStorageRowButton(System.String id,System.String label,System.Action<StorageNetwork.API.StorageNetworkStorageRowButtonContext> onClick,System.String tooltip=null,System.String iconName=null,System.String fallbackIconText=null,System.Single width=50,System.Int32 order=100,System.Boolean isEnabled=true)
+C StorageNetwork.API.StorageNetworkTransferResult(System.Single movedKg,System.String blockedItem,System.Boolean networkOffline=false)
+C StorageNetwork.API.StorageNetworkWorldPanelContent(System.String title,System.String lineOne,System.String lineTwo,System.String lineThree)
+C StorageNetwork.Core.StorageInfo(Geyser geyser)
+C StorageNetwork.Core.StorageInfo(MinionIdentity minion)
+C StorageNetwork.Core.StorageInfo(Storage storage)
+C StorageNetwork.Core.StorageSceneLightweightSnapshot(System.Collections.Generic.IReadOnlyList<Storage> storages,System.Boolean networkOnline)
+C StorageNetwork.Core.StorageSceneSnapshot(System.Collections.Generic.IReadOnlyList<StorageNetwork.Core.StorageInfo> storages,System.Single totalStoredKg,System.Single totalCapacityKg,System.Boolean networkOnline)
+F const StorageNetwork.API.StorageNetworkStorageFlags StorageNetwork.API.StorageNetworkStorageFlags.CategoryModStorage=8
+F const StorageNetwork.API.StorageNetworkStorageFlags StorageNetwork.API.StorageNetworkStorageFlags.GasInputPort=32768
+F const StorageNetwork.API.StorageNetworkStorageFlags StorageNetwork.API.StorageNetworkStorageFlags.GasOutputPort=65536
+F const StorageNetwork.API.StorageNetworkStorageFlags StorageNetwork.API.StorageNetworkStorageFlags.GasPort=256
+F const StorageNetwork.API.StorageNetworkStorageFlags StorageNetwork.API.StorageNetworkStorageFlags.InputPort=16
+F const StorageNetwork.API.StorageNetworkStorageFlags StorageNetwork.API.StorageNetworkStorageFlags.LiquidInputPort=8192
+F const StorageNetwork.API.StorageNetworkStorageFlags StorageNetwork.API.StorageNetworkStorageFlags.LiquidOutputPort=16384
+F const StorageNetwork.API.StorageNetworkStorageFlags StorageNetwork.API.StorageNetworkStorageFlags.LiquidPort=128
+F const StorageNetwork.API.StorageNetworkStorageFlags StorageNetwork.API.StorageNetworkStorageFlags.NetworkStorage=1
+F const StorageNetwork.API.StorageNetworkStorageFlags StorageNetwork.API.StorageNetworkStorageFlags.None=0
+F const StorageNetwork.API.StorageNetworkStorageFlags StorageNetwork.API.StorageNetworkStorageFlags.OutputPort=32
+F const StorageNetwork.API.StorageNetworkStorageFlags StorageNetwork.API.StorageNetworkStorageFlags.ParticleInputPort=524288
+F const StorageNetwork.API.StorageNetworkStorageFlags StorageNetwork.API.StorageNetworkStorageFlags.ParticleOutputPort=1048576
+F const StorageNetwork.API.StorageNetworkStorageFlags StorageNetwork.API.StorageNetworkStorageFlags.ParticlePort=1024
+F const StorageNetwork.API.StorageNetworkStorageFlags StorageNetwork.API.StorageNetworkStorageFlags.PowerInputPort=131072
+F const StorageNetwork.API.StorageNetworkStorageFlags StorageNetwork.API.StorageNetworkStorageFlags.PowerOutputPort=262144
+F const StorageNetwork.API.StorageNetworkStorageFlags StorageNetwork.API.StorageNetworkStorageFlags.PowerPort=512
+F const StorageNetwork.API.StorageNetworkStorageFlags StorageNetwork.API.StorageNetworkStorageFlags.ServerStorage=2
+F const StorageNetwork.API.StorageNetworkStorageFlags StorageNetwork.API.StorageNetworkStorageFlags.ShowSettingsButton=4
+F const StorageNetwork.API.StorageNetworkStorageFlags StorageNetwork.API.StorageNetworkStorageFlags.SolidInputPort=2048
+F const StorageNetwork.API.StorageNetworkStorageFlags StorageNetwork.API.StorageNetworkStorageFlags.SolidOutputPort=4096
+F const StorageNetwork.API.StorageNetworkStorageFlags StorageNetwork.API.StorageNetworkStorageFlags.SolidPort=64
+F const System.String StorageNetwork.API.StorageNetworkTags.CategoryGasInputPortTagName="StorageNetwork_CategoryGasInputPort"
+F const System.String StorageNetwork.API.StorageNetworkTags.CategoryGasOutputPortTagName="StorageNetwork_CategoryGasOutputPort"
+F const System.String StorageNetwork.API.StorageNetworkTags.CategoryGasPortTagName="StorageNetwork_CategoryGasPort"
+F const System.String StorageNetwork.API.StorageNetworkTags.CategoryInputPortTagName="StorageNetwork_CategoryInputPort"
+F const System.String StorageNetwork.API.StorageNetworkTags.CategoryLiquidInputPortTagName="StorageNetwork_CategoryLiquidInputPort"
+F const System.String StorageNetwork.API.StorageNetworkTags.CategoryLiquidOutputPortTagName="StorageNetwork_CategoryLiquidOutputPort"
+F const System.String StorageNetwork.API.StorageNetworkTags.CategoryLiquidPortTagName="StorageNetwork_CategoryLiquidPort"
+F const System.String StorageNetwork.API.StorageNetworkTags.CategoryModStorageTagName="StorageNetwork_CategoryModStorage"
+F const System.String StorageNetwork.API.StorageNetworkTags.CategoryOutputPortTagName="StorageNetwork_CategoryOutputPort"
+F const System.String StorageNetwork.API.StorageNetworkTags.CategoryParticleInputPortTagName="StorageNetwork_CategoryParticleInputPort"
+F const System.String StorageNetwork.API.StorageNetworkTags.CategoryParticleOutputPortTagName="StorageNetwork_CategoryParticleOutputPort"
+F const System.String StorageNetwork.API.StorageNetworkTags.CategoryParticlePortTagName="StorageNetwork_CategoryParticlePort"
+F const System.String StorageNetwork.API.StorageNetworkTags.CategoryPowerInputPortTagName="StorageNetwork_CategoryPowerInputPort"
+F const System.String StorageNetwork.API.StorageNetworkTags.CategoryPowerOutputPortTagName="StorageNetwork_CategoryPowerOutputPort"
+F const System.String StorageNetwork.API.StorageNetworkTags.CategoryPowerPortTagName="StorageNetwork_CategoryPowerPort"
+F const System.String StorageNetwork.API.StorageNetworkTags.CategorySolidInputPortTagName="StorageNetwork_CategorySolidInputPort"
+F const System.String StorageNetwork.API.StorageNetworkTags.CategorySolidOutputPortTagName="StorageNetwork_CategorySolidOutputPort"
+F const System.String StorageNetwork.API.StorageNetworkTags.CategorySolidPortTagName="StorageNetwork_CategorySolidPort"
+F const System.String StorageNetwork.API.StorageNetworkTags.ModStorageTagName="StorageNetwork_ModStorage"
+F const System.String StorageNetwork.API.StorageNetworkTags.ReservedForConstructionTagName="StorageNetwork_ReservedForConstruction"
+F const System.String StorageNetwork.API.StorageNetworkTags.ReservedForFabricatorTagName="StorageNetwork_ReservedForFabricator"
+F const System.String StorageNetwork.API.StorageNetworkTags.ReservedForFarmingTagName="StorageNetwork_ReservedForFarming"
+F const System.String StorageNetwork.API.StorageNetworkTags.SelectedEngravingDiskTagName="StorageNetwork_SelectedEngravingDisk"
+F const System.String StorageNetwork.API.StorageNetworkTags.ServerStorageTagName="StorageNetwork_ServerStorage"
+F const System.String StorageNetwork.API.StorageNetworkTags.ShowSettingsButtonTagName="StorageNetwork_ShowSettingsButton"
+F const System.String StorageNetwork.API.StorageNetworkTags.SolidOutputPortBufferedItemTagName="StorageNetwork_SolidOutputPortBufferedItem"
+F static readonly StorageNetwork.API.StorageNetworkTransferResult StorageNetwork.API.StorageNetworkTransferResult.Idle
+F static readonly StorageNetwork.API.StorageNetworkTransferResult StorageNetwork.API.StorageNetworkTransferResult.Offline
+F static readonly StorageNetwork.Core.StorageSceneLightweightSnapshot StorageNetwork.Core.StorageSceneLightweightSnapshot.Empty
+F static readonly StorageNetwork.Core.StorageSceneSnapshot StorageNetwork.Core.StorageSceneSnapshot.Empty
+F static readonly Tag StorageNetwork.API.StorageNetworkTags.CategoryGasInputPort
+F static readonly Tag StorageNetwork.API.StorageNetworkTags.CategoryGasOutputPort
+F static readonly Tag StorageNetwork.API.StorageNetworkTags.CategoryGasPort
+F static readonly Tag StorageNetwork.API.StorageNetworkTags.CategoryInputPort
+F static readonly Tag StorageNetwork.API.StorageNetworkTags.CategoryLiquidInputPort
+F static readonly Tag StorageNetwork.API.StorageNetworkTags.CategoryLiquidOutputPort
+F static readonly Tag StorageNetwork.API.StorageNetworkTags.CategoryLiquidPort
+F static readonly Tag StorageNetwork.API.StorageNetworkTags.CategoryModStorage
+F static readonly Tag StorageNetwork.API.StorageNetworkTags.CategoryOutputPort
+F static readonly Tag StorageNetwork.API.StorageNetworkTags.CategoryParticleInputPort
+F static readonly Tag StorageNetwork.API.StorageNetworkTags.CategoryParticleOutputPort
+F static readonly Tag StorageNetwork.API.StorageNetworkTags.CategoryParticlePort
+F static readonly Tag StorageNetwork.API.StorageNetworkTags.CategoryPowerInputPort
+F static readonly Tag StorageNetwork.API.StorageNetworkTags.CategoryPowerOutputPort
+F static readonly Tag StorageNetwork.API.StorageNetworkTags.CategoryPowerPort
+F static readonly Tag StorageNetwork.API.StorageNetworkTags.CategorySolidInputPort
+F static readonly Tag StorageNetwork.API.StorageNetworkTags.CategorySolidOutputPort
+F static readonly Tag StorageNetwork.API.StorageNetworkTags.CategorySolidPort
+F static readonly Tag StorageNetwork.API.StorageNetworkTags.ModStorage
+F static readonly Tag StorageNetwork.API.StorageNetworkTags.ReservedForConstruction
+F static readonly Tag StorageNetwork.API.StorageNetworkTags.ReservedForFabricator
+F static readonly Tag StorageNetwork.API.StorageNetworkTags.ReservedForFarming
+F static readonly Tag StorageNetwork.API.StorageNetworkTags.SelectedEngravingDisk
+F static readonly Tag StorageNetwork.API.StorageNetworkTags.ServerStorage
+F static readonly Tag StorageNetwork.API.StorageNetworkTags.ShowSettingsButton
+F static readonly Tag StorageNetwork.API.StorageNetworkTags.SolidOutputPortBufferedItem
+F System.Int32 StorageNetwork.API.StorageNetworkStorageFlags.value__
+M static StorageNetwork.API.StorageNetworkTransferResult StorageNetwork.API.StorageNetworkApi.TransferStoredItemsToNetwork(Storage source,Storage specificTarget=null,System.Boolean preferColdStorageForFood=false)
+M static StorageNetwork.API.StorageNetworkTransferResult StorageNetwork.API.StorageNetworkApi.TransferStoredItemToNetwork(Storage source,UnityEngine.GameObject item,Storage specificTarget=null,System.Boolean preferColdStorageForFood=false)
+M static StorageNetwork.API.StorageNetworkTransferResult StorageNetwork.API.StorageNetworkTransferResult.Blocked(System.String itemName)
+M static StorageNetwork.Core.StorageSceneLightweightSnapshot StorageNetwork.Core.StorageSceneCollector.CollectLightweightForWorld(System.Int32 worldId,System.Boolean includeReachableWorlds=true)
+M static StorageNetwork.Core.StorageSceneSnapshot StorageNetwork.Core.StorageSceneCollector.Collect(System.Boolean force=false)
+M static StorageNetwork.Core.StorageSceneSnapshot StorageNetwork.Core.StorageSceneCollector.CollectForWorld(System.Int32 worldId,System.Boolean includeReachableWorlds=true,System.Boolean force=false)
+M static System.Boolean StorageNetwork.API.StorageNetworkWorldPanelRegistry.TryBuildContent(UnityEngine.GameObject target,out StorageNetwork.API.StorageNetworkWorldPanelContent content)
+M static System.Boolean StorageNetwork.Core.StorageSceneRegistry.HasOnlineCoreInActiveWorld()
+M static System.Boolean StorageNetwork.Core.StorageSceneRegistry.HasOnlineCoreInActiveWorld(out System.Boolean crossPlanetRelayOnline)
+M static System.Boolean StorageNetwork.Core.StorageSceneRegistry.HasOnlineCoreInWorld(System.Int32 worldId)
+M static System.Boolean StorageNetwork.Core.StorageSceneRegistry.IsCrossPlanetRelayOnline()
+M static System.Boolean StorageNetwork.Core.StorageSceneRegistry.IsLive(UnityEngine.Component component)
+M static System.Collections.Generic.IReadOnlyCollection<Geyser> StorageNetwork.Core.StorageSceneRegistry.GetGeysers()
+M static System.Collections.Generic.IReadOnlyCollection<Storage> StorageNetwork.Core.StorageSceneRegistry.GetStorages()
+M static System.Collections.Generic.IReadOnlyCollection<StorageNetwork.Components.StorageNetworkCore> StorageNetwork.Core.StorageSceneRegistry.GetCores()
+M static System.Collections.Generic.IReadOnlyCollection<StorageNetwork.Components.StorageNetworkEnrollment> StorageNetwork.Core.StorageSceneRegistry.GetEnrollments()
+M static System.Collections.Generic.IReadOnlyCollection<StorageNetwork.Components.StorageNetworkPowerStorage> StorageNetwork.Core.StorageSceneRegistry.GetPowerStorages()
+M static System.Collections.Generic.IReadOnlyList<StorageNetwork.API.StorageNetworkPanelHeaderButton> StorageNetwork.API.StorageNetworkPanelHeaderButtonRegistry.GetButtons()
+M static System.Single StorageNetwork.API.StorageNetworkApi.TransferFromNetworkToStorage(System.Collections.Generic.IEnumerable<Tag> tags,System.Single amount,Storage destination,Storage specificSource=null)
+M static System.Void StorageNetwork.API.StorageNetworkApi.InstallExternalApiBridge(UnityEngine.GameObject gameObject)
+M static System.Void StorageNetwork.API.StorageNetworkApi.InvalidateScene()
+M static System.Void StorageNetwork.API.StorageNetworkApi.RefreshObjectUi(UnityEngine.GameObject gameObject)
+M static System.Void StorageNetwork.API.StorageNetworkApi.RegisterSceneMember(UnityEngine.GameObject gameObject)
+M static System.Void StorageNetwork.API.StorageNetworkApi.UnregisterSceneMember(UnityEngine.GameObject gameObject)
+M static System.Void StorageNetwork.API.StorageNetworkPanelHeaderButtonContext.PrepareEmbeddedPanel(UnityEngine.GameObject panel)
+M static System.Void StorageNetwork.API.StorageNetworkPanelHeaderButtonRegistry.Register(StorageNetwork.API.IStorageNetworkPanelHeaderButtonProvider provider)
+M static System.Void StorageNetwork.API.StorageNetworkPanelHeaderButtonRegistry.ResetRuntimeState()
+M static System.Void StorageNetwork.API.StorageNetworkPanelHeaderButtonRegistry.Unregister(StorageNetwork.API.IStorageNetworkPanelHeaderButtonProvider provider)
+M static System.Void StorageNetwork.API.StorageNetworkWorldPanelRegistry.Register(StorageNetwork.API.IStorageNetworkWorldPanelContentProvider provider,System.Int32 priority=100)
+M static System.Void StorageNetwork.API.StorageNetworkWorldPanelRegistry.ResetRuntimeState()
+M static System.Void StorageNetwork.API.StorageNetworkWorldPanelRegistry.Unregister(StorageNetwork.API.IStorageNetworkWorldPanelContentProvider provider)
+M static System.Void StorageNetwork.Core.StorageSceneCollector.InvalidateCache()
+M static System.Void StorageNetwork.Core.StorageSceneCollector.ResetRuntimeState()
+M static System.Void StorageNetwork.Core.StorageSceneRegistry.EnsureSceneSeeded()
+M static System.Void StorageNetwork.Core.StorageSceneRegistry.Invalidate()
+M static System.Void StorageNetwork.Core.StorageSceneRegistry.Register(UnityEngine.GameObject gameObject)
+M static System.Void StorageNetwork.Core.StorageSceneRegistry.ResetRuntimeState()
+M static System.Void StorageNetwork.Core.StorageSceneRegistry.Unregister(UnityEngine.GameObject gameObject)
+M static UnityEngine.Color StorageNetwork.API.StorageNetworkPanelPalette.GetEnabledStatusColor(System.Boolean enabled)
+M static UnityEngine.Color StorageNetwork.API.StorageNetworkPanelPalette.GetNetworkAutomationColor(System.Boolean enabled)
+M static UnityEngine.Color StorageNetwork.API.StorageNetworkPanelPalette.GetOutputStoreColor(System.Boolean enabled)
+M StorageNetwork.API.StorageNetworkCategoryDescriptor StorageNetwork.API.IStorageNetworkCategoryProvider.GetStorageNetworkCategory(Storage storage)
+M StorageNetwork.API.StorageNetworkDisplayInfo StorageNetwork.API.IStorageNetworkDisplayProvider.GetStorageNetworkDisplayInfo(Storage storage)
+M StorageNetwork.API.StorageNetworkSettingsButtonState StorageNetwork.API.IStorageNetworkSettingsButtonProvider.GetStorageNetworkSettingsButtonState(Storage storage)
+M StorageNetwork.API.StorageNetworkStorageFlags StorageNetwork.API.IStorageNetworkStorageFlagsProvider.GetStorageNetworkStorageFlags(Storage storage)
+M System.Boolean StorageNetwork.API.IStorageNetworkEnrollable.CanShowStorageNetworkEnrollmentButton()
+M System.Boolean StorageNetwork.API.IStorageNetworkEnrollable.IsStorageNetworkIncluded()
+M System.Boolean StorageNetwork.API.IStorageNetworkWorldPanelContentProvider.TryBuild(UnityEngine.GameObject target,out StorageNetwork.API.StorageNetworkWorldPanelContent content)
+M System.Collections.Generic.IEnumerable<StorageNetwork.API.StorageNetworkPanelHeaderButton> StorageNetwork.API.IStorageNetworkPanelHeaderButtonProvider.GetHeaderButtons()
+M System.Collections.Generic.IEnumerable<StorageNetwork.API.StorageNetworkStorageRowButton> StorageNetwork.API.IStorageNetworkStorageRowButtonProvider.GetStorageNetworkStorageRowButtons(Storage storage)
+M System.String StorageNetwork.API.IStorageNetworkSettingsPanelProvider.GetStorageNetworkSettingsPanelSignature(Storage storage)
+M System.Void StorageNetwork.API.IStorageNetworkEnrollable.SetStorageNetworkIncluded(System.Boolean included)
+M System.Void StorageNetwork.API.IStorageNetworkSettingsPanelProvider.BuildStorageNetworkSettingsPanel(Storage storage,StorageNetwork.API.StorageNetworkSettingsPanelBuilder builder)
+M System.Void StorageNetwork.API.StorageNetworkSettingsPanelBuilder.AddButton(UnityEngine.Transform parent,System.String label,System.String buttonText,System.Action onClick)
+M System.Void StorageNetwork.API.StorageNetworkSettingsPanelBuilder.AddHeading(UnityEngine.Transform parent,System.String text)
+M System.Void StorageNetwork.API.StorageNetworkSettingsPanelBuilder.AddMetricTile(UnityEngine.Transform parent,System.String label,System.String value,UnityEngine.Color accent)
+M System.Void StorageNetwork.API.StorageNetworkSettingsPanelBuilder.AddMetricTile(UnityEngine.Transform parent,System.String label,System.String value)
+M System.Void StorageNetwork.API.StorageNetworkSettingsPanelBuilder.AddReadOnlyRow(UnityEngine.Transform parent,System.String label,System.String value)
+M System.Void StorageNetwork.API.StorageNetworkSettingsPanelBuilder.AddStatusStrip(UnityEngine.Transform parent,System.String text,UnityEngine.Color color)
+M System.Void StorageNetwork.API.StorageNetworkSettingsPanelBuilder.AddText(UnityEngine.Transform parent,System.String text)
+M System.Void StorageNetwork.API.StorageNetworkSettingsPanelBuilder.AddToggleButton(UnityEngine.Transform parent,System.String label,System.String buttonText,System.Action onClick,System.Boolean currentlyEnabled)
+M System.Void StorageNetwork.API.StorageNetworkSettingsPanelBuilder.SetTitle(System.String title)
+M UnityEngine.GameObject StorageNetwork.API.IStorageNetworkEnrollable.GetStorageNetworkEnrollmentTarget()
+M UnityEngine.GameObject StorageNetwork.API.StorageNetworkPanelHeaderButtonContext.InstantiatePanelPrefab(UnityEngine.GameObject prefab,System.String name=null)
+M UnityEngine.GameObject StorageNetwork.API.StorageNetworkPanelHeaderButtonContext.InstantiatePanelPrefab(UnityEngine.GameObject prefab,UnityEngine.Transform parent,System.String name=null)
+M UnityEngine.Transform StorageNetwork.API.StorageNetworkSettingsPanelBuilder.AddCard(System.String title,System.Single preferredHeight=0)
+M UnityEngine.Transform StorageNetwork.API.StorageNetworkSettingsPanelBuilder.AddCard(UnityEngine.Transform parent,System.String title,System.Single preferredHeight=0)
+M UnityEngine.Transform StorageNetwork.API.StorageNetworkSettingsPanelBuilder.AddHorizontalGroup(System.Single preferredHeight=0,System.Single spacing=8)
+M UnityEngine.Transform StorageNetwork.API.StorageNetworkSettingsPanelBuilder.AddHorizontalGroup(UnityEngine.Transform parent,System.Single preferredHeight=0,System.Single spacing=8)
+P Geyser StorageNetwork.Core.StorageInfo.Geyser{get;}
+P MinionIdentity StorageNetwork.Core.StorageInfo.Minion{get;}
+P static System.Int32 StorageNetwork.Core.StorageSceneRegistry.Version{get;}
+P static UnityEngine.Color StorageNetwork.API.StorageNetworkPanelPalette.BlueButtonHover{get;}
+P static UnityEngine.Color StorageNetwork.API.StorageNetworkPanelPalette.BlueButtonNormal{get;}
+P static UnityEngine.Color StorageNetwork.API.StorageNetworkPanelPalette.BlueButtonPressed{get;}
+P static UnityEngine.Color StorageNetwork.API.StorageNetworkPanelPalette.BodyText{get;}
+P static UnityEngine.Color StorageNetwork.API.StorageNetworkPanelPalette.CardBackground{get;}
+P static UnityEngine.Color StorageNetwork.API.StorageNetworkPanelPalette.ContentBackground{get;}
+P static UnityEngine.Color StorageNetwork.API.StorageNetworkPanelPalette.DangerStatus{get;}
+P static UnityEngine.Color StorageNetwork.API.StorageNetworkPanelPalette.HeaderBackground{get;}
+P static UnityEngine.Color StorageNetwork.API.StorageNetworkPanelPalette.HeadingText{get;}
+P static UnityEngine.Color StorageNetwork.API.StorageNetworkPanelPalette.MetricAccent{get;}
+P static UnityEngine.Color StorageNetwork.API.StorageNetworkPanelPalette.MetricBackground{get;}
+P static UnityEngine.Color StorageNetwork.API.StorageNetworkPanelPalette.MetricLabelText{get;}
+P static UnityEngine.Color StorageNetwork.API.StorageNetworkPanelPalette.MutedText{get;}
+P static UnityEngine.Color StorageNetwork.API.StorageNetworkPanelPalette.NeutralStatus{get;}
+P static UnityEngine.Color StorageNetwork.API.StorageNetworkPanelPalette.PinkButtonHover{get;}
+P static UnityEngine.Color StorageNetwork.API.StorageNetworkPanelPalette.PinkButtonNormal{get;}
+P static UnityEngine.Color StorageNetwork.API.StorageNetworkPanelPalette.PinkButtonPressed{get;}
+P static UnityEngine.Color StorageNetwork.API.StorageNetworkPanelPalette.PositiveStatus{get;}
+P static UnityEngine.Color StorageNetwork.API.StorageNetworkPanelPalette.RowBackground{get;}
+P static UnityEngine.Color StorageNetwork.API.StorageNetworkPanelPalette.SettingsHeaderBackground{get;}
+P static UnityEngine.Color StorageNetwork.API.StorageNetworkPanelPalette.StatusText{get;}
+P static UnityEngine.Color StorageNetwork.API.StorageNetworkPanelPalette.WarningStatus{get;}
+P static UnityEngine.Color StorageNetwork.API.StorageNetworkPanelPalette.WindowBackground{get;}
+P Storage StorageNetwork.API.StorageNetworkStorageRowButtonContext.Storage{get;}
+P Storage StorageNetwork.Core.StorageInfo.Storage{get;}
+P System.Action StorageNetwork.API.StorageNetworkPanelHeaderButton.OnClick{get;}
+P System.Action<StorageNetwork.API.StorageNetworkPanelHeaderButtonContext> StorageNetwork.API.StorageNetworkPanelHeaderButton.OnClickWithContext{get;}
+P System.Action<StorageNetwork.API.StorageNetworkStorageRowButtonContext> StorageNetwork.API.StorageNetworkStorageRowButton.OnClick{get;}
+P System.Boolean StorageNetwork.API.StorageNetworkSettingsButtonState.IsEnabled{get;}
+P System.Boolean StorageNetwork.API.StorageNetworkSettingsButtonState.IsVisible{get;}
+P System.Boolean StorageNetwork.API.StorageNetworkStorageRowButton.IsEnabled{get;}
+P System.Boolean StorageNetwork.API.StorageNetworkTransferResult.HasMoved{get;}
+P System.Boolean StorageNetwork.API.StorageNetworkTransferResult.NetworkOffline{get;}
+P System.Boolean StorageNetwork.Core.StorageInfo.ConnectedToNetwork{get;}
+P System.Boolean StorageNetwork.Core.StorageSceneLightweightSnapshot.NetworkOnline{get;}
+P System.Boolean StorageNetwork.Core.StorageSceneSnapshot.NetworkOnline{get;}
+P System.Collections.Generic.IReadOnlyList<Storage> StorageNetwork.Core.StorageInfo.ContentStorages{get;}
+P System.Collections.Generic.IReadOnlyList<Storage> StorageNetwork.Core.StorageSceneLightweightSnapshot.Storages{get;}
+P System.Collections.Generic.IReadOnlyList<StorageNetwork.Core.StorageInfo> StorageNetwork.Core.StorageSceneSnapshot.Storages{get;}
+P System.Collections.Generic.IReadOnlyList<UnityEngine.GameObject> StorageNetwork.Core.StorageInfo.StoredItems{get;}
+P System.Int32 StorageNetwork.API.StorageNetworkCategoryDescriptor.Order{get;}
+P System.Int32 StorageNetwork.API.StorageNetworkPanelHeaderButton.Order{get;}
+P System.Int32 StorageNetwork.API.StorageNetworkStorageRowButton.Order{get;}
+P System.Nullable<UnityEngine.Color> StorageNetwork.API.StorageNetworkDisplayInfo.TypeIconTint{get;set;}
+P System.Single StorageNetwork.API.StorageNetworkPanelHeaderButton.Width{get;}
+P System.Single StorageNetwork.API.StorageNetworkStorageRowButton.Width{get;}
+P System.Single StorageNetwork.API.StorageNetworkTransferResult.MovedKg{get;}
+P System.Single StorageNetwork.Core.StorageInfo.CapacityKg{get;}
+P System.Single StorageNetwork.Core.StorageInfo.StoredKg{get;}
+P System.Single StorageNetwork.Core.StorageSceneSnapshot.TotalCapacityKg{get;}
+P System.Single StorageNetwork.Core.StorageSceneSnapshot.TotalStoredKg{get;}
+P System.String StorageNetwork.API.StorageNetworkCategoryDescriptor.Key{get;}
+P System.String StorageNetwork.API.StorageNetworkCategoryDescriptor.Name{get;}
+P System.String StorageNetwork.API.StorageNetworkDisplayInfo.RowName{get;set;}
+P System.String StorageNetwork.API.StorageNetworkDisplayInfo.TypeKey{get;set;}
+P System.String StorageNetwork.API.StorageNetworkDisplayInfo.TypeName{get;set;}
+P System.String StorageNetwork.API.StorageNetworkPanelHeaderButton.FallbackIconText{get;}
+P System.String StorageNetwork.API.StorageNetworkPanelHeaderButton.IconName{get;}
+P System.String StorageNetwork.API.StorageNetworkPanelHeaderButton.Id{get;}
+P System.String StorageNetwork.API.StorageNetworkPanelHeaderButton.Label{get;}
+P System.String StorageNetwork.API.StorageNetworkPanelHeaderButton.Tooltip{get;}
+P System.String StorageNetwork.API.StorageNetworkSettingsButtonState.Tooltip{get;}
+P System.String StorageNetwork.API.StorageNetworkStorageRowButton.FallbackIconText{get;}
+P System.String StorageNetwork.API.StorageNetworkStorageRowButton.IconName{get;}
+P System.String StorageNetwork.API.StorageNetworkStorageRowButton.Id{get;}
+P System.String StorageNetwork.API.StorageNetworkStorageRowButton.Label{get;}
+P System.String StorageNetwork.API.StorageNetworkStorageRowButton.Tooltip{get;}
+P System.String StorageNetwork.API.StorageNetworkTransferResult.BlockedItem{get;}
+P System.String StorageNetwork.API.StorageNetworkWorldPanelContent.LineOne{get;}
+P System.String StorageNetwork.API.StorageNetworkWorldPanelContent.LineThree{get;}
+P System.String StorageNetwork.API.StorageNetworkWorldPanelContent.LineTwo{get;}
+P System.String StorageNetwork.API.StorageNetworkWorldPanelContent.Title{get;}
+P System.String StorageNetwork.Core.StorageInfo.Name{get;}
+P UnityEngine.GameObject StorageNetwork.API.StorageNetworkPanelHeaderButtonContext.Button{get;}
+P UnityEngine.GameObject StorageNetwork.API.StorageNetworkPanelHeaderButtonContext.CanvasObject{get;}
+P UnityEngine.GameObject StorageNetwork.API.StorageNetworkPanelHeaderButtonContext.PanelRoot{get;}
+P UnityEngine.GameObject StorageNetwork.API.StorageNetworkStorageRowButtonContext.Button{get;}
+P UnityEngine.GameObject StorageNetwork.API.StorageNetworkStorageRowButtonContext.PanelRoot{get;}
+P UnityEngine.GameObject StorageNetwork.API.StorageNetworkStorageRowButtonContext.Row{get;}
+P UnityEngine.GameObject StorageNetwork.Core.StorageInfo.GameObject{get;}
+P UnityEngine.RectTransform StorageNetwork.API.StorageNetworkPanelHeaderButtonContext.ButtonRect{get;}
+P UnityEngine.RectTransform StorageNetwork.API.StorageNetworkPanelHeaderButtonContext.PanelRootRect{get;}
+P UnityEngine.Sprite StorageNetwork.API.StorageNetworkDisplayInfo.TypeIcon{get;set;}
+P UnityEngine.Transform StorageNetwork.API.StorageNetworkPanelHeaderButtonContext.Canvas{get;}
+P UnityEngine.Transform StorageNetwork.API.StorageNetworkPanelHeaderButtonContext.Header{get;}
+T interface StorageNetwork.API.IStorageNetworkCategoryProvider
+T interface StorageNetwork.API.IStorageNetworkDisplayProvider
+T interface StorageNetwork.API.IStorageNetworkEnrollable
+T interface StorageNetwork.API.IStorageNetworkPanelHeaderButtonProvider
+T interface StorageNetwork.API.IStorageNetworkSettingsButtonProvider
+T interface StorageNetwork.API.IStorageNetworkSettingsPanelProvider
+T interface StorageNetwork.API.IStorageNetworkStorageFlagsProvider
+T interface StorageNetwork.API.IStorageNetworkStorageRowButtonProvider
+T interface StorageNetwork.API.IStorageNetworkWorldPanelContentProvider
+T enum StorageNetwork.API.StorageNetworkStorageFlags
+T sealed class StorageNetwork.API.StorageNetworkCategoryDescriptor
+T sealed class StorageNetwork.API.StorageNetworkDisplayInfo
+T sealed class StorageNetwork.API.StorageNetworkPanelHeaderButton
+T sealed class StorageNetwork.API.StorageNetworkPanelHeaderButtonContext
+T sealed class StorageNetwork.API.StorageNetworkSettingsButtonState
+T sealed class StorageNetwork.API.StorageNetworkSettingsPanelBuilder
+T sealed class StorageNetwork.API.StorageNetworkStorageRowButton
+T sealed class StorageNetwork.API.StorageNetworkStorageRowButtonContext
+T sealed class StorageNetwork.API.StorageNetworkTransferResult
+T sealed class StorageNetwork.API.StorageNetworkWorldPanelContent
+T sealed class StorageNetwork.Core.StorageInfo
+T sealed class StorageNetwork.Core.StorageSceneLightweightSnapshot
+T sealed class StorageNetwork.Core.StorageSceneSnapshot
+T static class StorageNetwork.API.StorageNetworkApi
+T static class StorageNetwork.API.StorageNetworkPanelHeaderButtonRegistry
+T static class StorageNetwork.API.StorageNetworkPanelPalette
+T static class StorageNetwork.API.StorageNetworkTags
+T static class StorageNetwork.API.StorageNetworkWorldPanelRegistry
+T static class StorageNetwork.Core.StorageSceneCollector
+T static class StorageNetwork.Core.StorageSceneRegistry
