@@ -36,7 +36,10 @@ namespace StorageNetwork.Core
         {
             Localization.RegisterForTranslation(root);
             RegisterBuildMenuStrings();
+            foreach (StorageNetwork.Trading.TradingTextEntry entry in StorageNetwork.Trading.TradingTextCatalog.Entries)
+                Strings.Add(entry.Key, entry.Source);
             LoadStrings();
+            StorageNetwork.Trading.TradingText.Configure(GetLocaleCode(), key => Strings.Get(key));
             LocString.CreateLocStringKeys(root, null);
             translatedRoot = root;
             translatedLocaleCode = GetLocaleCode();
