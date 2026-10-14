@@ -15,7 +15,7 @@
     <OutputPath>$(UserProfile)\Documents\Klei\OxygenNotIncluded\mods\Dev\MusicBox\</OutputPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <OutputPath>$(UserProfile)\Documents\Klei\OxygenNotIncluded\mods\Dev\MusicBox\</OutputPath>
+    <OutputPath>bin\Release\</OutputPath>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="0Harmony">

@@ -20,7 +20,7 @@
     <OutputPath>bin\Debug\</OutputPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <OutputPath>$(UserProfile)\Documents\Klei\OxygenNotIncluded\mods\Dev\ONIResourceBridge\</OutputPath>
+    <OutputPath>bin\Release\</OutputPath>
   </PropertyGroup>
 
   <ItemGroup>

@@ -16,7 +16,7 @@
     <OutputPath>$(UserProfile)\Documents\Klei\OxygenNotIncluded\mods\Dev\MiniBox\</OutputPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <OutputPath>$(UserProfile)\Documents\Klei\OxygenNotIncluded\mods\Dev\MiniBox\</OutputPath>
+    <OutputPath>bin\Release\</OutputPath>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="0Harmony">

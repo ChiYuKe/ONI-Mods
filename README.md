@@ -12,6 +12,8 @@
 
 本仓库采用多项目管理，每个目录对应一个 Mod 或开发工具。
 
+全部 32 个 C# 项目的分类、构建入口和已知问题见 [项目索引](./PROJECTS.md)。
+
 ### 功能型 Mod
 
 | 源码目录 | Mod 名称 | 功能描述 | 获取 / 下载 |
@@ -32,6 +34,7 @@
 | [RunningOutOfTime](./RunningOutOfTime) | Running Out of Time | 为复制人增加时间与寿命相关机制。 | 源码 |
 | [StorageNetwork](./StorageNetwork) | 储存网络 | 将储存、生产建筑、喷泉和订单调度整合到可视化管理窗口。 | [Steam 订阅](https://steamcommunity.com/sharedfiles/filedetails/?id=3732422991) |
 | [LogicNetwork](./LogicNetwork) | 逻辑网络 | 独立的可编程自动化信号输出器。 | |
+| [LocalCanvas](./LocalCanvas) | 本地画布 | 将本地图片加入画布的重新装饰选项。 | 源码 |
 | [MadeInAbyss](./MadeInAbyss) | 来自深渊 | 灵感来自《来自深渊》：从深处上升会承受与下潜深度相应的"上升负荷"诅咒，探窟深度晋升笛级，深处挖掘可发现遗物，从最终地诅咒中幸存者化为生骸。 | 源码 |
 | [TAccessories](./TAccessories) | TAccessories | 扩展复制人饰品、效果及相关游戏内容。 | 源码 |
 | [VignetteBegone](./VignetteBegone) | 移除晕影 | 移除或切换游戏边缘暗角与警报晕影。 | [Steam 订阅](https://steamcommunity.com/sharedfiles/filedetails/?id=3460554894) |
@@ -48,6 +51,7 @@
 | [NewElementRegistration](./NewElementRegistration) | 新元素注册示例 | 演示通过 elements YAML 和 Substance 补丁注册自定义元素。 |
 | [ONIResourceBridge](./ONIResourceBridge) | ONI Resource Bridge | 将游戏已加载的 KAnim 资源通过本机接口提供给 KAnimGUI。 |
 | [SN_DuplicantGenetics](./SN_DuplicantGenetics) | StorageNetwork 扩展示例 | 演示储存网络组件接口和主面板扩展。 |
+| [StorageNetwork.Tests](./StorageNetwork.Tests) | 储存网络验证 | 确定性运行时检查、序列化、公共接口和性能验证。 |
 | [TestMod](./TestMod) | AB UI Toolkit | 用于测试 AssetBundle UI 预制体和运行时辅助功能。 |
 | [TestPlanter](./TestPlanter) | 植物测试 | 自定义植物、果实和作物机制的测试项目。 |
 | [FoodandFoodBuffTutorialCase](./TutorialCase/FoodandFoodBuffTutorialCase) | 食物与 Buff 教程 | 演示自定义食物和 Buff 的教程工程。 |
@@ -63,7 +67,13 @@
 1. 克隆本仓库到本地。
 2. 使用 Visual Studio 打开 `NOIMods.sln` 解决方案。
 3. 检查项目引用，确保 `Assembly-CSharp.dll` 等游戏库文件路径正确。
-4. 编译项目并将生成的 `.dll` 文件放入游戏的 `mods/Dev` 文件夹中。
+4. 使用 Release 编译所需项目，再将生成的 `.dll`、模组元数据和所需资源放入游戏的 `mods/Dev` 文件夹中。
+
+```powershell
+dotnet build StorageNetwork/StorageNetwork.csproj -c Release
+```
+
+Release 输出统一保存在各项目的 `bin/Release` 下；测试项目额外包含目标框架子目录。部分 Debug 配置会直接写入游戏目录。全仓构建存在已知旧项目错误，详情见 [项目索引](./PROJECTS.md)。
 
 ## 💻 技术细节
 
@@ -72,7 +82,7 @@
 - **补丁框架:** Harmony (`0Harmony`)。
 - **游戏依赖:** 引用《缺氧》`OxygenNotIncluded_Data/Managed` 下的 `Assembly-CSharp.dll`、`Assembly-CSharp-firstpass.dll`、Unity 模块和 TextMeshPro 等运行库。
 - **常用依赖:** 部分项目会使用 `Newtonsoft.Json`、PLib、FMODUnity、Unity UI / AssetBundle 等。
-- **构建方式:** 使用 Visual Studio 打开 `NOIMods.sln`，或对单个项目执行 `dotnet build <项目>.csproj`。
+- **构建方式:** 使用 Visual Studio 打开 `NOIMods.sln`，或对单个项目执行 `dotnet build <项目>.csproj -c Release`。
 - **输出位置:** 部分项目 Debug 配置会直接输出到 `Documents\Klei\OxygenNotIncluded\mods\Dev\<ModName>`。
 - **适用版本:** 以当前 Steam 版 ONI/U58+ 为主，实际兼容性取决于项目引用的游戏 Managed 程序集版本。
 
