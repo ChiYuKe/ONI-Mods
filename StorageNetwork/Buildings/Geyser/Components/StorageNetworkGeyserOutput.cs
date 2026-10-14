@@ -697,6 +697,10 @@ namespace StorageNetwork.Components
                 else if (element.IsSolid)
                 {
                     GameObject resource = element.substance.SpawnResource(target.transform.GetPosition(), amount, temperature, diseaseIdx, diseaseCount, true, false, true);
+                    if (resource == null) continue;
+                    // The resource is spawned with manual activation; initialize its
+                    // components before Store notifies inventory readers.
+                    resource.SetActive(true);
                     target.Store(resource, hide_popups: true, block_events: false, do_disease_transfer: true, is_deserializing: false);
                 }
                 else
