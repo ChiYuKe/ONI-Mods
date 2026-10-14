@@ -37,10 +37,13 @@ namespace StorageNetwork.UI
         private int tradingHistoryVersion = -1;
         private TradingGood tradingQuoteGood;
         private int tradingQuoteSupplierId;
+        private string tradingQuoteSupplierName;
         private bool tradingQuoteBuy;
         private int tradingQuoteWorldId;
         private TradingQuote tradingQuote;
         private readonly TextMeshProUGUI[] supplierLabels = new TextMeshProUGUI[5];
+        private readonly Image[] supplierTimeFills = new Image[5];
+        private readonly StorageNetworkTradingPortrait[] supplierPortraits = new StorageNetworkTradingPortrait[5];
         private KInputTextField tradingAmountInput;
         private KInputTextField tradingSearchInput;
         private int tradingSlot;
@@ -50,7 +53,14 @@ namespace StorageNetwork.UI
         private bool resetTradingScrollAfterLayout;
         private string tradingRowsSignature;
         private string tradingFilter = string.Empty;
-        private string tradingMessage = "选择供应商和商品，检查成交数量与总额后确认交易。货币、货物及成交记录随存档保存。";
+        private int tradingQuickFilter;
+        private TextMeshProUGUI tradingQuickFilterLabel;
+        private TextMeshProUGUI tradingEventLabel;
+        private TextMeshProUGUI tradingDeliveryText;
+        private KButton tradingLocateButton;
+        private readonly List<Storage> tradingLocateStorages = new List<Storage>();
+        private int tradingLocateIndex;
+        private string tradingMessage = TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_DADEC6AE34C8");
 
         private void ToggleTradingWindow()
         {
@@ -67,6 +77,11 @@ namespace StorageNetwork.UI
         {
             if (tradingAmountInput != null) tradingAmountInput.DeactivateInputField();
             if (tradingAmountDialogRoot != null && modalRoot == tradingAmountDialogRoot) CloseModal();
+            if (tradingChartRoot != null && modalRoot == tradingChartRoot) CloseModal();
+            if (tradingDialogueRoot != null && modalRoot == tradingDialogueRoot) CloseModal();
+            if (tradingIdentityRoot != null && modalRoot == tradingIdentityRoot) CloseModal();
+            if (tradingAiSettingsRoot != null && modalRoot == tradingAiSettingsRoot) CloseModal();
+            if (tradingGroupRoot != null && modalRoot == tradingGroupRoot) { StorageNetworkTradingState.Instance?.CancelGroupChat(); CloseModal(); }
             tradingSearchInput?.DeactivateInputField();
             tradingLayoutFrame = -1;
             resetTradingScrollAfterLayout = false;
@@ -92,12 +107,14 @@ namespace StorageNetwork.UI
             GameObject header = CreateBox("Header", tradingRoot.transform, StorageNetworkPanelPalette.HeaderBackground);
             SetTopStretch(header.GetComponent<RectTransform>(), 8, 8, 8, 40);
             header.AddComponent<StorageNetworkWindowDrag>().Configure(rect, "tradingMarket");
-            tradingSummary = CreateText("Title", header.transform, "网络交易", 16, TextAlignmentOptions.MidlineLeft);
+            tradingSummary = CreateText("Title", header.transform, TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_FAD7E42F054D"), 16, TextAlignmentOptions.MidlineLeft);
             tradingSummary.fontStyle = FontStyles.Bold;
             tradingSummary.textWrappingMode = TextWrappingModes.NoWrap;
             tradingSummary.overflowMode = TextOverflowModes.Ellipsis;
             Stretch(tradingSummary.rectTransform(), 12, 0);
-            tradingSummary.rectTransform().offsetMax = new Vector2(-44, 0);
+            tradingSummary.rectTransform().offsetMax = new Vector2(-160, 0);
+            BuildTradingAiSettingsButton(header.transform);
+            BuildTradingGroupChatButton(header.transform);
             GameObject close = CreateCloseIconButton("Close", header.transform, CloseTradingWindow);
             RectTransform closeRect = close.GetComponent<RectTransform>();
             closeRect.anchorMin = closeRect.anchorMax = closeRect.pivot = new Vector2(1, 0.5f);
@@ -105,7 +122,7 @@ namespace StorageNetwork.UI
             closeRect.anchoredPosition = new Vector2(-8, 0);
 
             GameObject suppliers = CreateBox("Suppliers", contentPlate.transform, TradingBackground);
-            SetTopStretch(suppliers.GetComponent<RectTransform>(), 8, 8, 8, 76);
+            SetTopStretch(suppliers.GetComponent<RectTransform>(), 8, 8, 8, 68);
             HorizontalLayoutGroup supplierLayout = suppliers.AddComponent<HorizontalLayoutGroup>();
             supplierLayout.padding = new RectOffset(6, 6, 6, 6);
             supplierLayout.spacing = 6;
@@ -114,7 +131,7 @@ namespace StorageNetwork.UI
             for (int i = 0; i < 5; i++)
             {
                 int slot = i;
-                GameObject button = CreateGameButton("Supplier" + i, suppliers.transform, "供货商", () =>
+                GameObject button = CreateGameButton("Supplier" + i, suppliers.transform, TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_13E43251E905"), () =>
                 {
                     tradingSlot = slot;
                     tradingPage = 0;
@@ -123,30 +140,77 @@ namespace StorageNetwork.UI
                     RefreshTradingWindow();
                 });
                 supplierLabels[i] = button.GetComponentInChildren<TextMeshProUGUI>();
-                supplierLabels[i].textWrappingMode = TextWrappingModes.Normal;
-                supplierLabels[i].maxVisibleLines = 3;
+                supplierLabels[i].textWrappingMode = TextWrappingModes.NoWrap;
+                supplierLabels[i].maxVisibleLines = 2;
+                supplierLabels[i].alignment = TextAlignmentOptions.MidlineLeft;
+                SetStretch(supplierLabels[i].rectTransform(), 54, 30, 15, 5);
+                GameObject identityButton = CreateGameButton("IdentityCard", button.transform, "i", () =>
+                {
+                    var visitors = StorageNetworkTradingState.Instance?.Market?.Suppliers;
+                    if (visitors != null && slot < visitors.Count) ShowTradingIdentityCard(visitors[slot].Id);
+                });
+                RectTransform identityRect = identityButton.GetComponent<RectTransform>();
+                identityRect.anchorMin = identityRect.anchorMax = identityRect.pivot = new Vector2(1, 1);
+                identityRect.sizeDelta = new Vector2(22, 22);
+                identityRect.anchoredPosition = new Vector2(-5, -5);
+                identityButton.AddComponent<ToolTip>().toolTip = TradingText.Render(TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_100256B8A848"));
+                GameObject portraitSlot = new GameObject("SupplierPortrait", typeof(RectTransform), typeof(StorageNetworkTradingPortrait));
+                portraitSlot.transform.SetParent(button.transform, false);
+                RectTransform portraitRect = portraitSlot.GetComponent<RectTransform>();
+                portraitRect.anchorMin = portraitRect.anchorMax = portraitRect.pivot = new Vector2(0, 0.5f);
+                portraitRect.sizeDelta = new Vector2(40, 40);
+                portraitRect.anchoredPosition = new Vector2(8, 5);
+                supplierPortraits[i] = portraitSlot.GetComponent<StorageNetworkTradingPortrait>();
+                GameObject timeTrack = CreatePlainImage("VisitTimeTrack", button.transform, new Color(0.12f, 0.14f, 0.18f, 1));
+                Image trackImage = timeTrack.GetComponent<Image>();
+                trackImage.type = Image.Type.Simple;
+                trackImage.raycastTarget = false;
+                RectTransform trackRect = timeTrack.GetComponent<RectTransform>();
+                trackRect.anchorMin = Vector2.zero;
+                trackRect.anchorMax = new Vector2(1, 0);
+                trackRect.offsetMin = new Vector2(8, 6);
+                trackRect.offsetMax = new Vector2(-8, 11);
+                GameObject fill = CreatePlainImage("RemainingVisitTime", timeTrack.transform, Color.white);
+                supplierTimeFills[i] = fill.GetComponent<Image>();
+                supplierTimeFills[i].type = Image.Type.Simple;
+                supplierTimeFills[i].raycastTarget = false;
+                Stretch(fill.GetComponent<RectTransform>(), 0, 0);
+                button.AddComponent<ToolTip>();
             }
 
             GameObject controls = CreateBox("Controls", contentPlate.transform, StorageNetworkPanelPalette.CardBackground);
-            SetTopStretch(controls.GetComponent<RectTransform>(), 8, 8, 90, 38);
+            SetTopStretch(controls.GetComponent<RectTransform>(), 8, 8, 82, 38);
             HorizontalLayoutGroup controlsLayout = controls.AddComponent<HorizontalLayoutGroup>();
             controlsLayout.padding = new RectOffset(8, 8, 5, 5);
             controlsLayout.spacing = 8;
             controlsLayout.childControlWidth = controlsLayout.childControlHeight = true;
             controlsLayout.childForceExpandWidth = false;
             controlsLayout.childForceExpandHeight = true;
-            TradingLabel(controls.transform, "搜索商品", 80);
+            TradingLabel(controls.transform, TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_98C2FE486054"), 80);
             tradingSearchInput = CreateFixedTextInput(controls.transform, "TradingSearch", "", 240, 28, 12);
             tradingSearchInput.onValueChanged.AddListener(value => { tradingFilter = value ?? ""; tradingPage = 0; });
-            GameObject previous = CreateGameButton("Previous", controls.transform, "上一页", () => { tradingPage = Math.Max(0, tradingPage - 1); RefreshTradingWindow(); });
+            GameObject previous = CreateGameButton("Previous", controls.transform, TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_C9B9AE7A6144"), () => { tradingPage = Math.Max(0, tradingPage - 1); RefreshTradingWindow(); });
             previous.AddComponent<LayoutElement>().preferredWidth = 64;
-            GameObject next = CreateGameButton("Next", controls.transform, "下一页", () => { tradingPage++; RefreshTradingWindow(); });
+            GameObject next = CreateGameButton("Next", controls.transform, TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_8A8542F69648"), () => { tradingPage++; RefreshTradingWindow(); });
             next.AddComponent<LayoutElement>().preferredWidth = 64;
             tradingPageLabel = TradingLabel(controls.transform, "", 90);
+            GameObject quickFilter = CreateGameButton("QuickFilter", controls.transform, TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_D11D7CBA555B"), () =>
+            {
+                tradingQuickFilter = (tradingQuickFilter + 1) % 3;
+                tradingPage = 0;
+                tradingRowsSignature = null;
+                RefreshTradingWindow();
+            });
+            quickFilter.AddComponent<LayoutElement>().preferredWidth = 96;
+            tradingQuickFilterLabel = quickFilter.GetComponentInChildren<TextMeshProUGUI>();
+            quickFilter.AddComponent<ToolTip>().toolTip = TradingText.Render(TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_223963F053C4"));
+            tradingEventLabel = TradingLabel(controls.transform, "", 180);
+            tradingEventLabel.raycastTarget = true;
+            tradingEventLabel.gameObject.AddComponent<ToolTip>().toolTip = TradingText.Render(TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_BE55C2A75D1B"));
 
             GameObject workspace = new GameObject("TradingWorkspace", typeof(RectTransform), typeof(HorizontalLayoutGroup));
             workspace.transform.SetParent(contentPlate.transform, false);
-            SetStretch(workspace.GetComponent<RectTransform>(), 8, 8, 70, 132);
+            SetStretch(workspace.GetComponent<RectTransform>(), 8, 8, 70, 124);
             HorizontalLayoutGroup workspaceLayout = workspace.GetComponent<HorizontalLayoutGroup>();
             workspaceLayout.spacing = 8;
             workspaceLayout.childControlWidth = workspaceLayout.childControlHeight = true;
@@ -158,8 +222,12 @@ namespace StorageNetwork.UI
             goodsPaneLayout.flexibleWidth = 1;
             GameObject listHeader = CreateBox("GoodsTitle", goodsPane.transform, StorageNetworkPanelPalette.SettingsHeaderBackground);
             SetTopStretch(listHeader.GetComponent<RectTransform>(), 0, 0, 0, 28);
-            TextMeshProUGUI listTitle = CreateText("Title", listHeader.transform, "货物交易 · 买卖报价 / 涨跌较上周期", 12, TextAlignmentOptions.MidlineLeft);
-            Stretch(listTitle.rectTransform(), 8, 0);
+            TextMeshProUGUI listTitle = CreateText("Title", listHeader.transform, TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_6678CEA99B81"), 12, TextAlignmentOptions.MidlineLeft);
+            SetStretch(listTitle.rectTransform(), 14, 316, 0, 0);
+            TextMeshProUGUI priceTitle = CreateText("PriceTitle", listHeader.transform, TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_E6B3D9BC208C"), 12, TextAlignmentOptions.MidlineLeft);
+            SetTradingRightColumn(priceTitle.rectTransform(), 128, 180, 28);
+            TextMeshProUGUI actionTitle = CreateText("ActionTitle", listHeader.transform, TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_919DDBBD91C0"), 12, TextAlignmentOptions.Center);
+            SetTradingRightColumn(actionTitle.rectTransform(), 28, 92, 28);
             RectTransform viewport = CreateScrollViewport(goodsPane.transform, "Goods", out tradingContent, 32, 0, 0, 0, 8);
             viewport.GetComponent<Image>().color = TradingBackground;
             tradingRows = new StorageNetworkKeyedRowCache(tradingContent, 40, 6);
@@ -178,6 +246,7 @@ namespace StorageNetwork.UI
             tradingStatus.overflowMode = TextOverflowModes.Ellipsis;
             tradingStatus.maxVisibleLines = 2;
             Stretch(tradingStatus.rectTransform(), 10, 3);
+            BuildTradingDialogueButton(footer.transform);
 
             AddTradingWindowBorder(scale);
             tradingRoot.SetActive(false);
@@ -217,17 +286,31 @@ namespace StorageNetwork.UI
             if (modalRoot != null) modalRoot.SetActive(false);
             CloseModal();
             tradingDialogFeedback = null;
-            modalRoot = CreateAmountModalFrame(tradingQuoteBuy ? "买入数量" : "卖出数量", 560, 400, out GameObject body);
+            modalRoot = CreateAmountModalFrame(tradingQuoteBuy ? TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_D8D7A6452DE9") : TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_7D6C856F7E96"), 620, 510, out GameObject body);
             tradingAmountDialogRoot = modalRoot;
             GameObject card = CreatePlainImage("TradeQuote", body.transform, StorageNetworkPanelPalette.RowBackground);
-            card.AddComponent<LayoutElement>().preferredHeight = 104;
+            card.AddComponent<LayoutElement>().preferredHeight = 124;
             card.AddComponent<RectMask2D>();
             tradingQuoteText = CreateText("TradeDetails", card.transform, "", 12, TextAlignmentOptions.MidlineLeft);
             tradingQuoteText.color = StorageNetworkPanelPalette.BodyText;
-            tradingQuoteText.textWrappingMode = TextWrappingModes.NoWrap;
+            tradingQuoteText.textWrappingMode = TextWrappingModes.Normal;
             tradingQuoteText.overflowMode = TextOverflowModes.Ellipsis;
-            tradingQuoteText.maxVisibleLines = 4;
+            tradingQuoteText.maxVisibleLines = 6;
             Stretch(tradingQuoteText.rectTransform(), 10, 6);
+            GameObject deliveryCard = CreatePlainImage("DeliveryPreview", body.transform, StorageNetworkPanelPalette.CardBackground);
+            deliveryCard.AddComponent<LayoutElement>().preferredHeight = 68;
+            tradingDeliveryText = CreateText("Delivery", deliveryCard.transform, "", 11, TextAlignmentOptions.MidlineLeft);
+            tradingDeliveryText.color = StorageNetworkPanelPalette.BodyText;
+            tradingDeliveryText.textWrappingMode = TextWrappingModes.NoWrap;
+            tradingDeliveryText.overflowMode = TextOverflowModes.Ellipsis;
+            tradingDeliveryText.maxVisibleLines = 3;
+            tradingDeliveryText.raycastTarget = true;
+            tradingDeliveryText.gameObject.AddComponent<ToolTip>();
+            SetStretch(tradingDeliveryText.rectTransform(), 10, 100, 4, 4);
+            GameObject locate = CreateGameButton("LocateDelivery", deliveryCard.transform, TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_2D533BF10CD6"), LocateTradingStorage);
+            SetTradingRightColumn(locate.GetComponent<RectTransform>(), 8, 86, 26);
+            tradingLocateButton = locate.GetComponent<KButton>();
+            tradingLocateIndex = 0;
             tradingQuantityLabel = CreateAmountModalText(body.transform, "", 12, FontStyles.Bold);
             tradingQuantityLabel.color = StorageNetworkPanelPalette.BodyText;
             tradingAmountSlider = CreateAmountSlider(body.transform, 1);
@@ -247,16 +330,18 @@ namespace StorageNetwork.UI
             });
             GameObject shortcuts = AddAmountModalRow(body.transform, 8, 28);
             AddFooterSpacer(shortcuts.transform);
-            GameObject maximum = AddAmountModalButton(shortcuts.transform, "全部", 86, SetMaximumTradingAmount);
+            GameObject maximum = AddAmountModalButton(shortcuts.transform, TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_5C55A67935AF"), 86, SetMaximumTradingAmount);
             tradingMaximumButton = maximum.GetComponent<KButton>();
             GameObject footer = AddAmountModalRow(body.transform, 8, 30);
             AddFooterSpacer(footer.transform);
-            AddAmountModalButton(footer.transform, "取消", 92, CloseModal);
-            GameObject confirm = AddAmountModalButton(footer.transform, "确认成交", 100, ConfirmTradingQuote);
+            AddAmountModalButton(footer.transform, TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_2CD0F3BE8738"), 92, CloseModal);
+            GameObject confirm = AddAmountModalButton(footer.transform, TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_39248F1A42C6"), 100, ConfirmTradingQuote);
             confirm.GetComponent<KImage>().colorStyleSetting = KleiPinkStyle();
+            confirm.GetComponent<KImage>().ApplyColorStyleSetting();
             tradingConfirmButton = confirm.GetComponent<KButton>();
             var initial = StorageNetworkTradingState.Instance.GetQuote(tradingQuoteSupplierId, tradingQuoteGood, 1, tradingQuoteBuy, GetActiveWorldFilterId());
-            SetTradingDialogAmount(Math.Min(initial.MaximumAmount, tradingQuoteGood.ByUnit ? 1 : 100));
+            double remembered = StorageNetworkTradingState.Instance.LastAmount(tradingQuoteGood, tradingQuoteBuy, tradingQuoteGood.ByUnit ? 1 : 100);
+            SetTradingDialogAmount(Math.Min(initial.MaximumAmount, remembered));
         }
 
         private void SetTradingDialogAmount(double amount)
@@ -276,7 +361,7 @@ namespace StorageNetwork.UI
             layout.minWidth = 260;
             GameObject header = CreateBox("HistoryHeader", pane.transform, StorageNetworkPanelPalette.SettingsHeaderBackground);
             SetTopStretch(header.GetComponent<RectTransform>(), 0, 0, 0, 28);
-            tradingHistoryTitle = CreateText("Title", header.transform, "最近成交", 12, TextAlignmentOptions.MidlineLeft);
+            tradingHistoryTitle = CreateText("Title", header.transform, TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_AE77FA5E5263"), 12, TextAlignmentOptions.MidlineLeft);
             Stretch(tradingHistoryTitle.rectTransform(), 8, 0);
             tradingHistoryTotals = CreateText("Totals", pane.transform, "", 11, TextAlignmentOptions.MidlineLeft);
             tradingHistoryTotals.color = StorageNetworkPanelPalette.BodyText;
@@ -293,17 +378,17 @@ namespace StorageNetwork.UI
         {
             if (tradingHistoryVersion == market.NextTradeId) return;
             tradingHistoryVersion = market.NextTradeId;
-            SetTextIfChanged(tradingHistoryTitle, $"最近成交 · {market.Receipts.Count} 笔");
+            SetTextIfChanged(tradingHistoryTitle, TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_DE52F420EB2D", TradingText.Argument((object)(market.Receipts.Count), null, 0)));
             string income = ColorUtility.ToHtmlStringRGB(StorageNetworkPanelPalette.PositiveStatus);
             string expense = ColorUtility.ToHtmlStringRGB(StorageNetworkPanelPalette.DangerStatus);
-            SetTextIfChanged(tradingHistoryTotals, $"<color=#{income}>收入 ¥{market.Receipts.Where(r => !r.Buy).Sum(r => r.Total):N0}</color>  <color=#{expense}>支出 ¥{market.Receipts.Where(r => r.Buy).Sum(r => r.Total):N0}</color>");
+            SetTextIfChanged(tradingHistoryTotals, TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_4242349E33B3", TradingText.Argument((object)(income), null, 0), TradingText.Argument((object)(market.Receipts.Where(r => !r.Buy).Sum(r => r.Total)), "N0", 0), TradingText.Argument((object)(expense), null, 0), TradingText.Argument((object)(market.Receipts.Where(r => r.Buy).Sum(r => r.Total)), "N0", 0)));
             tradingHistoryRows.Begin();
             foreach (TradingReceipt receipt in market.Receipts.AsEnumerable().Reverse())
                 tradingHistoryRows.Use("receipt:" + receipt.Id, () => CreateTradingReceiptRow(receipt));
             if (market.Receipts.Count == 0)
                 tradingHistoryRows.Use("empty", () =>
                 {
-                    TextMeshProUGUI empty = TradingLabel(tradingHistoryContent, "完成交易后，记录会出现在这里。", 0);
+                    TextMeshProUGUI empty = TradingLabel(tradingHistoryContent, TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_FDD458B3264D"), 0);
                     empty.GetComponent<LayoutElement>().preferredHeight = 44;
                     empty.textWrappingMode = TextWrappingModes.Normal;
                     return empty.gameObject;
@@ -333,28 +418,47 @@ namespace StorageNetwork.UI
             if (tradingRefreshElapsed < 1) return;
             tradingRefreshElapsed = 0;
             RefreshTradingWindow();
+            RefreshTradingPriceChart();
         }
 
         private void RefreshTradingWindow()
         {
             StorageNetworkTradingState state = StorageNetworkTradingState.Instance;
-            if (state == null || state.Market == null) { tradingStatus.text = "交易市场尚未初始化。"; return; }
-            state.Refresh();
+            if (state == null || state.Market == null) { tradingStatus.text = TradingText.Render(TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_289A3F2079CF")); return; }
+            using var displayRefresh = state.BeginDisplayRefresh();
             int worldId = GetActiveWorldFilterId();
+            state.Refresh(worldId);
             double cycle = StorageNetworkTradingState.Cycle;
             TradingSupplier selected = state.Market.Suppliers[tradingSlot];
-            SetTextIfChanged(tradingSummary, $"网络交易    账户余额 ¥{state.Market.Balance:0.#####}    {StorageNetworkWorldDisplay.GetWorldName(worldId)}");
+            SetTextIfChanged(tradingQuickFilterLabel, new[] { TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_D11D7CBA555B"), TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_29C8539FD571"), TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_D8390476F99E") }[tradingQuickFilter]);
+            string marketEvent = TradingMarket.EventName(selected.Specialty, cycle);
+            decimal marketEventFactor = TradingMarket.EventFactor(selected.Specialty, cycle);
+            SetTextIfChanged(tradingEventLabel, ColoredTradingText(marketEvent, marketEventFactor > 1 ? StorageNetworkPanelPalette.DangerStatus :
+                marketEventFactor < 1 ? StorageNetworkPanelPalette.PositiveStatus : StorageNetworkPanelPalette.MutedText));
+            SetTextIfChanged(tradingSummary, TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_FDDC805F60FB", TradingText.Argument((object)(state.Market.Balance), "0.#####", 0), TradingText.Argument((object)(StorageNetworkWorldDisplay.GetWorldName(worldId)), null, 0)));
             for (int i = 0; i < 5; i++)
             {
                 TradingSupplier supplier = state.Market.Suppliers[i];
-                string profile = StorageNetworkTradingState.ProfileName(supplier).Split('·')[0].Trim();
-                SetTextIfChanged(supplierLabels[i], $"{(i == tradingSlot ? "▶ " : "")}{StorageNetworkTradingState.SpecialtyName(supplier.Specialty)} #{supplier.Id}\n{profile} · 剩余 {supplier.Departure - cycle:0.0} 周期\n收购 ¥{supplier.BuyLimit - supplier.Bought:0} · 供货 ¥{supplier.SellLimit - supplier.Sold:0}");
+                double remaining = Math.Max(0, supplier.Departure - cycle);
+                double duration = Math.Max(0.001, supplier.Departure - supplier.Arrival);
+                Image timeFill = supplierTimeFills[i];
+                // Each visit starts full and drains relative to its own total duration.
+                timeFill.rectTransform.anchorMax = new Vector2(Mathf.Clamp01((float)(remaining / duration)), 1);
+                timeFill.color = remaining <= 1 ? new Color(0.86f, 0.40f, 0.40f, 1)
+                    : remaining <= 2 ? new Color(0.90f, 0.70f, 0.36f, 1) : new Color(0.40f, 0.74f, 0.68f, 1);
+                supplierPortraits[i].Bind(supplier);
+                SetTextIfChanged(supplierLabels[i], $"<b>{(i == tradingSlot ? "▶ " : "")}{supplier.Name ?? TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_C8A11D7DF26E")}</b>\n{StorageNetworkTradingState.SpecialtyName(supplier.Specialty)} #{supplier.Id}");
+                supplierLabels[i].GetComponentInParent<ToolTip>().toolTip = TradingText.Render(TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_EA3C0C11A4B9", TradingText.Argument((object)(supplier.Name ?? TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_C8A11D7DF26E")), null, 0), TradingText.Argument((object)(StorageNetworkTradingState.SpecialtyName(supplier.Specialty)), null, 0), TradingText.Argument((object)(supplier.Id), null, 0), TradingText.Argument((object)(supplier.BuyLimit - supplier.Bought), "0.###", 0), TradingText.Argument((object)(supplier.SellLimit - supplier.Sold), "0.###", 0)) + StorageNetworkTradingState.ProfileName(supplier) +
+                    TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_D34F20700273", TradingText.Argument((object)(duration), "0.#", 0), TradingText.Argument((object)(remaining), "0.00", 0)) +
+                    TradingMarket.PreferenceName(supplier) + TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_93192E1DBBFB") +
+                    (TradingCharacters.Description(supplier) is string description ? "\n\n" + description : ""));
             }
-            SetTextIfChanged(tradingStatus, $"{tradingMessage}\n供货商剩余买入额度 {selected.BuyLimit - selected.Bought:0.###} / {selected.BuyLimit:0}；剩余卖出额度 {selected.SellLimit - selected.Sold:0.###} / {selected.SellLimit:0}");
+            SetTextIfChanged(tradingStatus, TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_F23E40F78F37", TradingText.Argument((object)(tradingMessage), null, 0), TradingText.Argument((object)(selected.BuyLimit - selected.Bought), "0.###", 0), TradingText.Argument((object)(selected.BuyLimit), "0", 0), TradingText.Argument((object)(selected.SellLimit - selected.Sold), "0.###", 0), TradingText.Argument((object)(selected.SellLimit), "0", 0)));
+            RefreshTradingDialogue(selected);
             // Only list membership affects structure; changing amounts or prices updates existing views.
             List<TradingGood> catalog = state.Catalog.Where(g => g.Category == selected.Specialty &&
                 (string.IsNullOrEmpty(tradingFilter) || g.Name.IndexOf(tradingFilter, StringComparison.CurrentCultureIgnoreCase) >= 0 || g.Id.IndexOf(tradingFilter, StringComparison.OrdinalIgnoreCase) >= 0) &&
-                ((selected.Stock.TryGetValue(g.Id, out double stock) && stock > 0) || StorageNetworkTradingState.Available(g, worldId) > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)).ToList();
+                MatchesTradingQuickFilter(g, selected, state, worldId)).ToList();
             string signature = $"{selected.Id}|{tradingPage}|{tradingFilter}|" + string.Join(",", catalog.Select(g => g.Id));
             if (signature != tradingRowsSignature)
                 ReconcileTradingRows(state, selected, catalog, signature);
@@ -363,6 +467,16 @@ namespace StorageNetwork.UI
                     UpdateTradingGoodRow(view, state, selected, cycle, worldId);
             RefreshTradingHistory(state.Market);
             RefreshTradingQuote();
+        }
+
+        private bool MatchesTradingQuickFilter(TradingGood good, TradingSupplier supplier, StorageNetworkTradingState state, int worldId)
+        {
+            bool stock = supplier.Stock.TryGetValue(good.Id, out double value) && value > 0;
+            if (tradingQuickFilter == 1) return stock && state.GetQuote(supplier.Id, good, good.ByUnit ? 1 : 0.01, true, worldId).MaximumAmount > 0;
+            if (tradingQuickFilter == 0 && stock) return true;
+            bool available = state.DisplayAvailable(good, worldId) > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT;
+            if (tradingQuickFilter == 2) return available && state.GetQuote(supplier.Id, good, good.ByUnit ? 1 : 0.01, false, worldId).MaximumAmount > 0;
+            return stock || available;
         }
 
         private void ReconcileTradingRows(StorageNetworkTradingState state, TradingSupplier selected, List<TradingGood> goods, string signature)
@@ -385,7 +499,7 @@ namespace StorageNetwork.UI
                 tradingRows.Use("empty", () =>
                 {
                     TextMeshProUGUI empty = TradingLabel(tradingContent,
-                        "暂无符合条件的现货或可售材料。可清空搜索或选择其他供应商。", 0);
+                        TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_E83D08B85782"), 0);
                     empty.GetComponent<LayoutElement>().preferredHeight = 60;
                     empty.GetComponent<LayoutElement>().flexibleWidth = 1;
                     return empty.gameObject;
@@ -421,13 +535,6 @@ namespace StorageNetwork.UI
             LayoutElement rowLayout = row.AddComponent<LayoutElement>();
             rowLayout.minHeight = rowLayout.preferredHeight = 76;
             rowLayout.flexibleHeight = 0;
-            HorizontalLayoutGroup layout = row.AddComponent<HorizontalLayoutGroup>();
-            layout.padding = new RectOffset(8, 8, 4, 4);
-            layout.spacing = 8;
-            layout.childAlignment = TextAnchor.MiddleLeft;
-            layout.childControlWidth = layout.childControlHeight = true;
-            layout.childForceExpandWidth = false;
-            layout.childForceExpandHeight = true;
             GameObject iconObject = new GameObject("GoodIcon", typeof(RectTransform), typeof(Image), typeof(LayoutElement));
             iconObject.transform.SetParent(row.transform, false);
             Image icon = iconObject.GetComponent<Image>();
@@ -438,9 +545,15 @@ namespace StorageNetwork.UI
             icon.raycastTarget = false;
             LayoutElement iconLayout = iconObject.GetComponent<LayoutElement>();
             iconLayout.minWidth = iconLayout.preferredWidth = 44;
+            RectTransform iconRect = iconObject.GetComponent<RectTransform>();
+            iconRect.anchorMin = iconRect.anchorMax = iconRect.pivot = new Vector2(0, 0.5f);
+            iconRect.anchoredPosition = new Vector2(8, 0);
+            iconRect.sizeDelta = new Vector2(44, 44);
 
+            var rowView = new TradingGoodRowView { Good = good, Background = row.GetComponent<Image>() };
             GameObject textColumn = new GameObject("TextColumn", typeof(RectTransform), typeof(LayoutElement), typeof(VerticalLayoutGroup));
             textColumn.transform.SetParent(row.transform, false);
+            SetStretch(textColumn.GetComponent<RectTransform>(), 60, 296, 4, 4);
             LayoutElement columnLayout = textColumn.GetComponent<LayoutElement>();
             columnLayout.minWidth = 120;
             columnLayout.preferredWidth = 200;
@@ -450,43 +563,59 @@ namespace StorageNetwork.UI
             columnGroup.childControlWidth = columnGroup.childControlHeight = true;
             columnGroup.childForceExpandWidth = true;
             columnGroup.childForceExpandHeight = false;
-            TextMeshProUGUI name = TradingLabel(textColumn.transform, good.Name, 0);
+            GameObject nameRow = AddAmountModalRow(textColumn.transform, 6, 22);
+            TextMeshProUGUI name = TradingLabel(nameRow.transform, good.Name, 0);
+            name.gameObject.GetComponent<LayoutElement>().flexibleWidth = 1;
             name.fontSize = 13;
             name.fontStyle = FontStyles.Bold;
             name.color = StorageNetworkPanelPalette.HeadingText;
             SetTradingLineHeight(name, 22);
+            GameObject trendButton = CreateGameButton("PriceHistory", nameRow.transform, TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_501F8AA52560"), () => ShowTradingPriceChart(rowView.SupplierId, rowView.Good));
+            LayoutElement trendLayout = trendButton.AddComponent<LayoutElement>();
+            trendLayout.minWidth = trendLayout.preferredWidth = 40;
+            trendLayout.minHeight = trendLayout.preferredHeight = 22;
+            trendButton.AddComponent<ToolTip>().toolTip = TradingText.Render(TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_36D384DF5163"));
             TextMeshProUGUI inventory = TradingLabel(textColumn.transform, "", 0);
             inventory.color = StorageNetworkPanelPalette.MutedText;
             SetTradingLineHeight(inventory, 38);
             inventory.maxVisibleLines = 2;
             inventory.fontSize = 11;
-            TextMeshProUGUI prices = TradingLabel(row.transform, "", 150);
+            TextMeshProUGUI prices = TradingLabel(row.transform, "", 180);
             prices.fontSize = 11;
             prices.maxVisibleLines = 2;
-            prices.gameObject.GetComponent<LayoutElement>().minHeight = 42;
-            prices.gameObject.GetComponent<LayoutElement>().preferredHeight = 42;
-            var rowView = new TradingGoodRowView { Good = good, Background = row.GetComponent<Image>(), Inventory = inventory, Prices = prices };
+            SetTradingRightColumn(prices.rectTransform(), 108, 180, 56);
+            rowView.Inventory = inventory;
+            rowView.Prices = prices;
             GameObject actions = new GameObject("TradeActions", typeof(RectTransform), typeof(LayoutElement), typeof(VerticalLayoutGroup));
             actions.transform.SetParent(row.transform, false);
-            actions.GetComponent<LayoutElement>().minWidth = actions.GetComponent<LayoutElement>().preferredWidth = 64;
+            SetTradingRightColumn(actions.GetComponent<RectTransform>(), 8, 92, 56);
+            actions.GetComponent<LayoutElement>().minWidth = actions.GetComponent<LayoutElement>().preferredWidth = 92;
             VerticalLayoutGroup actionsLayout = actions.GetComponent<VerticalLayoutGroup>();
             actionsLayout.spacing = 4;
             actionsLayout.childAlignment = TextAnchor.MiddleCenter;
             actionsLayout.childControlWidth = actionsLayout.childControlHeight = true;
             actionsLayout.childForceExpandWidth = true;
             actionsLayout.childForceExpandHeight = false;
-            GameObject buyButton = CreateGameButton("Buy", actions.transform, "买入", () => SelectTradingGood(rowView.SupplierId, rowView.Good, true));
-            GameObject sellButton = CreateGameButton("Sell", actions.transform, "卖出", () => SelectTradingGood(rowView.SupplierId, rowView.Good, false));
+            GameObject buyButton = CreateGameButton("Buy", actions.transform, TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_A1557EC3B077"), () => SelectTradingGood(rowView.SupplierId, rowView.Good, true));
+            GameObject sellButton = CreateGameButton("Sell", actions.transform, TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_FB28BA14091D"), () => SelectTradingGood(rowView.SupplierId, rowView.Good, false));
             foreach (GameObject button in new[] { buyButton, sellButton })
             {
                 LayoutElement buttonLayout = button.AddComponent<LayoutElement>();
-                buttonLayout.minWidth = buttonLayout.preferredWidth = 64;
+                buttonLayout.minWidth = buttonLayout.preferredWidth = 92;
                 buttonLayout.minHeight = buttonLayout.preferredHeight = 26;
             }
             rowView.Buy = buyButton.GetComponent<KButton>();
             rowView.Sell = sellButton.GetComponent<KButton>();
+            rowView.SellTip = sellButton.AddComponent<ToolTip>();
             view = rowView;
             return row;
+        }
+
+        private static void SetTradingRightColumn(RectTransform rect, float right, float width, float height)
+        {
+            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(1, 0.5f);
+            rect.anchoredPosition = new Vector2(-right, 0);
+            rect.sizeDelta = new Vector2(width, height);
         }
 
         private static void SetTradingLineHeight(TextMeshProUGUI text, float height)
@@ -503,13 +632,14 @@ namespace StorageNetwork.UI
             view.SupplierId = supplier.Id;
             view.Background.color = tradingQuoteGood?.Id == good.Id && tradingQuoteSupplierId == supplier.Id
                 ? StorageNetworkPanelPalette.CardBackground : StorageNetworkPanelPalette.RowBackground;
-            string unit = good.ByUnit ? "件" : "kg";
+            string unit = good.ByUnit ? TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_7C0025557708") : "kg";
             supplier.Stock.TryGetValue(good.Id, out double stock);
-            float available = StorageNetworkTradingState.Available(good, worldId);
+            float available = state.DisplayAvailable(good, worldId);
             string own = ColoredTradingText($"{available:#,0.###} {unit}", StorageNetworkPanelPalette.PositiveStatus);
             string vendor = ColoredTradingText($"{stock:#,0.###} {unit}", StorageNetworkPanelPalette.MetricAccent);
-            SetTextIfChanged(view.Inventory, $"我的网络 {own}\n供货商现货 {vendor}");
-            SetTextIfChanged(view.Prices, TradingPriceLine(supplier, good, cycle, true, unit) + "\n" + TradingPriceLine(supplier, good, cycle, false, unit));
+            SetTextIfChanged(view.Inventory, TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_87AF53A707B2", TradingText.Argument((object)(own), null, 0), TradingText.Argument((object)(vendor), null, 0)));
+            SetTextIfChanged(view.Prices, "<line-height=30>" + TradingPriceLine(supplier, good, cycle, true, unit) + "\n" + TradingPriceLine(supplier, good, cycle, false, unit) + "</line-height>");
+            view.SellTip.toolTip = TradingText.Render(TradingMarket.Prefers(supplier, good) ? TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_8854589C732E") : TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_27704A1FBD0B"));
             view.Buy.isInteractable = supplier.Departure > cycle && stock > 0;
             view.Sell.isInteractable = supplier.Departure > cycle && available > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT;
         }
@@ -522,12 +652,17 @@ namespace StorageNetwork.UI
         private static string TradingPriceLine(TradingSupplier supplier, TradingGood good, double cycle, bool buy, string unit)
         {
             decimal price = TradingMarket.Price(supplier, good, cycle, buy);
-            decimal previous = TradingMarket.Price(supplier, good, Math.Max(0, Math.Floor(cycle) - 1), buy);
+            decimal previous = price;
+            if (supplier.History.TryGetValue(good.Id, out var history))
+            {
+                var point = history.LastOrDefault(p => p.Cycle == Math.Floor(cycle) - 1);
+                if (point != null) previous = buy ? point.Buy : point.Sell;
+            }
             decimal change = (price - previous) / previous * 100m;
             Color color = change > 0 ? StorageNetworkPanelPalette.DangerStatus : change < 0 ? StorageNetworkPanelPalette.PositiveStatus : StorageNetworkPanelPalette.MutedText;
             string trend = ColoredTradingText($"{(change > 0 ? "↑" : change < 0 ? "↓" : "—")}{Math.Abs(change):0.0}%", color);
-            string quote = ColoredTradingText($"{(buy ? "买" : "卖")} ¥{price:0.00}/{unit}", buy ? StorageNetworkPanelPalette.MetricAccent : StorageNetworkPanelPalette.PositiveStatus);
-            return quote + "  " + trend;
+            string quote = ColoredTradingText($"{(buy ? TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_2CD2507D65DE") : TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_D998FC91A172"))} ¥{price:0.00}/{unit}", buy ? StorageNetworkPanelPalette.MetricAccent : StorageNetworkPanelPalette.PositiveStatus);
+            return quote + "<pos=100>" + trend;
         }
 
         private sealed class TradingGoodRowView
@@ -539,13 +674,14 @@ namespace StorageNetwork.UI
             public TextMeshProUGUI Prices;
             public KButton Buy;
             public KButton Sell;
+            public ToolTip SellTip;
         }
 
         private GameObject CreateTradingReceiptRow(TradingReceipt receipt)
         {
             GameObject row = CreateBox("Receipt" + receipt.Id, tradingHistoryContent, StorageNetworkPanelPalette.CardBackground);
-            row.AddComponent<LayoutElement>().minHeight = 144;
-            row.GetComponent<LayoutElement>().preferredHeight = 144;
+            row.AddComponent<LayoutElement>().minHeight = 166;
+            row.GetComponent<LayoutElement>().preferredHeight = 166;
             row.AddComponent<RectMask2D>();
             Color amountColor = receipt.Buy ? StorageNetworkPanelPalette.DangerStatus : StorageNetworkPanelPalette.PositiveStatus;
             GameObject accent = CreatePlainImage("DirectionAccent", row.transform, amountColor);
@@ -567,15 +703,27 @@ namespace StorageNetwork.UI
             icon.rectTransform().pivot = new Vector2(0, 1);
             icon.rectTransform().anchoredPosition = new Vector2(10, -8);
             icon.rectTransform().sizeDelta = new Vector2(36, 36);
-            ReceiptLine(row.transform, "Name", ColoredTradingText(receipt.Buy ? "买入" : "卖出", amountColor) + "  <b>" + receipt.GoodName + "</b>", 54, 8, 22, 13, StorageNetworkPanelPalette.HeadingText);
-            ReceiptLine(row.transform, "Quantity", $"{receipt.Amount:#,0.###} {(receipt.ByUnit ? "件" : "kg")} · 单价 ¥{receipt.UnitPrice:0.00}", 54, 32, 18, 10, StorageNetworkPanelPalette.MetricAccent);
+            string localizedGoodName = StorageNetworkTradingState.Instance?.Catalog?.FirstOrDefault(g => g.Id == receipt.GoodId)?.Name ?? receipt.GoodName;
+            TextMeshProUGUI receiptName = ReceiptLine(row.transform, "Name", ColoredTradingText(receipt.Buy ? TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_A1557EC3B077") : TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_FB28BA14091D"), amountColor) + "  <b>" + localizedGoodName + "</b>", 54, 8, 22, 13, StorageNetworkPanelPalette.HeadingText);
+            receiptName.rectTransform().offsetMax = new Vector2(-66, receiptName.rectTransform().offsetMax.y);
+            GameObject locateReceipt = CreateGameButton("LocateReceipt", row.transform, TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_49726F09C812"), () => LocateTradingReceipt(receipt));
+            SetTopStretch(locateReceipt.GetComponent<RectTransform>(), 0, 8, 8, 22);
+            RectTransform locateReceiptRect = locateReceipt.GetComponent<RectTransform>();
+            locateReceiptRect.anchorMin = locateReceiptRect.anchorMax = locateReceiptRect.pivot = new Vector2(1, 1);
+            locateReceiptRect.sizeDelta = new Vector2(50, 22);
+            locateReceiptRect.anchoredPosition = new Vector2(-8, -8);
+            locateReceipt.GetComponent<KButton>().isInteractable = receipt.StorageIds != null && receipt.StorageIds.Count > 0;
+            ReceiptLine(row.transform, "Quantity", TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_BECA349C1FC7", TradingText.Argument((object)(receipt.Amount), "#,0.###", 0), TradingText.Argument((object)((receipt.ByUnit ? TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_7C0025557708") : "kg")), null, 0), TradingText.Argument((object)(receipt.UnitPrice), "0.00", 0)), 54, 32, 18, 10, StorageNetworkPanelPalette.MetricAccent);
+            TextMeshProUGUI delivery = ReceiptLine(row.transform, "Delivery", receipt.Delivery ?? "", 10, 138, 22, 10, StorageNetworkPanelPalette.MutedText);
+            delivery.raycastTarget = true;
+            delivery.gameObject.AddComponent<ToolTip>().toolTip = TradingText.Render(receipt.Delivery ?? TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_FACCE382ABF9"));
             ReceiptLine(row.transform, "Total", $"<b>{(receipt.Buy ? "−" : "+")}¥{receipt.Total:#,0.#####}</b>", 10, 54, 26, 16, amountColor);
-            ReceiptLine(row.transform, "Balance", $"成交后余额 ¥{receipt.BalanceAfter:#,0.#####}", 10, 82, 18, 10, StorageNetworkPanelPalette.NeutralStatus);
-            ReceiptLine(row.transform, "Context", $"#{receipt.Id:0000} · 第 {receipt.Cycle + 1:0.00} 周期\n{StorageNetworkTradingState.SpecialtyName(receipt.Specialty)} #{receipt.SupplierId} · {StorageNetworkWorldDisplay.GetWorldName(receipt.WorldId)}", 10, 102, 34, 10, StorageNetworkPanelPalette.MutedText);
+            ReceiptLine(row.transform, "Balance", TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_82A524B0D821", TradingText.Argument((object)(receipt.BalanceAfter), "#,0.#####", 0)), 10, 82, 18, 10, StorageNetworkPanelPalette.NeutralStatus);
+            ReceiptLine(row.transform, "Context", TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_EADA23F062D8", TradingText.Argument((object)(receipt.Id), "0000", 0), TradingText.Argument((object)(receipt.Cycle + 1), "0.00", 0), TradingText.Argument((object)(receipt.SupplierName ?? StorageNetworkTradingState.SpecialtyName(receipt.Specialty)), null, 0), TradingText.Argument((object)(receipt.SupplierId), null, 0), TradingText.Argument((object)(StorageNetworkWorldDisplay.GetWorldName(receipt.WorldId)), null, 0)), 10, 102, 34, 10, StorageNetworkPanelPalette.MutedText);
             return row;
         }
 
-        private static void ReceiptLine(Transform parent, string name, string value, float left, float top, float height, int fontSize, Color color)
+        private static TextMeshProUGUI ReceiptLine(Transform parent, string name, string value, float left, float top, float height, int fontSize, Color color)
         {
             TextMeshProUGUI text = CreateText(name, parent, value, fontSize, TextAlignmentOptions.MidlineLeft);
             text.color = color;
@@ -583,12 +731,14 @@ namespace StorageNetwork.UI
             text.overflowMode = TextOverflowModes.Ellipsis;
             text.maxVisibleLines = name == "Context" ? 2 : 1;
             SetTopStretch(text.rectTransform(), left, 10, top, height);
+            return text;
         }
 
         private void SelectTradingGood(int supplierId, TradingGood good, bool buy)
         {
             tradingQuoteGood = good;
             tradingQuoteSupplierId = supplierId;
+            tradingQuoteSupplierName = StorageNetworkTradingState.Instance?.Market?.Suppliers.Find(s => s.Id == supplierId)?.Name;
             tradingQuoteBuy = buy;
             RefreshTradingWindow();
             ShowTradingAmountDialog();
@@ -601,7 +751,7 @@ namespace StorageNetwork.UI
             tradingConfirmButton.isInteractable = tradingMaximumButton.isInteractable = false;
             if (tradingQuoteGood == null)
             {
-                SetTextIfChanged(tradingQuoteText, "选择货物的买入或卖出按钮，查看数量和总额后确认成交。");
+                SetTextIfChanged(tradingQuoteText, TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_31EEBA955D49"));
                 return;
             }
             var state = StorageNetworkTradingState.Instance;
@@ -610,10 +760,10 @@ namespace StorageNetwork.UI
                 double.TryParse(tradingAmountInput.text, NumberStyles.Float, CultureInfo.InvariantCulture, out requested);
             tradingQuoteWorldId = GetActiveWorldFilterId();
             tradingQuote = state.GetQuote(tradingQuoteSupplierId, tradingQuoteGood, requested, tradingQuoteBuy, tradingQuoteWorldId);
-            string unit = tradingQuoteGood.ByUnit ? "件" : "kg";
-            SetTextIfChanged(tradingQuantityLabel, $"最大可成交 {tradingQuote.MaximumAmount:0.###} {unit}    当前选择 {tradingQuote.Amount:0.###} {unit}");
+            string unit = tradingQuoteGood.ByUnit ? TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_7C0025557708") : "kg";
+            SetTextIfChanged(tradingQuantityLabel, TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_A5A84D846268", TradingText.Argument((object)(tradingQuote.MaximumAmount), "0.###", 0), TradingText.Argument((object)(unit), null, 0), TradingText.Argument((object)(tradingQuote.Amount), "0.###", 0), TradingText.Argument((object)(unit), null, 0), TradingText.Argument((object)(tradingQuote.MinimumAmount), "0.###", 0), TradingText.Argument((object)(unit), null, 0)));
             SetTextIfChanged(tradingQuoteText,
-                $"<b>{(tradingQuoteBuy ? "买入" : "卖出")} {tradingQuoteGood.Name}</b>    供货商 #{tradingQuoteSupplierId}\n数量 {tradingQuote.Amount:0.###} {unit} × ¥{tradingQuote.UnitPrice:0.00}    <b>总额 ¥{tradingQuote.Total:0.#####}</b>\n账户余额 ¥{state.Market.Balance:0.#####} → ¥{(tradingQuote.CanTrade ? tradingQuote.BalanceAfter : state.Market.Balance):0.#####}\n{tradingDialogFeedback ?? tradingQuote.Reason ?? "拖动滑块或输入数量，检查总额后确认成交。"}");
+                TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_30E12A23B389", TradingText.Argument((object)((tradingQuoteBuy ? TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_A1557EC3B077") : TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_FB28BA14091D"))), null, 0), TradingText.Argument((object)(tradingQuoteGood.Name), null, 0), TradingText.Argument((object)(tradingQuoteSupplierName ?? TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_13E43251E905")), null, 0), TradingText.Argument((object)(tradingQuoteSupplierId), null, 0), TradingText.Argument((object)(tradingQuote.Amount), "0.###", 0), TradingText.Argument((object)(unit), null, 0), TradingText.Argument((object)(tradingQuote.UnitPrice), "0.00", 0), TradingText.Argument((object)(tradingQuote.Total), "0.#####", 0), TradingText.Argument((object)(state.Market.Balance), "0.#####", 0), TradingText.Argument((object)((tradingQuote.CanTrade ? tradingQuote.BalanceAfter : state.Market.Balance)), "0.#####", 0), TradingText.Argument((object)(tradingDialogFeedback ?? tradingQuote.Reason ?? TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_D2A16107A98F")), null, 0)));
             tradingAmountUpdating = true;
             float maximum = (float)tradingQuote.MaximumAmount;
             if (maximum > tradingQuote.MaximumAmount) maximum = BitConverter.Int32BitsToSingle(BitConverter.SingleToInt32Bits(maximum) - 1);
@@ -624,6 +774,7 @@ namespace StorageNetwork.UI
             tradingAmountUpdating = false;
             tradingConfirmButton.isInteractable = tradingQuote.CanTrade;
             tradingMaximumButton.isInteractable = tradingQuote.MaximumAmount > 0;
+            RefreshTradingDeliveryPreview(state);
         }
 
         private void SetMaximumTradingAmount()
@@ -639,8 +790,8 @@ namespace StorageNetwork.UI
             var state = StorageNetworkTradingState.Instance;
             if (tradingAmountDialogRoot == null || modalRoot != tradingAmountDialogRoot || quote == null || !quote.CanTrade || state == null) return;
             int before = state.Market.NextTradeId;
-            if (tradingQuoteWorldId != GetActiveWorldFilterId()) tradingMessage = "当前星球已变化，请重新检查交易报价。";
-            else tradingMessage = state.Trade(quote.SupplierId, quote.Good, quote.Amount, quote.Buy, tradingQuoteWorldId, quote.UnitPrice, true);
+            if (tradingQuoteWorldId != GetActiveWorldFilterId()) tradingMessage = TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_19DCD9ED2D00");
+            else tradingMessage = state.Trade(quote.SupplierId, quote.Good, quote.Amount, quote.Buy, tradingQuoteWorldId, quote.UnitPrice, true, quote.Cycle);
             if (state.Market.NextTradeId != before) CloseModal();
             else tradingDialogFeedback = tradingMessage;
             RefreshTradingWindow();

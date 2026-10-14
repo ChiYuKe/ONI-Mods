@@ -148,7 +148,8 @@ namespace StorageNetwork.UI
 
         public static bool IsTextInputFocused()
         {
-            return IsOpen() && (StorageNetworkNumberInputField.IsAnyEditing || StorageNetworkTextInputGuard.IsAnyFocused);
+            return (IsOpen() || (instance != null && instance.tradingGroupFloating && instance.tradingGroupRoot != null)) &&
+                (StorageNetworkNumberInputField.IsAnyEditing || StorageNetworkTextInputGuard.IsAnyFocused);
         }
 
         public static bool CloseFromRightClick()
@@ -307,6 +308,7 @@ namespace StorageNetwork.UI
                 ContainsScreenPoint(enrollableWindowRoot, mousePosition) ||
                 ContainsScreenPoint(headerWindowRoot, mousePosition) ||
                 ContainsScreenPoint(tradingRoot, mousePosition) ||
+                (tradingGroupFloating && ContainsScreenPoint(tradingGroupWindow, mousePosition)) ||
                 ContainsScreenPoint(modalRoot, mousePosition);
         }
 
@@ -326,6 +328,7 @@ namespace StorageNetwork.UI
 
         private void CloseModal()
         {
+            if (tradingGroupRoot != null && modalRoot == tradingGroupRoot) Trading.StorageNetworkTradingState.Instance?.CancelGroupChat();
             if (modalRoot != null)
             {
                 Destroy(modalRoot);

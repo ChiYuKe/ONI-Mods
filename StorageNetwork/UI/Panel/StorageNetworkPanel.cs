@@ -149,6 +149,7 @@ namespace StorageNetwork.UI
             RunDeferredMainLayout();
             RunDeferredOrderLayout();
             float deltaTime = Time.unscaledDeltaTime;
+            if (!tradingGroupFloating) UpdateTradingGroupChat(deltaTime);
             ProcessSearchDebounces(deltaTime);
             UpdateOrderPanelAutoRefresh(deltaTime);
             UpdateTradingWindow(deltaTime);
