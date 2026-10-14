@@ -294,10 +294,27 @@ if ($disabledGuard -lt 0 -or
 # service boundary. This catches accidental removal even though runtime state uses
 # private ONI types that cannot be instantiated in the net8 deterministic harness.
 $transferService = Get-Source 'StorageNetwork/Services/Transfer/NetworkStorageTransferService.cs'
-if (-not $transferService.Contains('BeginContentIndexTransaction()', [StringComparison]::Ordinal) -or
-    -not $transferService.Contains('StorageNetworkContentIndexService.BeginTransferTransaction()', [StringComparison]::Ordinal) -or
+if (-not $transferService.Contains('StorageNetworkContentIndexService.BeginTransferTransaction(worldId)', [StringComparison]::Ordinal) -or
+    -not $transferService.Contains('StorageNetworkContentIndexService.BeginTransferTransaction(source, target)', [StringComparison]::Ordinal) -or
     -not $transferService.Contains('StorageNetworkContentIndexService.EndTransferTransaction()', [StringComparison]::Ordinal)) {
     Add-Failure 'Public transfer service no longer brackets writes in one content-index transaction.'
+}
+$transferScopes = @{
+    'public static StorageTransferResult TransferStoredItemsToNetwork(' = 'sourceWorldId'
+    'public static StorageTransferResult TransferStoredFluidsToNetwork(' = 'sourceWorldId'
+    'public static StorageTransferResult TransferLooseItemToNetwork(' = 'sourceWorldId'
+    'public static StorageTransferResult TransferStoredItemToNetwork(' = 'sourceWorldId'
+    'public static float TransferFromNetworkToStorage(' = 'destinationWorldId'
+    'public static float TransferMatchingItemsFromStorage(' = 'source, destination'
+    'public static float TransferMatchingItemUnitsFromStorage(' = 'source, destination'
+    'public static StorageTransferResult TransferAnySolidFromNetworkToStorage(' = 'destinationWorldId'
+    'private static StorageTransferResult TransferAnyElementStateFromNetworkToStorage(' = 'destinationWorldId'
+}
+foreach ($entry in $transferScopes.GetEnumerator()) {
+    $body = (Get-MethodRange $transferService $entry.Key).Body
+    if (-not $body.Contains("using (workspace.BeginContentIndexTransaction($($entry.Value)))", [StringComparison]::Ordinal)) {
+        Add-Failure "Transfer boundary must bracket writes in its explicit world/endpoint scope: $($entry.Key)"
+    }
 }
 
 if ($failures.Count -gt 0) {

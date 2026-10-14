@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using StorageNetwork.Core;
 using StorageNetwork.Services;
 using UnityEngine;
@@ -12,6 +13,10 @@ internal static class ContentIndexRuntimeChecks
     public static void Verify(Action<bool, string> check)
     {
         VerifyScopedRefresh(check);
+        VerifyScopedTransferBaselines(check);
+        VerifyPendingSourceCandidates(check);
+        VerifyPendingSourceDifferential(check);
+        VerifyPortTransferBaseline(check);
         VerifyTransfersAndDetails(check);
         VerifyUnknownChanges(check);
         VerifyFoodAndTagDetails(check);
@@ -126,6 +131,224 @@ internal static class ContentIndexRuntimeChecks
         check(Amount(0) == 31f, "disconnected server stops contributing after native refresh");
         StorageNetworkContentIndexService.ResetRuntimeState();
         check(Amount(0) == 31f, "reload reseeds live state without old subscriptions or contributions");
+    }
+
+    private static void VerifyScopedTransferBaselines(Action<bool, string> check)
+    {
+        Reset();
+        Storage source = Store(1, 0, 10f), target = Store(2, 0, 0f);
+        Storage localOther = Store(3, 0, 40f), remote = Store(4, 1, 20f);
+        Warm();
+        Change(source, 11f);
+        Change(localOther, 41f);
+        Change(remote, 25f);
+        StorageNetworkContentIndexService.BeginTransferTransaction(0, false);
+        var scoped = StorageNetworkPerformanceCounters.ConsumeSnapshot();
+        check(scoped.RefreshedStorages == 2 && scoped.ScannedItems == 2 && Amount(0) == 52f,
+            "world-scoped transfer establishes strict local baselines without scanning dirty remote storage");
+        StorageNetworkContentIndexService.EndTransferTransaction();
+        check(Amount(1) == 25f && StorageNetworkPerformanceCounters.ConsumeSnapshot().RefreshedStorages == 1,
+            "remote dirty baseline survives scoped transfer for a later strict query");
+
+        Change(source, 12f);
+        Change(target, 1f);
+        Change(localOther, 42f);
+        Change(remote, 26f);
+        StorageNetworkContentIndexService.BeginTransferTransaction(source, target);
+        var direct = StorageNetworkPerformanceCounters.ConsumeSnapshot();
+        check(direct.RefreshedStorages == 2 && direct.ScannedItems == 2,
+            "direct transfer refreshes exactly its endpoints even with dirty siblings in the same world");
+        var tags = source.items[0].MatchTags;
+        Change(source, 7f);
+        Change(target, 6f);
+        StorageNetworkContentIndexService.RecordTransferMutation(source, target, tags, GameTags.Solid, 5f, 5f);
+        StorageNetworkContentIndexService.EndTransferTransaction();
+        check(StorageNetworkContentIndexService.GetStorageAmount(source, Material) == 7f &&
+              StorageNetworkContentIndexService.GetStorageAmount(target, Material) == 6f &&
+              StorageNetworkPerformanceCounters.ConsumeSnapshot().RefreshedStorages == 0,
+            "direct transfer retains exact pending deltas without rescanning endpoint contents");
+        check(StorageNetworkContentIndexService.GetStorageAmount(localOther, Material) == 42f &&
+              StorageNetworkPerformanceCounters.ConsumeSnapshot().RefreshedStorages == 1,
+            "direct transfer leaves unrelated same-world dirty records queued");
+
+        // Explicit cross-world targets can be outside the entry point's scope.
+        StorageNetworkContentIndexService.BeginTransferTransaction(0, false);
+        Change(source, 5f);
+        Change(remote, 28f);
+        StorageNetworkContentIndexService.RecordTransferMutation(source, remote, tags, GameTags.Solid, 2f, 2f);
+        check(StorageNetworkContentIndexService.GetStorageAmount(remote, Material) == 28f && Amount(1) == 28f,
+            "dirty out-of-scope endpoint uses native baseline without double-applying pending deltas");
+        StorageNetworkContentIndexService.EndTransferTransaction();
+        check(Amount(0) == 53f && Amount(1) == 28f,
+            "cross-world explicit transfer commits exact world totals after scoped entry");
+
+        Change(remote, 30f);
+        StorageNetworkContentIndexService.BeginTransferTransaction(0, false);
+        StorageNetworkContentIndexService.BeginTransferTransaction(1, false);
+        Change(source, 4f);
+        Change(remote, 31f);
+        StorageNetworkContentIndexService.RecordTransferMutation(source, remote, tags, GameTags.Solid, 1f, 1f);
+        check(StorageNetworkContentIndexService.GetStorageAmount(remote, Material) == 31f,
+            "nested transfer into an unprepared world keeps native dirty endpoint authoritative");
+        StorageNetworkContentIndexService.EndTransferTransaction();
+        StorageNetworkContentIndexService.EndTransferTransaction();
+        check(Amount(0) == 52f && Amount(1) == 31f,
+            "nested scoped transactions preserve conservation and outermost commit");
+
+        Reset();
+        source = Store(1, 0, 10f);
+        remote = Store(2, 1, 20f);
+        Storage rocket = Store(3, 2, 30f);
+        Warm();
+        StorageNetworkWorldUtility.Parents[2] = 0;
+        Change(source, 11f);
+        Change(remote, 21f);
+        Change(rocket, 31f);
+        StorageNetworkContentIndexService.BeginTransferTransaction(0);
+        check(StorageNetworkPerformanceCounters.ConsumeSnapshot().RefreshedStorages == 2 && Amount(0) == 42f,
+            "transfer scope includes landed rockets while leaving independent colonies dirty");
+        StorageNetworkContentIndexService.EndTransferTransaction();
+        StorageSceneRegistry.Relay = true;
+        StorageNetworkContentIndexService.BeginTransferTransaction(0);
+        check(StorageNetworkPerformanceCounters.ConsumeSnapshot().RefreshedStorages == 1 && Amount(0, true) == 63f,
+            "online relay transfer establishes strict baselines across the entire reachable network");
+        StorageNetworkContentIndexService.EndTransferTransaction();
+        StorageNetworkPerformanceMode.LegacyFullScanEnabled = true;
+        StorageNetworkContentIndexService.BeginTransferTransaction(source, source);
+        check(StorageNetworkPerformanceCounters.ConsumeSnapshot().RefreshedStorages == 3,
+            "legacy diagnostic mode retains full refresh for endpoint-scoped transfers");
+        StorageNetworkContentIndexService.EndTransferTransaction();
+    }
+
+    private static void VerifyPendingSourceCandidates(Action<bool, string> check)
+    {
+        Reset();
+        Storage source = Store(1, 0, 20f), target = Store(2, 0, 0f), other = Store(3, 0, 10f);
+        Storage newlyMatching = null;
+        for (int i = 0; i < 1000; i++)
+        {
+            Storage unrelated = Store(i + 4, 0, 0f);
+            unrelated.items.Add(Item(Unrelated, 1f));
+            if (i == 0) newlyMatching = unrelated;
+        }
+        Storage remote = Store(2001, 1, 40f), rocket = Store(2002, 2, 8f);
+        Warm();
+        StorageNetworkContentIndexService.BeginTransferTransaction(0, false);
+        var tags = source.items[0].MatchTags;
+        Change(source, 15f);
+        Change(target, 5f);
+        StorageNetworkContentIndexService.RecordTransferMutation(source, target, tags, GameTags.Solid, 5f, 5f);
+        var result = Sources(Material);
+        var operations = StorageNetworkPerformanceCounters.ConsumeSnapshot();
+        check(result.Count == 3 && result[0] == source && result[1] == other && result[2] == target &&
+              operations.PendingSourceChecks == 3 && operations.RefreshedStorages == 0,
+            "pending-source lookup checks three material candidates instead of 1,003 local servers");
+        Change(newlyMatching, 16f);
+        result = Sources(Material);
+        check(result.Count == 4 && result[0] == newlyMatching && result[1] == source &&
+              result[2] == other && result[3] == target &&
+              StorageNetworkPerformanceCounters.ConsumeSnapshot().PendingSourceChecks == 4,
+            "unknown native change adds a newly matching endpoint absent from the committed tag bucket");
+        var filtered = new List<Storage>();
+        StorageNetworkContentIndexService.FillSourceStorages(0, false,
+            new[] { Tag.Invalid, Material, Material }, new HashSet<Storage> { source, target }, null, filtered, false);
+        check(filtered.Count == 2 && filtered[0] == newlyMatching && filtered[1] == other,
+            "candidate union preserves exclusions and deduplicates repeated source tags");
+
+        StorageNetworkWorldUtility.Parents[2] = 0;
+        result = Sources(Material);
+        check(result.Count == 5 && result[3] == rocket && result[4] == target,
+            "pending-source candidate union includes landed rockets in descending amount order");
+        StorageSceneRegistry.Relay = true;
+        filtered.Clear();
+        StorageNetworkContentIndexService.FillSourceStorages(0, true, new[] { Material }, null, null, filtered, false);
+        check(filtered.Count == 6 && filtered[0] == remote && filtered[1] == newlyMatching,
+            "pending-source candidate union retains relay-wide source order");
+        StorageSceneRegistry.Relay = false;
+        StorageNetworkContentIndexService.EndTransferTransaction();
+        check(Amount(0) == 54f && Amount(1) == 40f,
+            "candidate queries preserve exact totals through unknown-change commit and landed aggregation");
+
+        // Multiple tags use the maximum matched amount per source, rather than
+        // counting the same object once for every matching category.
+        source.items.Add(Item(Unrelated, 30f));
+        source.OnStorageChange?.Invoke(null);
+        StorageNetworkContentIndexService.BeginTransferTransaction(0, false);
+        Change(target, 7f);
+        StorageNetworkContentIndexService.TouchTransferStorage(target);
+        StorageNetworkPerformanceCounters.ConsumeSnapshot();
+        StorageNetworkContentIndexService.FillSourceStorages(0, false,
+            new[] { Material, Unrelated }, null, null, filtered, false);
+        check(filtered.Count == 1004 && filtered[0] == source && filtered[1] == newlyMatching &&
+              filtered[2] == other && filtered[3] == rocket && filtered[4] == target,
+            "multi-tag pending-source lookup preserves max-amount ranking and all unrelated-tag matches");
+        check(StorageNetworkPerformanceCounters.ConsumeSnapshot().PendingSourceChecks == 1004,
+            "dense material categories visit each reachable server once without a second candidate pass");
+        StorageNetworkContentIndexService.EndTransferTransaction();
+    }
+
+    private static void VerifyPortTransferBaseline(Action<bool, string> check)
+    {
+        Reset();
+        Storage port = Store(1, 0, 10f), server = Store(2, 0, 0f);
+        port.Server = false;
+        Warm();
+        StorageNetworkContentIndexService.BeginTransferTransaction(0);
+        var tags = port.items[0].MatchTags;
+        Change(port, 5f);
+        Change(server, 5f);
+        StorageNetworkContentIndexService.RecordTransferMutation(port, server, tags, GameTags.Solid, 5f, 5f);
+        check(Amount(0) == 5f && StorageNetworkPerformanceCounters.ConsumeSnapshot().RefreshedStorages == 0,
+            "non-indexed port endpoint does not force native rebuilds of an otherwise known server transfer");
+        StorageNetworkContentIndexService.EndTransferTransaction();
+        check(StorageNetworkContentIndexService.GetStorageAmount(server, Material) == 5f &&
+              StorageNetworkPerformanceCounters.ConsumeSnapshot().ScannedItems == 0,
+            "port-to-server commit preserves the incremental fast path without indexing the port");
+    }
+
+    private static void VerifyPendingSourceDifferential(Action<bool, string> check)
+    {
+        Reset();
+        var random = new Random(20261015);
+        var storages = new List<Storage>();
+        for (int i = 0; i < 48; i++) storages.Add(Store(i + 1, i % 3, random.Next(1, 40)));
+        Warm();
+        for (int iteration = 0; iteration < 120; iteration++)
+        {
+            StorageNetworkWorldUtility.Parents.Clear();
+            if (iteration % 2 == 0) StorageNetworkWorldUtility.Parents[2] = 0;
+            StorageSceneRegistry.Relay = iteration % 3 == 0;
+            bool related = iteration % 4 != 0;
+            int worldId = iteration % 3;
+            Storage source = storages[random.Next(storages.Count)];
+            Storage target = storages[(storages.IndexOf(source) + 1) % storages.Count];
+            // Leave an independent mutation queued before the scoped baseline.
+            Storage changed = storages[random.Next(storages.Count)];
+            Change(changed, random.Next(1, 40));
+            StorageNetworkContentIndexService.BeginTransferTransaction(worldId, related);
+            float sourceAmount = source.MassStored(), targetAmount = target.MassStored();
+            float moved = Math.Min(0.25f, sourceAmount);
+            Change(source, sourceAmount - moved);
+            Change(target, targetAmount + moved);
+            var tags = new StorageItemUtility.StorageMatchTags
+            { PrefabIdTag = Material, PrefabTag = Material, ElementTag = Material, TransferTag = Material };
+            StorageNetworkContentIndexService.RecordTransferMutation(source, target, tags, GameTags.Solid, moved, moved);
+            Storage unknown = storages[random.Next(storages.Count)];
+            Change(unknown, random.Next(1, 40));
+            StorageNetworkContentIndexService.TouchTransferStorage(unknown);
+            var excluded = new HashSet<Storage> { storages[random.Next(storages.Count)] };
+            var result = new List<Storage>();
+            StorageNetworkContentIndexService.FillSourceStorages(worldId, related,
+                new[] { Tag.Invalid, Material, Material }, excluded, null, result, false);
+            bool allWorlds = related && StorageSceneRegistry.Relay;
+            var expected = storages.Where(storage => !excluded.Contains(storage) &&
+                    (allWorlds || StorageNetworkWorldUtility.AreWorldsSameOrLanded(storage.gameObject.WorldId, worldId)) &&
+                    storage.MassStored() > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
+                .OrderByDescending(storage => storage.MassStored()).ThenBy(storage => storage.InstanceId).ToList();
+            check(result.SequenceEqual(expected),
+                "pending-source lookup matches native full-scan reference across deterministic mutation/world scenario " + iteration);
+            StorageNetworkContentIndexService.EndTransferTransaction();
+        }
     }
 
     private static List<Storage> Sources(Tag tag)
