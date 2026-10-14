@@ -11,6 +11,7 @@ namespace StorageNetwork.Services
         private static long detailRefreshes;
         private static long updatedTags;
         private static long sourceBucketSorts;
+        private static long pendingSourceChecks;
         private static long farmingSnapshotEntries;
         private static long textMeshRebuilds;
 
@@ -56,6 +57,12 @@ namespace StorageNetwork.Services
         {
             if (Volatile.Read(ref enabled) == 0) return;
             Interlocked.Add(ref sourceBucketSorts, count);
+        }
+
+        public static void RecordPendingSourceChecks()
+        {
+            if (Volatile.Read(ref enabled) == 0) return;
+            Interlocked.Increment(ref pendingSourceChecks);
         }
 
         public static void RecordFarmingSnapshotEntries(int count = 1)
@@ -182,7 +189,8 @@ namespace StorageNetwork.Services
                 Interlocked.Exchange(ref updatedTags, 0L),
                 Interlocked.Exchange(ref sourceBucketSorts, 0L),
                 Interlocked.Exchange(ref farmingSnapshotEntries, 0L),
-                Interlocked.Exchange(ref textMeshRebuilds, 0L));
+                Interlocked.Exchange(ref textMeshRebuilds, 0L),
+                Interlocked.Exchange(ref pendingSourceChecks, 0L));
         }
 
         public static void ResetRuntimeState()
@@ -213,7 +221,8 @@ namespace StorageNetwork.Services
             long updatedTags = 0,
             long sourceBucketSorts = 0,
             long farmingSnapshotEntries = 0,
-            long textMeshRebuilds = 0)
+            long textMeshRebuilds = 0,
+            long pendingSourceChecks = 0)
         {
             InventoryIndexRebuilds = inventoryIndexRebuilds;
             CollectForWorldRebuilds = collectForWorldRebuilds;
@@ -234,6 +243,7 @@ namespace StorageNetwork.Services
             SourceBucketSorts = sourceBucketSorts;
             FarmingSnapshotEntries = farmingSnapshotEntries;
             TextMeshRebuilds = textMeshRebuilds;
+            PendingSourceChecks = pendingSourceChecks;
 
         }
 
@@ -254,6 +264,7 @@ namespace StorageNetwork.Services
         public long DetailRefreshes { get; }
         public long UpdatedTags { get; }
         public long SourceBucketSorts { get; }
+        public long PendingSourceChecks { get; }
         public long FarmingSnapshotEntries { get; }
         public long TextMeshRebuilds { get; }
 

@@ -34,7 +34,7 @@ namespace StorageNetwork.Services
             }
 
             workspace = GetWorkspace(workspace);
-            using (workspace.BeginContentIndexTransaction())
+            using (workspace.BeginContentIndexTransaction(sourceWorldId))
             {
             HashSet<Storage> excluded = workspace.PrepareExcluded(excludedStorages, source);
             float totalMoved = 0f;
@@ -99,7 +99,7 @@ namespace StorageNetwork.Services
             }
 
             workspace = GetWorkspace(workspace);
-            using (workspace.BeginContentIndexTransaction())
+            using (workspace.BeginContentIndexTransaction(sourceWorldId))
             {
             HashSet<Storage> excluded = workspace.PrepareExcluded(excludedStorages, source);
             float totalMoved = 0f;
@@ -164,7 +164,7 @@ namespace StorageNetwork.Services
             }
 
             workspace = GetWorkspace(workspace);
-            using (workspace.BeginContentIndexTransaction())
+            using (workspace.BeginContentIndexTransaction(sourceWorldId))
             {
             StorageItemUtility.StorageMatchTags matchTags =
                 StorageItemUtility.GetStorageMatchTagsNonAlloc(item);
@@ -234,7 +234,7 @@ namespace StorageNetwork.Services
 
             workspace = GetWorkspace(workspace);
             HashSet<Storage> excluded = workspace.PrepareExcluded(excludedStorages, source);
-            using (workspace.BeginContentIndexTransaction())
+            using (workspace.BeginContentIndexTransaction(sourceWorldId))
             {
                 return TransferStoredItem(source, item, excluded, specificTarget, null, sourceWorldId, preferColdStorageForFood);
             }
@@ -283,7 +283,7 @@ namespace StorageNetwork.Services
             }
 
             workspace = GetWorkspace(workspace);
-            using (workspace.BeginContentIndexTransaction())
+            using (workspace.BeginContentIndexTransaction(destinationWorldId))
             {
             HashSet<Storage> excluded = workspace.PrepareExcluded(excludedStorages, destination);
             StorageNetworkSourceIndexService.FillSourceStorages(
@@ -363,7 +363,7 @@ namespace StorageNetwork.Services
             }
 
             StorageNetworkTransferWorkspace workspace = GetWorkspace(null);
-            using (workspace.BeginContentIndexTransaction())
+            using (workspace.BeginContentIndexTransaction(source, destination))
             {
             float moved = 0f;
             List<GameObject> items = workspace.Items;
@@ -412,7 +412,7 @@ namespace StorageNetwork.Services
             }
 
             StorageNetworkTransferWorkspace workspace = GetWorkspace(null);
-            using (workspace.BeginContentIndexTransaction())
+            using (workspace.BeginContentIndexTransaction(source, destination))
             {
             float movedUnits = 0f;
             List<GameObject> items = workspace.Items;
@@ -538,7 +538,7 @@ namespace StorageNetwork.Services
             }
 
             workspace = GetWorkspace(workspace);
-            using (workspace.BeginContentIndexTransaction())
+            using (workspace.BeginContentIndexTransaction(destinationWorldId))
             {
             HashSet<Tag> allowed = workspace.PrepareAllowedTags(allowedTags);
             HashSet<Storage> excluded = workspace.PrepareExcluded(excludedStorages, destination);
@@ -670,7 +670,7 @@ namespace StorageNetwork.Services
             }
 
             workspace = GetWorkspace(workspace);
-            using (workspace.BeginContentIndexTransaction())
+            using (workspace.BeginContentIndexTransaction(destinationWorldId))
             {
             HashSet<Storage> excluded = workspace.PrepareExcluded(excludedStorages, destination);
             Tag sourceTag = elementFilter.HasValue
@@ -1609,9 +1609,14 @@ namespace StorageNetwork.Services
 
         public HashSet<Storage> YieldedSources { get; } = new HashSet<Storage>();
 
-        public StorageNetworkTransferTransactionScope BeginContentIndexTransaction()
+        public StorageNetworkTransferTransactionScope BeginContentIndexTransaction(int worldId)
         {
-            return new StorageNetworkTransferTransactionScope(begin: true);
+            return new StorageNetworkTransferTransactionScope(worldId);
+        }
+
+        public StorageNetworkTransferTransactionScope BeginContentIndexTransaction(Storage source, Storage target)
+        {
+            return new StorageNetworkTransferTransactionScope(source, target);
         }
 
         public HashSet<Storage> PrepareExcluded(IEnumerable<Storage> storages, Storage required)
@@ -1671,13 +1676,16 @@ namespace StorageNetwork.Services
     {
         private readonly bool active;
 
-        public StorageNetworkTransferTransactionScope(bool begin)
+        public StorageNetworkTransferTransactionScope(int worldId)
         {
-            active = begin;
-            if (begin)
-            {
-                StorageNetworkContentIndexService.BeginTransferTransaction();
-            }
+            active = true;
+            StorageNetworkContentIndexService.BeginTransferTransaction(worldId);
+        }
+
+        public StorageNetworkTransferTransactionScope(Storage source, Storage target)
+        {
+            active = true;
+            StorageNetworkContentIndexService.BeginTransferTransaction(source, target);
         }
 
         public void Dispose()

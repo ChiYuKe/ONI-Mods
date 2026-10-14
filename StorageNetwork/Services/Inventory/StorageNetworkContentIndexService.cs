@@ -33,6 +33,8 @@ namespace StorageNetwork.Services
         private static readonly List<KeyValuePair<StorageContentRecord, float>> SourceMergeWorkspace =
             new List<KeyValuePair<StorageContentRecord, float>>();
         private static readonly List<Tag> PendingSourceTags = new List<Tag>();
+        private static readonly HashSet<WorldContentState> PendingFullScanWorlds =
+            new HashSet<WorldContentState>();
         private static readonly List<Storage> ShadowSourceWorkspace = new List<Storage>();
         private static readonly StableStorageComparer ProductionSourceComparer =
             new StableStorageComparer();
@@ -109,17 +111,44 @@ namespace StorageNetwork.Services
 
         /// <summary>
         /// Starts an ambient transfer transaction on the current simulation thread.
-        /// The index is made strict once up front so every pending delta has a stable
-        /// baseline. Native OnStorageChange callbacks are then folded into the
-        /// transaction instead of repeatedly rebuilding the same Storage record.
+        /// Only the reachable world scope is made strict up front so pending deltas
+        /// have a stable baseline without scanning unrelated colonies. Native callbacks
+        /// are folded into the transaction instead of repeatedly rebuilding the same record.
         /// </summary>
-        internal static void BeginTransferTransaction()
+        internal static void BeginTransferTransaction(int worldId = -1, bool includeRelatedWorlds = true)
         {
             TransferTransactionContext transaction = transferTransaction ??
                 (transferTransaction = new TransferTransactionContext());
             if (transaction.Depth == 0)
             {
-                EnsureFresh(false);
+                EnsureFresh(false, worldId, includeRelatedWorlds);
+                transaction.Reset();
+            }
+
+            transaction.Depth++;
+        }
+
+        internal static void BeginTransferTransaction(Storage source, Storage target)
+        {
+            TransferTransactionContext transaction = transferTransaction ??
+                (transferTransaction = new TransferTransactionContext());
+            if (transaction.Depth == 0)
+            {
+                if (StorageNetworkPerformanceMode.LegacyFullScanEnabled)
+                {
+                    EnsureFresh(false);
+                }
+                else
+                {
+                    if (source != null)
+                    {
+                        EnsureStorageFresh(source, false);
+                    }
+                    if (target != null && target != source)
+                    {
+                        EnsureStorageFresh(target, false);
+                    }
+                }
                 transaction.Reset();
             }
 
@@ -403,6 +432,7 @@ namespace StorageNetwork.Services
             SourceMergeAmounts.Clear();
             SourceMergeWorkspace.Clear();
             PendingSourceTags.Clear();
+            PendingFullScanWorlds.Clear();
             ShadowSourceWorkspace.Clear();
             observedRegistryVersion = -1;
             observedCapabilityVersion = -1;
@@ -2566,61 +2596,36 @@ namespace StorageNetwork.Services
                 }
             }
 
+            // The committed tag buckets contain every unchanged candidate. Only
+            // touched endpoints can acquire a new matching tag during a transaction.
+            // Union those endpoints with the buckets instead of visiting every server.
+            SourceMergeAmounts.Clear();
             SourceMergeWorkspace.Clear();
-            bool includeAllWorlds = IncludesAllWorlds(includeRelatedWorlds);
-            if (includeAllWorlds)
+            PendingFullScanWorlds.Clear();
+            MergeSources(worldId, includeRelatedWorlds, PendingSourceTags, excludedStorages, pendingTransfer: true);
+            foreach (Storage storage in transferTransaction.TouchedStorages)
             {
-                foreach (WorldContentState world in Worlds.Values)
+                if (Records.TryGetValue(storage, out StorageContentRecord record) &&
+                    (!Worlds.TryGetValue(record.WorldId, out WorldContentState world) ||
+                     !PendingFullScanWorlds.Contains(world)))
                 {
-                    AddPendingTransferSources(
-                        world,
-                        worldId,
-                        includeRelatedWorlds,
-                        PendingSourceTags,
-                        excludedStorages);
+                    SourceMergeAmounts[record] = 0f;
                 }
             }
-            else
+
+            foreach (StorageContentRecord record in SourceMergeAmounts.Keys)
             {
-                if (Worlds.TryGetValue(worldId, out WorldContentState world))
+                StorageNetworkPerformanceCounters.RecordPendingSourceChecks();
+                if (TryGetUsableSource(
+                    record.Storage,
+                    worldId,
+                    includeRelatedWorlds,
+                    PendingSourceTags,
+                    excludedStorages,
+                    out float amount))
                 {
-                    AddPendingTransferSources(
-                        world,
-                        worldId,
-                        includeRelatedWorlds,
-                        PendingSourceTags,
-                        excludedStorages);
-                }
-
-                if (worldId >= 0 && StorageNetworkWorldUtility.HasLandedRocketsOrIsLandedRocket(worldId))
-                {
-                    int parentWorldId = StorageNetworkWorldUtility.GetParentWorldId(worldId);
-                    if (parentWorldId != worldId &&
-                        Worlds.TryGetValue(parentWorldId, out WorldContentState parentWorld))
-                    {
-                        AddPendingTransferSources(
-                            parentWorld,
-                            worldId,
-                            includeRelatedWorlds,
-                            PendingSourceTags,
-                            excludedStorages);
-                    }
-
-                    IReadOnlyList<int> rockets = StorageNetworkWorldUtility.GetLandedRocketWorldIds(parentWorldId);
-                    for (int i = 0; i < rockets.Count; i++)
-                    {
-                        int rWorldId = rockets[i];
-                        if (rWorldId != worldId &&
-                            Worlds.TryGetValue(rWorldId, out WorldContentState rocketWorld))
-                        {
-                            AddPendingTransferSources(
-                                rocketWorld,
-                                worldId,
-                                includeRelatedWorlds,
-                                PendingSourceTags,
-                                excludedStorages);
-                        }
-                    }
+                    SourceMergeWorkspace.Add(
+                        new KeyValuePair<StorageContentRecord, float>(record, amount));
                 }
             }
 
@@ -2630,51 +2635,31 @@ namespace StorageNetwork.Services
                 result.Add(pair.Key.Storage);
             }
 
+            SourceMergeAmounts.Clear();
             SourceMergeWorkspace.Clear();
             PendingSourceTags.Clear();
-        }
-
-        private static void AddPendingTransferSources(
-            WorldContentState world,
-            int destinationWorldId,
-            bool includeRelatedWorlds,
-            IEnumerable<Tag> tags,
-            HashSet<Storage> excludedStorages)
-        {
-            foreach (StorageContentRecord record in world.Records)
-            {
-                if (TryGetUsableSource(
-                    record.Storage,
-                    destinationWorldId,
-                    includeRelatedWorlds,
-                    tags,
-                    excludedStorages,
-                    out float amount))
-                {
-                    SourceMergeWorkspace.Add(
-                        new KeyValuePair<StorageContentRecord, float>(record, amount));
-                }
-            }
+            PendingFullScanWorlds.Clear();
         }
 
         private static void MergeSources(
             int worldId,
             bool includeRelatedWorlds,
             IEnumerable<Tag> tags,
-            HashSet<Storage> excludedStorages)
+            HashSet<Storage> excludedStorages,
+            bool pendingTransfer = false)
         {
             if (IncludesAllWorlds(includeRelatedWorlds))
             {
                 foreach (WorldContentState world in Worlds.Values)
                 {
-                    MergeWorldSources(world, tags, excludedStorages);
+                    MergeWorldSources(world, tags, excludedStorages, pendingTransfer);
                 }
             }
             else
             {
                 if (Worlds.TryGetValue(worldId, out WorldContentState world))
                 {
-                    MergeWorldSources(world, tags, excludedStorages);
+                    MergeWorldSources(world, tags, excludedStorages, pendingTransfer);
                 }
 
                 if (worldId >= 0 && StorageNetworkWorldUtility.HasLandedRocketsOrIsLandedRocket(worldId))
@@ -2683,7 +2668,7 @@ namespace StorageNetwork.Services
                     if (parentWorldId != worldId &&
                         Worlds.TryGetValue(parentWorldId, out WorldContentState parentWorld))
                     {
-                        MergeWorldSources(parentWorld, tags, excludedStorages);
+                        MergeWorldSources(parentWorld, tags, excludedStorages, pendingTransfer);
                     }
 
                     IReadOnlyList<int> rockets = StorageNetworkWorldUtility.GetLandedRocketWorldIds(parentWorldId);
@@ -2693,7 +2678,7 @@ namespace StorageNetwork.Services
                         if (rWorldId != worldId &&
                             Worlds.TryGetValue(rWorldId, out WorldContentState rocketWorld))
                         {
-                            MergeWorldSources(rocketWorld, tags, excludedStorages);
+                            MergeWorldSources(rocketWorld, tags, excludedStorages, pendingTransfer);
                         }
                     }
                 }
@@ -2703,8 +2688,40 @@ namespace StorageNetwork.Services
         private static void MergeWorldSources(
             WorldContentState world,
             IEnumerable<Tag> tags,
-            HashSet<Storage> excludedStorages)
+            HashSet<Storage> excludedStorages,
+            bool pendingTransfer = false)
         {
+            if (pendingTransfer)
+            {
+                // Broad categories often match almost every server. In that case
+                // retain the direct pass instead of constructing an equally large
+                // candidate dictionary and visiting every record a second time.
+                int candidates = 0;
+                int directScanThreshold = System.Math.Max(1, world.Records.Count / 2);
+                foreach (Tag tag in tags)
+                {
+                    if (world.SourceBuckets.TryGetValue(tag, out SourceBucket candidateBucket))
+                    {
+                        candidates += candidateBucket.Amounts.Count;
+                        if (candidates >= directScanThreshold)
+                        {
+                            PendingFullScanWorlds.Add(world);
+                            foreach (StorageContentRecord record in world.Records)
+                            {
+                                StorageNetworkPerformanceCounters.RecordPendingSourceChecks();
+                                if (TryGetUsableSource(record.Storage, record.WorldId, false,
+                                    tags, excludedStorages, out float amount))
+                                {
+                                    SourceMergeWorkspace.Add(
+                                        new KeyValuePair<StorageContentRecord, float>(record, amount));
+                                }
+                            }
+                            return;
+                        }
+                    }
+                }
+            }
+
             foreach (Tag tag in tags)
             {
                 if (tag == Tag.Invalid ||
@@ -2901,6 +2918,17 @@ namespace StorageNetwork.Services
                 if (touchedSet.Add(storage))
                 {
                     TouchedStorages.Add(storage);
+                }
+
+                // Explicit targets, reentrant callbacks and nested transfers can
+                // reach outside the entry scope. A pre-existing dirty snapshot
+                // cannot accept a delta after native contents have already changed.
+                // Keep that endpoint authoritative for this entire transaction.
+                if (Records.TryGetValue(storage, out StorageContentRecord record) &&
+                    (!record.HasSnapshot || DirtyRecords.Contains(record)))
+                {
+                    nativeReadRequired.Add(storage);
+                    forcedNativeRead.Add(storage);
                 }
 
                 if (requireNativeRead)
