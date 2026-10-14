@@ -6,7 +6,24 @@
     <Nullable>disable</Nullable>
   </PropertyGroup>
   <ItemGroup>
+    <None Include="..\StorageNetwork\translations\en.po" Link="en.po" CopyToOutputDirectory="PreserveNewest" />
     <Compile Include="..\StorageNetwork\Trading\TradingMarket.cs" Link="TradingMarket.cs" />
+    <Compile Include="..\StorageNetwork\Trading\TradingMarket.Market.cs" Link="TradingMarket.Market.cs" />
+    <Compile Include="..\StorageNetwork\Trading\TradingMarket.Inventory.cs" Link="TradingMarket.Inventory.cs" />
+    <Compile Include="..\StorageNetwork\Trading\TradingRefreshCache.cs" Link="TradingRefreshCache.cs" />
+    <Compile Include="..\StorageNetwork\Trading\TradingGroupChat.cs" Link="TradingGroupChat.cs" />
+    <Compile Include="..\StorageNetwork\Trading\TradingPrecision.cs" Link="TradingPrecision.cs" />
+    <Compile Include="..\StorageNetwork\Trading\TradingIdentity.cs" Link="TradingIdentity.cs" />
+    <Compile Include="..\StorageNetwork\Trading\TradingCharacters.cs" Link="TradingCharacters.cs" />
+    <Compile Include="..\StorageNetwork\Trading\TradingDialogue.cs" Link="TradingDialogue.cs" />
+    <Compile Include="..\StorageNetwork\Trading\TradingConversations.cs" Link="TradingConversations.cs" />
+    <Compile Include="..\StorageNetwork\Trading\TradingPersona.cs" Link="TradingPersona.cs" />
+    <Compile Include="..\StorageNetwork\Trading\TradingDialogueContext.cs" Link="TradingDialogueContext.cs" />
+    <Compile Include="..\StorageNetwork\Trading\TradingText.cs" Link="TradingText.cs" />
+    <Compile Include="..\StorageNetwork\Trading\TradingRelationships.cs" Link="TradingRelationships.cs" />
+    <Compile Include="..\StorageNetwork\Trading\TradingQuoteSignals.cs" Link="TradingQuoteSignals.cs" />
+    <Compile Include="..\StorageNetwork\Trading\TradingTextCatalog.cs" Link="TradingTextCatalog.cs" />
+    <Compile Include="..\StorageNetwork\Services\Filters\StorageNetworkCategoryMatcher.cs" Link="StorageNetworkCategoryMatcher.cs" />
     <Compile Include="..\StorageNetwork\Services\Supply\StorageNetworkFarmingSupplyService.cs" Link="StorageNetworkFarmingSupplyService.cs" />
     <Compile Include="..\StorageNetwork\Services\Inventory\StorageNetworkContentIndexService.cs" Link="StorageNetworkContentIndexService.cs" />
     <Compile Include="..\StorageNetwork\Services\Inventory\StorageNetworkAmountDelta.cs" Link="StorageNetworkAmountDelta.cs" />

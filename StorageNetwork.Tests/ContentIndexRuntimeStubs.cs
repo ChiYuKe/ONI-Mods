@@ -28,6 +28,8 @@ internal static class GameTags
 internal sealed class Element
 {
     public bool IsLiquid, IsGas;
+    public bool HasTag(Tag tag) => (tag == GameTags.Liquid && IsLiquid) || (tag == GameTags.Gas && IsGas) ||
+        (tag == GameTags.Solid && !IsLiquid && !IsGas);
 }
 internal static class ElementLoader
 {

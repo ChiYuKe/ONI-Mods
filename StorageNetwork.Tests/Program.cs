@@ -18,6 +18,16 @@ internal static class Program
         ContentIndexRuntimeChecks.Verify(Check);
         FarmingRuntimeChecks.Verify(Check);
         TradingMarketChecks.Verify(Check);
+        TradingCharacterChecks.Verify(Check);
+        TradingDialogueChecks.Verify(Check);
+        TradingPersonaChecks.Verify(Check);
+        TradingLocalizationChecks.Verify(Check);
+        TradingRelationshipChecks.Verify(Check);
+        TradingQuoteSignalChecks.Verify(Check);
+        TradingInventorySignalChecks.Verify(Check);
+        TradingRefreshCacheChecks.Verify(Check);
+        TradingGroupChatChecks.Verify(Check);
+        StorageCategoryRuntimeChecks.Verify(Check);
         VerifyDebounceCoalescesRequests();
         VerifyDebounceCancellation();
         VerifyRingBufferKeepsNewestValues();
