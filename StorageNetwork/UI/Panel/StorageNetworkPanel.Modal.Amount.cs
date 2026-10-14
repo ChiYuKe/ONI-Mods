@@ -168,7 +168,7 @@ namespace StorageNetwork.UI
             label.fontStyle = style;
             label.textWrappingMode = TextWrappingModes.Normal;
             label.overflowMode = TextOverflowModes.Ellipsis;
-            label.gameObject.AddComponent<LayoutElement>().preferredHeight = text.Contains("\n") ? 40f : 22f;
+            label.gameObject.AddComponent<LayoutElement>().preferredHeight = label.text.Contains("\n") ? 40f : 22f;
             return label;
         }
 
