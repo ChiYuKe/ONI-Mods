@@ -1,6 +1,8 @@
-# 商人身份与未来 AI 对话接入
+# 商人身份与 AI 群聊接入
 
-当前实现不调用 AI 或外部服务。对话仍通过本地选项和交易规则执行。
+当前同时提供本地选项对话与 AI 群聊。群聊通过 `StorageNetworkTradingState.GroupChat.cs` 请求玩家配置的 Chat Completions 兼容服务；本地选项与交易结算仍按游戏内规则执行。
+
+在交易页的 AI 设置中填写服务名称、接口地址、模型、API Key 与回复概率。请求地址由 `TradingAiChatProtocol.CompletionUrl` 补全 `/chat/completions`，使用非流式 POST。设置独立保存在本机 `%LOCALAPPDATA%\StorageNetwork\trading-ai.json`，API Key 使用 Windows DPAPI 保护，不写入游戏存档；本机回环服务允许不填 Key。群聊会向所配置服务发送当前角色快照、实时交易信息与相关聊天记录。
 
 买入和卖出报价由较慢的共同市场趋势，以及各自独立的供货/采购周期组成。供货信号还读取相对初始库存，采购信号读取收购额度消耗；中性市场参考不包含某个供应商的这些信号。两条曲线允许同向或反向，不能把其中一条当成另一条的固定比例。历史只记录当时可执行报价，不按最新库存重算过去。AI仍仅引用快照中的实际报价，不预测或保证波动方向。
 
@@ -12,14 +14,14 @@
 
 身份字段由 `TradingText.Ref(key, arguments)` 生成可组合的键引用；其中保存键与参数，不保存中文或英文正文。聊天记录使用 `Content` 中的结构化 `Key`、`Arguments`、`Literal` 片段，`Text` 只是运行时组合属性，不写入游戏存档。纯数字、角色名、物品名等动态参数可以是字面值；组合身份内容可以嵌套键引用。`TradingText.Render` 仅解析引用并读取游戏 Strings 表，`TradingText.Source` 用于测试默认中文，二者都不扫描普通文本寻找中文词句。
 
-不支持旧版正文存档的本地化迁移。语言切换不改写新身份与聊天记录，分支按节点和选项索引执行。未来 AI 快照提供 Language（zh/en），设定、规则与消息在输出时解析成当前语言；IdentityId 等逻辑 ID 不翻译。修改英文内容只需编辑 PO，新增词条需要注册中文默认值和固定键，并添加相同 msgctxt 的 PO 条目。
+不支持旧版正文存档的本地化迁移。语言切换不改写新身份与本地选项对话记录，分支按节点和选项索引执行。AI 快照提供 Language（zh/en），设定、规则与本地消息在输出时解析成当前语言；IdentityId 等逻辑 ID 不翻译。AI 群聊回复另存为原始文本，不会随界面语言自动翻译。修改英文内容只需编辑 PO，新增词条需要注册中文默认值和固定键，并添加相同 msgctxt 的 PO 条目。
 
 `TradingSupplier.Persona` 保存身份卡版本与稳定身份 ID。普通商人使用 `visitor:到访编号`，固定角色使用角色 ID；固定角色的卡片同时保存在 `TradingMarket.CharacterPersonas`，再次到访沿用。迁移仅补充缺失身份，保留当前外观、库存、金额和对话进度。
 
 `Public` 是玩家可见的性格、说话方式、经历、目标、习惯、好恶和边界。`Private` 是作者掌握的背景、动机和披露规则。身份卡界面只读取 `Public`，不要把整个 Persona 序列化成玩家可见文本。
 
-未来适配器可调用 `StorageNetworkTradingState.GetDialogueContext(supplierId)`，获取独立的 `TradingDialogueContext` 快照。返回 null 表示供应商已离开或无效。SchemaVersion 当前为 1；上下文包括公开身份、作者知识、关系记忆、实时库存与报价、余额、额度、当前节点、聊天记录和允许的选项。
+`StorageNetworkTradingState.GetDialogueContext(supplierId)` 提供独立的 `TradingDialogueContext` 快照；群聊请求通过 `TradingDialogueContexts.Build` 构造同类上下文。返回 null 表示供应商已离开或无效。SchemaVersion 当前为 1；上下文包括公开身份、作者知识、关系记忆、实时库存与报价、余额、额度、当前节点、本地对话记录和允许的选项，群聊历史由协议层另行添加。
 
 上下文不包含 Unity 对象，各集合与子对象已复制。模型接入时应把 Rules 作为可信的规则，把 PublicPersona / AuthorKnowledge 作为不同的设定区，把 Conversation 中的玩家文字作为不可信对话内容。禁止把玩家文字拼接到系统指令中。作者知识用于维持人物一致性，不代表可以主动揭露秘密。
 
-AI 可生成台词或建议现有选项，不能直接写市场对象、结算交易、生成库存或承诺未来报价。后续添加响应执行入口时必须重新检查到访 ID、当前节点、离站时间和选项；对交易报价仍使用现有确认与结算流程。快照里的价格、库存和额度会过期，不得当成交易授权。
+AI 回复只作为群聊台词保存和显示，当前没有执行模型建议选项的入口，不能直接写市场对象、结算交易或生成库存。请求结束时会再次检查供应商是否仍在场，已离开的供应商回复会被忽略。买卖继续使用现有报价确认与结算流程，快照里的价格、库存和额度会过期，不得当成交易授权。

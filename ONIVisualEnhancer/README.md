@@ -1,63 +1,27 @@
 # ONI Visual Enhancer
 
-轻量级《缺氧》视觉增强模组原型。
+《缺氧》画面调整模组。点击顶部状态栏新增的按钮打开设置窗口，修改会立即应用，并通过 `PlayerPrefs` 保存，下次进入游戏恢复。
 
-第一版不改游戏底层渲染管线，而是在游戏画面上方绘制一层轻量 screen-space overlay，用来模拟“光影包”式的整体氛围：
+## 当前功能
 
-- 全屏色调叠加
-- 暗角
-- 轻扫描线
-- 轻颗粒噪声
-- 顶部状态栏按钮打开设置窗口
-- 合并 VignetteBegone 的原版暗角/警报暗角隐藏功能
+- 隐藏原版屏幕暗角与警报暗角。
+- 基础调整：亮度、暗部压低。
+- 相机后处理开关：曝光、对比度、饱和度、色温、色相偏移、色散、镜头畸变和泛光。
+- 材质调整开关：液体色彩、反光与流动，固体色彩与反光，以及纹理缩放。
+- 滚动设置窗口、参数滑条和重置按钮。
 
-## 预设
+当前界面直接调整参数；旧说明中的 Soft、Cinematic 等预设，以及颗粒、扫描线选项已不适用于当前代码。
 
-点击顶部状态栏新增的灯光图标按钮，会在屏幕中间打开设置窗口。窗口里可以切换这些预设：
+## 构建与安装
 
-| 预设 | 效果 |
-| --- | --- |
-| `Off` | 关闭增强效果。 |
-| `Soft` | 轻微冷色调、低暗角、低颗粒。 |
-| `Cinematic` | 更强暗角和电影感色调。 |
-| `Cool Space` | 偏冷、偏深的太空感。 |
-| `Warm Colony` | 偏暖的殖民地灯光感。 |
-| `Noir` | 更暗、更强暗角、扫描线和电影遮罩。 |
-| `Toxic` | 偏污染氧/辐射感的绿色风格化预设。 |
-| `Retro Film` | 复古胶片感，暖色、颗粒和扫描线更强。 |
-| `Deep Sea` | 深海蓝绿感，适合低亮度基地。 |
-| `Magma` | 岩浆/热浪感，明显红橙色调。 |
-| `Frost` | 极寒蓝白感，适合冰原星球。 |
-| `Dream` | 偏紫的柔光梦境感。 |
-| `Terminal` | 绿色终端屏风格，扫描线最明显。 |
+在仓库根目录执行：
 
-当前预设会保存到 `PlayerPrefs`，下次进入游戏自动恢复。
+```powershell
+dotnet build ONIVisualEnhancer/ONIVisualEnhancer.csproj -c Release
+```
 
-## 设置
+Release 产物位于 `ONIVisualEnhancer/bin/Release`。安装时需保留模组元数据和 `assets/visual_enhancer_postprocess` 资源包，不能只复制 DLL；相机效果需要可加载的 `Hidden/ONIVisualEnhancer/PostProcess` Shader，加载失败时画面直接透传。
 
-设置窗口包含：
+## 实现
 
-- 预设上一项/下一项。
-- 隐藏原版屏幕暗角/警报暗角。
-- 色调强度。
-- 暗角强度。
-- 扫描线强度。
-- 颗粒强度。
-- 重置强度按钮。
-
-## 技术路线
-
-这个版本优先保证稳定和可迭代：
-
-- 不修改存档。
-- 不依赖 StorageNetwork。
-- 不 patch 复杂相机渲染流程。
-- 通过 `Game.OnSpawn` 创建 overlay。
-- 通过 `MeterScreen.OnSpawn` 添加状态栏按钮。
-
-后续如果要继续做得更像真正光影包，可以再尝试：
-
-- 相机后处理 shader。
-- 按世界/环境自动切换色调。
-- 灯具、岩浆、蒸汽、太空背景等对象级发光增强。
-- 配置窗口和强度滑条。
+通过 `Game.OnSpawn` 初始化设置窗口、相机后处理与材质调整，通过 `MeterScreen.OnSpawn` 添加状态栏按钮。相机效果使用 `OnRenderImage` 与 Shader，材质调整由 `MaterialVisualController` 执行。模组不依赖 StorageNetwork，设置不写入殖民地存档。

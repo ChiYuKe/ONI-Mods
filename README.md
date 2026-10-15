@@ -29,12 +29,12 @@
 | [MoreFood](./MoreFood) | 更多食物 | 丰富游戏菜谱，提供更多食物和饮食选择。 | [Steam 订阅](https://steamcommunity.com/sharedfiles/filedetails/?id=2957924585) |
 | [MusicBox](./MusicBox) | 音乐盒 | 新增 1×1 音乐盒建筑，接收 4-bit 信号并播放对应钢琴音符。 | [Steam 订阅](https://steamcommunity.com/sharedfiles/filedetails/?id=3762583359) |
 | [NewMap](./NewMap) | 葱翠裂谷 | 新增资源较宽裕、保持原版风格的自定义地图。 | 源码 |
-| [ONIVisualEnhancer](./ONIVisualEnhancer) | ONI Visual Enhancer | 提供色调、暗角、颗粒和扫描线等轻量画面预设。 | 源码 |
+| [ONIVisualEnhancer](./ONIVisualEnhancer) | ONI Visual Enhancer | 调整亮度、相机后处理、液体与固体材质，并可隐藏原版暗角。 | 源码 |
 | [OxygenConsumingPlant](./OxygenConsumingPlant) | 耗氧植物 | 引入消耗氧气的特殊植物及其产物。 | 源码 |
 | [RunningOutOfTime](./RunningOutOfTime) | Running Out of Time | 为复制人增加时间与寿命相关机制。 | 源码 |
-| [StorageNetwork](./StorageNetwork) | 储存网络 | 将储存、生产建筑、喷泉和订单调度整合到可视化管理窗口。 | [Steam 订阅](https://steamcommunity.com/sharedfiles/filedetails/?id=3732422991) |
-| [LogicNetwork](./LogicNetwork) | 逻辑网络 | 独立的可编程自动化信号输出器。 | |
-| [LocalCanvas](./LocalCanvas) | 本地画布 | 将本地图片加入画布的重新装饰选项。 | 源码 |
+| [StorageNetwork](./StorageNetwork) | 储存网络 | 管理网络储存、生产与订单，提供商人交易、行情、角色对话及可配置的 AI 群聊。 | [Steam 订阅](https://steamcommunity.com/sharedfiles/filedetails/?id=3732422991) |
+| [LogicNetwork](./LogicNetwork) | 逻辑网络 | 独立的可编程自动化信号输出器。 | 源码 |
+| [LocalCanvas](./LocalCanvas) | 本地画布 | 将本地图片加入画布的重新装饰选项，并支持游戏内截图保存。 | 源码 |
 | [MadeInAbyss](./MadeInAbyss) | 来自深渊 | 灵感来自《来自深渊》：从深处上升会承受与下潜深度相应的"上升负荷"诅咒，探窟深度晋升笛级，深处挖掘可发现遗物，从最终地诅咒中幸存者化为生骸。 | 源码 |
 | [TAccessories](./TAccessories) | TAccessories | 扩展复制人饰品、效果及相关游戏内容。 | 源码 |
 | [VignetteBegone](./VignetteBegone) | 移除晕影 | 移除或切换游戏边缘暗角与警报晕影。 | [Steam 订阅](https://steamcommunity.com/sharedfiles/filedetails/?id=3460554894) |
@@ -84,7 +84,7 @@ Release 输出统一保存在各项目的 `bin/Release` 下；测试项目额外
 - **常用依赖:** 部分项目会使用 `Newtonsoft.Json`、PLib、FMODUnity、Unity UI / AssetBundle 等。
 - **构建方式:** 使用 Visual Studio 打开 `NOIMods.sln`，或对单个项目执行 `dotnet build <项目>.csproj -c Release`。
 - **输出位置:** 部分项目 Debug 配置会直接输出到 `Documents\Klei\OxygenNotIncluded\mods\Dev\<ModName>`。
-- **适用版本:** 以当前 Steam 版 ONI/U58+ 为主，实际兼容性取决于项目引用的游戏 Managed 程序集版本。
+- **兼容性:** 各项目引用的游戏程序集与接口不同，不能统一保证兼容某个游戏版本；已知构建问题见项目索引，游戏内兼容性需另行验证。
 
 ---
 

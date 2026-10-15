@@ -4,15 +4,20 @@ Localhost-only Oxygen Not Included mod bridge for KAnimGUI.
 
 ## Usage
 
-1. Build the project:
+1. Build from the repository root:
 
    ```powershell
-   dotnet build .\ONIResourceBridge.csproj -c Release
+   dotnet build .\ONIResourceBridge\ONIResourceBridge.csproj -c Release
    ```
 
-2. Enable `ONI Resource Bridge` in ONI's mod list and restart the game.
+2. Copy `ONIResourceBridge.dll`, `mod.yaml`, and `mod_info.yaml` from
+   `ONIResourceBridge/bin/Release` into
+   `%USERPROFILE%\Documents\Klei\OxygenNotIncluded\mods\Dev\ONIResourceBridge`.
+   Release builds produce local output and do not install the mod automatically.
 
-3. Start KAnimGUI and click the game resource bridge button in the top bar.
+3. Enable `ONI Resource Bridge` in ONI's mod list and restart the game.
+
+4. Start KAnimGUI and click the game resource bridge button in the top bar.
 
 ## Endpoints
 
@@ -24,6 +29,8 @@ It writes the selected URL to `%TEMP%\KAnimGui.ONIResourceBridge.json`.
 - `GET /assets/sprites`
 - `GET /assets/offline-anims`
 - `GET /assets/offline-sprites`
+- `GET /assets/offline-refresh`
+- `GET /assets/offline-sprite-refresh`
 - `GET /assets/kanim?name=<animName>`
 - `GET /assets/sprite?id=<spriteId>`
 - `GET /assets/offline-kanim?id=<assetId>`

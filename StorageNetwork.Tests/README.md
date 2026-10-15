@@ -6,13 +6,19 @@ Run the complete release gate from the repository root:
 pwsh -NoProfile -File .\StorageNetwork.Tests\Verify.ps1
 ```
 
-Use `-GameManagedDir <path>` when Oxygen Not Included is installed somewhere other
-than the default path in the script.
+`-GameManagedDir <path>` selects the game assemblies used by the reflection and
+serialization scripts. The unified gate currently does not forward this parameter
+to its `dotnet build` step. For a non-default installation, also configure the mod
+project's `GameManagedDir` build property; do not assume this script parameter
+changes the build references.
 
 The gate builds the mod and deterministic harness in Release, executes the linked
 runtime/algorithm checks, enforces static hot-path contracts, compares the public
 API with `PublicApiBaseline.txt`, resolves every Harmony target against the current
 game assemblies, and runs `git diff --check` on the in-scope files.
+It also checks the profiling report pipeline and logic-material/trading JSON
+serialization against the actual compiled mod. The gate stops at its first failed
+stage; later API/Harmony checks must be run separately if the static scan fails.
 
 `PublicApiBaseline.txt` is intentionally exact. Do not regenerate it to make a
 failure disappear: review any public addition, removal, optional default, or type

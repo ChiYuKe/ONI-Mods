@@ -61,7 +61,7 @@ ComplexRecipe recipe = RecipeUtility.Create(
 ```
 
 ```csharp
-MyConfig config = JsonConfigStore.LoadOrCreate(
+MyConfig config = JsonConfigStore.LoadOrCreate<MyConfig>(
     configPath,
     normalize: value => value.Brightness =
         UnityEngine.Mathf.Clamp01(value.Brightness),
