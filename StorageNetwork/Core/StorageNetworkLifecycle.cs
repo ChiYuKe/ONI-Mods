@@ -15,6 +15,7 @@ namespace StorageNetwork.Core
         public static void ResetRuntimeState()
         {
             StorageNetworkPanel.ResetRuntimeState();
+            API.StorageNetworkUiAccess.ResetRightClickGesture();
             StorageNetworkLiquidOutputPortSideScreen.ResetRuntimeStyles();
             ModConfigDialog.ResetRuntimeState();
             StorageSceneRegistry.ResetRuntimeState();

@@ -9,6 +9,9 @@ namespace StorageNetwork.API
     /// </summary>
     public static class StorageNetworkApi
     {
+        /// <summary>公开接口兼容版本；新增兼容接口时保持不变，破坏兼容性时递增。</summary>
+        public static int ApiVersion => 1;
+
         /// <summary>
         /// 将目标对象登记到储存网络场景注册表中。通常只在动态创建对象或自定义生命周期时需要手动调用。
         /// </summary>

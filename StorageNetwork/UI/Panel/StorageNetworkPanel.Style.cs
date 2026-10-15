@@ -82,7 +82,7 @@ namespace StorageNetwork.UI
             if (spriteCache == null)
             {
                 spriteCache = new Dictionary<string, Sprite>();
-                foreach (Sprite resourceSprite in Resources.FindObjectsOfTypeAll<Sprite>())
+                foreach (Sprite resourceSprite in Assets.instance?.SpriteAssets ?? new List<Sprite>())
                 {
                     string name = resourceSprite != null ? resourceSprite.name : null;
                     if (!string.IsNullOrEmpty(name) && !spriteCache.ContainsKey(name))

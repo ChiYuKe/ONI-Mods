@@ -359,7 +359,7 @@ namespace StorageNetwork.UI
 
         private static void SetTextIfChanged(TextMeshProUGUI text, string value)
         {
-            value = StorageNetwork.Trading.TradingText.Render(value);
+
             if (text != null && text.text != value)
             {
                 text.text = value;

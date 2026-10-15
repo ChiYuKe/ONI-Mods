@@ -98,7 +98,7 @@ namespace StorageNetwork.ProductionOrders
             return Mathf.Max(0f, GetNetworkRawAmount(tag) - GetReservedAmount(tag, ignoredReservationOrderKey));
         }
 
-        internal static float GetTradingReservedAmount(Tag tag, IReadOnlyList<Storage> sources)
+        internal static float GetReservedInventoryAmount(Tag tag, IReadOnlyList<Storage> sources)
         {
             EnsureOrdersLoaded();
             float reserved = 0f;

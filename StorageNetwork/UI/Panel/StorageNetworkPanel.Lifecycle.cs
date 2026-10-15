@@ -148,8 +148,8 @@ namespace StorageNetwork.UI
 
         public static bool IsTextInputFocused()
         {
-            return (IsOpen() || (instance != null && instance.tradingGroupFloating && instance.tradingGroupRoot != null)) &&
-                (StorageNetworkNumberInputField.IsAnyEditing || StorageNetworkTextInputGuard.IsAnyFocused);
+            return (IsOpen() && (StorageNetworkNumberInputField.IsAnyEditing || StorageNetworkTextInputGuard.IsAnyFocused)) ||
+                (ExternalTextInputFocused?.Invoke() ?? false) || API.StorageNetworkUiAccess.IsExternalTextInputFocused();
         }
 
         public static bool CloseFromRightClick()
@@ -181,10 +181,6 @@ namespace StorageNetwork.UI
             {
                 instance.CloseEnrollableWindow();
             }
-            else if (instance.tradingRoot != null && instance.tradingRoot.activeSelf)
-            {
-                instance.CloseTradingWindow();
-            }
             else if (instance.headerWindowRoot != null && instance.headerWindowRoot.activeSelf)
             {
                 instance.CloseHeaderWindow();
@@ -199,6 +195,12 @@ namespace StorageNetwork.UI
 
         public static bool BeginRightClickCloseCandidate()
         {
+            if (API.StorageNetworkUiAccess.TrackRightClickClose(out _))
+            {
+                standaloneRightClickCloseCandidate = false;
+                if (instance != null) instance.rightClickCloseCandidate = false;
+                return true;
+            }
             if (!IsOpen() && standaloneOutputFilterPickerRoot == null)
             {
                 return false;
@@ -222,6 +224,12 @@ namespace StorageNetwork.UI
 
         public static bool FinishRightClickCloseCandidate(out bool closed)
         {
+            if (API.StorageNetworkUiAccess.TrackRightClickClose(out closed))
+            {
+                standaloneRightClickCloseCandidate = false;
+                if (instance != null) instance.rightClickCloseCandidate = false;
+                return true;
+            }
             closed = false;
             if (standaloneOutputFilterPickerRoot != null)
             {
@@ -287,6 +295,11 @@ namespace StorageNetwork.UI
 
         private void TrackRightClickCloseGesture()
         {
+            if (API.StorageNetworkUiAccess.TrackRightClickClose(out _))
+            {
+                standaloneRightClickCloseCandidate = rightClickCloseCandidate = false;
+                return;
+            }
             if (Input.GetMouseButtonDown(1))
             {
                 BeginRightClickCloseCandidate();
@@ -307,8 +320,6 @@ namespace StorageNetwork.UI
                 ContainsScreenPoint(categorySummaryRoot, mousePosition) ||
                 ContainsScreenPoint(enrollableWindowRoot, mousePosition) ||
                 ContainsScreenPoint(headerWindowRoot, mousePosition) ||
-                ContainsScreenPoint(tradingRoot, mousePosition) ||
-                (tradingGroupFloating && ContainsScreenPoint(tradingGroupWindow, mousePosition)) ||
                 ContainsScreenPoint(modalRoot, mousePosition);
         }
 
@@ -328,7 +339,6 @@ namespace StorageNetwork.UI
 
         private void CloseModal()
         {
-            if (tradingGroupRoot != null && modalRoot == tradingGroupRoot) Trading.StorageNetworkTradingState.Instance?.CancelGroupChat();
             if (modalRoot != null)
             {
                 Destroy(modalRoot);
@@ -338,7 +348,7 @@ namespace StorageNetwork.UI
 
         private void Close()
         {
-            CloseTradingWindow();
+
             CloseModal();
             CloseCategorySummaryPanel();
             CloseProductionSettingsPanel();
@@ -381,11 +391,6 @@ namespace StorageNetwork.UI
 
             if (e.TryConsume(global::Action.Escape))
             {
-                if (tradingRoot != null && tradingRoot.activeSelf)
-                {
-                    CloseTradingWindow();
-                    return;
-                }
                 if (enrollableWindowRoot != null && enrollableWindowRoot.activeSelf)
                 {
                     CloseEnrollableWindow();

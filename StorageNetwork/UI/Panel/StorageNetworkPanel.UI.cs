@@ -255,7 +255,7 @@ namespace StorageNetwork.UI
             GameObject textObject = new GameObject(name);
             textObject.transform.SetParent(parent, false);
             TextMeshProUGUI textComponent = textObject.AddComponent<TextMeshProUGUI>();
-            textComponent.text = StorageNetwork.Trading.TradingText.Render(text);
+            textComponent.text = text;
             textComponent.fontSize = size;
             textComponent.alignment = alignment;
             textComponent.color = Color.white;

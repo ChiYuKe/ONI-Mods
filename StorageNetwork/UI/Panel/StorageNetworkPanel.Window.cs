@@ -50,15 +50,7 @@ namespace StorageNetwork.UI
             orderRect.sizeDelta = new Vector2(72f, 22f);
             ToolTip orderTooltip = orderButton.AddComponent<ToolTip>();
             orderTooltip.toolTip = Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.ORDER_CENTER_OPEN_TOOLTIP);
-
-            GameObject tradeButton = CreateGameButton("TradingButton", header.transform, StorageNetwork.Trading.TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_919DDBBD91C0"), ToggleTradingWindow);
-            RectTransform tradeRect = tradeButton.GetComponent<RectTransform>();
-            tradeRect.anchorMin = tradeRect.anchorMax = tradeRect.pivot = new Vector2(0f, 0.5f);
-            tradeRect.anchoredPosition = new Vector2(248f, 0f);
-            tradeRect.sizeDelta = new Vector2(72f, 22f);
-            tradeButton.AddComponent<ToolTip>().toolTip = StorageNetwork.Trading.TradingText.Render(StorageNetwork.Trading.TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.OPEN_DESCRIPTION"));
-
-            CreateHeaderAddonButtonPanel(window, header.transform);
+            CreateHeaderAddonButtonPanel(window, header.transform, orderRect);
 
             GameObject closeButton = CreateCloseIconButton("CloseButton", header.transform, Close);
             RectTransform closeRect = closeButton.GetComponent<RectTransform>();
@@ -167,7 +159,7 @@ namespace StorageNetwork.UI
             rightList.AddComponent<ScrollWheelBlocker>();
         }
 
-        private void CreateHeaderAddonButtonPanel(GameObject panelRoot, Transform header)
+        private void CreateHeaderAddonButtonPanel(GameObject panelRoot, Transform header, RectTransform previousButton)
         {
             GameObject panel = new GameObject("AddonButtonPanel");
             panel.transform.SetParent(header, false);
@@ -175,9 +167,10 @@ namespace StorageNetwork.UI
             panelRect.anchorMin = new Vector2(0f, 0.5f);
             panelRect.anchorMax = new Vector2(1f, 0.5f);
             panelRect.pivot = new Vector2(0f, 0.5f);
-            panelRect.anchoredPosition = new Vector2(326f, 0f);
-            panelRect.offsetMin = new Vector2(326f, -11f);
-            panelRect.offsetMax = new Vector2(-36f, 11f);
+            float left = previousButton.anchoredPosition.x + previousButton.sizeDelta.x + 6f;
+            float halfHeight = previousButton.sizeDelta.y * 0.5f;
+            panelRect.offsetMin = new Vector2(left, -halfHeight);
+            panelRect.offsetMax = new Vector2(-36f, halfHeight);
 
             HorizontalLayoutGroup layout = panel.AddComponent<HorizontalLayoutGroup>();
             layout.spacing = 6f;

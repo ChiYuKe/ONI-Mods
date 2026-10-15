@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -8,9 +9,7 @@ namespace StorageNetwork.API
     /// </summary>
     public static class StorageNetworkPanelHeaderButtonRegistry
     {
-        private static readonly List<IStorageNetworkPanelHeaderButtonProvider> Providers =
-            new List<IStorageNetworkPanelHeaderButtonProvider>();
-
+        private static readonly List<IStorageNetworkPanelHeaderButtonProvider> Providers = new List<IStorageNetworkPanelHeaderButtonProvider>();
         /// <summary>
         /// 注册一个主面板顶部按钮提供器。重复注册同一个实例会被忽略。
         /// </summary>
@@ -25,8 +24,26 @@ namespace StorageNetwork.API
         }
 
         /// <summary>
-        /// 移除一个已注册的主面板顶部按钮提供器。
+        /// 使用工厂注册按钮，避免附属模组类型声明依赖本模组接口。
         /// </summary>
+        public static void RegisterFactory(Func<IEnumerable<StorageNetworkPanelHeaderButton>> factory)
+        {
+            if (factory != null)
+                Register(new FactoryProvider(factory));
+        }
+
+        private sealed class FactoryProvider : IStorageNetworkPanelHeaderButtonProvider
+        {
+            private readonly Func<IEnumerable<StorageNetworkPanelHeaderButton>> factory;
+            internal FactoryProvider(Func<IEnumerable<StorageNetworkPanelHeaderButton>> factory)
+            {
+                this.factory = factory;
+            }
+
+            public IEnumerable<StorageNetworkPanelHeaderButton> GetHeaderButtons() => factory();
+        }
+
+        /// <summary>移除一个已注册的主面板顶部按钮提供器。</summary>
         public static void Unregister(IStorageNetworkPanelHeaderButtonProvider provider)
         {
             if (provider != null)
@@ -40,13 +57,7 @@ namespace StorageNetwork.API
         /// </summary>
         public static IReadOnlyList<StorageNetworkPanelHeaderButton> GetButtons()
         {
-            return Providers
-                .Where(provider => provider != null)
-                .SelectMany(provider => provider.GetHeaderButtons() ?? Enumerable.Empty<StorageNetworkPanelHeaderButton>())
-                .Where(button => button != null)
-                .OrderBy(button => button.Order)
-                .ThenBy(button => button.Id)
-                .ToList();
+            return Providers.Where(provider => provider != null).SelectMany(provider => provider.GetHeaderButtons() ?? Enumerable.Empty<StorageNetworkPanelHeaderButton>()).Where(button => button != null).OrderBy(button => button.Order).ThenBy(button => button.Id).ToList();
         }
 
         /// <summary>
