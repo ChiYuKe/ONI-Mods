@@ -32,7 +32,8 @@
 | [ONIVisualEnhancer](./ONIVisualEnhancer) | ONI Visual Enhancer | 调整亮度、相机后处理、液体与固体材质，并可隐藏原版暗角。 | 源码 |
 | [OxygenConsumingPlant](./OxygenConsumingPlant) | 耗氧植物 | 引入消耗氧气的特殊植物及其产物。 | 源码 |
 | [RunningOutOfTime](./RunningOutOfTime) | Running Out of Time | 为复制人增加时间与寿命相关机制。 | 源码 |
-| [StorageNetwork](./StorageNetwork) | 储存网络 | 管理网络储存、生产与订单，提供商人交易、行情、角色对话及可配置的 AI 群聊。 | [Steam 订阅](https://steamcommunity.com/sharedfiles/filedetails/?id=3732422991) |
+| [StorageNetwork](./StorageNetwork) | 储存网络 | 管理网络储存、生产与订单，为附属模组提供仓库接口。 | [Steam 订阅](https://steamcommunity.com/sharedfiles/filedetails/?id=3732422991) |
+| [StorageNetworkTrading](./StorageNetworkTrading) | 存储网络交易 | 独立的商人交易、行情、好感度、角色对话和 AI 群聊；需要启用储存网络。 | 本地模组 |
 | [LogicNetwork](./LogicNetwork) | 逻辑网络 | 独立的可编程自动化信号输出器。 | 源码 |
 | [LocalCanvas](./LocalCanvas) | 本地画布 | 将本地图片加入画布的重新装饰选项，并支持游戏内截图保存。 | 源码 |
 | [MadeInAbyss](./MadeInAbyss) | 来自深渊 | 灵感来自《来自深渊》：从深处上升会承受与下潜深度相应的"上升负荷"诅咒，探窟深度晋升笛级，深处挖掘可发现遗物，从最终地诅咒中幸存者化为生骸。 | 源码 |

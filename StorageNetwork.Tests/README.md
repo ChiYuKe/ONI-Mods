@@ -12,7 +12,7 @@ to its `dotnet build` step. For a non-default installation, also configure the m
 project's `GameManagedDir` build property; do not assume this script parameter
 changes the build references.
 
-The gate builds the mod and deterministic harness in Release, executes the linked
+The gate builds StorageNetwork, StorageNetworkTrading and the deterministic harness in Release, executes the linked
 runtime/algorithm checks, enforces static hot-path contracts, compares the public
 API with `PublicApiBaseline.txt`, resolves every Harmony target against the current
 game assemblies, and runs `git diff --check` on the in-scope files.
@@ -47,8 +47,8 @@ For a visible main/category panel run, also pass `-RequireMainPanel`,
 `-MaxWorldSnapshotRebuilds 0`.
 
 Algorithm optimization results and pending game benchmarks are recorded in
-`ALGORITHM_OPTIMIZATION.md`. The full gate intentionally still reports the
-pre-existing global Sprite compatibility scan; its rule has not been relaxed.
+`ALGORITHM_OPTIMIZATION.md`. The previous global Sprite compatibility scan has been
+replaced with an asset-list lookup; the static rule remains enforced.
 
 Run production-linked runtime tests independently of source contracts:
 
