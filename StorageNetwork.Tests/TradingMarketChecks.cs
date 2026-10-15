@@ -8,13 +8,30 @@ internal static class TradingMarketChecks
 {
     public static void Verify(Action<bool, string> check)
     {
+        check(TradingFoodPricing.BasePrice(0) == 28m, "neutral-quality food has a stable base unit price");
+        for (int quality = -2; quality <= 8; quality++)
+        {
+            check(TradingFoodPricing.BasePrice(quality + 1) > TradingFoodPricing.BasePrice(quality),
+                "higher-quality food has a strictly higher base unit price");
+            check(TradingFoodPricing.BasePrice(quality, 2000000f) > TradingFoodPricing.BasePrice(quality, 1000000f),
+                "more calories increase the price within the same food quality tier");
+            check(TradingFoodPricing.BasePrice(quality + 1, 0) > TradingFoodPricing.BasePrice(quality, 1000000000f),
+                "calorie premiums cannot invert adjacent quality price bands");
+        }
+        check(TradingFoodPricing.BasePrice(0, 1000000f) == 32.67m &&
+            TradingFoodPricing.BasePrice(0, 2000000f) == 35m,
+            "food energy premiums use native game calorie units and round only the final price");
+        check(TradingFoodPricing.BasePrice(0, -100f) == TradingFoodPricing.BasePrice(0, 0),
+            "negative food energy cannot reduce the quality floor price");
+        check(TradingFoodPricing.IngredientPrice < TradingFoodPricing.BasePrice(-1),
+            "unrated cooking ingredients do not inherit the old generic item premium");
         // The small economy fixture uses one category; specialization has a separate full catalog below.
         var material = new TradingGood { Id = "Iron", Name = "Iron", BasePrice = 2m, Category = "Metal" };
         var item = new TradingGood { Id = "Suit", Name = "Suit", BasePrice = 100m, ByUnit = true, Category = "Metal" };
         var catalog = new[] { material, item };
         var market = new TradingMarket();
         check(market.Refresh(40, catalog) && market.Suppliers.Count == 5, "market creates exactly five suppliers");
-        check(market.Suppliers.All(s => s.Departure - s.Arrival >= 1 && s.Departure - s.Arrival <= 15), "supplier visits last 1 to 15 cycles");
+        check(market.Suppliers.All(s => s.Departure - s.Arrival >= 1 && s.Departure - s.Arrival <= 30), "supplier visits last 1 to 30 cycles");
         var ids = market.Suppliers.Select(s => s.Id).ToArray();
         check(!market.Refresh(40.9, catalog) && market.Suppliers.Select(s => s.Id).SequenceEqual(ids), "opening the panel does not reroll suppliers");
         var supplier = market.Suppliers[0];
@@ -160,8 +177,9 @@ internal static class TradingMarketChecks
         supplier.BuyLimit = 68000m;
         supplier.Bought = 67999.988m;
         var quote = market.Quote(supplier, good, 0, false, 0.002, oil);
-        check(quote.MaximumAmount < minimum && TradingText.Source(quote.LimitReason).Contains("收购") && TradingText.Source(quote.LimitReason).Contains("0.012"),
-            "almost exhausted buy budgets explicitly explain why abundant oil has a tiny sale cap");
+        check(quote.MaximumAmount < minimum && supplier.BuyLimit - supplier.Bought == 0.012m &&
+            TradingText.Source(quote.LimitReason).Contains("收购") && TradingText.Source(quote.LimitReason).Contains("0.0"),
+            "residual budgets retain exact precision while their limit explanation uses one decimal place");
         TradingPrecision.ApplyMinimum(quote, minimum, market.Balance);
         check(!quote.CanTrade && quote.MaximumAmount == 0 && quote.Total == 0 && quote.BalanceAfter == market.Balance && TradingText.Source(quote.Reason).Contains("最小"),
             "the actual quote validation disables unrepresentable residual-budget trades without promising a payout");
@@ -314,7 +332,9 @@ internal static class TradingMarketChecks
             {
                 decimal before = TradingMarket.Price(visitor, good, cycle - 1, true);
                 decimal after = TradingMarket.Price(visitor, good, cycle, true);
-                check(Math.Abs(after / before - 1m) < 0.07m, "daily quotes move gradually for each supplier profile");
+                // Short-term news deliberately permits double-digit moves now;
+                // shocks must still avoid an overnight collapse or runaway quote.
+                check(Math.Abs(after / before - 1m) < 0.45m, "volatile daily quotes remain bounded for each supplier profile");
             }
         }
         check(TradingMarket.Profile(new TradingSupplier { Id = 3 }) == "Bulk" &&

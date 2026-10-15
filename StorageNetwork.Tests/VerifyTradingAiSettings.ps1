@@ -1,6 +1,6 @@
 param(
     [string] $GameManagedDir = 'D:\Program Files (x86)\Steam\steamapps\common\OxygenNotIncluded\OxygenNotIncluded_Data\Managed',
-    [string] $ModAssembly = 'C:\Users\Administrator\Documents\Klei\OxygenNotIncluded\mods\Dev\StorageNetwork\StorageNetwork.dll'
+    [string] $ModAssembly = 'C:\Users\Administrator\Documents\Klei\OxygenNotIncluded\mods\Dev\StorageNetworkTrading\StorageNetworkTrading.dll'
 )
 $ErrorActionPreference = 'Stop'
 [void][Reflection.Assembly]::LoadFrom((Join-Path $GameManagedDir 'Newtonsoft.Json.dll'))
@@ -11,7 +11,8 @@ $flags = [Reflection.BindingFlags]'Instance,NonPublic'
 $directory = Join-Path $PSScriptRoot 'bin'
 [void][IO.Directory]::CreateDirectory($directory)
 $testPath = Join-Path $directory ('ai-config-check-' + [Guid]::NewGuid().ToString('N') + '.json')
-$store = $storeType.GetConstructors($flags)[0].Invoke([object[]]@([string]$testPath))
+$constructor = $storeType.GetConstructors($flags) | Where-Object { $_.GetParameters().Count -eq 1 }
+$store = $constructor.Invoke([object[]]@([string]$testPath))
 $validate = $settingsType.GetMethod('ValidationKey', $flags)
 $canChat = $settingsType.GetMethod('CanChat', $flags)
 $save = $storeType.GetMethod('Save', $flags)
@@ -51,8 +52,49 @@ try {
     if (-not $load.Invoke($store, $loadedArgs) -or $loadedArgs[0].ApiKey -ne '' -or $loadedArgs[0].Model -ne 'second-model' -or $loadedArgs[0].ReplyProbability -ne 75) {
         throw 'Replacing settings or clearing credentials failed.'
     }
+    $migrationPath = $testPath + '.migrated'
+    try {
+        $settings.ApiKey = 'synthetic-key-only-for-tests-1234567890'
+        $save.Invoke($store, @($settings)) | Out-Null
+        $migrationConstructor = $storeType.GetConstructors($flags) | Where-Object { $_.GetParameters().Count -eq 2 }
+        $migrationStore = $migrationConstructor.Invoke([object[]]@([string]$migrationPath, [string]$testPath))
+        if (-not $load.Invoke($migrationStore, $loadedArgs) -or $loadedArgs[0].ApiKey -ne $settings.ApiKey -or -not [IO.File]::Exists($migrationPath)) {
+            throw 'Legacy configuration migration failed to preserve settings and credential.'
+        }
+        if ([IO.File]::ReadAllText($migrationPath).Contains($settings.ApiKey)) { throw 'Migration wrote a plaintext credential.' }
+        $settings.Model = 'new-location-wins'
+        $save.Invoke($migrationStore, @($settings)) | Out-Null
+        if (-not $load.Invoke($migrationStore, $loadedArgs) -or $loadedArgs[0].Model -ne 'new-location-wins') {
+            throw 'Existing new configuration was overwritten by legacy data.'
+        }
+        [IO.File]::WriteAllText($migrationPath, 'invalid JSON')
+        if ($load.Invoke($migrationStore, $loadedArgs)) { throw 'Corrupted new configuration was silently replaced with legacy data.' }
+    }
+    finally { if ([IO.File]::Exists($migrationPath)) { [IO.File]::Delete($migrationPath) } }
+    $savePath = $testPath + '.sav'
+    $otherSave = $testPath + '.other.sav'
+    $sidecar = $savePath + '.StorageNetworkTradingAi.json'
+    try {
+        [IO.File]::WriteAllText($savePath, 'synthetic save placeholder')
+        [IO.File]::WriteAllText($otherSave, 'synthetic save placeholder')
+        $savePatch = $assembly.GetType('StorageNetwork.Trading.TradingAiSettingsSavePatch', $true)
+        $postfix = $savePatch.GetMethod('Postfix', [Reflection.BindingFlags]'Static,NonPublic')
+        $postfix.Invoke($null, [object[]]@([string]$savePath, [string]$savePath, $settings)) | Out-Null
+        if (-not [IO.File]::Exists($sidecar)) { throw 'Save completion did not create an adjacent AI configuration.' }
+        $sidecarStore = $constructor.Invoke([object[]]@([string]$sidecar))
+        if (-not $load.Invoke($sidecarStore, $loadedArgs) -or $loadedArgs[0].ApiKey -ne $settings.ApiKey) {
+            throw 'Adjacent save configuration lost its credential.'
+        }
+        $postfix.Invoke($null, [object[]]@([string]$otherSave, [string]$savePath, $settings)) | Out-Null
+        if ([IO.File]::Exists($otherSave + '.StorageNetworkTradingAi.json')) {
+            throw 'Unsuccessful save created an AI configuration at the requested path.'
+        }
+    }
+    finally {
+        foreach ($file in @($savePath, $otherSave, $sidecar)) { if ([IO.File]::Exists($file)) { [IO.File]::Delete($file) } }
+    }
     [IO.File]::WriteAllText($testPath, 'invalid JSON')
     if ($load.Invoke($store, $loadedArgs)) { throw 'Corrupted configuration was silently accepted.' }
-    Write-Output 'AI settings validation, atomic replacement and Windows credential encryption checks passed.'
+    Write-Output 'AI settings validation, atomic replacement, migration, save sidecars and Windows credential encryption checks passed.'
 }
 finally { if ([IO.File]::Exists($testPath)) { [IO.File]::Delete($testPath) } }

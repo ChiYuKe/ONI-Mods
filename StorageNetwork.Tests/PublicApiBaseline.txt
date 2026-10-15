@@ -1,5 +1,3 @@
-# Locked public surface from f5183008 (before the performance refactor).
-# Exact comparison intentionally rejects removals, changes, and accidental additions.
 C StorageNetwork.API.StorageNetworkCategoryDescriptor(System.String key,System.String name,System.Int32 order=0)
 C StorageNetwork.API.StorageNetworkDisplayInfo()
 C StorageNetwork.API.StorageNetworkPanelHeaderButton(System.String id,System.String label,System.Action onClick,System.String tooltip=null,System.String iconName=null,System.String fallbackIconText=null,System.Single width=72,System.Int32 order=100)
@@ -92,12 +90,29 @@ F static readonly Tag StorageNetwork.API.StorageNetworkTags.ServerStorage
 F static readonly Tag StorageNetwork.API.StorageNetworkTags.ShowSettingsButton
 F static readonly Tag StorageNetwork.API.StorageNetworkTags.SolidOutputPortBufferedItem
 F System.Int32 StorageNetwork.API.StorageNetworkStorageFlags.value__
+M static Storage StorageNetwork.API.StorageNetworkInventoryAccess.FindFoodOutputTarget(UnityEngine.GameObject item,StorageNetwork.API.StorageNetworkItemTags matchTags,System.Collections.Generic.HashSet<Storage> excludedStorages,Storage specificTarget,StorageNetwork.Core.StorageSceneSnapshot snapshot=null,System.Int32 sourceWorldId=-1,Storage sourceStorage=null)
+M static Storage StorageNetwork.API.StorageNetworkInventoryAccess.FindFoodOutputTarget(UnityEngine.GameObject item,System.Collections.Generic.HashSet<Tag> matchTags,System.Collections.Generic.HashSet<Storage> excludedStorages,Storage specificTarget,StorageNetwork.Core.StorageSceneSnapshot snapshot=null,System.Int32 sourceWorldId=-1,Storage sourceStorage=null)
+M static Storage StorageNetwork.API.StorageNetworkInventoryAccess.FindFoodReceiver(UnityEngine.GameObject item,StorageNetwork.API.StorageNetworkItemTags matchTags,System.Collections.Generic.HashSet<Storage> excludedStorages=null,Storage specificTarget=null,System.Int32 sourceWorldId=-1,Storage sourceStorage=null)
+M static Storage StorageNetwork.API.StorageNetworkInventoryAccess.FindItemReceiver(UnityEngine.GameObject item,StorageNetwork.API.StorageNetworkItemTags matchTags,System.Collections.Generic.HashSet<Storage> excludedStorages=null,Storage specificTarget=null,System.Int32 sourceWorldId=-1,Storage sourceStorage=null)
+M static Storage StorageNetwork.API.StorageNetworkInventoryAccess.FindOutputTarget(UnityEngine.GameObject item,StorageNetwork.API.StorageNetworkItemTags matchTags,System.Collections.Generic.HashSet<Storage> excludedStorages,Storage specificTarget,StorageNetwork.Core.StorageSceneSnapshot snapshot=null,System.Int32 sourceWorldId=-1,Storage sourceStorage=null)
+M static Storage StorageNetwork.API.StorageNetworkInventoryAccess.FindOutputTarget(UnityEngine.GameObject item,System.Collections.Generic.HashSet<Tag> matchTags,System.Collections.Generic.HashSet<Storage> excludedStorages,Storage specificTarget,StorageNetwork.Core.StorageSceneSnapshot snapshot=null,System.Int32 sourceWorldId=-1,Storage sourceStorage=null)
+M static StorageNetwork.API.StorageNetworkItemTags StorageNetwork.API.StorageNetworkInventoryAccess.GetStorageMatchTagsNonAlloc(UnityEngine.GameObject item)
 M static StorageNetwork.API.StorageNetworkTransferResult StorageNetwork.API.StorageNetworkApi.TransferStoredItemsToNetwork(Storage source,Storage specificTarget=null,System.Boolean preferColdStorageForFood=false)
 M static StorageNetwork.API.StorageNetworkTransferResult StorageNetwork.API.StorageNetworkApi.TransferStoredItemToNetwork(Storage source,UnityEngine.GameObject item,Storage specificTarget=null,System.Boolean preferColdStorageForFood=false)
 M static StorageNetwork.API.StorageNetworkTransferResult StorageNetwork.API.StorageNetworkTransferResult.Blocked(System.String itemName)
 M static StorageNetwork.Core.StorageSceneLightweightSnapshot StorageNetwork.Core.StorageSceneCollector.CollectLightweightForWorld(System.Int32 worldId,System.Boolean includeReachableWorlds=true)
 M static StorageNetwork.Core.StorageSceneSnapshot StorageNetwork.Core.StorageSceneCollector.Collect(System.Boolean force=false)
 M static StorageNetwork.Core.StorageSceneSnapshot StorageNetwork.Core.StorageSceneCollector.CollectForWorld(System.Int32 worldId,System.Boolean includeReachableWorlds=true,System.Boolean force=false)
+M static System.Boolean StorageNetwork.API.StorageNetworkInventoryAccess.HasElementOutputCandidateIgnoringCapacity(SimHashes elementHash,System.Collections.Generic.HashSet<Storage> excludedStorages=null,Storage specificTarget=null,StorageNetwork.Core.StorageSceneSnapshot snapshot=null,System.Int32 sourceWorldId=-1)
+M static System.Boolean StorageNetwork.API.StorageNetworkInventoryAccess.HasElementReceiverIgnoringCapacity(SimHashes elementHash,System.Collections.Generic.HashSet<Storage> excludedStorages=null,Storage specificTarget=null,System.Int32 sourceWorldId=-1)
+M static System.Boolean StorageNetwork.API.StorageNetworkInventoryAccess.HasOnlineCoreInWorld(System.Int32 worldId)
+M static System.Boolean StorageNetwork.API.StorageNetworkInventoryAccess.IsColdStorageServer(Storage storage)
+M static System.Boolean StorageNetwork.API.StorageNetworkInventoryAccess.IsConnectedNetworkStorage(Storage storage)
+M static System.Boolean StorageNetwork.API.StorageNetworkInventoryAccess.IsServerStorage(Storage storage)
+M static System.Boolean StorageNetwork.API.StorageNetworkInventoryAccess.IsSolidStorageServer(Storage storage)
+M static System.Boolean StorageNetwork.API.StorageNetworkInventoryAccess.IsStorageReachableFromWorld(Storage storage,System.Int32 worldId)
+M static System.Boolean StorageNetwork.API.StorageNetworkInventoryAccess.MatchesElementState(Storage storage,Element element)
+M static System.Boolean StorageNetwork.API.StorageNetworkUiAccess.TrackRightClickClose(out System.Boolean closed)
 M static System.Boolean StorageNetwork.API.StorageNetworkWorldPanelRegistry.TryBuildContent(UnityEngine.GameObject target,out StorageNetwork.API.StorageNetworkWorldPanelContent content)
 M static System.Boolean StorageNetwork.Core.StorageSceneRegistry.HasOnlineCoreInActiveWorld()
 M static System.Boolean StorageNetwork.Core.StorageSceneRegistry.HasOnlineCoreInActiveWorld(out System.Boolean crossPlanetRelayOnline)
@@ -105,21 +120,37 @@ M static System.Boolean StorageNetwork.Core.StorageSceneRegistry.HasOnlineCoreIn
 M static System.Boolean StorageNetwork.Core.StorageSceneRegistry.IsCrossPlanetRelayOnline()
 M static System.Boolean StorageNetwork.Core.StorageSceneRegistry.IsLive(UnityEngine.Component component)
 M static System.Collections.Generic.IReadOnlyCollection<Geyser> StorageNetwork.Core.StorageSceneRegistry.GetGeysers()
+M static System.Collections.Generic.IReadOnlyCollection<Storage> StorageNetwork.API.StorageNetworkInventoryAccess.GetStorages()
 M static System.Collections.Generic.IReadOnlyCollection<Storage> StorageNetwork.Core.StorageSceneRegistry.GetStorages()
 M static System.Collections.Generic.IReadOnlyCollection<StorageNetwork.Components.StorageNetworkCore> StorageNetwork.Core.StorageSceneRegistry.GetCores()
 M static System.Collections.Generic.IReadOnlyCollection<StorageNetwork.Components.StorageNetworkEnrollment> StorageNetwork.Core.StorageSceneRegistry.GetEnrollments()
 M static System.Collections.Generic.IReadOnlyCollection<StorageNetwork.Components.StorageNetworkPowerStorage> StorageNetwork.Core.StorageSceneRegistry.GetPowerStorages()
 M static System.Collections.Generic.IReadOnlyList<StorageNetwork.API.StorageNetworkPanelHeaderButton> StorageNetwork.API.StorageNetworkPanelHeaderButtonRegistry.GetButtons()
+M static System.Collections.Generic.List<Storage> StorageNetwork.API.StorageNetworkInventoryAccess.FindElementOutputTargets(SimHashes elementHash,System.Collections.Generic.HashSet<Storage> excludedStorages=null,Storage specificTarget=null,StorageNetwork.Core.StorageSceneSnapshot snapshot=null,System.Int32 sourceWorldId=-1)
+M static System.Collections.Generic.List<Storage> StorageNetwork.API.StorageNetworkInventoryAccess.FindElementReceivers(SimHashes elementHash,System.Collections.Generic.HashSet<Storage> excludedStorages=null,Storage specificTarget=null,System.Int32 sourceWorldId=-1)
+M static System.Int32 StorageNetwork.API.StorageNetworkInventoryAccess.GetStorageInstanceId(Storage storage)
 M static System.Single StorageNetwork.API.StorageNetworkApi.TransferFromNetworkToStorage(System.Collections.Generic.IEnumerable<Tag> tags,System.Single amount,Storage destination,Storage specificSource=null)
+M static System.Single StorageNetwork.API.StorageNetworkInventoryAccess.GetReservedAmount(Tag tag,System.Collections.Generic.IReadOnlyList<Storage> sources)
+M static System.String StorageNetwork.API.StorageNetworkInventoryAccess.GetStoredItemKey(UnityEngine.GameObject item)
+M static System.String StorageNetwork.API.StorageNetworkInventoryAccess.GetWorldName(System.Int32 worldId)
 M static System.Void StorageNetwork.API.StorageNetworkApi.InstallExternalApiBridge(UnityEngine.GameObject gameObject)
 M static System.Void StorageNetwork.API.StorageNetworkApi.InvalidateScene()
 M static System.Void StorageNetwork.API.StorageNetworkApi.RefreshObjectUi(UnityEngine.GameObject gameObject)
 M static System.Void StorageNetwork.API.StorageNetworkApi.RegisterSceneMember(UnityEngine.GameObject gameObject)
 M static System.Void StorageNetwork.API.StorageNetworkApi.UnregisterSceneMember(UnityEngine.GameObject gameObject)
+M static System.Void StorageNetwork.API.StorageNetworkInventoryAccess.FillSourceStorages(System.Int32 worldId,System.Boolean includeRelatedWorlds,System.Collections.Generic.IEnumerable<Tag> wantedTags,System.Collections.Generic.HashSet<Storage> excludedStorages,Storage specificSource,System.Collections.Generic.List<Storage> result,System.Boolean allowStaleContent)
+M static System.Void StorageNetwork.API.StorageNetworkInventoryAccess.Invalidate()
+M static System.Void StorageNetwork.API.StorageNetworkInventoryAccess.Invalidate(Storage first,Storage second)
+M static System.Void StorageNetwork.API.StorageNetworkInventoryAccess.Invalidate(Storage storage)
 M static System.Void StorageNetwork.API.StorageNetworkPanelHeaderButtonContext.PrepareEmbeddedPanel(UnityEngine.GameObject panel)
 M static System.Void StorageNetwork.API.StorageNetworkPanelHeaderButtonRegistry.Register(StorageNetwork.API.IStorageNetworkPanelHeaderButtonProvider provider)
+M static System.Void StorageNetwork.API.StorageNetworkPanelHeaderButtonRegistry.RegisterFactory(System.Func<System.Collections.Generic.IEnumerable<StorageNetwork.API.StorageNetworkPanelHeaderButton>> factory)
 M static System.Void StorageNetwork.API.StorageNetworkPanelHeaderButtonRegistry.ResetRuntimeState()
 M static System.Void StorageNetwork.API.StorageNetworkPanelHeaderButtonRegistry.Unregister(StorageNetwork.API.IStorageNetworkPanelHeaderButtonProvider provider)
+M static System.Void StorageNetwork.API.StorageNetworkUiAccess.RegisterRightClickClose(System.String id,System.Func<System.Boolean> isOpen,System.Action closeTop,System.Int32 priority=100)
+M static System.Void StorageNetwork.API.StorageNetworkUiAccess.RegisterTextInputFocus(System.String id,System.Func<System.Boolean> isFocused)
+M static System.Void StorageNetwork.API.StorageNetworkUiAccess.UnregisterRightClickClose(System.String id)
+M static System.Void StorageNetwork.API.StorageNetworkUiAccess.UnregisterTextInputFocus(System.String id)
 M static System.Void StorageNetwork.API.StorageNetworkWorldPanelRegistry.Register(StorageNetwork.API.IStorageNetworkWorldPanelContentProvider provider,System.Int32 priority=100)
 M static System.Void StorageNetwork.API.StorageNetworkWorldPanelRegistry.ResetRuntimeState()
 M static System.Void StorageNetwork.API.StorageNetworkWorldPanelRegistry.Unregister(StorageNetwork.API.IStorageNetworkWorldPanelContentProvider provider)
@@ -133,6 +164,7 @@ M static System.Void StorageNetwork.Core.StorageSceneRegistry.Unregister(UnityEn
 M static UnityEngine.Color StorageNetwork.API.StorageNetworkPanelPalette.GetEnabledStatusColor(System.Boolean enabled)
 M static UnityEngine.Color StorageNetwork.API.StorageNetworkPanelPalette.GetNetworkAutomationColor(System.Boolean enabled)
 M static UnityEngine.Color StorageNetwork.API.StorageNetworkPanelPalette.GetOutputStoreColor(System.Boolean enabled)
+M static UnityEngine.Sprite StorageNetwork.API.StorageNetworkUiAccess.GetSprite(System.String name)
 M StorageNetwork.API.StorageNetworkCategoryDescriptor StorageNetwork.API.IStorageNetworkCategoryProvider.GetStorageNetworkCategory(Storage storage)
 M StorageNetwork.API.StorageNetworkDisplayInfo StorageNetwork.API.IStorageNetworkDisplayProvider.GetStorageNetworkDisplayInfo(Storage storage)
 M StorageNetwork.API.StorageNetworkSettingsButtonState StorageNetwork.API.IStorageNetworkSettingsButtonProvider.GetStorageNetworkSettingsButtonState(Storage storage)
@@ -163,6 +195,8 @@ M UnityEngine.Transform StorageNetwork.API.StorageNetworkSettingsPanelBuilder.Ad
 M UnityEngine.Transform StorageNetwork.API.StorageNetworkSettingsPanelBuilder.AddHorizontalGroup(UnityEngine.Transform parent,System.Single preferredHeight=0,System.Single spacing=8)
 P Geyser StorageNetwork.Core.StorageInfo.Geyser{get;}
 P MinionIdentity StorageNetwork.Core.StorageInfo.Minion{get;}
+P static System.Int32 StorageNetwork.API.StorageNetworkApi.ApiVersion{get;}
+P static System.Int32 StorageNetwork.API.StorageNetworkUiAccess.CurrentWorldId{get;}
 P static System.Int32 StorageNetwork.Core.StorageSceneRegistry.Version{get;}
 P static UnityEngine.Color StorageNetwork.API.StorageNetworkPanelPalette.BlueButtonHover{get;}
 P static UnityEngine.Color StorageNetwork.API.StorageNetworkPanelPalette.BlueButtonNormal{get;}
@@ -249,6 +283,7 @@ P UnityEngine.RectTransform StorageNetwork.API.StorageNetworkPanelHeaderButtonCo
 P UnityEngine.Sprite StorageNetwork.API.StorageNetworkDisplayInfo.TypeIcon{get;set;}
 P UnityEngine.Transform StorageNetwork.API.StorageNetworkPanelHeaderButtonContext.Canvas{get;}
 P UnityEngine.Transform StorageNetwork.API.StorageNetworkPanelHeaderButtonContext.Header{get;}
+T enum StorageNetwork.API.StorageNetworkStorageFlags
 T interface StorageNetwork.API.IStorageNetworkCategoryProvider
 T interface StorageNetwork.API.IStorageNetworkDisplayProvider
 T interface StorageNetwork.API.IStorageNetworkEnrollable
@@ -258,7 +293,6 @@ T interface StorageNetwork.API.IStorageNetworkSettingsPanelProvider
 T interface StorageNetwork.API.IStorageNetworkStorageFlagsProvider
 T interface StorageNetwork.API.IStorageNetworkStorageRowButtonProvider
 T interface StorageNetwork.API.IStorageNetworkWorldPanelContentProvider
-T enum StorageNetwork.API.StorageNetworkStorageFlags
 T sealed class StorageNetwork.API.StorageNetworkCategoryDescriptor
 T sealed class StorageNetwork.API.StorageNetworkDisplayInfo
 T sealed class StorageNetwork.API.StorageNetworkPanelHeaderButton
@@ -273,9 +307,12 @@ T sealed class StorageNetwork.Core.StorageInfo
 T sealed class StorageNetwork.Core.StorageSceneLightweightSnapshot
 T sealed class StorageNetwork.Core.StorageSceneSnapshot
 T static class StorageNetwork.API.StorageNetworkApi
+T static class StorageNetwork.API.StorageNetworkInventoryAccess
 T static class StorageNetwork.API.StorageNetworkPanelHeaderButtonRegistry
 T static class StorageNetwork.API.StorageNetworkPanelPalette
 T static class StorageNetwork.API.StorageNetworkTags
+T static class StorageNetwork.API.StorageNetworkUiAccess
 T static class StorageNetwork.API.StorageNetworkWorldPanelRegistry
 T static class StorageNetwork.Core.StorageSceneCollector
 T static class StorageNetwork.Core.StorageSceneRegistry
+T struct StorageNetwork.API.StorageNetworkItemTags

@@ -1,6 +1,6 @@
 param(
     [string] $GameManagedDir = 'D:\Program Files (x86)\Steam\steamapps\common\OxygenNotIncluded\OxygenNotIncluded_Data\Managed',
-    [string] $ModAssembly = "$env:USERPROFILE\Documents\Klei\OxygenNotIncluded\mods\Dev\StorageNetwork\StorageNetwork.dll"
+    [string] $ModAssembly = "$env:USERPROFILE\Documents\Klei\OxygenNotIncluded\mods\Dev\StorageNetworkTrading\StorageNetworkTrading.dll"
 )
 $ErrorActionPreference = 'Stop'
 foreach ($dependency in @('UnityEngine.CoreModule.dll', 'Assembly-CSharp-firstpass.dll', 'Assembly-CSharp.dll', 'Newtonsoft.Json.dll')) {
@@ -17,7 +17,7 @@ $staticFlags = [Reflection.BindingFlags]'Static,NonPublic'
 $configure = $textType.GetMethod('Configure', $staticFlags)
 $ref = $textType.GetMethod('Ref', $staticFlags)
 $render = $textType.GetMethod('Render', $staticFlags)
-$lookup = [Func[string,string]] { param($key) return $translations[$key] }
+$lookup = [Func[string,string]] ({ param($key) return $translations[$key] }.GetNewClosure())
 $configure.Invoke($null, @('en', $lookup)) | Out-Null
 foreach ($entry in $entries) {
     $key = $entry.GetType().GetField('Key', $flags).GetValue($entry)

@@ -16,7 +16,7 @@ $env:STORAGE_NETWORK_REPOSITORY_ROOT = $repositoryRoot
 
 Push-Location $repositoryRoot
 try {
-    & dotnet build 'StorageNetwork\StorageNetwork.csproj' -c Release --nologo
+    & dotnet build 'StorageNetworkTrading\StorageNetworkTrading.csproj' -c Release --nologo
     if ($LASTEXITCODE -ne 0) {
         throw "StorageNetwork Release build failed with exit code $LASTEXITCODE."
     }
@@ -34,6 +34,12 @@ try {
     & (Join-Path $PSScriptRoot 'VerifyProfileComparison.ps1')
     & (Join-Path $PSScriptRoot 'VerifyLogicMaterialSerialization.ps1') -GameManagedDir $GameManagedDir
     & (Join-Path $PSScriptRoot 'VerifyTradingSerialization.ps1') -GameManagedDir $GameManagedDir
+    & (Join-Path $PSScriptRoot 'VerifyTradingModSplit.ps1') -GameManagedDir $GameManagedDir
+    $tradingAssembly = Join-Path $repositoryRoot 'StorageNetworkTrading\bin\Release\StorageNetworkTrading.dll'
+    & (Join-Path $PSScriptRoot 'VerifyTradingLocalization.ps1') -GameManagedDir $GameManagedDir -ModAssembly $tradingAssembly
+    & (Join-Path $PSScriptRoot 'VerifyTradingGroupChat.ps1') -GameManagedDir $GameManagedDir -ModAssembly $tradingAssembly
+    & (Join-Path $PSScriptRoot 'VerifyTradingAiSettings.ps1') -GameManagedDir $GameManagedDir -ModAssembly $tradingAssembly
+    & (Join-Path $PSScriptRoot 'VerifyHarmonyTargets.ps1') -GameManagedDir $GameManagedDir -ModAssembly $tradingAssembly
 
     & (Join-Path $PSScriptRoot 'VerifyStaticPerformance.ps1') `
         -RepositoryRoot $repositoryRoot
@@ -58,6 +64,7 @@ try {
 
     & git -c core.safecrlf=false diff --check -- `
         'StorageNetwork' `
+        'StorageNetworkTrading' `
         'StorageNetwork.Tests' `
         '.gitignore' `
         'NOIMods.sln'

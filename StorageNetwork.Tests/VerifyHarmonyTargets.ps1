@@ -201,7 +201,11 @@ if ($failed -ne 0) {
 
 Write-Output "Resolved $resolvedTargets targets across $checkedTypes Harmony patch classes and validated $validatedSignatures patch signatures."
 
-$profilerType = $mod.GetType('StorageNetwork.Core.StorageNetworkHarmonyProfileTool', $true)
+$profilerType = $mod.GetType('StorageNetwork.Core.StorageNetworkHarmonyProfileTool', $false)
+if ($null -eq $profilerType) {
+    if ($mod.GetName().Name -eq 'StorageNetworkTrading') { return }
+    throw 'Expected prerequisite profiler type is missing.'
+}
 $shouldProfileMethod = $profilerType.GetMethod(
     'ShouldProfileMethod',
     [Reflection.BindingFlags]'Static,NonPublic')

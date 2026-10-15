@@ -35,6 +35,7 @@ internal static class TradingRelationshipChecks
         limits.Arrival = 0; limits.Departure = 13; limits.BuyLimit = 1000; limits.SellLimit = 2000;
         limits.Bought = 300; limits.Sold = 700;
         var limitsMarket = new TradingMarket();
+        limitsMarket.Suppliers.Add(limits);
         TradingRelationships.Initialize(limitsMarket, limits);
         limits.Relationship.Affection = 100;
         TradingRelationships.Initialize(limitsMarket, limits);
@@ -46,6 +47,11 @@ internal static class TradingRelationshipChecks
         decimal cap = limits.Relationship.Affection;
         TradingRelationships.OnSettled(limitsMarket, limits, 100000000);
         check(limits.Relationship.Affection == 100 && limits.Departure == 13, "affection gains never extend the current visit");
+        check(TradingText.Source(TradingRelationships.Card(limits)).Contains("5～30 周期"),
+            "identity card renders the actual next-visit range at maximum affection");
+        var visitContext = TradingDialogueContexts.Build(limitsMarket, limits, new[] { good }, 1);
+        check(visitContext.MaximumVisitCycles == 30 && visitContext.NextVisitMinimumCycles == 5,
+            "AI dialogue facts agree with the actual next-visit range");
         for (int id = 1; id <= 3; id++)
         {
             var trader = New(id);
@@ -85,8 +91,8 @@ internal static class TradingRelationshipChecks
             {
                 var visitor = New(visit + 100); visitor.CharacterId = "greyfinch";
                 TradingRelationships.RollVisit(returningMarket, visitor);
-                check(visitor.Departure - visitor.Arrival >= minimum && visitor.Departure - visitor.Arrival <= 15,
-                    "arrival draws duration within the relationship-adjusted range and a fixed 15-cycle maximum");
+                check(visitor.Departure - visitor.Arrival >= minimum && visitor.Departure - visitor.Arrival <= 30,
+                    "arrival draws duration within the relationship-adjusted range and a fixed 30-cycle maximum");
             }
         }
         returning.Relationship.Affection = 70;

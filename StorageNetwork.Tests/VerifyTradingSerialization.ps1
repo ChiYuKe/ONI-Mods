@@ -1,6 +1,6 @@
 param(
     [string] $GameManagedDir = 'D:\Program Files (x86)\Steam\steamapps\common\OxygenNotIncluded\OxygenNotIncluded_Data\Managed',
-    [string] $ModAssembly = (Join-Path $PSScriptRoot '..\StorageNetwork\bin\Release\StorageNetwork.dll')
+    [string] $ModAssembly = (Join-Path $PSScriptRoot '..\StorageNetworkTrading\bin\Release\StorageNetworkTrading.dll')
 )
 $ErrorActionPreference = 'Stop'
 foreach ($dependency in @('UnityEngine.CoreModule.dll', 'Assembly-CSharp-firstpass.dll', 'Assembly-CSharp.dll', 'Newtonsoft.Json.dll')) {
@@ -118,11 +118,50 @@ $inventory.TradeDelta.Add('Iron', 17.125)
 $inventory.Factors.Add('Iron', [decimal]0.975)
 $inventory.History.Add('Iron', $pointList)
 $market.WorldInventorySignals.Add(3, $inventory)
+$weeklyType = $assembly.GetType('StorageNetwork.Trading.TradingWeeklyReport', $true)
+$articleType = $assembly.GetType('StorageNetwork.Trading.TradingWeeklyArticle', $true)
+$arrivalType = $assembly.GetType('StorageNetwork.Trading.TradingArrivalPlan', $true)
+$weekly = [Activator]::CreateInstance($weeklyType)
+$weekly.Number = 4
+$weekly.Cycle = 21.25
+$weekly.Read = $true
+$article = [Activator]::CreateInstance($articleType)
+$article.Title = 'Dockside report'
+$article.Body = 'Remember this visitor and their habit.'
+$weekly.Articles.Add($article)
+$market.WeeklyReports.Add($weekly)
+$market.LastBulletinWeek = 3
+$arrival = [Activator]::CreateInstance($arrivalType)
+$arrival.ExpectedCycle = 35.5
+$arrival.Visitor = [Activator]::CreateInstance($supplierType)
+$arrival.Visitor.Id = 9
+$arrival.Visitor.Name = 'Expected visitor'
+$market.UpcomingVisit = $arrival
+$tipType = $assembly.GetType('StorageNetwork.Trading.TradingMerchantTip', $true)
+$tip = [Activator]::CreateInstance($tipType)
+$tip.SupplierId = 8
+$tip.Window = 5
+$tip.Cycle = 21.25
+$tip.Expires = 24
+$tip.Read = $true
+$tip.Articles.Add($article)
+$market.MerchantTips.Add(8, $tip)
+$market.LastTipDay = 21
 $json = [Newtonsoft.Json.JsonConvert]::SerializeObject($market)
 if ($json.Contains('"Text":') -or -not $json.Contains('"Content":')) {
     throw 'Chat saves must store structured content parts instead of the runtime Text property.'
 }
 $restored = [Newtonsoft.Json.JsonConvert]::DeserializeObject($json, $marketType)
+if ($restored.LastTipDay -ne 21 -or -not $restored.MerchantTips[8].Read -or
+    $restored.MerchantTips[8].Expires -ne 24 -or $restored.MerchantTips[8].Articles[0].Body -ne $article.Body) {
+    throw 'Merchant intelligence content, expiration or read state changed during native save round trip.'
+}
+if ($restored.LastBulletinWeek -ne 3 -or $restored.WeeklyReports.Count -ne 1 -or
+    -not $restored.WeeklyReports[0].Read -or $restored.WeeklyReports[0].Cycle -ne 21.25 -or
+    $restored.WeeklyReports[0].Articles[0].Body -ne $article.Body -or
+    $restored.UpcomingVisit.ExpectedCycle -ne 35.5 -or $restored.UpcomingVisit.Visitor.Name -ne 'Expected visitor') {
+    throw 'Weekly intelligence, archive read state or promised arrivals changed during native save round trip.'
+}
 if ($restored.WorldInventorySignals[3].TradeDelta['Iron'] -ne 17.125 -or
     $restored.WorldInventorySignals[3].NeutralStock['Iron'] -ne 10000 -or
     $restored.WorldInventorySignals[3].Factors['Iron'] -ne [decimal]0.975 -or

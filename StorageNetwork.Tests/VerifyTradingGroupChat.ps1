@@ -1,6 +1,6 @@
 param(
     [string] $GameManagedDir = 'D:\Program Files (x86)\Steam\steamapps\common\OxygenNotIncluded\OxygenNotIncluded_Data\Managed',
-    [string] $ModAssembly = 'C:\Users\Administrator\Documents\Klei\OxygenNotIncluded\mods\Dev\StorageNetwork\StorageNetwork.dll'
+    [string] $ModAssembly = 'C:\Users\Administrator\Documents\Klei\OxygenNotIncluded\mods\Dev\StorageNetworkTrading\StorageNetworkTrading.dll'
 )
 $ErrorActionPreference = 'Stop'
 [void][Reflection.Assembly]::LoadFrom((Join-Path $GameManagedDir 'Newtonsoft.Json.dll'))

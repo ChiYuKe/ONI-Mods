@@ -25,7 +25,7 @@ internal static class TradingCharacterChecks
                 seen.Add(supplier.CharacterId);
                 var character = TradingCharacters.Find(supplier);
                 check(supplier.Name == character.Name && supplier.Specialty == character.Specialty &&
-                    supplier.Departure - supplier.Arrival >= 1 && supplier.Departure - supplier.Arrival <= 15,
+                    supplier.Departure - supplier.Arrival >= 1 && supplier.Departure - supplier.Arrival <= 30,
                     "recurring characters retain names and specialties within the common visit range");
                 check(supplier.Stock.Count == 6 && supplier.Stock.Keys.All(id => catalog.Single(g => g.Id == id).BasePrice >= 130),
                     "character stock samples the valuable half of its own specialty");

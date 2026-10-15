@@ -27,6 +27,7 @@ internal static class Program
         TradingInventorySignalChecks.Verify(Check);
         TradingRefreshCacheChecks.Verify(Check);
         TradingGroupChatChecks.Verify(Check);
+        TradingWeeklyReportChecks.Verify(Check);
         StorageCategoryRuntimeChecks.Verify(Check);
         VerifyDebounceCoalescesRequests();
         VerifyDebounceCancellation();
