@@ -26,8 +26,9 @@ namespace StorageNetworkTrading.UI
         {
             var state = StorageNetworkTradingState.Instance;
             state?.Refresh();
-            if (state?.Market == null || slot >= state.Market.Suppliers.Count) return;
-            var supplier = state.Market.Suppliers[slot];
+            var visitors = state?.LocalVisitors(GetActiveWorldFilterId());
+            if (visitors == null || slot >= visitors.Count) return;
+            var supplier = visitors[slot];
             var tip = state.Market.PendingMerchantTip(supplier.Id, StorageNetworkTradingState.Cycle);
             if (tip == null) { RefreshTradingWindow(); return; }
             state.ReadMerchantTip(tip);

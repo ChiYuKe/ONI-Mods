@@ -80,7 +80,7 @@ namespace StorageNetworkTrading.UI
 
         private void ShowSelectedTradingDialogue()
         {
-            var suppliers = StorageNetworkTradingState.Instance?.Market?.Suppliers;
+            var suppliers = StorageNetworkTradingState.Instance?.LocalVisitors(GetActiveWorldFilterId());
             if (suppliers == null || tradingSlot < 0 || tradingSlot >= suppliers.Count) return;
             ShowTradingDialogue(suppliers[tradingSlot].Id);
         }

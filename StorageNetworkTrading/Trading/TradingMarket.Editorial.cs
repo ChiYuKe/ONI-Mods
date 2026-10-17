@@ -75,8 +75,12 @@ namespace StorageNetwork.Trading
             IReadOnlyList<TradingGood> catalog, double cycle, int edition)
         {
             var pool = new List<WeeklyCandidate>();
-            TradingSupplier next = UpcomingVisit.Visitor;
-            AddWeeklyCandidate(pool, edition, "arrival", "ARRIVAL_TITLE", "ARRIVAL_NAMED", "arrival:" + next.Id,
+            TradingSupplier next = UpcomingVisit?.Visitor;
+            if (next != null && FleetEnabled) AddWeeklyCandidate(pool, edition, "arrival", "ARRIVAL_TITLE", "ARRIVAL_PLAN", "arrival:" + UpcomingVisit.RouteKey,
+                next, true, next.Name, UpcomingVisit.DestinationName ?? TradingText.Argument(UpcomingVisit.WorldId),
+                TradingText.Argument(UpcomingVisit.LaunchCycle + 1, "0.0"), TradingText.Argument(UpcomingVisit.ExpectedCycle + 1, "0.0"),
+                TradingPersonas.Specialty(next.Specialty));
+            else if (next != null) AddWeeklyCandidate(pool, edition, "arrival", "ARRIVAL_TITLE", "ARRIVAL_NAMED", "arrival:" + next.Id,
                 next, true, TradingText.Argument(UpcomingVisit.ExpectedCycle + 1, "0.0"),
                 TradingPersonas.Specialty(next.Specialty), next.Persona.Public.Habit, next.Name);
             foreach (var s in live)

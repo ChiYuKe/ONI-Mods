@@ -16,6 +16,7 @@ namespace StorageNetwork.Trading
 
         public bool Refresh(double cycle, IReadOnlyList<TradingGood> catalog)
         {
+            if (FleetEnabled) return RefreshFleet(cycle, catalog);
             bool changed = PrepareMarket(cycle);
             if (QuoteSignalVersion < 1) { QuoteSignalVersion = 1; changed = true; }
             for (int slot = 0; slot < 5; slot++)
@@ -249,6 +250,7 @@ namespace StorageNetwork.Trading
 
     internal sealed class TradingSupplier
     {
+        public int VisitWorldId = -1;
         public int Id;
         public string Name;
         public string CharacterId;

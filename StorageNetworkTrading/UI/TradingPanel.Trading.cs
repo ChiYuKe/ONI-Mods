@@ -48,6 +48,7 @@ namespace StorageNetworkTrading.UI
         private KInputTextField tradingAmountInput;
         private KInputTextField tradingSearchInput;
         private int tradingSlot;
+        private List<TradingSupplier> tradingLocalSuppliers = new List<TradingSupplier>();
         private int tradingPage;
         private float tradingRefreshElapsed;
         private int tradingLayoutFrame = -1;
@@ -147,7 +148,7 @@ namespace StorageNetworkTrading.UI
                 SetStretch(supplierLabels[i].rectTransform(), 54, 30, 15, 5);
                 GameObject identityButton = CreateGameButton("IdentityCard", button.transform, "i", () =>
                 {
-                    var visitors = StorageNetworkTradingState.Instance?.Market?.Suppliers;
+                    var visitors = StorageNetworkTradingState.Instance?.LocalVisitors(GetActiveWorldFilterId());
                     if (visitors != null && slot < visitors.Count) ShowTradingIdentityCard(visitors[slot].Id);
                 });
                 RectTransform identityRect = identityButton.GetComponent<RectTransform>();
@@ -197,6 +198,8 @@ namespace StorageNetworkTrading.UI
             tradingSearchInput.onValueChanged.AddListener(value => { tradingFilter = value ?? ""; tradingPage = 0; });
             var weeklyButton = AddAmountModalButton(controls.transform, WeeklyLabel("BUTTON"), 76, () => ShowTradingWeeklyReport());
             tradingWeeklyButtonLabel = weeklyButton.GetComponentInChildren<TextMeshProUGUI>();
+            AddAmountModalButton(controls.transform, StarMapText("BUTTON"), 76, ShowTradingStarMap)
+                .GetComponent<KButton>().isInteractable = DlcManager.FeatureClusterSpaceEnabled();
             AddFooterSpacer(controls.transform);
             GameObject previous = CreateGameButton("Previous", controls.transform, TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_C9B9AE7A6144"), () => { tradingPage = Math.Max(0, tradingPage - 1); RefreshTradingWindow(); });
             previous.AddComponent<LayoutElement>().preferredWidth = 64;
@@ -439,7 +442,28 @@ namespace StorageNetworkTrading.UI
             state.Refresh(worldId);
             RefreshWeeklyButton();
             double cycle = StorageNetworkTradingState.Cycle;
-            TradingSupplier selected = state.Market.Suppliers[tradingSlot];
+            int previousId = tradingSlot >= 0 && tradingSlot < tradingLocalSuppliers.Count ? tradingLocalSuppliers[tradingSlot].Id : -1;
+            tradingLocalSuppliers = state.LocalVisitors(worldId);
+            int retainedSlot = tradingLocalSuppliers.FindIndex(s => s.Id == previousId);
+            tradingSlot = retainedSlot >= 0 ? retainedSlot : 0;
+            for (int i = 0; i < 5; i++)
+                supplierLabels[i].transform.parent.gameObject.SetActive(i < tradingLocalSuppliers.Count);
+            SetTextIfChanged(tradingSummary, TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_FDDC805F60FB", TradingText.Argument(state.Market.Balance, "0.0"), NetworkInventory.GetWorldName(worldId)));
+            if (tradingLocalSuppliers.Count == 0)
+            {
+                tradingQuoteGood = null;
+                tradingRowsSignature = null;
+                tradingVisibleGoods.Clear();
+                tradingRows.Begin(); tradingRows.Commit();
+                SetTextIfChanged(tradingEventLabel, "");
+                SetTextIfChanged(tradingPageLabel, "0 / 0");
+                SetTextIfChanged(tradingStatus, StarMapText("NO_VISITORS"));
+                tradingDialogueButton?.SetActive(false);
+                RefreshTradingHistory(state.Market);
+                RefreshTradingQuote();
+                return;
+            }
+            TradingSupplier selected = tradingLocalSuppliers[tradingSlot];
             SetTextIfChanged(tradingQuickFilterLabel, new[] { TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_D11D7CBA555B"), TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_29C8539FD571"), TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_D8390476F99E") }[tradingQuickFilter]);
             string marketEvent = TradingMarket.EventName(selected.Specialty, cycle);
             decimal marketEventFactor = TradingMarket.EventFactor(selected.Specialty, cycle);
@@ -448,7 +472,8 @@ namespace StorageNetworkTrading.UI
             SetTextIfChanged(tradingSummary, TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_FDDC805F60FB", TradingText.Argument((object)(state.Market.Balance), "0.0", 0), TradingText.Argument((object)(StorageNetwork.API.StorageNetworkInventoryAccess.GetWorldName(worldId)), null, 0)));
             for (int i = 0; i < 5; i++)
             {
-                TradingSupplier supplier = state.Market.Suppliers[i];
+                if (i >= tradingLocalSuppliers.Count) continue;
+                TradingSupplier supplier = tradingLocalSuppliers[i];
                 double remaining = Math.Max(0, supplier.Departure - cycle);
                 double duration = Math.Max(0.001, supplier.Departure - supplier.Arrival);
                 Image timeFill = supplierTimeFills[i];

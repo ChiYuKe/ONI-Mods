@@ -38,6 +38,7 @@ namespace StorageNetwork.Trading
 
         protected override void OnCleanUp()
         {
+            ClearNativeFleet();
             CancelGroupChat();
             StorageNetworkTrading.UI.TradingPanel.ResetRuntimeState();
             if (Instance == this) { Instance = null; TradingText.NativeLabels = null; }
@@ -72,6 +73,14 @@ namespace StorageNetwork.Trading
                 }
                 market.SelectInventoryWorld(worldId >= 0 ? worldId : ClusterManager.Instance.activeWorldId);
             }
+            changed |= ConfigureRuntimeFleet();
+            // During loading the asteroid components may not exist yet. Do not seed
+            // the legacy five-merchant roster while waiting for the DLC cluster.
+            if (DlcManager.FeatureClusterSpaceEnabled() && !market.FleetEnabled)
+            {
+                if (changed) Persist();
+                return;
+            }
             changed |= market.Refresh(Cycle, catalog);
             bool initializeVisitors = changed || identityTemplates == null;
             if (identityTemplates == null) identityTemplates = BuildIdentityTemplates();
@@ -82,8 +91,18 @@ namespace StorageNetwork.Trading
                 TradingRelationships.Initialize(market, supplier);
                 changed |= TradingConversations.Upgrade(supplier);
             }
+            if (market.FleetEnabled && identityTemplates != null)
+                foreach (var voyage in market.Voyages)
+                {
+                    if (voyage.Visitor == null) continue;
+                    changed |= market.EnsureIdentity(voyage.Visitor, identityTemplates);
+                    changed |= market.EnsurePersona(voyage.Visitor);
+                }
+            if (market.FleetEnabled && market.UpcomingVisit != null)
+                market.UpcomingVisit.DestinationName = NetworkInventory.GetWorldName(market.UpcomingVisit.WorldId);
             changed |= market.UpdateWeeklyReports(Cycle, catalog, identityTemplates);
             changed |= market.UpdateMerchantTips(Cycle, catalog);
+            changed |= SynchronizeNativeFleet();
             if (changed) Persist();
         }
 
@@ -292,6 +311,9 @@ namespace StorageNetwork.Trading
         {
             Refresh(worldId);
             TradingSupplier supplier = market.Suppliers.Find(s => s.Id == supplierId);
+            if (!market.IsVisiting(supplier, TradeWorldId(worldId), Cycle))
+                return new TradingQuote { SupplierId = supplierId, Good = good, Buy = buy,
+                    Reason = TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.STARMAP_NOT_DOCKED") };
             if (!NetworkInventory.HasOnlineCoreInWorld(worldId))
                 return new TradingQuote { SupplierId = supplierId, Good = good, Buy = buy, Reason = TradingText.Ref("STRINGS.UI.STORAGENETWORK_TRADING.TEXT_A797050A89B7") };
             double available;

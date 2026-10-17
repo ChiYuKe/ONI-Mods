@@ -46,7 +46,14 @@ namespace StorageNetwork.Trading
                 if (MerchantTips.Values.Count(t => t.Window == window) >= 2) break;
                 var tip = new TradingMerchantTip { SupplierId = supplier.Id, Window = window, Cycle = cycle,
                     Expires = Math.Min(supplier.Departure, cycle + 7) };
-                if (UpcomingVisit?.Visitor != null)
+                if (FleetEnabled && UpcomingVisit?.Visitor != null)
+                    tip.Articles.Add(new TradingWeeklyArticle { Title = WeeklyText("TIP_ROUTE_TITLE"),
+                        Body = WeeklyText("TIP_ROUTE_PLAN", UpcomingVisit.Visitor.Name,
+                            UpcomingVisit.DestinationName ?? TradingText.Argument(UpcomingVisit.WorldId),
+                            TradingText.Argument(UpcomingVisit.LaunchCycle + 1, "0.0"),
+                            TradingText.Argument(UpcomingVisit.ExpectedCycle + 1, "0.0"),
+                            TradingPersonas.Specialty(UpcomingVisit.Visitor.Specialty)) });
+                else if (UpcomingVisit?.Visitor != null)
                     tip.Articles.Add(new TradingWeeklyArticle { Title = WeeklyText("TIP_ROUTE_TITLE"),
                         Body = WeeklyText("TIP_ROUTE_" + window % 2, TradingPersonas.Specialty(UpcomingVisit.Visitor.Specialty),
                             TradingText.Argument(UpcomingVisit.ExpectedCycle + 1, "0.0")) });

@@ -2082,3 +2082,79 @@ msgstr "The berth book added {0}: arrival around cycle {1}, trade in {2}. An unf
 msgctxt "STRINGS.UI.STORAGENETWORK_TRADING.WEEKLY_NEWCOMER_ALT2"
 msgid "这期认一张新面孔：{0}，第 {1} 周期前后到站，经营{2}。换来的不只是柜台上的头像，货单和额度也都换了一套。想照旧下单，先核对一遍。"
 msgstr "A face for this issue: {0}, arrived around cycle {1}, trading in {2}. The change reaches beyond the portrait: cargo and budgets change too. Check before repeating an old order."
+
+msgctxt "STRINGS.UI.STORAGENETWORK_TRADING.STARMAP_BUTTON"
+msgid "贸易星图"
+msgstr "Star Map"
+
+msgctxt "STRINGS.UI.STORAGENETWORK_TRADING.STARMAP_TITLE"
+msgid "贸易星图 · 商站网络"
+msgstr "Trade Star Map · Station Network"
+
+msgctxt "STRINGS.UI.STORAGENETWORK_TRADING.STARMAP_HOME"
+msgid "◆\n殖民地贸易枢纽"
+msgstr "◆\nColony Trade Hub"
+
+msgctxt "STRINGS.UI.STORAGENETWORK_TRADING.STARMAP_RESET"
+msgid "回到中心"
+msgstr "Recenter"
+
+msgctxt "STRINGS.UI.STORAGENETWORK_TRADING.STARMAP_HINT"
+msgid "拖动平移 · 滚轮缩放 · 点击商站交易 · 航线表示贸易联系，不代表火箭航程"
+msgstr "Drag to pan · Scroll to zoom · Click a station to trade · Routes show trade connections, not rocket paths"
+
+msgctxt "STRINGS.UI.STORAGENETWORK_TRADING.STARMAP_EMPTY"
+msgid "空闲商站"
+msgstr "Vacant Station"
+
+msgctxt "STRINGS.UI.STORAGENETWORK_TRADING.STARMAP_STATION"
+msgid "商站 {0}\n{1}\n{2} · 剩余 {3} 周期"
+msgstr "Station {0}\n{1}\n{2} · {3} cycles remaining"
+
+msgctxt "STRINGS.UI.STORAGENETWORK_TRADING.STARMAP_NOT_DOCKED"
+msgid "商人尚未到达当前星球或已经离港，暂时无法交易。"
+msgstr "The merchant has not arrived at this asteroid or has departed. Trading is unavailable."
+
+
+msgctxt "STRINGS.UI.STORAGENETWORK_TRADING.STARMAP_NO_VISITORS"
+msgid "当前星球没有停留中的商人，请在星图查看到访路线与预计时间（最多同时停留 5 位）。"
+msgstr "No merchants are visiting this asteroid. Check the star map for routes and arrival times (up to 5 visitors)."
+
+
+msgctxt "STRINGS.UI.STORAGENETWORK_TRADING.STARMAP_INBOUND"
+msgid "{0}\n前往 {1}\n{2} 周期后到达"
+msgstr "{0}\nBound for {1}\nArrives in {2} cycles"
+
+
+msgctxt "STRINGS.UI.STORAGENETWORK_TRADING.STARMAP_DOCKED"
+msgid "{0}\n停留于 {1}\n{2} 周期后离港"
+msgstr "{0}\nVisiting {1}\nDeparts in {2} cycles"
+
+
+msgctxt "STRINGS.UI.STORAGENETWORK_TRADING.STARMAP_OUTBOUND"
+msgid "{0}\n已离开 {1}\n{2} 周期后离开星域"
+msgstr "{0}\nDeparted {1}\nExits the region in {2} cycles"
+
+msgctxt "STRINGS.UI.STORAGENETWORK_TRADING.STARMAP_TRADE"
+msgid "与商人交易"
+msgstr "Trade with Merchant"
+
+msgctxt "STRINGS.UI.STORAGENETWORK_TRADING.STARMAP_WAITING_ROUTE"
+msgid "{0}\n位于 {1} 的轨道\n其他星球泊位已满，等待空位后启航。"
+msgstr "{0}\nIn orbit around {1}\nOther asteroids are full. Waiting for an available berth."
+
+msgctxt "STRINGS.UI.STORAGENETWORK_TRADING.WEEKLY_ARRIVAL_PLAN"
+msgid "航运名册已登记：{0}携带{4}货物，计划第 {2} 周期启航，预计第 {3} 周期到访{1}。若目的地泊位已满，船长会另行改道。"
+msgstr "The shipping register lists {0} carrying {4}, launching in cycle {2} and arriving at {1} in cycle {3}. A full port may require a diversion."
+
+msgctxt "STRINGS.UI.STORAGENETWORK_TRADING.WEEKLY_ARRIVAL_PLAN_ALT1"
+msgid "电台收到{0}的航行计划：第 {2} 周期出发，目的地为{1}，预计第 {3} 周期到港，申报货类是{4}。泊位变化可能导致改道。"
+msgstr "Radio dispatch from {0}: launch in cycle {2}, destination {1}, arrival in cycle {3}, cargo specialty {4}. Berth availability may change the route."
+
+msgctxt "STRINGS.UI.STORAGENETWORK_TRADING.WEEKLY_ARRIVAL_PLAN_ALT2"
+msgid "下一批航路记录中，{0}准备带着{4}前往{1}：第 {2} 周期启航，第 {3} 周期前后抵达。若当地已满员，将重新选择目的地。"
+msgstr "The next itinerary takes {0} and their {4} cargo to {1}: launch in cycle {2}, expected arrival in cycle {3}. A full destination will trigger rerouting."
+
+msgctxt "STRINGS.UI.STORAGENETWORK_TRADING.WEEKLY_TIP_ROUTE_PLAN"
+msgid "我听到{0}报的航线了：第 {2} 周期启航，带的是{4}，预计第 {3} 周期到{1}。这是登记过的航行计划；要是那边泊位满了，船长还得改道。"
+msgstr "I heard the route filed by {0}: launch in cycle {2}, carrying {4}, arriving at {1} in cycle {3}. It is a registered itinerary, though a full port could force a diversion."

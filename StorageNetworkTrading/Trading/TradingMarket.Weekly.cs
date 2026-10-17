@@ -20,6 +20,10 @@ namespace StorageNetwork.Trading
     {
         public double ExpectedCycle;
         public TradingSupplier Visitor;
+        public int WorldId = -1;
+        public double LaunchCycle;
+        public string DestinationName;
+        public string RouteKey;
     }
     internal sealed partial class TradingMarket
     {
@@ -33,17 +37,18 @@ namespace StorageNetwork.Trading
         public bool UpdateWeeklyReports(double cycle, IReadOnlyList<TradingGood> catalog,
             IReadOnlyList<TradingIdentityTemplate> templates)
         {
-            if (double.IsNaN(cycle) || double.IsInfinity(cycle) || cycle < 0 || Suppliers.Count == 0) return false;
+            if (double.IsNaN(cycle) || double.IsInfinity(cycle) || cycle < 0 ||
+                (Suppliers.Count == 0 && UpcomingVisit?.Visitor == null)) return false;
             WeeklyReports = WeeklyReports ?? new List<TradingWeeklyReport>();
             TradingWeeklyReport previous = WeeklyReports.LastOrDefault();
             // Count seven full cycles from publication, never from a calendar bucket.
             if (previous != null && cycle < previous.Cycle + 7) return false;
             int week = previous?.Number ?? 0;
             var live = Suppliers.Where(s => s.Departure > cycle).ToList();
-            if (live.Count == 0) return false;
+            if (live.Count == 0 && UpcomingVisit?.Visitor == null) return false;
             // Reserve the next visitor's identity, not a slot or a visit duration.
             // Refresh consumes this exact visitor when the next departure occurs.
-            if (UpcomingVisit?.Visitor == null || UpcomingVisit.Visitor.Id != NextId)
+            if (!FleetEnabled && (UpcomingVisit?.Visitor == null || UpcomingVisit.Visitor.Id != NextId))
             {
                 double arrival = live.Min(s => s.Departure);
                 var random = new Random(NextId * 7919);
