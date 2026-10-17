@@ -56,7 +56,7 @@ namespace StorageNetworkTrading.UI
                 var title = CreateAmountModalText(content, article.Title, 14, FontStyles.Bold);
                 title.color = StorageNetworkPanelPalette.HeaderBackground;
                 title.GetComponent<LayoutElement>().preferredHeight = 28;
-                var text = CreateAmountModalText(content, article.Body, 13, FontStyles.Normal);
+                var text = CreateAmountModalText(content, FormatTradingNewsBody(article.Body), 13, FontStyles.Normal);
                 text.color = StorageNetworkPanelPalette.BodyText;
                 text.alignment = TextAlignmentOptions.TopLeft;
                 text.GetComponent<LayoutElement>().preferredHeight = Math.Max(48, text.GetPreferredValues(text.text, 540, 0).y + 16);

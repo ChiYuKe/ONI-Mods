@@ -128,8 +128,13 @@ namespace StorageNetworkTrading.UI
             HorizontalLayoutGroup supplierLayout = suppliers.AddComponent<HorizontalLayoutGroup>();
             supplierLayout.padding = new RectOffset(6, 6, 6, 6);
             supplierLayout.spacing = 6;
+            supplierLayout.childAlignment = TextAnchor.MiddleLeft;
             supplierLayout.childControlWidth = supplierLayout.childControlHeight = true;
-            supplierLayout.childForceExpandWidth = supplierLayout.childForceExpandHeight = true;
+            supplierLayout.childForceExpandWidth = false;
+            supplierLayout.childForceExpandHeight = true;
+            // Reserve five equal slots even when fewer merchants are currently visiting.
+            // The width follows the window, rather than stretching the visible cards.
+            float supplierCardWidth = Mathf.Min(210f, Mathf.Max(0f, (rect.sizeDelta.x - 68f) / 5f));
             for (int i = 0; i < 5; i++)
             {
                 int slot = i;
@@ -141,6 +146,9 @@ namespace StorageNetworkTrading.UI
                     tradingRowsSignature = null;
                     RefreshTradingWindow();
                 });
+                LayoutElement supplierCardLayout = button.AddComponent<LayoutElement>();
+                supplierCardLayout.minWidth = supplierCardLayout.preferredWidth = supplierCardWidth;
+                supplierCardLayout.flexibleWidth = 0;
                 supplierLabels[i] = button.GetComponentInChildren<TextMeshProUGUI>();
                 supplierLabels[i].textWrappingMode = TextWrappingModes.NoWrap;
                 supplierLabels[i].maxVisibleLines = 2;
