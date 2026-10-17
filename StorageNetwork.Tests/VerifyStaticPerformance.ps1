@@ -94,7 +94,7 @@ foreach ($file in Get-ChildItem -LiteralPath $sourceRoot -Filter '*.cs' -File -R
 # lifecycle registries instead of expanding this list.
 $allowedSceneScans = @{
     'StorageNetwork/Core/StorageSceneRegistry.cs' = @(
-        'public static void EnsureSceneSeeded()'
+        'private static IEnumerable<int> EnumerateSceneSeed()'
     )
     'StorageNetwork/Services/Supply/StorageNetworkConstructionSupplyService.cs' = @(
         'public static void CleanupLegacyTagsFromNativeStorages()'

@@ -21,7 +21,88 @@ internal static class ContentIndexRuntimeChecks
         VerifyUnknownChanges(check);
         VerifyFoodAndTagDetails(check);
         VerifyRepeatedTransfers(check);
+        VerifyItemCandidateIndex(check);
+        VerifyRequestWakeVersions(check);
         Reset();
+    }
+
+    private static void VerifyRequestWakeVersions(Action<bool, string> check)
+    {
+        Reset();
+        Storage local = Store(1, 0, 10f), other = Store(2, 0, 10f), target = Store(3, 0, 0f), remote = Store(4, 1, 10f);
+        other.items.Clear(); other.items.Add(Item(Unrelated, 10f));
+        Warm();
+        var wanted = new[] { Material };
+        long initial = StorageNetworkContentIndexService.GetRequestWakeVersion(0, wanted, null);
+        var tags = other.items[0].MatchTags;
+        StorageNetworkContentIndexService.BeginTransferTransaction(0);
+        Change(other, 9f); other.items[0].MatchTags = tags;
+        target.items.Add(Item(Unrelated, 1f)); target.OnStorageChange?.Invoke(null);
+        StorageNetworkContentIndexService.RecordTransferMutation(other, target, tags, GameTags.Solid, 1f, 1f);
+        StorageNetworkContentIndexService.EndTransferTransaction();
+        check(StorageNetworkContentIndexService.GetRequestWakeVersion(0, wanted, null) == initial,
+            "known unrelated-material transfer does not wake a material-specific request");
+        Change(remote, 11f);
+        check(StorageNetworkContentIndexService.GetRequestWakeVersion(0, wanted, null) == initial,
+            "unknown mutation in an unreachable world does not wake a local request");
+        Change(local, 12f);
+        check(StorageNetworkContentIndexService.GetRequestWakeVersion(0, wanted, null) != initial,
+            "pending unknown local mutations wake without flushing native inventories");
+        var counts = StorageNetworkPerformanceCounters.ConsumeSnapshot();
+        check(counts.RefreshedStorages == 0,
+            "checking sleeping-request generations does not refresh dirty storages");
+        long beforeTopology = StorageNetworkContentIndexService.GetRequestWakeVersion(0, wanted, null);
+        StorageSceneRegistry.ConnectivityVersion++;
+        check(StorageNetworkContentIndexService.GetRequestWakeVersion(0, wanted, null) != beforeTopology,
+            "core and relay connectivity changes wake requests");
+    }
+
+    private static void VerifyItemCandidateIndex(Action<bool, string> check)
+    {
+        Reset();
+        Storage storage = Store(1, 0, 1f);
+        storage.items.Clear();
+        for (int i = 0; i < 1003; i++)
+            storage.items.Add(Item(i % 333 == 0 ? Material : Unrelated, 1f));
+        Warm();
+        var tags = new HashSet<Tag> { Material };
+        var result = new List<GameObject>();
+        StorageNetworkContentIndexService.FillStorageItemCandidates(storage, tags, result);
+        check(result.SequenceEqual(storage.items.Where(i => i.MatchTags.Contains(Material))),
+            "item buckets retain exact native order across a 1003-item storage");
+        check(StorageNetworkPerformanceCounters.ConsumeSnapshot().ScannedItems == 1003,
+            "cold item bucket scans the storage once");
+        StorageNetworkContentIndexService.FillStorageItemCandidates(storage, tags, result);
+        check(StorageNetworkPerformanceCounters.ConsumeSnapshot().ScannedItems == 0 && result.Count == 4,
+            "warm sparse item bucket returns four candidates without scanning 999 unrelated items");
+        tags.Add(Unrelated);
+        StorageNetworkContentIndexService.FillStorageItemCandidates(storage, tags, result);
+        check(result.SequenceEqual(storage.items), "multi-tag union preserves native order without duplicates");
+
+        StorageNetworkContentIndexService.BeginTransferTransaction(0);
+        GameObject replacement = Item(Material, 2f);
+        storage.items[1] = replacement;
+        storage.OnStorageChange?.Invoke(null);
+        tags.Remove(Unrelated);
+        StorageNetworkContentIndexService.FillStorageItemCandidates(storage, tags, result);
+        check(result.Contains(replacement) && result.Count == 5,
+            "same-count object replacement invalidates candidate buckets inside a transfer transaction");
+        storage.items.Reverse();
+        StorageNetworkContentIndexService.InvalidateAll();
+        StorageNetworkContentIndexService.FillStorageItemCandidates(storage, tags, result);
+        check(result.SequenceEqual(storage.items.Where(i => i.MatchTags.Contains(Material))),
+            "unknown global mutation refreshes candidate order before transaction commit");
+        StorageNetworkContentIndexService.EndTransferTransaction();
+
+        Tag dynamicTag = new Tag("Dynamic");
+        replacement.GetComponent<KPrefabID>().Tags.Add(dynamicTag);
+        storage.OnStorageChange?.Invoke(null);
+        tags.Clear(); tags.Add(dynamicTag);
+        StorageNetworkContentIndexService.FillStorageItemCandidates(storage, tags, result);
+        check(result.Count == 1 && result[0] == replacement,
+            "candidate matching includes native prefab tags outside the four material tags");
+        StorageNetworkContentIndexService.FillStorageItemCandidates(storage, null, result);
+        check(result.SequenceEqual(storage.items), "unfiltered candidates retain every native list slot");
     }
 
     private static void Reset()

@@ -7,6 +7,7 @@ internal static class SourceContractChecks
 {
     public static void Verify(string repositoryRoot, Action<bool, string> check)
     {
+        VerifyMainThreadOptimization(repositoryRoot, check);
         string contentIndex = Read(repositoryRoot,
             "StorageNetwork/Services/Inventory/StorageNetworkContentIndexService.cs");
         string targetSelector = Read(repositoryRoot,
@@ -584,11 +585,11 @@ internal static class SourceContractChecks
             "private void ReconcileCategorySummaryRows(");
         string categoryVisibleRange = ExtractMethod(categoryPanel,
             "private void GetCategorySummaryVisibleRange(");
-        int categorySort = categoryRefresh.IndexOf("totals.Sort", StringComparison.Ordinal);
-        check(categorySort >= 0 &&
-              categoryRefresh.IndexOf("left.Key", categorySort, StringComparison.Ordinal) >= 0 &&
-              categoryRefresh.IndexOf("right.Key", categorySort, StringComparison.Ordinal) >= 0 &&
-              categoryRefresh.IndexOf("right.MassKg.CompareTo", categorySort, StringComparison.Ordinal) < 0,
+        string stableDisplayOrder = Read(repositoryRoot, "StorageNetwork/UI/Common/StorageNetworkStableDisplayOrder.cs");
+        check(categoryRefresh.Contains("categorySummaryDisplayOrder.Apply", StringComparison.Ordinal) &&
+              stableDisplayOrder.Contains("comparer.Compare(name(a), name(b))", StringComparison.Ordinal) &&
+              stableDisplayOrder.Contains("StringComparer.Ordinal.Compare(key(a), key(b))", StringComparison.Ordinal) &&
+              !stableDisplayOrder.Contains("MassKg", StringComparison.Ordinal),
             "category rendering order is stable by key rather than live mass rank");
         check(!categoryRefresh.Contains("ForceRebuildLayoutImmediate", StringComparison.Ordinal) &&
               !categoryRefresh.Contains("ForceCategorySummaryLayout", StringComparison.Ordinal),
@@ -596,10 +597,15 @@ internal static class SourceContractChecks
         check(categoryRefresh.Contains("TryGetStorageDisplayVersion", StringComparison.Ordinal) &&
               categoryRefresh.Contains("categorySummaryObservedStorageVersion", StringComparison.Ordinal),
             "category live aggregation is gated by its selected storages rather than global content churn");
-        check(categoryValues.Contains("TryFillStorageItemTotals", StringComparison.Ordinal) &&
-              categoryValues.IndexOf("TryFillStorageItemTotals", StringComparison.Ordinal) <
+        string incrementalCategory = Read(repositoryRoot, "StorageNetwork/UI/Panel/CategorySummary/StorageNetworkPanel.CategorySummary.Incremental.cs");
+        check(categoryValues.Contains("TryUpdateCategorySummaryIndexedTotals", StringComparison.Ordinal) &&
+              categoryValues.IndexOf("TryUpdateCategorySummaryIndexedTotals", StringComparison.Ordinal) <
               categoryValues.IndexOf("foreach (Storage storage in storages)", StringComparison.Ordinal),
             "category summary reads the content index first and keeps native traversal only as compatibility fallback");
+        check(incrementalCategory.Contains("TryGetSingleStorageDisplayVersion", StringComparison.Ordinal) &&
+              incrementalCategory.Contains("TryReadSingleStorageItemTotals", StringComparison.Ordinal) &&
+              incrementalCategory.Contains("categorySummaryAggregation.SetSource", StringComparison.Ordinal),
+            "category summary replaces only changed source contributions");
         check(categoryPanel.Contains(
                   "private const int CategorySummaryVirtualizationThreshold = 32;",
                   StringComparison.Ordinal) &&
@@ -731,6 +737,50 @@ internal static class SourceContractChecks
               trackingLive.Contains("view.Amount", StringComparison.Ordinal) &&
               trackingLive.Contains("view.Detail", StringComparison.Ordinal),
             "tracking card updates summary, amount, and detail through stable live bindings");
+    }
+
+    private static void VerifyMainThreadOptimization(string root, Action<bool, string> check)
+    {
+        string category = Read(root, "StorageNetwork/UI/Panel/CategorySummary/StorageNetworkPanel.CategorySummary.cs");
+        string categoryRebuild = ExtractMethod(category, "private void RebuildCategorySummaryValues(");
+        check(!categoryRebuild.Contains("categorySummaryIndexedTotals.Clear()", StringComparison.Ordinal),
+            "category refresh preserves unchanged material totals in its incremental destination");
+        string registry = Read(root, "StorageNetwork/Core/StorageSceneRegistry.cs");
+        string strictSeed = ExtractMethod(registry, "public static void EnsureSceneSeeded()");
+        string advanceSeed = ExtractMethod(registry, "internal static bool AdvanceSceneSeed(");
+        check(strictSeed.Contains("finishSynchronously: true", StringComparison.Ordinal) &&
+              advanceSeed.Contains("processed < 32", StringComparison.Ordinal) &&
+              advanceSeed.Contains("Elapsed.TotalMilliseconds < 0.75d", StringComparison.Ordinal) &&
+              advanceSeed.Contains("sceneSeedWork.Dispose()", StringComparison.Ordinal),
+            "scene warmup is bounded per frame while strict readers finish the same directory synchronously");
+        string panel = Read(root, "StorageNetwork/UI/Panel/StorageNetworkPanel.cs");
+        string refresh = ExtractMethod(panel, "private void RefreshStoragePanel(");
+        check(ContainsInOrder(refresh, "!StorageSceneRegistry.IsSceneReady", "return;", "RefreshStoragePanelMain(mode)") &&
+              panel.Contains("StorageSceneRegistry.AdvanceSceneSeed()", StringComparison.Ordinal),
+            "main panel waits for complete scene registration before exposing inventory");
+        string frameBuild = Read(root, "StorageNetwork/UI/Panel/StorageNetworkPanel.BuildQueue.cs");
+        check(frameBuild.Contains("mainRowBuildQueue.Run(2, 0.75d)", StringComparison.Ordinal) &&
+              frameBuild.Contains("owner.gameObject.activeInHierarchy", StringComparison.Ordinal) &&
+              frameBuild.Contains("section.Aggregates.ContainsKey(itemKey)", StringComparison.Ordinal),
+            "deferred rows have frame budgets and lifetime/visibility checks");
+        foreach (string kind in new[] { "Solid", "Liquid", "Gas" })
+        {
+            foreach (bool input in new[] { false, true })
+            {
+                string direction = input ? "Input" : "Output";
+                string component = "StorageNetwork" + kind + direction + "Port" + (input ? "Ingress" : "Egress");
+                string source = Read(root, "StorageNetwork/Buildings/Ports/" + kind + direction + "/Components/" + component + ".cs");
+                check(ContainsInOrder(source, "requestWake.ShouldAttempt", "RecordPortRequestAttempt", "requestWake.RecordResult") &&
+                      source.Contains("requestWake.Dispose()", StringComparison.Ordinal),
+                    component + " gates failed transfers before request counters and removes its owner subscription");
+            }
+        }
+        string index = Read(root, "StorageNetwork/Services/Inventory/StorageNetworkContentIndexService.cs");
+        string wakeVersion = ExtractMethod(index, "internal static long GetRequestWakeVersion(");
+        check(!wakeVersion.Contains("EnsureFresh(", StringComparison.Ordinal) &&
+              wakeVersion.Contains("UnknownRequestVersion", StringComparison.Ordinal) &&
+              wakeVersion.Contains("bucket.Version", StringComparison.Ordinal),
+            "sleeping requests inspect scoped material generations without forcing native refreshes");
     }
 
     public static string FindRepositoryRoot()

@@ -78,7 +78,7 @@ namespace StorageNetwork.Core
 {
     internal static class StorageSceneRegistry
     {
-        public static int MembershipVersion, CapabilityVersion;
+        public static int MembershipVersion, CapabilityVersion, ConnectivityVersion;
         public static bool Relay;
         public static readonly HashSet<int> OfflineWorlds = new HashSet<int>();
         public static readonly List<Storage> Storages = new List<Storage>();

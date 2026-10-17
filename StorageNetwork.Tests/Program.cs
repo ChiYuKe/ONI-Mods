@@ -15,6 +15,7 @@ internal static class Program
     private static int Main(string[] args)
     {
         AlgorithmOptimizationChecks.Verify(Check);
+        MainThreadOptimizationChecks.Verify(Check);
         ContentIndexRuntimeChecks.Verify(Check);
         FarmingRuntimeChecks.Verify(Check);
         TradingMarketChecks.Verify(Check);

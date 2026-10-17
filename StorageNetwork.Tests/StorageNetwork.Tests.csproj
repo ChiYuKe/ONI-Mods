@@ -6,6 +6,11 @@
     <Nullable>disable</Nullable>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="..\StorageNetwork\Services\Inventory\StorageNetworkOrderedCandidateIndex.cs" Link="StorageNetworkOrderedCandidateIndex.cs" />
+    <Compile Include="..\StorageNetwork\UI\Panel\CategorySummary\StorageNetworkIncrementalTotals.cs" Link="StorageNetworkIncrementalTotals.cs" />
+    <Compile Include="..\StorageNetwork\UI\Common\StorageNetworkStableDisplayOrder.cs" Link="StorageNetworkStableDisplayOrder.cs" />
+    <Compile Include="..\StorageNetwork\UI\Common\StorageNetworkFrameWorkQueue.cs" Link="StorageNetworkFrameWorkQueue.cs" />
+    <Compile Include="..\StorageNetwork\Core\StorageNetworkRequestWakeGate.cs" Link="StorageNetworkRequestWakeGate.cs" />
     <None Include="..\StorageNetworkTrading\translations\en.po" Link="en.po" CopyToOutputDirectory="PreserveNewest" />
     <Compile Include="..\StorageNetworkTrading\Trading\TradingMarket.cs" Link="TradingMarket.cs" />
     <Compile Include="..\StorageNetworkTrading\Trading\TradingMarket.Market.cs" Link="TradingMarket.Market.cs" />
