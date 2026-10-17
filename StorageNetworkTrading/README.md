@@ -6,8 +6,19 @@
 
 中文为源文本，英文来自 [translations/en.po](translations/en.po)。AI 配置与前置订单数据一样，保存在当前 `.sav` 文件旁，文件名为 `<存档文件名>.sav.StorageNetworkTradingAi.json`，不嵌入 `.sav` 内部。每个存档独立读取，另存和自动保存时会写出对应的配置文件；API Key 仍使用当前 Windows 账户加密。当前存档尚无配置时，优先迁移旧 `mods/config/StorageNetworkTrading/trading-ai.json`，其次迁移旧 AppData 配置；已有存档配置优先，旧文件保留作为备份。交易状态及聊天记录由本模组的存档组件管理。
 
-构建 `dotnet build StorageNetworkTrading/StorageNetworkTrading.csproj -c Release` 会同时构建前置，两个程序集分别位于各自的 `bin/Release`。发布时分别打包两个模组目录，勿将 `StorageNetwork.dll` 放入交易模组。
+构建 `dotnet build StorageNetworkTrading/StorageNetworkTrading.csproj -c Release` 会同时构建前置。交易模组的 Debug 和 Release 均输出到 `$(UserProfile)\Documents\Klei\OxygenNotIncluded\mods\Dev\StorageNetworkTrading\`，包含程序集、模组描述和翻译；前置的 Release 仍输出到其 `bin/Release`。发布时分别打包两个模组目录，勿将 `StorageNetwork.dll` 放入交易模组。需要生成仓库内的发布包或运行依赖该路径的验证脚本时，可用 `-p:OutputPath=bin/Release/` 覆盖输出位置。
 
+## 原生星图中的商人航行
+
+商船作为真实 ClusterGridEntity 注册到原生星图，使用原生 ClusterTraveler 寻路、逐格移动和 ClusterMapTravelAnimator 动画。图标暂时复用原版火箭动画；同格停留使用原生分散布局。选中商船后，由原生 ClusterMapVisualizer、ClusterMapPathDrawer 和 ClusterMapPath 显示高亮曲线路径和箭头，不再绘制自定义线条或常驻商人卡片。原生详情面板显示目的地、到达或离港倒计时，并提供“与商人交易”按钮。商船不会揭开沿途迷雾。
+
+DLC 模式下，商人的候选目的地是所有真实小行星（排除火箭内部世界），不受是否已发现或当前查看星球限制。每个星球最多同时停靠五位商人，不再固定补满五位。初始先登记一艘商船计划，每隔 2～4 周期尝试安排下一艘；新商船提前两周期登记，启航前不会出现在星图中，航速为每六边形格一周期，选择目的地时排除当前已停靠五位的星球；到达时再次检查，已满则改道其他未满星球。停留结束后同一商人随机前往另一颗未满星球，保留库存和已使用交易额度。全部其他星球已满时在原星球轨道等待，不计为停靠访客，空位出现后继续航行。停留时长沿用现有好感度和访问规则。原版无 DLC 时保留旧供应商机制。
+
+交易窗口只列出当前星球停留中的商人；没有商人时显示等待提示，可以打开星图查看预计到访时间。航行中、已离港或停留在其他星球的商人无法与当前星球交易。选中商船可查看原生详情，抵达当前星球后使用详情中的交易按钮打开货单。商船使用 Payload 层，不加入玩家火箭列表，也不触发陨石轰炸或原版陨石事件。
+
+路线、起航时间、到达时间、目的星球、商人库存和额度随存档保存。原生实体为不单独存档的运行时对象，读档按航程重建，并在离开或退出存档时注销，避免重复商船。入场起点超出网格时调整到最近有效格；终点始终取目标 WorldContainer 对应的小行星实际坐标，不能替换为空格。旧版出境空格终点自动迁移为随机可停靠星球或轨道等待状态。未发现星球的商船不会显示在星图中泄露目的地。旧存档现有商人迁移为当前星球的停留访客，身份、库存和额度不重置，之后不再立即补位。旧版固定商站坐标保留为兼容数据，不再生成商站节点。
+
+游戏内检查：打开星图选中商船，检查原生高亮路径、箭头、右侧详情和到达倒计时；时间到后检查当前星球交易窗口增加商人，离港后减少；切换星球检查各自名单；保存读档核对航程进度；检查未知目的地和火箭目的地选择模式不泄露或阻挡标记。
 Debug 构建会分别部署到游戏的 `mods/Dev/StorageNetwork` 和 `mods/Dev/StorageNetworkTrading`。新模组仍需在游戏模组列表启用。功能细节见 [交易说明](Trading/README.md) 和 [AI 接入说明](Trading/AI_DIALOGUE.md)。
 
 ## AI 功能文件开关
@@ -20,3 +31,5 @@ Debug 构建会分别部署到游戏的 `mods/Dev/StorageNetwork` 和 `mods/Dev/
 - 当前交易模组安装目录下的 `TradingAi.enabled`，即 `StorageNetworkTrading.dll` 所在目录。
 
 删除这两个位置的启用文件并重启游戏即可关闭。文件仅控制功能可用性，API 配置仍通过齿轮按钮按存档保存；不要将启用文件加入默认发布包。
+
+周报和到访商人的航路口信使用已保存的实际航行计划，包含商人身份、货物类别、目的星球、启航周期和预计抵达周期。打开消息不会重新随机生成计划。尚无停靠商人时，只要有已登记的到访计划也可以刊发预告；泊位变化导致改道时，原消息保留为发布时的记录。
