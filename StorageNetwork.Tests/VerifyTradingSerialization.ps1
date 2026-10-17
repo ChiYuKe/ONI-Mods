@@ -7,6 +7,16 @@ foreach ($dependency in @('UnityEngine.CoreModule.dll', 'Assembly-CSharp-firstpa
     [void][Reflection.Assembly]::LoadFrom((Join-Path $GameManagedDir $dependency))
 }
 $assembly = [Reflection.Assembly]::LoadFrom((Resolve-Path -LiteralPath $ModAssembly).Path)
+$entityType = $assembly.GetType('StorageNetworkTrading.UI.TradingMerchantClusterEntity', $true)
+$coordinates = $entityType.GetMethod('FromCoordinates', [Reflection.BindingFlags]'Static,NonPublic')
+foreach ($pair in @(@(2, -5), @(-3, 7), @(0, 4))) {
+    $cell = $coordinates.Invoke($null, [object[]]@([int]$pair[0], [int]$pair[1]))
+    $actualQ = ([AxialI]).GetProperty('Q').GetValue($cell)
+    $actualR = ([AxialI]).GetProperty('R').GetValue($cell)
+    if ($actualQ -ne $pair[0] -or $actualR -ne $pair[1]) {
+        throw 'Merchant native coordinates transpose the saved Q/R fields.'
+    }
+}
 $marketType = $assembly.GetType('StorageNetwork.Trading.TradingMarket', $true)
 $supplierType = $assembly.GetType('StorageNetwork.Trading.TradingSupplier', $true)
 $market = [Activator]::CreateInstance($marketType)
