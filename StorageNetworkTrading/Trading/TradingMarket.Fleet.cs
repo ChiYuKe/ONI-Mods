@@ -7,6 +7,8 @@ namespace StorageNetwork.Trading
     internal sealed class TradingPort
     {
         public int WorldId, Q, R;
+        public bool Eligible = true;
+        public int Population;
     }
 
     internal sealed class TradingVoyage
@@ -26,6 +28,7 @@ namespace StorageNetwork.Trading
         public double NextFleetDispatch;
         public List<TradingPort> TradePorts = new List<TradingPort>();
         public List<TradingVoyage> Voyages = new List<TradingVoyage>();
+        public TradingPort ExitPort;
 
         internal bool ConfigureFleet(List<TradingPort> ports, int migrationWorld, double cycle)
         {
@@ -39,6 +42,10 @@ namespace StorageNetwork.Trading
                 if (existing == null) { TradePorts.Add(port); changed = true; }
                 else if (existing.Q != port.Q || existing.R != port.R)
                 { existing.Q = port.Q; existing.R = port.R; changed = true; }
+                if (existing != null && existing.Eligible != port.Eligible)
+                { existing.Eligible = port.Eligible; changed = true; }
+                if (existing != null && existing.Population != port.Population)
+                { existing.Population = port.Population; changed = true; }
             }
             if (!FleetEnabled)
             {
@@ -79,10 +86,10 @@ namespace StorageNetwork.Trading
                 if (docked != null) voyage.Visitor = supplier = docked;
                 if (voyage.Outbound)
                 {
-                    // Upgrade old exit-to-empty-space legs into a planet-to-planet itinerary.
-                    BeginWaiting(voyage, cycle);
-                    TryRouteToNextPlanet(voyage, cycle);
-                    changed = true;
+                    if (ExitPort == null) continue;
+                    if (voyage.WaitingForDestination || voyage.ToQ != ExitPort.Q || voyage.ToR != ExitPort.R)
+                    { BeginOutbound(voyage, cycle); changed = true; }
+                    if (cycle >= voyage.Arrival) { Voyages.Remove(voyage); changed = true; }
                     continue;
                 }
                 if (voyage.WaitingForDestination)
@@ -91,6 +98,12 @@ namespace StorageNetwork.Trading
                     continue;
                 }
                 var destination = TradePorts.Find(p => p.WorldId == voyage.WorldId);
+                if (destination != null && !destination.Eligible && docked == null)
+                {
+                    if (!TryRouteToNextPlanet(voyage, cycle)) BeginOutbound(voyage, cycle, true);
+                    changed = true;
+                    continue;
+                }
                 if (destination != null && (voyage.ToQ != destination.Q || voyage.ToR != destination.R))
                 {
                     // The destination world is authoritative, never a nearby empty hex.
@@ -101,8 +114,7 @@ namespace StorageNetwork.Trading
                 if (cycle >= supplier.Departure)
                 {
                     Suppliers.RemoveAll(s => s.Id == supplier.Id);
-                    BeginWaiting(voyage, cycle);
-                    TryRouteToNextPlanet(voyage, cycle);
+                    BeginOutbound(voyage, cycle);
                     changed = true;
                     continue;
                 }
@@ -124,12 +136,12 @@ namespace StorageNetwork.Trading
             changed |= Suppliers.RemoveAll(s => s.Departure <= cycle) > 0;
             if (cycle >= NextFleetDispatch && TradePorts.Count > 0)
             {
-                var available = TradePorts.Where(p => DockedCount(p.WorldId, cycle) < MaximumVisitorsPerWorld).ToList();
+                var available = TradePorts.Where(p => p.Eligible && DockedCount(p.WorldId, cycle) < MaximumVisitorsPerWorld).ToList();
                 if (available.Count > 0)
                 {
                     int id = NextId++;
                     var random = new Random(unchecked(id * 7919));
-                    var port = available[random.Next(available.Count)];
+                    var port = ChoosePopulatedPort(available, random);
                     int dq = random.Next(2) == 0 ? -4 : 4;
                     int dr = random.Next(-2, 3);
                     // Publish a saved itinerary before the merchant appears on the star map.
@@ -164,6 +176,19 @@ namespace StorageNetwork.Trading
         private int DockedCount(int worldId, double cycle) => Suppliers.Count(s =>
             s.VisitWorldId == worldId && s.Arrival <= cycle && s.Departure > cycle);
 
+        private void BeginOutbound(TradingVoyage voyage, double cycle, bool keepCurrentOrigin = false)
+        {
+            var origin = TradePorts.Find(p => p.WorldId == voyage.WorldId);
+            voyage.FromQ = keepCurrentOrigin ? voyage.FromQ : origin?.Q ?? voyage.ToQ;
+            voyage.FromR = keepCurrentOrigin ? voyage.FromR : origin?.R ?? voyage.ToR;
+            voyage.Start = cycle;
+            voyage.Outbound = true;
+            voyage.WaitingForDestination = ExitPort == null;
+            voyage.ToQ = ExitPort?.Q ?? voyage.FromQ;
+            voyage.ToR = ExitPort?.R ?? voyage.FromR;
+            voyage.Arrival = cycle + Math.Max(1, HexDistance(voyage.FromQ, voyage.FromR, voyage.ToQ, voyage.ToR));
+        }
+
         private void BeginWaiting(TradingVoyage voyage, double cycle)
         {
             var port = TradePorts.Find(p => p.WorldId == voyage.WorldId);
@@ -177,11 +202,11 @@ namespace StorageNetwork.Trading
 
         private bool TryRouteToNextPlanet(TradingVoyage voyage, double cycle)
         {
-            var available = TradePorts.Where(p => p.WorldId != voyage.WorldId &&
+            var available = TradePorts.Where(p => p.Eligible && p.WorldId != voyage.WorldId &&
                 DockedCount(p.WorldId, cycle) < MaximumVisitorsPerWorld).ToList();
             if (available.Count == 0) return false;
             var random = new Random(unchecked(voyage.Visitor.Id * 7919 ^ (int)Math.Floor(cycle * 1000)));
-            var target = available[random.Next(available.Count)];
+            var target = ChoosePopulatedPort(available, random);
             var supplier = voyage.Visitor;
             double duration = Math.Max(1, HexDistance(voyage.FromQ, voyage.FromR, target.Q, target.R));
             voyage.WorldId = supplier.VisitWorldId = target.WorldId;
@@ -193,6 +218,13 @@ namespace StorageNetwork.Trading
             // Carry stock and monetary usage forward; changing planets cannot reset trade limits.
             supplier.BaseDeparture = supplier.Departure;
             return true;
+        }
+
+        private static TradingPort ChoosePopulatedPort(List<TradingPort> available, Random random)
+        {
+            int largestPopulation = available.Max(p => p.Population);
+            var preferred = available.Where(p => p.Population == largestPopulation).ToList();
+            return preferred[random.Next(preferred.Count)];
         }
 
         internal static int HexDistance(int q1, int r1, int q2, int r2) =>

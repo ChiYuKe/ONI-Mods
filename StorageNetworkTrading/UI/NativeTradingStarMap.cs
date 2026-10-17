@@ -13,6 +13,8 @@ namespace StorageNetworkTrading.UI
     internal sealed class TradingMerchantClusterEntity : ClusterGridEntity, ISidescreenButtonControl
     {
         internal TradingVoyage Voyage;
+        // AxialI's constructor takes (R, Q), unlike the saved voyage's Q/R fields.
+        internal static AxialI FromCoordinates(int q, int r) => new AxialI { Q = q, R = r };
         private ClusterTraveler traveler;
         private ClusterDestinationSelector selector;
         private double legStart = double.NaN;
@@ -88,15 +90,16 @@ namespace StorageNetworkTrading.UI
         private void ApplyLeg(bool initial)
         {
             var target = ClusterManager.Instance.GetWorld(Voyage.WorldId)?.GetComponent<AsteroidGridEntity>();
-            if (target == null) return;
-            AxialI to = target.Location;
+            var exit = StorageNetworkTradingState.Instance?.Market?.ExitPort;
+            if (Voyage.Outbound ? exit == null : target == null) return;
+            AxialI to = Voyage.Outbound ? FromCoordinates(exit.Q, exit.R) : target.Location;
             Voyage.ToQ = to.Q; Voyage.ToR = to.R;
             if (!initial && legStart == Voyage.Start && legDestination == to)
             {
                 // Market arrival and native movement share a deadline, including large time jumps.
                 if (StorageNetworkTradingState.Cycle >= Voyage.Arrival)
                 {
-                    var end = new AxialI(Voyage.ToQ, Voyage.ToR);
+                    var end = to;
                     if (Location != end) Location = end;
                     if (selector.GetDestination() != end) selector.SetDestination(end);
                 }
@@ -105,7 +108,7 @@ namespace StorageNetworkTrading.UI
             legStart = Voyage.Start;
             legDestination = to;
             var grid = ClusterGrid.Instance;
-            AxialI from = ClosestValid(new AxialI(Voyage.FromQ, Voyage.FromR));
+            AxialI from = ClosestValid(FromCoordinates(Voyage.FromQ, Voyage.FromR));
             Voyage.FromQ = from.Q; Voyage.FromR = from.R;
             Voyage.ToQ = to.Q; Voyage.ToR = to.R;
             var path = grid.GetPath(from, to, selector);
