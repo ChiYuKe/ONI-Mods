@@ -13,6 +13,7 @@
     <Compile Include="..\StorageNetwork\Core\StorageNetworkRequestWakeGate.cs" Link="StorageNetworkRequestWakeGate.cs" />
     <None Include="..\StorageNetworkTrading\translations\en.po" Link="en.po" CopyToOutputDirectory="PreserveNewest" />
     <Compile Include="..\StorageNetworkTrading\Trading\TradingMarket.cs" Link="TradingMarket.cs" />
+    <Compile Include="..\StorageNetworkTrading\Trading\TradingMarket.Fleet.cs" Link="TradingMarket.Fleet.cs" />
     <Compile Include="..\StorageNetworkTrading\Trading\TradingMarket.Market.cs" Link="TradingMarket.Market.cs" />
     <Compile Include="..\StorageNetworkTrading\Trading\TradingMarket.Inventory.cs" Link="TradingMarket.Inventory.cs" />
     <Compile Include="..\StorageNetworkTrading\Trading\TradingMarket.Weekly.cs" Link="TradingMarket.Weekly.cs" />

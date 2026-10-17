@@ -19,6 +19,7 @@ internal static class Program
         ContentIndexRuntimeChecks.Verify(Check);
         FarmingRuntimeChecks.Verify(Check);
         TradingMarketChecks.Verify(Check);
+        TradingFleetChecks.Verify(Check);
         TradingCharacterChecks.Verify(Check);
         TradingDialogueChecks.Verify(Check);
         TradingPersonaChecks.Verify(Check);

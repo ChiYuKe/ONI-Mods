@@ -147,11 +147,29 @@ $tip.Read = $true
 $tip.Articles.Add($article)
 $market.MerchantTips.Add(8, $tip)
 $market.LastTipDay = 21
+$voyageType = $assembly.GetType('StorageNetwork.Trading.TradingVoyage', $true)
+$voyage = [Activator]::CreateInstance($voyageType)
+$voyage.Visitor = $supplier
+$voyage.WorldId = 3
+$voyage.FromQ = -4
+$voyage.ToQ = 2
+$voyage.Start = 16.5
+$voyage.Arrival = 20.5
+$supplier.VisitWorldId = 3
+$market.FleetEnabled = $true
+$market.NextFleetDispatch = 25.25
+$market.Voyages.Add($voyage)
 $json = [Newtonsoft.Json.JsonConvert]::SerializeObject($market)
 if ($json.Contains('"Text":') -or -not $json.Contains('"Content":')) {
     throw 'Chat saves must store structured content parts instead of the runtime Text property.'
 }
 $restored = [Newtonsoft.Json.JsonConvert]::DeserializeObject($json, $marketType)
+if (-not $restored.FleetEnabled -or $restored.NextFleetDispatch -ne 25.25 -or
+    $restored.Voyages.Count -ne 1 -or $restored.Voyages[0].FromQ -ne -4 -or
+    $restored.Voyages[0].ToQ -ne 2 -or $restored.Voyages[0].Arrival -ne 20.5 -or
+    $restored.Voyages[0].Visitor.VisitWorldId -ne 3) {
+    throw 'Merchant route, arrival time or destination did not survive JSON round trip.'
+}
 if ($restored.LastTipDay -ne 21 -or -not $restored.MerchantTips[8].Read -or
     $restored.MerchantTips[8].Expires -ne 24 -or $restored.MerchantTips[8].Articles[0].Body -ne $article.Body) {
     throw 'Merchant intelligence content, expiration or read state changed during native save round trip.'
