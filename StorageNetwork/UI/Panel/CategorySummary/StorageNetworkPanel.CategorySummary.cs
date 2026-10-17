@@ -186,11 +186,8 @@ namespace StorageNetwork.UI
             if (valuesDirty)
             {
                 RebuildCategorySummaryValues(storages, totals);
-                totals.Sort((left, right) =>
-                {
-                    int comparison = string.Compare(left.Name, right.Name, System.StringComparison.CurrentCultureIgnoreCase);
-                    return comparison != 0 ? comparison : string.Compare(left.Key, right.Key, System.StringComparison.Ordinal);
-                });
+                categorySummaryDisplayOrder.Apply(totals, item => item.Key, item => item.Name,
+                    System.StringComparer.CurrentCultureIgnoreCase);
                 int titleFingerprint = CombineCategorySummaryFingerprint(
                     storages.Count,
                     categorySummaryStoredKg);
@@ -248,7 +245,6 @@ namespace StorageNetwork.UI
             storages.Clear();
             totals.Clear();
             categorySummaryTotalsByKey.Clear();
-            categorySummaryIndexedTotals.Clear();
             if (currentSnapshot?.Storages != null)
             {
                 foreach (StorageInfo info in currentSnapshot.Storages)
@@ -262,11 +258,7 @@ namespace StorageNetwork.UI
                 }
             }
 
-            if (StorageNetworkContentIndexService.TryFillStorageItemTotals(
-                    storages,
-                    categorySummaryIndexedTotals,
-                    allowStaleContent: true,
-                    out categorySummaryStoredKg))
+            if (TryUpdateCategorySummaryIndexedTotals(storages, out categorySummaryStoredKg))
             {
                 foreach (StorageNetworkIndexedItemTotal indexed in
                          categorySummaryIndexedTotals.Values)
@@ -541,6 +533,7 @@ namespace StorageNetwork.UI
 
         private void InvalidateCategorySummaryValues()
         {
+            ResetCategorySummaryAggregation();
             categorySummaryObservedContentVersion = -1;
             categorySummaryObservedStorageVersion = int.MinValue;
             categorySummaryObservedMembershipVersion = -1;
@@ -551,6 +544,7 @@ namespace StorageNetwork.UI
 
         private void ClearCategorySummaryContent()
         {
+            ResetCategorySummaryAggregation();
             categorySummaryRows?.ClearDestroy();
             categorySummaryRows = categorySummaryContent != null
                 ? new StorageNetworkKeyedRowCache(categorySummaryContent, 32, 120)
