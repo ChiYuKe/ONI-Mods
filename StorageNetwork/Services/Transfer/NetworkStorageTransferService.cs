@@ -584,7 +584,13 @@ namespace StorageNetwork.Services
                     items.Capacity = source.items.Count;
                 }
 
-                foreach (GameObject item in source.items)
+                IEnumerable<GameObject> candidates = source.items;
+                if (allowed != null && allowed.Count > 0)
+                {
+                    StorageNetworkContentIndexService.FillStorageItemCandidates(source, allowed, workspace.Candidates);
+                    candidates = workspace.Candidates;
+                }
+                foreach (GameObject item in candidates)
                 {
                     PrimaryElement primaryElement = item != null ? item.GetComponent<PrimaryElement>() : null;
                     if (IsSolidOutputItem(item, primaryElement))
@@ -716,7 +722,13 @@ namespace StorageNetwork.Services
                     items.Capacity = source.items.Count;
                 }
 
-                foreach (GameObject item in source.items)
+                IEnumerable<GameObject> candidates = source.items;
+                if (elementFilter.HasValue)
+                {
+                    StorageNetworkContentIndexService.FillStorageItemCandidates(source, sourceTags, workspace.Candidates);
+                    candidates = workspace.Candidates;
+                }
+                foreach (GameObject item in candidates)
                 {
                     PrimaryElement primaryElement = item != null ? item.GetComponent<PrimaryElement>() : null;
                     if (itemPredicate(primaryElement, elementFilter))
@@ -1606,6 +1618,7 @@ namespace StorageNetwork.Services
         public List<Storage> Sources { get; } = new List<Storage>();
 
         public List<GameObject> Items { get; } = new List<GameObject>();
+        public List<GameObject> Candidates { get; } = new List<GameObject>();
 
         public HashSet<Storage> YieldedSources { get; } = new HashSet<Storage>();
 

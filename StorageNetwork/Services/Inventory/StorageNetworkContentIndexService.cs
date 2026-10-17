@@ -52,6 +52,103 @@ namespace StorageNetwork.Services
         public static int Version => contentVersion;
         public static int ChangeVersion => changeVersion;
 
+        // Reads mutation generations only: sleeping ports must not flush native
+        // inventory just to discover that nothing relevant has changed.
+        internal static long GetRequestWakeVersion(int worldId, IEnumerable<Tag> tags, Storage specific)
+        {
+            EnsureRegistrySynchronized();
+            unchecked
+            {
+                long version = ((long)StorageSceneRegistry.MembershipVersion * 397) ^ StorageSceneRegistry.CapabilityVersion;
+                version = version * 397 ^ StorageSceneRegistry.ConnectivityVersion;
+                version = version * 397 ^ (specific != null ? StorageItemUtility.GetStorageInstanceId(specific) : -1);
+                if (specific != null && Records.TryGetValue(specific, out StorageContentRecord selected))
+                    version = version * 397 ^ selected.DisplayVersion;
+                bool allWorlds = IncludesAllWorlds(true);
+                foreach (KeyValuePair<int, WorldContentState> pair in Worlds)
+                {
+                    if (!allWorlds && pair.Key != worldId &&
+                        !StorageNetworkWorldUtility.AreWorldsSameOrLanded(pair.Key, worldId)) continue;
+                    WorldContentState world = pair.Value;
+                    long local = world.UnknownRequestVersion;
+                    if (tags == null) local = local * 397 ^ world.AnyRequestVersion;
+                    else foreach (Tag tag in tags)
+                    {
+                        int bucketVersion = world.SourceBuckets.TryGetValue(tag, out SourceBucket bucket) ? bucket.Version : 0;
+                        local += ((long)tag.GetHash() * 397) ^ bucketVersion;
+                    }
+                    version += ((long)pair.Key * 1000003) ^ local;
+                }
+                return version;
+            }
+        }
+
+        internal static void FillStorageItemCandidates(Storage storage,
+            IEnumerable<Tag> tags, List<GameObject> destination)
+        {
+            destination.Clear();
+            if (storage == null || storage.items == null) return;
+            if (tags == null)
+            {
+                destination.AddRange(storage.items);
+                return;
+            }
+            if (!Records.TryGetValue(storage, out StorageContentRecord record) ||
+                StorageNetworkPerformanceMode.LegacyFullScanEnabled)
+            {
+                // Explicit non-server sources and diagnostic mode keep native reads.
+                foreach (GameObject item in storage.items)
+                    destination.Add(item);
+                return;
+            }
+            if (record.ItemCandidates == null)
+                record.ItemCandidates = new StorageNetworkOrderedCandidateIndex<GameObject, Tag>();
+            int scanned = record.ItemCandidates.Fill(storage.items, tags,
+                MatchesCandidateTag, destination);
+            StorageNetworkPerformanceCounters.RecordScannedItems(scanned);
+        }
+
+        private static bool MatchesCandidateTag(GameObject item, Tag tag)
+        {
+            return item != null && tag != Tag.Invalid &&
+                (item.GetComponent<KPrefabID>()?.HasTag(tag) == true ||
+                 StorageItemUtility.GetStorageMatchTagsNonAlloc(item).Contains(tag));
+        }
+
+        internal static bool TryGetSingleStorageDisplayVersion(Storage storage, out int version)
+        {
+            version = 0;
+            EnsureRegistrySynchronized();
+            if (storage == null || !Records.TryGetValue(storage, out StorageContentRecord record)) return false;
+            unchecked
+            {
+                version = record.DisplayVersion * 397;
+                if (DirtyRecords.Contains(record))
+                    version ^= record.DirtyFrame == Time.frameCount ? 1 : 2;
+                else if (record.ItemDetailsDirty)
+                    version ^= record.DirtyFrame == Time.frameCount ? 3 : 4;
+            }
+            return true;
+        }
+
+        internal static bool TryReadSingleStorageItemTotals(Storage storage,
+            out IReadOnlyList<StorageNetworkIndexedItemTotal> totals, out float storedKg,
+            out int version, bool allowStaleContent = true)
+        {
+            totals = null; storedKg = 0f; version = 0;
+            EnsureRegistrySynchronized();
+            if (storage == null) return false;
+            EnsureStorageFresh(storage, allowStaleContent);
+            if (!Records.TryGetValue(storage, out StorageContentRecord record)) return false;
+            if (record.ItemDetailsDirty &&
+                (!allowStaleContent || record.DirtyFrame != Time.frameCount))
+                RefreshItemDetails(record);
+            if (record.HasUnindexedDisplayItems) return false;
+            totals = record.ItemTotals;
+            storedKg = record.StoredKg;
+            return TryGetSingleStorageDisplayVersion(storage, out version);
+        }
+
         /// <summary>
         /// Builds a stable mutation fingerprint for a caller-selected Storage set
         /// without flushing unrelated dirty records. UI panels use this to avoid
@@ -102,6 +199,11 @@ namespace StorageNetwork.Services
                         // refresh even when no further mutation arrives.
                         version = (version * 397) ^
                                   (record.DirtyFrame == Time.frameCount ? 1 : 2);
+                    }
+                    else if (record.ItemDetailsDirty)
+                    {
+                        version = (version * 397) ^
+                                  (record.DirtyFrame == Time.frameCount ? 3 : 4);
                     }
                 }
             }
@@ -198,6 +300,10 @@ namespace StorageNetwork.Services
             float amount,
             float massKg)
         {
+            if (source != null && Records.TryGetValue(source, out StorageContentRecord sourceRecord))
+                sourceRecord.ItemCandidates?.Invalidate();
+            if (target != null && Records.TryGetValue(target, out StorageContentRecord targetRecord))
+                targetRecord.ItemCandidates?.Invalidate();
             TransferTransactionContext transaction = transferTransaction;
             if (transaction == null || transaction.Depth <= 0)
             {
@@ -240,6 +346,8 @@ namespace StorageNetwork.Services
         /// </summary>
         internal static void TouchTransferStorage(Storage storage)
         {
+            if (storage != null && Records.TryGetValue(storage, out StorageContentRecord record))
+                record.ItemCandidates?.Invalidate();
             TransferTransactionContext transaction = transferTransaction;
             if (transaction == null || transaction.Depth <= 0)
             {
@@ -321,6 +429,9 @@ namespace StorageNetwork.Services
                 return;
             }
 
+            if (Records.TryGetValue(storage, out StorageContentRecord candidateRecord))
+                candidateRecord.ItemCandidates?.Invalidate();
+
             TransferTransactionContext transaction = transferTransaction;
             if (transaction != null && transaction.Depth > 0)
             {
@@ -363,6 +474,7 @@ namespace StorageNetwork.Services
             {
                 foreach (StorageContentRecord record in Records.Values)
                 {
+                    record.ItemCandidates?.Invalidate();
                     // A world/global invalidation is not a provisional
                     // OnStorageChange callback. It represents an unknown mutation
                     // (or a shadow mismatch), so an explicit transfer delta must
@@ -394,6 +506,7 @@ namespace StorageNetwork.Services
             {
                 foreach (StorageContentRecord record in world.Records)
                 {
+                    record.ItemCandidates?.Invalidate();
                     transaction.ForceNativeRead(record.Storage);
                 }
 
@@ -1886,6 +1999,7 @@ namespace StorageNetwork.Services
 
         private static void RefreshRecord(StorageContentRecord record)
         {
+            record.ItemCandidates?.Invalidate();
             StorageNetworkPerformanceCounters.RecordRefreshedStorages();
             Storage storage = record.Storage;
             if (!StorageSceneRegistry.IsLive(storage) ||
@@ -2315,6 +2429,8 @@ namespace StorageNetwork.Services
                 return;
             }
 
+            record.ItemCandidates?.Invalidate();
+
             TransferTransactionContext transaction = transferTransaction;
             if (transaction != null && transaction.Depth > 0)
             {
@@ -2358,6 +2474,9 @@ namespace StorageNetwork.Services
                 // native Storage.items without removing this record from DirtyRecords.
                 record.DisplayVersion++;
                 changeVersion++;
+                WorldContentState changedWorld = GetOrCreateWorld(record.WorldId);
+                changedWorld.UnknownRequestVersion++;
+                changedWorld.AnyRequestVersion++;
             }
         }
 
@@ -3121,6 +3240,7 @@ namespace StorageNetwork.Services
                 }
 
                 WorldContentState world = GetOrCreateWorld(record.WorldId);
+                unchecked { world.AnyRequestVersion++; }
                 foreach (KeyValuePair<Tag, float> pair in deltas.InventoryAmounts)
                 {
                     float actual = ApplyAmountDelta(record.Amounts, pair.Key, pair.Value);
@@ -3408,6 +3528,7 @@ namespace StorageNetwork.Services
             public bool ElementMassesDirty { get; set; }
             public int DirtyFrame { get; set; }
             public int DisplayVersion { get; set; }
+            public StorageNetworkOrderedCandidateIndex<GameObject, Tag> ItemCandidates { get; set; }
             public float StoredKg { get; set; }
             public float CapacityKg { get; set; }
             public bool HasUnindexedDisplayItems { get; set; }
@@ -3425,6 +3546,8 @@ namespace StorageNetwork.Services
 
         private sealed class WorldContentState
         {
+            public int UnknownRequestVersion { get; set; }
+            public int AnyRequestVersion { get; set; }
             public HashSet<StorageContentRecord> DirtyRecords { get; } = new HashSet<StorageContentRecord>();
             public HashSet<StorageContentRecord> Records { get; } =
                 new HashSet<StorageContentRecord>();
@@ -3453,6 +3576,7 @@ namespace StorageNetwork.Services
 
         private sealed class SourceBucket
         {
+            public int Version { get; private set; }
             private readonly List<KeyValuePair<StorageContentRecord, float>> sorted =
                 new List<KeyValuePair<StorageContentRecord, float>>();
             private bool sortedDirty = true;
@@ -3473,6 +3597,7 @@ namespace StorageNetwork.Services
                     return;
                 }
                 Amounts[record] = amount;
+                unchecked { Version++; }
                 sortedDirty = true;
             }
 
@@ -3480,6 +3605,7 @@ namespace StorageNetwork.Services
             {
                 if (Amounts.Remove(record))
                 {
+                    unchecked { Version++; }
                     sortedDirty = true;
                 }
             }
