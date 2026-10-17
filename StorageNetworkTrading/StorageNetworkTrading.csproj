@@ -17,7 +17,7 @@
     <OutputPath>$(UserProfile)\Documents\Klei\OxygenNotIncluded\mods\Dev\StorageNetworkTrading\</OutputPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <OutputPath>bin\Release\</OutputPath>
+    <OutputPath>$(UserProfile)\Documents\Klei\OxygenNotIncluded\mods\Dev\StorageNetworkTrading\</OutputPath>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="UnityEngine.UnityWebRequestModule">
