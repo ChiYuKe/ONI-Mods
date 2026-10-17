@@ -20,6 +20,7 @@ namespace StorageNetwork.UI
             float scrollOffset = GetListScrollOffset();
             lastListSignature = BuildListSignature(currentSnapshot.Storages);
             RebuildStorageRows(currentSnapshot.Storages);
+            pendingMainBuildScrollOffset = mainRowBuildQueue.Count > 0 ? scrollOffset : (float?)null;
             RestoreListScrollOffset(scrollOffset);
         }
 
@@ -131,7 +132,7 @@ namespace StorageNetwork.UI
             layout.childForceExpandWidth = true;
             layout.childForceExpandHeight = false;
             host.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-            build(host.transform);
+            QueueMainRowBuild(host.transform, () => build(host.transform));
             return host;
         }
 
@@ -272,6 +273,8 @@ namespace StorageNetwork.UI
 
         private void ClearList()
         {
+            mainRowBuildQueue.Clear();
+            pendingMainBuildScrollOffset = null;
             ClearMainStorageLiveViews();
             mainStorageRows = null;
             mainStorageRowsContent = null;

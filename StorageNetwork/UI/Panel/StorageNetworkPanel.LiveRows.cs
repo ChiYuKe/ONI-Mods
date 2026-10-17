@@ -328,13 +328,12 @@ namespace StorageNetwork.UI
             {
                 row = section.Rows.Use(
                     rowKey,
-                    () => CreateStoredItemRow(
+                    () => CreateDeferredItemRow(
                         storage,
-                        section.Parent,
+                        section,
+                        rowKey,
                         itemKey,
                         displayName,
-                        string.Empty,
-                        string.Empty,
                         aggregate.Representative));
                 if (liveStoredItemRows.TryGetValue(
                         new StorageItemLiveKey(storage, itemKey),
@@ -565,6 +564,8 @@ namespace StorageNetwork.UI
 
         private void OnMainListScroll(Vector2 _)
         {
+            if (Input.mouseScrollDelta.y != 0f || Input.GetMouseButton(0))
+                pendingMainBuildScrollOffset = null;
             mainListViewportDirty = true;
         }
 

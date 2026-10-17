@@ -34,6 +34,9 @@ namespace StorageNetwork.Core
         private static int capabilityVersion;
         private static int connectivityVersion;
         private static bool sceneSeeded;
+        private static IEnumerator<int> sceneSeedWork;
+        private static bool advancingSceneSeed;
+        private static readonly System.Diagnostics.Stopwatch SceneSeedStopwatch = new System.Diagnostics.Stopwatch();
         private static bool worldDirectoriesDirty;
         private static bool collectableCatalogDirty;
         private static int lastPruneFrame = -1;
@@ -76,6 +79,10 @@ namespace StorageNetwork.Core
             DeadAuditedComponents.Clear();
             PruneStopwatch.Reset();
             OnlineCoreCache.Clear();
+            sceneSeedWork?.Dispose();
+            sceneSeedWork = null;
+            advancingSceneSeed = false;
+            SceneSeedStopwatch.Reset();
             sceneSeeded = false;
             worldDirectoriesDirty = false;
             collectableCatalogDirty = false;
@@ -475,14 +482,50 @@ namespace StorageNetwork.Core
 
         public static void EnsureSceneSeeded()
         {
-            if (sceneSeeded)
-            {
-                return;
-            }
+            // Strict simulation/API readers must never observe a partial directory.
+            AdvanceSceneSeed(finishSynchronously: true);
+        }
 
-            using var performanceScope =
-                StorageNetworkFrameProfileTool.BeginWork(StorageNetworkPerformanceArea.Registry);
-            sceneSeeded = true;
+        internal static bool IsSceneReady => sceneSeeded;
+
+        internal static bool AdvanceSceneSeed(bool finishSynchronously = false)
+        {
+            if (sceneSeeded) return true;
+            if (advancingSceneSeed) return false;
+            if (sceneSeedWork == null) sceneSeedWork = EnumerateSceneSeed().GetEnumerator();
+            advancingSceneSeed = true;
+            using var scope = StorageNetworkFrameProfileTool.BeginWork(StorageNetworkPerformanceArea.Registry);
+            SceneSeedStopwatch.Restart();
+            try
+            {
+                int processed = 0;
+                do
+                {
+                    if (!sceneSeedWork.MoveNext())
+                    {
+                        sceneSeedWork.Dispose(); sceneSeedWork = null;
+                        return sceneSeeded;
+                    }
+                    processed++;
+                }
+                while (finishSynchronously || (processed < 32 && SceneSeedStopwatch.Elapsed.TotalMilliseconds < 0.75d));
+                return false;
+            }
+            catch
+            {
+                sceneSeedWork?.Dispose();
+                sceneSeedWork = null;
+                throw;
+            }
+            finally
+            {
+                SceneSeedStopwatch.Stop();
+                advancingSceneSeed = false;
+            }
+        }
+
+        private static IEnumerable<int> EnumerateSceneSeed()
+        {
             bool changed = false;
 
             foreach (Storage storage in Object.FindObjectsByType<Storage>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
@@ -508,6 +551,7 @@ namespace StorageNetwork.Core
                         AuditedComponents.Add(enrollment);
                     }
                 }
+                yield return 0;
             }
 
             foreach (Geyser geyser in Object.FindObjectsByType<Geyser>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
@@ -528,6 +572,7 @@ namespace StorageNetwork.Core
                         AuditedComponents.Add(enrollment);
                     }
                 }
+                yield return 0;
             }
 
             foreach (StorageNetworkCore core in Object.FindObjectsByType<StorageNetworkCore>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
@@ -542,6 +587,7 @@ namespace StorageNetwork.Core
                         AddByWorld(CoresByWorld, GetWorldId(core), core);
                     }
                 }
+                yield return 0;
             }
 
             foreach (StorageNetworkRelayModule relay in Object.FindObjectsByType<StorageNetworkRelayModule>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
@@ -551,6 +597,7 @@ namespace StorageNetwork.Core
                     changed |= Relays.Add(relay);
                     AuditedComponents.Add(relay);
                 }
+                yield return 0;
             }
 
             foreach (StorageNetworkPowerStorage powerStorage in Object.FindObjectsByType<StorageNetworkPowerStorage>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
@@ -560,6 +607,7 @@ namespace StorageNetwork.Core
                     changed |= PowerStorages.Add(powerStorage);
                     AuditedComponents.Add(powerStorage);
                 }
+                yield return 0;
             }
 
             if (changed)
@@ -572,6 +620,7 @@ namespace StorageNetwork.Core
 
             worldDirectoriesDirty = false;
             collectableCatalogDirty = false;
+            sceneSeeded = true;
         }
 
         public static void Invalidate()

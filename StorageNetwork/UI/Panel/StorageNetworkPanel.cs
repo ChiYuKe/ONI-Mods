@@ -144,8 +144,15 @@ namespace StorageNetwork.UI
             {
                 return;
             }
+            if (deferredInitialPanelRefresh)
+            {
+                if (!StorageSceneRegistry.AdvanceSceneSeed()) return;
+                deferredInitialPanelRefresh = false;
+                RefreshStoragePanel(StoragePanelRefreshMode.Structure);
+            }
 
             UpdatePanelDrag();
+            RunMainRowBuildQueue();
             RunDeferredMainLayout();
             RunDeferredOrderLayout();
             float deltaTime = Time.unscaledDeltaTime;
@@ -260,6 +267,12 @@ namespace StorageNetwork.UI
             {
                 return;
             }
+            if (!StorageSceneRegistry.IsSceneReady)
+            {
+                deferredInitialPanelRefresh = true;
+                return;
+            }
+            deferredInitialPanelRefresh = false;
 
             using (StorageNetworkFrameProfileTool.BeginWork(
                        StorageNetworkPerformanceArea.MainPanel))
@@ -272,6 +285,7 @@ namespace StorageNetwork.UI
 
         private void RefreshStoragePanelMain(StoragePanelRefreshMode mode)
         {
+            using var preparationScope = StorageNetworkFrameProfileTool.BeginWork(StorageNetworkPerformanceArea.MainPanelPrepare);
             bool forceRebuild = mode == StoragePanelRefreshMode.Structure;
             bool checkStructure = forceRebuild || mode == StoragePanelRefreshMode.StructureCheck;
             EnsureValidMainWorldFilter();

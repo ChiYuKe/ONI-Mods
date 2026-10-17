@@ -22,6 +22,8 @@ namespace StorageNetwork.Core
         ProductionPlanning,
         LogicDiy,
         MainPanel,
+        MainPanelPrepare,
+        MainPanelBuild,
         CategorySummary,
         OrderEditor,
         Tracking,

@@ -136,7 +136,11 @@ namespace StorageNetwork.UI
 
             foreach (StorageInfo storage in storages.OrderBy(storage => storage.Name))
             {
-                CreateStorageRow(storage, storageList.transform);
+                QueueMainRowBuild(storageList.transform, () =>
+                {
+                    if (storage.Storage != null || storage.Geyser != null)
+                        CreateStorageRow(storage, storageList.transform);
+                });
             }
 
             row.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;

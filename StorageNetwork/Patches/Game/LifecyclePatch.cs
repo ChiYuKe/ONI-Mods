@@ -21,6 +21,7 @@ namespace StorageNetwork.Patches
             {
                 StorageNetworkConstructionSupplyService.CleanupLegacyTagsFromNativeStorages();
                 StorageNetworkFrameProfileTool.InstallIfEnabled(__instance);
+                __instance.gameObject.AddOrGet<StorageNetworkSceneWarmup>().enabled = true;
                 __instance.gameObject.AddOrGet<ProductionOrderBackgroundMaintenance>();
             }
         }
