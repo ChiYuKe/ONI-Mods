@@ -45,6 +45,7 @@ namespace StorageNetwork.Components
         private Guid solidInputPortStatusHandle = Guid.Empty;
         private FilteredStorage filteredStorage;
         private float retryTimer;
+        private readonly StorageNetworkPortRequestWake requestWake = new StorageNetworkPortRequestWake();
         private float flushElapsed;
         private string lastStatus;
         private string cachedStatusText;
@@ -75,6 +76,7 @@ namespace StorageNetwork.Components
         protected override void OnSpawn()
         {
             base.OnSpawn();
+            requestWake.Bind(storage);
             storage?.SetDefaultStoredItemModifiers(Storage.StandardInsulatedStorage);
             if (shouldMigrateManualOperation)
             {
@@ -99,6 +101,7 @@ namespace StorageNetwork.Components
 
             RefreshSolidInputPortStatus();
             Subscribe((int)GameHashes.CopySettings, OnCopySettingsDelegate);
+            requestWake.Reset();
             StorageNetworkInputTargetReservationService.Invalidate();
         }
 
@@ -110,6 +113,8 @@ namespace StorageNetwork.Components
 
         protected override void OnCleanUp()
         {
+            requestWake.Dispose();
+            requestWake.Reset();
             StorageNetworkInputTargetReservationService.Invalidate();
             CleanupFilteredStorage();
             RemoveSolidInputPortStatus();
@@ -161,6 +166,7 @@ namespace StorageNetwork.Components
                 wasInputEnabled = true;
                 EnsureFilteredStorage();
                 filteredStorage?.FilterChanged();
+                requestWake.Reset();
                 retryTimer = 0f;
                 flushElapsed = 0f;
                 // 继续执行正常传输逻辑
@@ -168,10 +174,11 @@ namespace StorageNetwork.Components
 
             if (!InputStoreEnabled)
             {
+                requestWake.Reset();
                 return;
             }
 
-            if (retryTimer > 0f)
+            if (!requestWake.IsWaiting && retryTimer > 0f)
             {
                 retryTimer -= dt;
                 return;
@@ -195,15 +202,20 @@ namespace StorageNetwork.Components
                 return;
             }
 
+            int requestWorld = StorageTargetSelector.GetObjectWorldId(storage.gameObject);
+            Storage requestTarget = CurrentInputStoreMode == StorageNetworkMaterialRequester.OutputStoreMode.SpecificStorage ? ResolveInputStorage() : null;
+            if (!requestWake.ShouldAttempt(storage, requestWorld, null, requestTarget, out _)) return;
             StorageNetworkPerformanceCounters.RecordPortRequestAttempt(gameObject.GetInstanceID());
             StorageTransferResult result = NetworkStorageTransferService.TransferStoredItemsToNetwork(
                 storage,
                 null,
-                CurrentInputStoreMode == StorageNetworkMaterialRequester.OutputStoreMode.SpecificStorage ? ResolveInputStorage() : null,
+                requestTarget,
                 null,
                 true,
                 true,
                 transferWorkspace);
+            requestWake.RecordResult(result.MovedKg > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT,
+                requestWorld, null, requestTarget);
 
             if (CurrentInputStoreMode == StorageNetworkMaterialRequester.OutputStoreMode.SpecificStorage &&
                 result.MovedKg <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT &&
@@ -266,6 +278,7 @@ namespace StorageNetwork.Components
         {
             InputStorageInstanceId = GetStorageInstanceId(target);
             CurrentInputStoreMode = StorageNetworkMaterialRequester.OutputStoreMode.SpecificStorage;
+            requestWake.Reset();
             StorageNetworkInputTargetReservationService.Invalidate();
         }
 
@@ -275,6 +288,7 @@ namespace StorageNetwork.Components
             InputStorageInstanceId = KPrefabID.InvalidInstanceID;
             lastStatus = string.Empty;
             cachedStatusText = null;
+            requestWake.Reset();
             StorageNetworkInputTargetReservationService.Invalidate();
         }
 
@@ -313,10 +327,12 @@ namespace StorageNetwork.Components
                 ManualOperationMigratedToAutomatable = true;
             }
 
+            requestWake.Reset();
             retryTimer = 0f;
             lastStatus = string.Empty;
             cachedStatusText = null;
             SyncManualOperation();
+            requestWake.Reset();
             StorageNetworkInputTargetReservationService.Invalidate();
         }
 

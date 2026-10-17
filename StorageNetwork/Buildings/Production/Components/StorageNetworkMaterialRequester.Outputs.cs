@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using StorageNetwork.Core;
 using StorageNetwork.Services;
 using UnityEngine;
 using Loc = StorageNetwork.STRINGS;
@@ -12,6 +13,7 @@ namespace StorageNetwork.Components
             EnsureFabricator();
             if (!OutputStoreEnabled)
             {
+                outputRequestWake.Reset();
                 lastOutputStatus = string.Empty;
                 lastRecipeResultTags.Clear();
                 return;
@@ -80,13 +82,20 @@ namespace StorageNetwork.Components
                 return;
             }
 
-            if (outputStoreCooldown > 0f)
+            if (!outputRequestWake.IsWaiting && outputStoreCooldown > 0f)
             {
                 outputStoreCooldown -= 1f;
                 return;
             }
 
+            int requestWorld = StorageNetworkWorldUtility.GetObjectWorldId(gameObject);
+            Storage requestTarget = GetSpecificOutputTarget();
+            if (fabricator?.outStorage == null) return;
+            if (!outputRequestWake.ShouldAttempt(fabricator.outStorage, requestWorld, null,
+                    requestTarget, out _, OutputStoreModeValue)) return;
             StorageTransferResult result = StoreOutputsFromOutputStorage();
+            outputRequestWake.RecordResult(result.MovedKg > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT,
+                requestWorld, null, requestTarget, OutputStoreModeValue);
             lastOutputStatus = NetworkStorageTransferService.FormatOutputStatus(result, Loc.Get(Loc.UI.STORAGE_NETWORK.MATERIAL_STATUS_WAITING_PRODUCTS));
             outputStoreCooldown = result.MovedKg > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ? 0f : EmptyOutputRetrySeconds;
         }

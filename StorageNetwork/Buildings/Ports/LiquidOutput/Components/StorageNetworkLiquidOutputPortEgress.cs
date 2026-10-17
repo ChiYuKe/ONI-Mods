@@ -56,6 +56,8 @@ namespace StorageNetwork.Components
 
         private Guid liquidOutputPortStatusHandle = Guid.Empty;
         private float retryTimer;
+        private readonly StorageNetworkPortRequestWake requestWake = new StorageNetworkPortRequestWake();
+        private readonly Tag[] requestWakeTags = new Tag[1];
         private string lastStatus;
         private string cachedStatusText;
         private readonly StorageNetworkTransferWorkspace transferWorkspace = new StorageNetworkTransferWorkspace();
@@ -102,6 +104,7 @@ namespace StorageNetwork.Components
 
         protected override void OnCleanUp()
         {
+            requestWake.Dispose();
             RemoveLiquidOutputPortStatus();
             base.OnCleanUp();
         }
@@ -118,10 +121,11 @@ namespace StorageNetwork.Components
 
             if (storage == null || !OutputRequestEnabled)
             {
+                requestWake.Reset();
                 return;
             }
 
-            if (retryTimer > 0f)
+            if (!requestWake.IsWaiting && retryTimer > 0f)
             {
                 retryTimer -= dt;
                 return;
@@ -135,6 +139,7 @@ namespace StorageNetwork.Components
         {
             if (storage == null || !OutputRequestEnabled)
             {
+                requestWake.Reset();
                 return;
             }
 
@@ -149,14 +154,20 @@ namespace StorageNetwork.Components
             Storage source = CurrentSourceMode == StorageNetworkMaterialRequester.RequestMode.SpecificStorage
                 ? ResolveSourceStorage()
                 : null;
+            SimHashes? requestedElement = GetSelectedOutputElement();
+            requestWakeTags[0] = requestedElement.HasValue ? requestedElement.Value.CreateTag() : GameTags.Liquid;
+            int requestWorld = GetWorldId();
+            if (!requestWake.ShouldAttempt(storage, requestWorld, requestWakeTags, source, out _)) return;
             StorageNetworkPerformanceCounters.RecordPortRequestAttempt(gameObject.GetInstanceID());
             StorageTransferResult result = NetworkStorageTransferService.TransferAnyLiquidFromNetworkToStorage(
                 storage,
                 requestCapacity,
                 null,
                 source,
-                GetSelectedOutputElement(),
+                requestedElement,
                 transferWorkspace);
+            requestWake.RecordResult(result.MovedKg > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT,
+                requestWorld, requestWakeTags, source);
 
             lastStatus = FormatRequestStatus(result);
             if (OutputLimitEnabled && result.MovedKg > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
@@ -172,6 +183,7 @@ namespace StorageNetwork.Components
         {
             SourceStorageInstanceId = GetStorageInstanceId(source);
             CurrentSourceMode = StorageNetworkMaterialRequester.RequestMode.SpecificStorage;
+            requestWake.Reset();
             StorageNetworkInputTargetReservationService.Invalidate();
         }
 
@@ -181,6 +193,7 @@ namespace StorageNetwork.Components
             SourceStorageInstanceId = KPrefabID.InvalidInstanceID;
             lastStatus = string.Empty;
             cachedStatusText = null;
+            requestWake.Reset();
             StorageNetworkInputTargetReservationService.Invalidate();
         }
 
@@ -212,6 +225,7 @@ namespace StorageNetwork.Components
         {
             SetOutputElement(elementHash);
             ReturnMismatchedBufferedLiquidsToNetwork(elementHash);
+            requestWake.Reset();
             retryTimer = 0f;
             RequestFromNetwork();
             SyncDispenserState();
@@ -249,6 +263,7 @@ namespace StorageNetwork.Components
         public void SetRequestRateKgPerSecond(float value)
         {
             RequestRateKgPerSecond = Mathf.Clamp(value, MinRequestRateKgPerSecond, GetMaxRequestRateKgPerSecond());
+            requestWake.Reset();
             retryTimer = 0f;
             cachedStatusText = null;
         }
@@ -332,6 +347,7 @@ namespace StorageNetwork.Components
                 ? Mathf.Max(0f, storage.MassStored())
                 : 0f;
             RequestRateKgPerSecond = source.GetRequestRateKgPerSecond();
+            requestWake.Reset();
             retryTimer = 0f;
             lastStatus = string.Empty;
             cachedStatusText = null;
@@ -339,6 +355,7 @@ namespace StorageNetwork.Components
             ReturnMismatchedBufferedLiquidsToNetwork(GetSelectedOutputElement());
             SyncDispenserFilter();
             SyncDispenserState();
+            requestWake.Reset();
             StorageNetworkInputTargetReservationService.Invalidate();
         }
 
@@ -586,6 +603,7 @@ namespace StorageNetwork.Components
         {
             if (!OutputRequestEnabled)
             {
+                requestWake.Reset();
                 return Loc.Get(Loc.UI.STORAGE_NETWORK.STATUS_DISABLED);
             }
 

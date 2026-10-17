@@ -33,6 +33,7 @@ namespace StorageNetwork.Components
 
         private Guid gasInputPortStatusHandle = Guid.Empty;
         private float retryTimer;
+        private readonly StorageNetworkPortRequestWake requestWake = new StorageNetworkPortRequestWake();
         private float flushElapsed;
         private string lastStatus;
         private string cachedStatusText;
@@ -55,14 +56,18 @@ namespace StorageNetwork.Components
         protected override void OnSpawn()
         {
             base.OnSpawn();
+            requestWake.Bind(storage);
             storage?.SetDefaultStoredItemModifiers(Storage.StandardInsulatedStorage);
             RefreshGasInputPortStatus();
             Subscribe((int)GameHashes.CopySettings, OnCopySettingsDelegate);
+            requestWake.Reset();
             StorageNetworkInputTargetReservationService.Invalidate();
         }
 
         protected override void OnCleanUp()
         {
+            requestWake.Dispose();
+            requestWake.Reset();
             StorageNetworkInputTargetReservationService.Invalidate();
             RemoveGasInputPortStatus();
             base.OnCleanUp();
@@ -78,10 +83,11 @@ namespace StorageNetwork.Components
             RefreshGasInputPortStatus();
             if (storage == null || !InputStoreEnabled)
             {
+                requestWake.Reset();
                 return;
             }
 
-            if (retryTimer > 0f)
+            if (!requestWake.IsWaiting && retryTimer > 0f)
             {
                 retryTimer -= dt;
                 return;
@@ -105,16 +111,19 @@ namespace StorageNetwork.Components
                 return;
             }
 
+            int requestWorld = StorageTargetSelector.GetObjectWorldId(storage.gameObject);
+            Storage requestTarget = CurrentInputStoreMode == StorageNetworkMaterialRequester.OutputStoreMode.SpecificStorage ? ResolveInputStorage() : null;
+            if (!requestWake.ShouldAttempt(storage, requestWorld, null, requestTarget, out _)) return;
             StorageNetworkPerformanceCounters.RecordPortRequestAttempt(gameObject.GetInstanceID());
             StorageTransferResult result = NetworkStorageTransferService.TransferStoredFluidsToNetwork(
                 storage,
                 null,
                 ConduitType.Gas,
-                specificTarget: CurrentInputStoreMode == StorageNetworkMaterialRequester.OutputStoreMode.SpecificStorage
-                    ? ResolveInputStorage()
-                    : null,
+                specificTarget: requestTarget,
                 workspace: transferWorkspace);
 
+            requestWake.RecordResult(result.MovedKg > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT,
+                requestWorld, null, requestTarget);
             lastStatus = FormatInputStoreStatus(result);
             retryTimer = result.MovedKg > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ? 0f : EmptyRetrySeconds;
             if (result.MovedKg > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
@@ -128,6 +137,7 @@ namespace StorageNetwork.Components
         {
             InputStorageInstanceId = GetStorageInstanceId(target);
             CurrentInputStoreMode = StorageNetworkMaterialRequester.OutputStoreMode.SpecificStorage;
+            requestWake.Reset();
             StorageNetworkInputTargetReservationService.Invalidate();
         }
 
@@ -137,6 +147,7 @@ namespace StorageNetwork.Components
             InputStorageInstanceId = KPrefabID.InvalidInstanceID;
             lastStatus = string.Empty;
             cachedStatusText = null;
+            requestWake.Reset();
             StorageNetworkInputTargetReservationService.Invalidate();
         }
 
@@ -168,10 +179,12 @@ namespace StorageNetwork.Components
             InputStoreModeValue = source.InputStoreModeValue;
             InputStorageInstanceId = source.InputStorageInstanceId;
             StorageNetworkFilterCopyHelper.CopyFilters(gameObject, sourceObject);
+            requestWake.Reset();
             retryTimer = 0f;
             flushElapsed = 0f;
             lastStatus = string.Empty;
             cachedStatusText = null;
+            requestWake.Reset();
             StorageNetworkInputTargetReservationService.Invalidate();
         }
 

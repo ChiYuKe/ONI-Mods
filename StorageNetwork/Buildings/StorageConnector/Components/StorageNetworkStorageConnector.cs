@@ -27,6 +27,7 @@ namespace StorageNetwork.Components
         private Storage storage;
         private string lastOutputStatus;
         private float outputRetryTimer;
+        private readonly StorageNetworkPortRequestWake outputRequestWake = new StorageNetworkPortRequestWake();
 
         public string LastOutputStatus => lastOutputStatus;
 
@@ -48,12 +49,14 @@ namespace StorageNetwork.Components
             }
 
             OutputStoreEnabled = IsOutputStoreEnabled();
+            outputRequestWake.Bind(storage);
             ApplyServerStorageModifiers();
             StorageSceneRegistry.Register(gameObject);
         }
 
         protected override void OnCleanUp()
         {
+            outputRequestWake.Dispose();
             StorageSceneRegistry.Unregister(gameObject);
             base.OnCleanUp();
         }
@@ -63,12 +66,13 @@ namespace StorageNetwork.Components
             EnsureStorage();
             if (storage == null || StorageNetworkStorageRules.IsServerStorage(storage) || !IsOutputStoreEnabled())
             {
+                outputRequestWake.Reset();
                 lastOutputStatus = string.Empty;
                 outputRetryTimer = 0f;
                 return;
             }
 
-            if (outputRetryTimer > 0f)
+            if (!outputRequestWake.IsWaiting && outputRetryTimer > 0f)
             {
                 outputRetryTimer -= dt;
                 return;
@@ -81,10 +85,16 @@ namespace StorageNetwork.Components
                 return;
             }
 
+            Storage requestTarget = GetSpecificOutputTarget();
+            int requestWorld = StorageTargetSelector.GetObjectWorldId(gameObject);
+            if (!outputRequestWake.ShouldAttempt(storage, requestWorld, null, requestTarget,
+                    out _, OutputStoreModeValue)) return;
             StorageTransferResult result = NetworkStorageTransferService.TransferStoredItemsToNetwork(
                 storage,
-                new[] { storage },
-                GetSpecificOutputTarget());
+                null,
+                requestTarget);
+            outputRequestWake.RecordResult(result.MovedKg > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT,
+                requestWorld, null, requestTarget, OutputStoreModeValue);
             lastOutputStatus = NetworkStorageTransferService.FormatOutputStatus(result, Get(StorageNetwork.STRINGS.UI.STORAGE_NETWORK.MATERIAL_STATUS_WAITING_CONTENTS));
             outputRetryTimer = result.MovedKg > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT ? 0f : EmptyRetrySeconds;
         }

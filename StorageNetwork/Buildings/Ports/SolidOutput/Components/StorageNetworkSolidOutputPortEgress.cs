@@ -57,6 +57,7 @@ namespace StorageNetwork.Components
 
         private Guid solidOutputPortStatusHandle = Guid.Empty;
         private float retryTimer;
+        private readonly StorageNetworkPortRequestWake requestWake = new StorageNetworkPortRequestWake();
         private string lastStatus;
         private string cachedStatusText;
         private string cachedStatusSignature;
@@ -102,6 +103,7 @@ namespace StorageNetwork.Components
 
         protected override void OnCleanUp()
         {
+            requestWake.Dispose();
             ClearBufferedOutputMarkers();
             RemoveSolidOutputPortStatus();
             base.OnCleanUp();
@@ -122,7 +124,7 @@ namespace StorageNetwork.Components
                 return;
             }
 
-            if (retryTimer > 0f)
+            if (!requestWake.IsWaiting && retryTimer > 0f)
             {
                 retryTimer -= dt;
                 return;
@@ -170,6 +172,7 @@ namespace StorageNetwork.Components
 
             if (!OutputRequestEnabled)
             {
+                requestWake.Reset();
                 lastStatus = Loc.Get(Loc.UI.STORAGE_NETWORK.STATUS_DISABLED);
                 retryTimer = RetrySeconds;
                 return;
@@ -195,14 +198,19 @@ namespace StorageNetwork.Components
                 return;
             }
 
+            HashSet<Tag> requestTags = GetSelectedOutputTags();
+            int requestWorld = StorageTargetSelector.GetObjectWorldId(storage.gameObject);
+            if (!requestWake.ShouldAttempt(storage, requestWorld, requestTags, source, out _)) return;
             StorageNetworkPerformanceCounters.RecordPortRequestAttempt(gameObject.GetInstanceID());
             StorageTransferResult result = NetworkStorageTransferService.TransferAnySolidFromNetworkToStorage(
                 storage,
                 requestCapacity,
                 null,
                 source,
-                GetSelectedOutputTags(),
+                requestTags,
                 transferWorkspace);
+            requestWake.RecordResult(result.MovedKg > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT,
+                requestWorld, requestTags, source);
 
             lastStatus = NetworkStorageTransferService.FormatOutputStatus(result, Loc.Get(Loc.UI.STORAGE_NETWORK.MATERIAL_STATUS_WAITING_CONTENTS));
             if (OutputLimitEnabled && result.MovedKg > PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
@@ -227,6 +235,7 @@ namespace StorageNetwork.Components
         {
             SourceStorageInstanceId = GetStorageInstanceId(source);
             CurrentSourceMode = StorageNetworkMaterialRequester.RequestMode.SpecificStorage;
+            requestWake.Reset();
             StorageNetworkInputTargetReservationService.Invalidate();
         }
 
@@ -237,6 +246,7 @@ namespace StorageNetwork.Components
             lastStatus = string.Empty;
             cachedStatusText = null;
             cachedStatusSignature = null;
+            requestWake.Reset();
             StorageNetworkInputTargetReservationService.Invalidate();
         }
 
@@ -283,6 +293,7 @@ namespace StorageNetwork.Components
         public void SetRequestRateKgPerSecond(float value)
         {
             RequestRateKgPerSecond = Mathf.Clamp(value, MinRequestRateKgPerSecond, GetMaxRequestRateKgPerSecond());
+            requestWake.Reset();
             retryTimer = 0f;
             cachedStatusText = null;
         }
@@ -361,11 +372,13 @@ namespace StorageNetwork.Components
             OutputLimitKg = source.OutputLimitKg;
             OutputLimitUsedKg = OutputLimitEnabled ? GetPortStoredMassKg() : 0f;
             RequestRateKgPerSecond = source.GetRequestRateKgPerSecond();
+            requestWake.Reset();
             retryTimer = 0f;
             lastStatus = string.Empty;
             cachedStatusText = null;
             ConfigureRailOutputStorage();
             SyncDispenserState();
+            requestWake.Reset();
             StorageNetworkInputTargetReservationService.Invalidate();
         }
 
@@ -411,6 +424,7 @@ namespace StorageNetwork.Components
         {
             SetOutputTag(tag);
             ReturnMismatchedBufferedItemsToNetwork(tag);
+            requestWake.Reset();
             retryTimer = 0f;
             RequestFromNetwork();
             SyncDispenserState();
@@ -661,6 +675,7 @@ namespace StorageNetwork.Components
         {
             if (!OutputRequestEnabled)
             {
+                requestWake.Reset();
                 return Loc.Get(Loc.UI.STORAGE_NETWORK.STATUS_DISABLED);
             }
 

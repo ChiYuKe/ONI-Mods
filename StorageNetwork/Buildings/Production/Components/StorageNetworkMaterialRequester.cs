@@ -61,6 +61,9 @@ namespace StorageNetwork.Components
         private static StatusItem materialRequestStatusItem;
         private Guid materialRequestStatusHandle = Guid.Empty;
         private float requestCooldown;
+        private readonly StorageNetworkPortRequestWake materialRequestWake = new StorageNetworkPortRequestWake();
+        private readonly List<Tag> materialRequestWakeTags = new List<Tag>();
+        private readonly StorageNetworkPortRequestWake outputRequestWake = new StorageNetworkPortRequestWake();
         private float outputStoreCooldown;
         private string lastStatus;
         private string lastOutputStatus;
@@ -112,6 +115,7 @@ namespace StorageNetwork.Components
 
             if (!RequestEnabled || fabricator.inStorage == null)
             {
+                materialRequestWake.Reset();
                 RemoveMaterialRequestStatus();
                 return;
             }
@@ -126,7 +130,7 @@ namespace StorageNetwork.Components
             }
 
             RefreshMaterialRequestStatus();
-            if (requestCooldown > 0f)
+            if (!materialRequestWake.IsWaiting && requestCooldown > 0f)
             {
                 requestCooldown -= dt;
                 return;
@@ -142,6 +146,22 @@ namespace StorageNetwork.Components
 
             bool requestedAny = false;
             bool movedAny = false;
+            materialRequestWakeTags.Clear();
+            long requestSettings = recipe.GetHashCode();
+            unchecked
+            {
+                requestSettings = requestSettings * 397 ^ Mode;
+                requestSettings = requestSettings * 397 ^ remainingLimit.GetHashCode();
+                foreach (ComplexRecipe.RecipeElement ingredient in recipe.ingredients)
+                {
+                    materialRequestWakeTags.Add(ingredient.material);
+                    requestSettings = requestSettings * 397 ^ GetTargetIngredientAmount(recipe, ingredient).GetHashCode();
+                }
+            }
+            int requestWorld = StorageNetworkWorldUtility.GetObjectWorldId(gameObject);
+            Storage requestSource = CurrentMode == RequestMode.SpecificStorage ? ResolveSourceStorage() : null;
+            if (!materialRequestWake.ShouldAttempt(fabricator.inStorage, requestWorld,
+                    materialRequestWakeTags, requestSource, out _, requestSettings)) return;
             foreach (ComplexRecipe.RecipeElement ingredient in recipe.ingredients)
             {
                 if (remainingLimit <= PICKUPABLETUNING.MINIMUM_PICKABLE_AMOUNT)
@@ -181,6 +201,9 @@ namespace StorageNetwork.Components
             {
                 requestCooldown = Config.Instance.MaterialRequestRetryCooldownSeconds;
             }
+            materialRequestWake.RecordResult(!requestedAny || movedAny, requestWorld,
+                materialRequestWakeTags, requestSource, requestSettings,
+                Mathf.Max(5f, Config.Instance.MaterialRequestRetryCooldownSeconds));
         }
 
         /// <summary>
@@ -283,10 +306,14 @@ namespace StorageNetwork.Components
             base.OnSpawn();
             EnsureFabricator();
             StorageNetworkRuntimeCatalog.RegisterMaterialRequester(fabricator, this);
+            materialRequestWake.Bind(fabricator?.inStorage);
+            outputRequestWake.Bind(fabricator?.outStorage);
         }
 
         protected override void OnCleanUp()
         {
+            materialRequestWake.Dispose();
+            outputRequestWake.Dispose();
             StorageNetworkRuntimeCatalog.UnregisterMaterialRequester(fabricator, this);
             RemoveMaterialRequestStatus();
             base.OnCleanUp();
